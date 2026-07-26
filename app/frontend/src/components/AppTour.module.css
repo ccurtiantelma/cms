@@ -1,0 +1,37 @@
+/*
+ * Tema del popover di driver.js (vedi AppTour.tsx). Nessun hex custom: usa le
+ * CSS var Mantine del colore primario attivo (`starterPrimary`), quindi segue
+ * automaticamente lo switch del primario dal Theme Customizer.
+ * driver.js inietta i propri elementi fuori dal tree React (document.body),
+ * quindi gli override puntano alle classi globali della libreria tramite
+ * :global() all'interno della classe locale passata come `popoverClass`.
+ */
+.popover :global(.driver-popover-title) {
+  color: var(--mantine-primary-color-filled);
+}
+
+.popover :global(.driver-popover-progress-text) {
+  color: var(--mantine-primary-color-filled);
+}
+
+.popover :global(.driver-popover-next-btn),
+.popover :global(.driver-popover-done-btn) {
+  background-color: var(--mantine-primary-color-filled);
+  border-color: var(--mantine-primary-color-filled);
+  color: var(--mantine-color-white);
+}
+
+.popover :global(.driver-popover-next-btn):hover,
+.popover :global(.driver-popover-done-btn):hover {
+  background-color: var(--mantine-primary-color-filled-hover);
+}
+
+.popover :global(.driver-popover-prev-btn) {
+  background-color: var(--mantine-color-white);
+  border-color: var(--mantine-primary-color-filled);
+  color: var(--mantine-primary-color-filled);
+}
+
+.popover :global(.driver-popover-arrow) {
+  border-color: var(--mantine-color-white);
+}

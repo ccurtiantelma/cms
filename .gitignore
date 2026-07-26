@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.npm
+
+# Build output
+dist/
+build/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Storage documenti locale (ADR-8, STORAGE_DRIVER=local)
+storage/
+app/backend/storage/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Vite
+app/frontend/.vite/
+
+# NestJS
+app/backend/dist/
+
+# Generated (committed intentionally — do NOT add these)
+# docs/openapi.yaml → versionato
+# app/frontend/src/types/api.types.ts → versionato

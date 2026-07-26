@@ -1,0 +1,84 @@
+# Compose di produzione — separato da docker-compose.yml (dev: solo servizi di
+# supporto Postgres/Redis/Mailhog, app avviata via `npm run dev`). Qui invece
+# anche backend e frontend girano come container, buildati dai rispettivi
+# Dockerfile multi-stage (app/backend/Dockerfile, app/frontend/Dockerfile).
+#
+# Setup:
+#   1. cp .env.example .env   (root, accanto a questo file) e compila i valori
+#      reali (POSTGRES_PASSWORD, SECURITY_KEY, COOKIE_SECRET, SMTP_*, FRONTEND_URL
+#      con l'URL pubblico reale, VITE_API_BASE_URL con l'URL pubblico dell'API).
+#   2. docker compose -f docker-compose.prod.yml up -d --build
+#
+# Note:
+# - Nessun mailhog: in produzione l'invio email usa SMTP reale (SMTP_HOST/PORT/
+#   USER/PASS/FROM in .env), non un catcher locale.
+# - DATABASE_URL/REDIS_URL vengono ricalcolate qui sotto (non lette da .env) per
+#   puntare sempre ai nomi dei servizi Docker (postgres/redis) e restare in sync
+#   con POSTGRES_USER/PASSWORD/DB — evita che le due config driftino.
+# - TLS/dominio/reverse proxy sono intenzionalmente fuori scope: da mettere
+#   davanti (Traefik/nginx/load balancer del provider) nell'ambiente di hosting.
+# - postgres/redis non pubblicano porte sull'host: raggiungibili solo dagli
+#   altri servizi sulla rete Docker interna del progetto.
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app_db}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Imposta POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-app_db}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redisdata_prod:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: app/backend/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app_db}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - '3000:3000'
+
+  frontend:
+    build:
+      context: .
+      dockerfile: app/frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:?Imposta VITE_API_BASE_URL in .env}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - '80:80'
+
+volumes:
+  pgdata_prod:
+  redisdata_prod:

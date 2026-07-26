@@ -1,0 +1,118 @@
+/* Stili di PageHeader: breadcrumb + titolo + sottotitolo + KPI. */
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.headingCol {
+  min-width: 0;
+}
+
+/* --- Breadcrumb --- */
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.crumbWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.crumb {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-text-secondary, var(--mantine-color-gray-6));
+}
+
+.crumbActive {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mantine-color-starterPrimary-6);
+}
+
+.crumbSep {
+  color: var(--mantine-color-gray-5);
+}
+
+/* --- Titolo / sottotitolo --- */
+.title {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--app-text-primary, var(--mantine-color-text));
+}
+
+.subtitle {
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+/* --- KPI (mini-card con badge icona) --- */
+.kpis {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.kpi {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px 10px 12px;
+  background: var(--mantine-color-starterPrimary-0);
+  border: 1px solid var(--mantine-color-starterPrimary-1);
+  border-radius: 14px;
+}
+
+.kpiIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--mantine-color-white);
+  background: var(--mantine-primary-color-filled);
+  box-shadow: var(--mantine-shadow-sm);
+}
+
+.kpiText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.kpiValue {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--mantine-color-starterPrimary-9);
+}
+
+.kpiLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--app-text-secondary, var(--mantine-color-gray-6));
+  margin-top: 3px;
+}
+
+[data-mantine-color-scheme='dark'] .kpi {
+  background: var(--mantine-color-dark-6);
+  border-color: var(--mantine-color-starterPrimary-8);
+}
+
+[data-mantine-color-scheme='dark'] .kpiValue {
+  color: var(--mantine-color-starterPrimary-2);
+}

@@ -1,0 +1,32 @@
+/**
+ * Colore per singolo livello di titolo h1–h6 (Global Theme Customizer,
+ * ADR-4 §1/§2, contratto v3). Non è un CSS Module: Mantine `Title` renderizza
+ * il tag semantico reale (`component: h${order}`, vedi @mantine/core), quindi
+ * lo selettore per tag intercetta ogni `<Title order={n}>` dell'app senza
+ * bisogno di una classe dedicata. Import unico in `main.tsx`, subito dopo gli
+ * stili base di Mantine — stesso pattern di quell'import, non iniezione
+ * manuale di stili (vietata da ADR-4 §2).
+ *
+ * Fallback su `--mantine-color-text`: quella variabile è già la stessa
+ * riscritta dal token `textPrimary` (vedi `theme.ts`, TOKEN_MANTINE_VARS),
+ * quindi finché l'admin non differenzia un livello di titolo tutti i titoli
+ * seguono il colore del testo principale, esattamente come oggi.
+ */
+h1 {
+  color: var(--app-heading-h1, var(--mantine-color-text));
+}
+h2 {
+  color: var(--app-heading-h2, var(--mantine-color-text));
+}
+h3 {
+  color: var(--app-heading-h3, var(--mantine-color-text));
+}
+h4 {
+  color: var(--app-heading-h4, var(--mantine-color-text));
+}
+h5 {
+  color: var(--app-heading-h5, var(--mantine-color-text));
+}
+h6 {
+  color: var(--app-heading-h6, var(--mantine-color-text));
+}

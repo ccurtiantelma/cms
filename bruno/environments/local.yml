@@ -1,0 +1,13 @@
+name: local
+variables:
+  - name: baseUrl
+    value: http://localhost:3000/api/v1
+  # Fuori dal prefisso api/v1 (convenzione Prometheus): usato solo da bruno/metrics/*.yml (ADR-15).
+  - name: serverUrl
+    value: http://localhost:3000
+  - name: token
+    value: ""
+  - name: tmpToken
+    value: ""
+  - name: fileGuid
+    value: ""

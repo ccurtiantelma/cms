@@ -1,0 +1,15 @@
+/* Stili della toolbar sticky delle pagine elenco CRUD (vedi ListToolbar.tsx). */
+
+.toolbar {
+  flex: 0 0 auto;
+  margin-bottom: var(--mantine-spacing-md);
+}
+
+/* Il campo di ricerca cresce occupando tutto lo spazio libero della toolbar. */
+.search {
+  flex: 1 1 200px;
+}
+
+.nowrap {
+  white-space: nowrap;
+}

@@ -1,0 +1,129 @@
+info:
+  name: Update Theme
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/app/settings/theme"
+  body:
+    type: json
+    data: |-
+      {
+        "version": 7,
+        "navbarWidth": 210,
+        "navbarWidthUnit": "px",
+        "navbarDefaultCollapsed": false,
+        "navbarEdgeStyle": "border",
+        "navbarEdgeShadowIntensity": 0.16,
+        "colors": {
+          "primary": "#228be6",
+          "secondary": "#868e96",
+          "accent": "#be4bdb",
+          "success": "#40c057",
+          "warning": "#fab005",
+          "alert": "#f76707",
+          "error": "#fa5252",
+          "danger": "#c92a2a",
+          "info": "#15aabf"
+        },
+        "primaryShade": { "light": 8, "dark": 5 },
+        "radius": "md",
+        "focusRing": "auto",
+        "cursorType": "default",
+        "respectReducedMotion": false,
+        "autoContrast": false,
+        "luminanceThreshold": 0.3,
+        "scale": 1,
+        "defaultGradient": { "from": "#228be6", "to": "#15aabf", "deg": 45 },
+        "typography": {
+          "fontFamily": "inter",
+          "fontFamilyMonospace": "system-mono",
+          "fontSizes": { "xs": 12, "sm": 14, "md": 16, "lg": 18, "xl": 20 },
+          "fontSizeUnit": "px",
+          "lineHeights": { "xs": 1.4, "sm": 1.45, "md": 1.55, "lg": 1.6, "xl": 1.65 },
+          "headings": {
+            "fontFamily": "inter",
+            "fontWeight": "700",
+            "fontSizeUnit": "px",
+            "sizes": {
+              "h1": { "fontSize": 34, "lineHeight": 1.3 },
+              "h2": { "fontSize": 26, "lineHeight": 1.35 },
+              "h3": { "fontSize": 22, "lineHeight": 1.4 },
+              "h4": { "fontSize": 18, "lineHeight": 1.45 },
+              "h5": { "fontSize": 16, "lineHeight": 1.5 },
+              "h6": { "fontSize": 14, "lineHeight": 1.5 }
+            }
+          }
+        },
+        "spacing": { "xs": 10, "sm": 12, "md": 16, "lg": 20, "xl": 32 },
+        "spacingUnit": "px",
+        "radiusScale": { "xs": 2, "sm": 4, "md": 8, "lg": 16, "xl": 32 },
+        "radiusScaleUnit": "px",
+        "shadows": {
+          "xs": { "y": 1, "blur": 3, "spread": 0, "opacity": 0.05 },
+          "sm": { "y": 2, "blur": 6, "spread": -1, "opacity": 0.06 },
+          "md": { "y": 4, "blur": 12, "spread": -2, "opacity": 0.07 },
+          "lg": { "y": 8, "blur": 20, "spread": -4, "opacity": 0.08 },
+          "xl": { "y": 12, "blur": 28, "spread": -6, "opacity": 0.09 }
+        },
+        "shadowUnit": "px",
+        "components": {
+          "button": { "variant": "unset", "size": "unset", "radius": "unset" },
+          "actionIcon": { "variant": "unset", "radius": "unset" },
+          "badge": { "variant": "unset", "size": "unset", "radius": "unset" },
+          "input": { "variant": "unset", "size": "unset", "radius": "unset" },
+          "card": { "shadow": "unset", "radius": "unset", "padding": "unset", "withBorder": false },
+          "modal": { "radius": "unset", "shadow": "unset", "padding": "unset", "overlayBlur": 0, "centered": false },
+          "table": { "striped": false, "highlightOnHover": false, "withTableBorder": false, "withColumnBorders": false, "verticalSpacing": "unset" },
+          "tooltip": { "withArrow": false, "radius": "unset" },
+          "loader": { "type": "unset" }
+        },
+        "light": {
+          "pageBg": "#f8f9fa",
+          "cardBg": "#ffffff",
+          "cardBorder": "#ffffff",
+          "textPrimary": "#000000",
+          "textSecondary": "#868e96",
+          "headingH1": "#000000",
+          "headingH2": "#000000",
+          "headingH3": "#000000",
+          "headingH4": "#000000",
+          "headingH5": "#000000",
+          "headingH6": "#000000",
+          "navbarBg": "#ffffff",
+          "navbarText": "#242424",
+          "navbarHoverBg": "#f1f3f5",
+          "navbarActiveBg": "#1971c2",
+          "navbarActiveText": "#ffffff",
+          "navbarBorder": "#dee2e6"
+        },
+        "dark": {
+          "pageBg": "#1f1f1f",
+          "cardBg": "#242424",
+          "cardBorder": "#242424",
+          "textPrimary": "#c9c9c9",
+          "textSecondary": "#828282",
+          "headingH1": "#c9c9c9",
+          "headingH2": "#c9c9c9",
+          "headingH3": "#c9c9c9",
+          "headingH4": "#c9c9c9",
+          "headingH5": "#c9c9c9",
+          "headingH6": "#c9c9c9",
+          "navbarBg": "#ffffff",
+          "navbarText": "#242424",
+          "navbarHoverBg": "#f1f3f5",
+          "navbarActiveBg": "#339af0",
+          "navbarActiveText": "#ffffff",
+          "navbarBorder": "#dee2e6"
+        }
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

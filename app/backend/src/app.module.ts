@@ -1,0 +1,134 @@
+import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { BullModule } from '@nestjs/bullmq';
+import IORedis from 'ioredis';
+import * as Joi from 'joi';
+import * as path from 'path';
+import { AppConstants } from './common/app-constants';
+import { DbModule } from './db/db.module';
+import { CommonModule } from './common/common.module';
+import { AuthModule } from './auth/auth.module';
+import { AuthMiddleware } from './auth/auth.middleware';
+import { RedisModule } from './redis/redis.module';
+import { AdminModule } from './admin/admin.module';
+import { SettingsModule } from './settings/settings.module';
+import { HealthModule } from './health/health.module';
+import { FilesModule } from './files/files.module';
+import { FilesCleanupQueueModule } from './queues/files-cleanup-queue/files-cleanup-queue.module';
+import { SchedulerModule } from './scheduler/scheduler.module';
+import { RealtimeModule } from './realtime/realtime.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { MetricsModule } from './metrics/metrics.module';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: [
+        path.resolve(__dirname, '../../.env'),
+        path.resolve(__dirname, '../.env'),
+        '.env',
+      ],
+      validationSchema: Joi.object({
+        DATABASE_URL: Joi.string().required(),
+        REDIS_URL: Joi.string().required(),
+        SECURITY_KEY: Joi.string().required(),
+        COOKIE_SECRET: Joi.string().default('change_me_cookie_secret'),
+        COOKIE_DOMAIN: Joi.string().default('localhost'),
+        // Allineato ad AppConstants.jwtExpiration (fix: entrambi i default devono coincidere).
+        JWT_EXPIRATION: Joi.string().default('15m'),
+        RTK_EXPIRATION: Joi.number().default(604800),
+        PORT: Joi.number().default(3000),
+        NODE_ENV: Joi.string()
+          .valid('development', 'production', 'staging', 'test')
+          .default('development'),
+        FRONTEND_URL: Joi.string().default('http://localhost:5173'),
+        SMTP_HOST: Joi.string().optional(),
+        SMTP_PORT: Joi.number().default(1025),
+        SMTP_USER: Joi.string().allow('').optional(),
+        SMTP_PASS: Joi.string().allow('').optional(),
+        SMTP_FROM: Joi.string().optional(),
+        SUPERADMIN_EMAIL: Joi.string().allow('').optional(),
+        SUPERADMIN_PASSWORD: Joi.string().allow('').optional(),
+        LOG_LEVEL: Joi.string().default('info'),
+        LOG_DIR: Joi.string().default('logs'),
+        LOG_MAX_PER_SEC: Joi.number().default(100),
+        STORAGE_DRIVER: Joi.string().valid('local', 's3').default('local'),
+        STORAGE_LOCAL_PATH: Joi.string().default('storage'),
+        STORAGE_S3_ENDPOINT: Joi.string().allow('').optional(),
+        STORAGE_S3_REGION: Joi.string().default('us-east-1'),
+        STORAGE_S3_BUCKET: Joi.string().allow('').optional(),
+        STORAGE_S3_ACCESS_KEY_ID: Joi.string().allow('').optional(),
+        STORAGE_S3_SECRET_ACCESS_KEY: Joi.string().allow('').optional(),
+        STORAGE_MAX_FILE_SIZE_MB: Joi.number().default(20),
+        FILES_CLEANUP_ENABLED: Joi.boolean().default(false),
+        FILES_CLEANUP_GRACE_DAYS: Joi.number().default(30),
+        FILES_CLEANUP_CRON_PATTERN: Joi.string().default('0 3 * * *'),
+        FILES_CLEANUP_BATCH_SIZE: Joi.number().default(500),
+        SENTRY_ENABLED: Joi.boolean().default(false),
+        SENTRY_DSN: Joi.string().allow('').optional(),
+        SENTRY_ENVIRONMENT: Joi.string().optional(),
+        SENTRY_TRACES_SAMPLE_RATE: Joi.number().min(0).max(1).default(0),
+        METRICS_ENABLED: Joi.boolean().default(false),
+      }),
+    }),
+    // Rate limiting su /auth/*. Limite di default per le rotte auth senza @Throttle
+    // dedicato; le rotte esposte a brute-force (login, mfa-verify, reset-password,
+    // ecc.) sovrascrivono questo default in auth.controller.ts.
+    ThrottlerModule.forRoot({
+      throttlers: [{ name: 'auth', ttl: 60_000, limit: 20 }],
+    }),
+    // Connessione Redis condivisa da tutte le code BullMQ (coda email in
+    // src/queues/email-queue/). `maxRetriesPerRequest: null` è la
+    // configurazione raccomandata da BullMQ per le connessioni worker/coda.
+    BullModule.forRoot({
+      connection: new IORedis(AppConstants.redisUrl, { maxRetriesPerRequest: null }),
+    }),
+    DbModule,
+    CommonModule,
+    RedisModule,
+    AuthModule,
+    AdminModule,
+    SettingsModule,
+    HealthModule,
+    FilesModule,
+    FilesCleanupQueueModule,
+    SchedulerModule,
+    // RealtimeModule (Socket.io, ADR-12) montato per servire il push del bell/badge
+    // di NotificationsModule — prima non importato di default, vedi ADR-12 §Contesto.
+    RealtimeModule,
+    NotificationsModule,
+    // MetricsModule (ADR-15) montato solo se METRICS_ENABLED=true: opt-in esplicito,
+    // nessun endpoint/interceptor registrato per i progetti che non lo abilitano.
+    ...(AppConstants.metricsEnabled ? [MetricsModule] : []),
+    // TODO: aggiungere qui i moduli applicativi man mano che vengono creati dal progetto che eredita lo starter-kit.
+  ],
+  controllers: [],
+  providers: [],
+})
+export class AppModule {
+  /**
+   * Applica `AuthMiddleware` globalmente, escludendo SOLO gli endpoint pubblici
+   * di `/auth` (senza JWT). Tutti gli altri endpoint /auth/* (me, mfa-setup,
+   * mfa-enable, mfa-disable, request-activation, logout, impersonate, ecc.)
+   * richiedono `req.authInfo` popolato dal middleware.
+   */
+  configure(consumer: MiddlewareConsumer): void {
+    consumer
+      .apply(AuthMiddleware)
+      .exclude(
+        { path: 'health', method: RequestMethod.ALL },
+        // Scraper Prometheus (ADR-15): nessun JWT applicativo, esclusione innocua se
+        // MetricsModule non è registrato (METRICS_ENABLED=false, default).
+        { path: 'metrics', method: RequestMethod.ALL },
+        { path: 'auth/login', method: RequestMethod.ALL },
+        { path: 'auth/mfa-verify', method: RequestMethod.ALL },
+        { path: 'auth/refresh', method: RequestMethod.ALL },
+        { path: 'auth/activate', method: RequestMethod.ALL },
+        { path: 'auth/forgot-password', method: RequestMethod.ALL },
+        { path: 'auth/reset-password', method: RequestMethod.ALL },
+      )
+      .forRoutes({ path: '*path', method: RequestMethod.ALL });
+  }
+}

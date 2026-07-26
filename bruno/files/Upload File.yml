@@ -1,0 +1,40 @@
+info:
+  name: Upload File
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/files"
+  body:
+    type: multipartForm
+    data:
+      - name: file
+        type: file
+        value:
+          - /path/to/local/file.pdf
+      - name: entity
+        type: text
+        value: invoice
+      - name: entityId
+        type: text
+        value: inv-1
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("risposta contiene guid/originalName/mimeType/sizeBytes", function() {
+    const body = res.getBody();
+    expect(body).to.have.all.keys("guid", "originalName", "mimeType", "sizeBytes", "entity", "entityId", "createdAt");
+  });

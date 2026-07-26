@@ -1,0 +1,269 @@
+/*
+ * Chrome di LayoutProtected: sidebar collassabile (chiara, sfondo bianco) +
+ * area contenuto grigio chiaro con card bianca arrotondata. Vedi
+ * LayoutProtected.tsx. Nessun hex/gradiente custom: solo CSS var Mantine
+ * (`--mantine-color-*`, `--mantine-primary-color-*`) e token semantici
+ * `--app-*` del Global Theme Customizer (ADR-4), sempre con fallback sul
+ * valore nativo: senza customizzazioni l'aspetto è identico ai default.
+ */
+
+/* Sfondo applicativo: grigio chiaro pieno. */
+.appBg {
+  min-height: 100vh;
+  background-color: var(--app-page-bg, var(--mantine-color-gray-0));
+}
+
+[data-mantine-color-scheme='dark'] .appBg {
+  background-color: var(--app-page-bg, var(--mantine-color-dark-8));
+}
+
+/* Transizione fluida su collasso/espansione della sidebar. */
+.navbar,
+.main {
+  transition: width 200ms ease, padding-inline-start 200ms ease;
+}
+
+/* --- Navbar --- */
+.navbar {
+  border-right: none;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+/* Superficie della sidebar: sfondo bianco, indipendente dal colore primario
+   attivo e dallo scheme light/dark dell'app (evita problemi di contrasto se
+   l'admin sceglie un primario scuro dal customizer).
+   Selettore `nav.navbarSurface` (non solo `.navbarSurface`): l'AppShell.Navbar
+   di Mantine applica di suo `background-color: var(--mantine-color-body)`
+   sulla stessa classe hash con specificità identica (0-1-0) — a parità di
+   specificità vince l'ultima regola nel CSS finale, che è quella nativa
+   Mantine (in scheme "dark" `--mantine-color-body` è scuro, in conflitto con
+   la navbar chiara). L'elemento selettore aggiunge specificità (0-1-1) e
+   garantisce che il nostro sfondo vinca sempre. */
+.navbarSurface,
+nav.navbarSurface {
+  background: var(--app-navbar-bg, var(--mantine-color-white));
+  border-right: none;
+}
+
+/* Sezione branding in alto. */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 64px;
+  padding: 0 16px;
+  flex-shrink: 0;
+}
+
+.brandCollapsed {
+  justify-content: center;
+  padding: 0;
+}
+
+/* Box logo testuale placeholder (quadrato arrotondato con iniziali). */
+.logoBox {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: var(--mantine-primary-color-filled);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--mantine-color-white);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  box-shadow: var(--mantine-shadow-sm);
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  min-width: 0;
+}
+
+.brandName {
+  color: var(--app-navbar-text, var(--mantine-color-dark-7));
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 0.5px;
+}
+
+.brandSub {
+  color: var(--mantine-color-gray-6);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* --- Voci di navigazione --- */
+.navScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 8px 12px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  /* reset button/anchor nativi (usato anche per le ancore dell'Editor tema) */
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  font-family: inherit;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  border-radius: 10px;
+  color: var(--app-navbar-text, var(--mantine-color-dark-7));
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.navItem:hover {
+  background-color: var(--app-navbar-hover-bg, var(--mantine-color-gray-1));
+}
+
+.navItemCollapsed {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.navItemActive,
+.navItemActive:hover {
+  /* Il fallback segue il primario attivo: il token, se customizzato, lo fissa. */
+  background: var(--app-navbar-active-bg, var(--mantine-primary-color-filled));
+  color: var(--app-navbar-active-text, var(--mantine-color-white));
+  font-weight: 600;
+  box-shadow: var(--mantine-shadow-sm);
+}
+
+.navIcon {
+  flex-shrink: 0;
+  display: flex;
+}
+
+.navLabel {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Tasto "Editor tema" (solo SuperAdmin) --- */
+.customizerSection {
+  flex-shrink: 0;
+  padding: 0 12px 4px;
+}
+
+/* --- Sezione utente in basso --- */
+.userSection {
+  flex-shrink: 0;
+  border-top: 1px solid var(--app-navbar-border, var(--mantine-color-gray-3));
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.userSectionCollapsed {
+  flex-direction: column;
+  gap: 10px;
+}
+
+.userLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  border-radius: 8px;
+  padding: 4px;
+  transition: background-color 120ms ease;
+}
+
+.userLink:hover {
+  background-color: var(--app-navbar-hover-bg, var(--mantine-color-gray-1));
+}
+
+.userInfo {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.userName {
+  color: var(--app-navbar-text, var(--mantine-color-dark-7));
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userRole {
+  color: var(--app-navbar-text, var(--mantine-color-dark-7));
+  opacity: 0.75;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userEmail {
+  color: var(--app-navbar-text, var(--mantine-color-dark-7));
+  opacity: 0.55;
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.userActionsCollapsed {
+  flex-direction: column;
+}
+
+/* Tasti azione in basso: box arrotondato con bordo sottile chiaro. */
+.bottomBtn {
+  border: 1px solid var(--app-navbar-border, var(--mantine-color-gray-4));
+  border-radius: 8px;
+}
+
+.bottomBtn:hover {
+  background-color: var(--app-navbar-hover-bg, var(--mantine-color-gray-1));
+}
+
+/* --- Area contenuto --- */
+.main {
+  background-color: transparent;
+}
+
+/* Burger flottante (solo mobile, niente header). */
+.mobileBurger {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 300;
+  background-color: var(--app-navbar-bg, var(--mantine-color-white));
+  border: 1px solid var(--app-navbar-border, var(--mantine-color-gray-3));
+  border-radius: 8px;
+  padding: 6px;
+}

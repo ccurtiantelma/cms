@@ -1,0 +1,21 @@
+info:
+  name: MFA Verify
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/mfa-verify"
+  body:
+    type: json
+    data: |-
+      {
+        "tmpToken": "{{tmpToken}}",
+        "code": "123456"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

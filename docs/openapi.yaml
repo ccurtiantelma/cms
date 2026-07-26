@@ -1,0 +1,2158 @@
+openapi: 3.0.0
+paths:
+  /api/v1/auth/login:
+    post:
+      operationId: AuthController_login
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginDto'
+      responses:
+        '200':
+          description: Login avvenuto con successo, oppure richiesta MFA
+        '401':
+          description: Credenziali errate o account non attivato
+        '429':
+          description: Troppe richieste, riprovare più tardi
+      summary: Login utente e generazione token JWT
+      tags:
+        - Auth
+  /api/v1/auth/mfa-verify:
+    post:
+      operationId: AuthController_mfaVerify
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaVerifyDto'
+      responses:
+        '200':
+          description: MFA verificato con successo
+        '401':
+          description: Token temporaneo scaduto o codice MFA non valido
+        '429':
+          description: Troppe richieste, riprovare più tardi
+      summary: Verifica codice MFA per completare il login
+      tags:
+        - Auth
+  /api/v1/auth/refresh:
+    post:
+      operationId: AuthController_refresh
+      parameters: []
+      responses:
+        '200':
+          description: Nuovo access token generato
+        '401':
+          description: Refresh token assente, non valido o scaduto
+      summary: Rinnova l'access token usando il refresh token opaco (cookie rtk)
+      tags:
+        - Auth
+  /api/v1/auth/logout:
+    post:
+      operationId: AuthController_logout
+      parameters: []
+      responses:
+        '200':
+          description: Logout avvenuto con successo
+      summary: Logout utente e invalidazione sessione
+      tags:
+        - Auth
+  /api/v1/auth/activate:
+    post:
+      operationId: AuthController_activate
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivateAccountDto'
+      responses:
+        '200':
+          description: Account attivato e password impostata
+        '400':
+          description: Password non conforme alla policy
+        '401':
+          description: Token non valido o scaduto
+        '429':
+          description: Troppe richieste, riprovare più tardi
+      summary: Attiva un account utente tramite token e imposta la password
+      tags:
+        - Auth
+  /api/v1/auth/forgot-password:
+    post:
+      operationId: AuthController_forgotPassword
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordDto'
+      responses:
+        '200':
+          description: Richiesta elaborata (risposta generica per sicurezza)
+        '429':
+          description: Troppe richieste, riprovare più tardi
+      summary: Richiede il recupero password inviando una email con token
+      tags:
+        - Auth
+  /api/v1/auth/reset-password:
+    post:
+      operationId: AuthController_resetPassword
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordDto'
+      responses:
+        '200':
+          description: Password reimpostata con successo
+        '400':
+          description: Password non conforme alla policy
+        '401':
+          description: Token non valido o scaduto
+        '429':
+          description: Troppe richieste, riprovare più tardi
+      summary: Reimposta la password tramite token di recupero
+      tags:
+        - Auth
+  /api/v1/auth/request-activation:
+    post:
+      operationId: AuthController_requestActivation
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordDto'
+      responses:
+        '200':
+          description: Email di attivazione inviata con successo
+        '400':
+          description: Account già attivo
+        '404':
+          description: Utente non trovato
+      summary: Richiede o re-invia l'email di attivazione per un utente (Admin+)
+      tags:
+        - Auth
+  /api/v1/auth/me:
+    get:
+      operationId: AuthController_getMe
+      parameters: []
+      responses:
+        '200':
+          description: Dati utente recuperati
+      summary: Recupera i dati dell'utente autenticato
+      tags:
+        - Auth
+    patch:
+      operationId: AuthController_updateProfile
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileDto'
+      responses:
+        '200':
+          description: Dati anagrafici aggiornati con successo
+        '400':
+          description: Nome o cognome non validi
+      summary: Aggiorna nome e cognome dell'utente autenticato (pagina profilo)
+      tags:
+        - Auth
+  /api/v1/auth/change-password:
+    patch:
+      operationId: AuthController_changePassword
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordDto'
+      responses:
+        '200':
+          description: Password cambiata con successo
+        '400':
+          description: Nuova password non conforme alla policy
+        '401':
+          description: Password attuale non corretta
+      summary: Cambia la password dell'utente autenticato (pagina profilo)
+      tags:
+        - Auth
+  /api/v1/auth/mfa-setup:
+    post:
+      operationId: AuthController_mfaSetup
+      parameters: []
+      responses:
+        '200':
+          description: Secret e QR code generati
+      summary: Genera secret e QR code per la configurazione MFA (non persiste ancora)
+      tags:
+        - Auth
+  /api/v1/auth/mfa-enable:
+    post:
+      operationId: AuthController_mfaEnable
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaEnableDto'
+      responses:
+        '200':
+          description: MFA abilitata con successo
+        '400':
+          description: MFA già abilitata, setup scaduto o codice non valido
+      summary: Abilita la MFA per l'utente autenticato
+      tags:
+        - Auth
+  /api/v1/auth/mfa-disable:
+    post:
+      operationId: AuthController_mfaDisable
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaDisableDto'
+      responses:
+        '200':
+          description: MFA disabilitata con successo
+        '400':
+          description: MFA non abilitata o codice non valido
+      summary: Disabilita la MFA per l'utente autenticato
+      tags:
+        - Auth
+  /api/v1/auth/sessions:
+    get:
+      operationId: AuthController_getSessions
+      parameters: []
+      responses:
+        '200':
+          description: Elenco sessioni attive
+      summary: Elenca le sessioni/dispositivi attivi dell'utente autenticato
+      tags:
+        - Auth
+  /api/v1/auth/sessions/{sessionId}:
+    delete:
+      operationId: AuthController_revokeSession
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          description: Identificativo opaco della sessione (16 char hex)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sessione revocata con successo
+        '404':
+          description: Sessione non trovata o non appartenente all'utente
+      summary: Revoca una sessione/dispositivo dell'utente autenticato
+      tags:
+        - Auth
+  /api/v1/auth/impersonate/{guid}:
+    post:
+      operationId: AuthController_impersonate
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          description: Guid pubblico (16 char) dell'utente da impersonare
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Access token di impersonificazione generato
+        '403':
+          description: Permessi insufficienti o target è un SuperAdmin/utente disabilitato
+        '404':
+          description: Utente target non trovato
+      summary: Avvia l'impersonificazione di un utente (SuperAdmin only)
+      tags:
+        - Auth
+  /api/v1/auth/end-impersonation:
+    post:
+      operationId: AuthController_endImpersonation
+      parameters: []
+      responses:
+        '200':
+          description: Sessione del SuperAdmin originale ripristinata
+        '400':
+          description: Nessuna impersonificazione in corso
+        '401':
+          description: Sessione del SuperAdmin originale non più valida
+      summary: >-
+        Termina l'impersonificazione corrente e ripristina la sessione del
+        SuperAdmin originale
+      tags:
+        - Auth
+  /api/v1/app/admin/system/seed-demo:
+    post:
+      operationId: AdminController_seedDemo
+      parameters: []
+      responses:
+        '200':
+          description: Summary record creati per tabella
+      security:
+        - access-token: []
+      summary: Carica i dati demo (SuperAdmin only)
+      tags:
+        - Admin
+  /api/v1/app/admin/system/reset-demo:
+    post:
+      operationId: AdminController_resetDemo
+      parameters: []
+      responses:
+        '200':
+          description: Summary record cancellati per tabella
+      security:
+        - access-token: []
+      summary: >-
+        Cancella tutti i dati tranne il SuperAdmin (SuperAdmin only,
+        irreversibile)
+      tags:
+        - Admin
+  /api/v1/app/admin/users:
+    get:
+      operationId: AdminController_findAllUsers
+      parameters:
+        - name: p
+          required: false
+          in: query
+          description: Pagina (default 1)
+          schema:
+            type: string
+        - name: i
+          required: false
+          in: query
+          description: Elementi per pagina (default 20)
+          schema:
+            type: string
+        - name: q
+          required: false
+          in: query
+          description: Ricerca testuale su nome, cognome, email
+          schema:
+            type: string
+        - name: o
+          required: false
+          in: query
+          description: Campo di ordinamento (name, surname, email, role, createdAt)
+          schema:
+            type: string
+        - name: d
+          required: false
+          in: query
+          description: Direzione ordinamento (asc|desc, default asc)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista utenti paginata
+      security:
+        - access-token: []
+      summary: Lista utenti paginata (un Admin non vede gli utenti SuperAdmin)
+      tags:
+        - Admin
+    post:
+      operationId: AdminController_createUser
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserDto'
+      responses:
+        '201':
+          description: Utente creato
+        '403':
+          description: Tentativo di creare un utente SuperAdmin da parte dell'Admin
+      security:
+        - access-token: []
+      summary: Crea un nuovo utente (un Admin non può creare utenti SuperAdmin)
+      tags:
+        - Admin
+  /api/v1/app/admin/users/{guid}:
+    get:
+      operationId: AdminController_findOneUser
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Utente trovato
+        '403':
+          description: Target SuperAdmin non gestibile dall'Admin
+        '404':
+          description: Utente non trovato
+      security:
+        - access-token: []
+      summary: Dettaglio utente (un Admin non vede gli utenti SuperAdmin)
+      tags:
+        - Admin
+    patch:
+      operationId: AdminController_updateUser
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserDto'
+      responses:
+        '200':
+          description: Utente aggiornato
+        '403':
+          description: Target SuperAdmin non gestibile dall'Admin
+        '404':
+          description: Utente non trovato
+      security:
+        - access-token: []
+      summary: Aggiorna i dati di un utente
+      tags:
+        - Admin
+  /api/v1/app/admin/users/{guid}/toggle-active:
+    patch:
+      operationId: AdminController_toggleActiveUser
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Stato isActive invertito
+        '403':
+          description: Target SuperAdmin non gestibile dall'Admin
+        '404':
+          description: Utente non trovato
+      security:
+        - access-token: []
+      summary: Abilita/disabilita un utente senza eliminarlo
+      tags:
+        - Admin
+  /api/v1/app/admin/users/{guid}/reset-mfa:
+    post:
+      operationId: AdminController_resetMfaUser
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: MFA resettata con successo
+        '403':
+          description: Target SuperAdmin non gestibile dall'Admin
+        '404':
+          description: Utente non trovato
+      security:
+        - access-token: []
+      summary: Resetta l'MFA di un utente (potrà ri-configurarla al prossimo login)
+      tags:
+        - Admin
+  /api/v1/app/admin/audit-log:
+    get:
+      operationId: AdminController_findAuditLog
+      parameters:
+        - name: p
+          required: false
+          in: query
+          description: Pagina (default 1)
+          schema:
+            type: string
+        - name: i
+          required: false
+          in: query
+          description: Elementi per pagina (default 20)
+          schema:
+            type: string
+        - name: userId
+          required: false
+          in: query
+          description: Filtra per id dell'utente autore
+          schema:
+            type: string
+        - name: action
+          required: false
+          in: query
+          description: Filtra per azione (ricerca parziale, es. "login")
+          schema:
+            type: string
+        - name: from
+          required: false
+          in: query
+          description: Data/ora inizio (ISO 8601)
+          schema:
+            type: string
+        - name: to
+          required: false
+          in: query
+          description: Data/ora fine (ISO 8601)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista audit log paginata
+      security:
+        - access-token: []
+      summary: Lista paginata degli eventi di audit log (Admin+)
+      tags:
+        - Admin
+  /api/v1/app/settings/theme:
+    get:
+      operationId: SettingsController_getTheme
+      parameters: []
+      responses:
+        '200':
+          description: Configurazione tema corrente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThemeConfigDto'
+      security:
+        - access-token: []
+      summary: Tema globale dell'installazione (default di fabbrica se mai salvato)
+      tags:
+        - Settings
+    put:
+      operationId: SettingsController_updateTheme
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThemeConfigDto'
+      responses:
+        '200':
+          description: Tema salvato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThemeConfigDto'
+        '400':
+          description: Payload non valido (hex, palette o versione)
+        '403':
+          description: Ruolo non SuperAdmin
+      security:
+        - access-token: []
+      summary: Salva il tema globale (SuperAdmin only, registrato su audit log)
+      tags:
+        - Settings
+  /api/v1/health:
+    get:
+      operationId: HealthController_check
+      parameters: []
+      responses:
+        '200':
+          description: |-
+            Tutte le dipendenze esterne sono raggiungibili
+
+            The Health Check is successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  info:
+                    type: object
+                    example:
+                      database:
+                        status: up
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+                    nullable: true
+                  error:
+                    type: object
+                    example: {}
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+                    nullable: true
+                  details:
+                    type: object
+                    example:
+                      database:
+                        status: up
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+        '503':
+          description: |-
+            Almeno una dipendenza esterna non è raggiungibile
+
+            The Health Check is not successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  info:
+                    type: object
+                    example:
+                      database:
+                        status: up
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+                    nullable: true
+                  error:
+                    type: object
+                    example:
+                      redis:
+                        status: down
+                        message: Could not connect
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+                    nullable: true
+                  details:
+                    type: object
+                    example:
+                      database:
+                        status: up
+                      redis:
+                        status: down
+                        message: Could not connect
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+      summary: Health check applicativo (verifica connettività DB, Redis e coda BullMQ)
+      tags:
+        - Health
+  /api/v1/app/files:
+    post:
+      operationId: FilesController_upload
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadFileDto'
+      responses:
+        '201':
+          description: File caricato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileMetadataDto'
+        '413':
+          description: File più grande del limite configurato
+      security:
+        - access-token: []
+      summary: Carica un documento (multipart/form-data, campo "file")
+      tags:
+        - Files
+  /api/v1/app/files/{guid}:
+    get:
+      operationId: FilesController_download
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contenuto del file
+        '404':
+          description: File non trovato o eliminato
+      security:
+        - access-token: []
+      summary: Scarica il contenuto di un file (streaming)
+      tags:
+        - Files
+    delete:
+      operationId: FilesController_delete
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '204':
+          description: File eliminato
+        '403':
+          description: Non sei l'autore del file e non hai un ruolo Admin/superiore
+        '404':
+          description: File non trovato o già eliminato
+      security:
+        - access-token: []
+      summary: >-
+        Elimina un file (soft-delete, blob fisico non rimosso subito — vedi
+        ADR-8)
+      tags:
+        - Files
+  /api/v1/app/notifications:
+    get:
+      operationId: NotificationsController_findAll
+      parameters:
+        - name: p
+          required: false
+          in: query
+          description: Pagina (default 1)
+          schema:
+            type: string
+        - name: i
+          required: false
+          in: query
+          description: Elementi per pagina (default 20)
+          schema:
+            type: string
+        - name: unreadOnly
+          required: false
+          in: query
+          description: Se "true", restituisce solo le notifiche non lette
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista notifiche paginata
+      security:
+        - access-token: []
+      summary: Lista paginata delle notifiche del chiamante, più recenti prima
+      tags:
+        - Notifications
+  /api/v1/app/notifications/unread-count:
+    get:
+      operationId: NotificationsController_unreadCount
+      parameters: []
+      responses:
+        '200':
+          description: Conteggio non lette
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnreadCountDto'
+      security:
+        - access-token: []
+      summary: Numero di notifiche non lette del chiamante
+      tags:
+        - Notifications
+  /api/v1/app/notifications/{guid}/read:
+    patch:
+      operationId: NotificationsController_markRead
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notifica aggiornata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationDto'
+        '404':
+          description: Notifica non trovata o non del chiamante
+      security:
+        - access-token: []
+      summary: Segna una notifica come letta (solo se del chiamante)
+      tags:
+        - Notifications
+  /api/v1/app/notifications/read-all:
+    patch:
+      operationId: NotificationsController_markAllRead
+      parameters: []
+      responses:
+        '200':
+          description: Numero di notifiche aggiornate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarkAllReadDto'
+      security:
+        - access-token: []
+      summary: Segna tutte le notifiche del chiamante come lette
+      tags:
+        - Notifications
+info:
+  title: Starter Kit API
+  description: >-
+    API REST del boilerplate aziendale (auth, RBAC, MFA, audit log, gestione
+    utenti).
+  version: '1.0'
+  contact: {}
+tags: []
+servers: []
+components:
+  securitySchemes:
+    access-token:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http
+  schemas:
+    LoginDto:
+      type: object
+      properties:
+        email:
+          type: string
+          description: Indirizzo email dell'utente
+          example: admin@example.com
+        password:
+          type: string
+          description: Password dell'utente
+          example: Password123!
+      required:
+        - email
+        - password
+    MfaVerifyDto:
+      type: object
+      properties:
+        tmpToken:
+          type: string
+          description: Token temporaneo restituito da /auth/login quando è richiesta la MFA
+          example: a1b2c3...
+        code:
+          type: string
+          description: Codice TOTP a 6 cifre generato dall'app authenticator
+          example: '123456'
+      required:
+        - tmpToken
+        - code
+    ActivateAccountDto:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Il token di attivazione ricevuto via email (64 caratteri)
+          example: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3d4e5f6
+        password:
+          type: string
+          description: La nuova password da impostare per l'account (minimo 12 caratteri)
+          example: SicuraPassword123!
+      required:
+        - token
+        - password
+    ForgotPasswordDto:
+      type: object
+      properties:
+        email:
+          type: string
+          description: L'indirizzo email associato all'account da recuperare
+          example: utente@example.com
+      required:
+        - email
+    ResetPasswordDto:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Il token di reimpostazione ricevuto via email (64 caratteri)
+          example: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3d4e5f6
+        password:
+          type: string
+          description: >-
+            La nuova password conforme alla policy di sicurezza (minimo 12
+            caratteri)
+          example: NuovaSuperPassword2026!
+      required:
+        - token
+        - password
+    UpdateProfileDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nome dell'utente
+          example: Mario
+        surname:
+          type: string
+          description: Cognome dell'utente
+          example: Rossi
+      required:
+        - name
+    ChangePasswordDto:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+          description: La password attuale dell'utente, usata per confermare l'identità
+          example: VecchiaPassword2025!
+        newPassword:
+          type: string
+          description: >-
+            La nuova password conforme alla policy di sicurezza (minimo 12
+            caratteri)
+          example: NuovaSuperPassword2026!
+      required:
+        - currentPassword
+        - newPassword
+    MfaEnableDto:
+      type: object
+      properties:
+        code:
+          type: string
+          description: >-
+            Codice TOTP a 6 cifre generato dall'app authenticator con il secret
+            ricevuto da mfa-setup
+          example: '123456'
+      required:
+        - code
+    MfaDisableDto:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Codice TOTP a 6 cifre generato dall'app authenticator
+          example: '123456'
+      required:
+        - code
+    CreateUserDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nome dell'utente
+          example: Mario
+        surname:
+          type: string
+          description: Cognome dell'utente
+          example: Rossi
+        email:
+          type: string
+          description: Email dell'utente
+          example: mario.rossi@example.com
+        role:
+          type: number
+          description: Ruolo assegnato
+          enum:
+            - 5
+            - 10
+            - 20
+            - 30
+          example: 30
+        scopeId:
+          type: string
+          description: >-
+            Identificatore di scope multi-tenant/multi-sede (libero per il
+            progetto che eredita lo starter-kit)
+      required:
+        - name
+        - email
+        - role
+    UpdateUserDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nome dell'utente
+        surname:
+          type: string
+          description: Cognome dell'utente
+        email:
+          type: string
+          description: Email dell'utente
+        role:
+          type: number
+          description: Ruolo assegnato
+          enum:
+            - 5
+            - 10
+            - 20
+            - 30
+        scopeId:
+          type: string
+          description: Identificatore di scope multi-tenant/multi-sede
+    ThemeColorsDto:
+      type: object
+      properties:
+        primary:
+          type: string
+          description: Colore primario
+          example: '#228be6'
+        secondary:
+          type: string
+          description: Colore secondario
+          example: '#868e96'
+        accent:
+          type: string
+          description: Colore accento
+          example: '#be4bdb'
+        success:
+          type: string
+          description: Colore successo
+          example: '#40c057'
+        warning:
+          type: string
+          description: Colore avviso
+          example: '#fab005'
+        alert:
+          type: string
+          description: Colore allerta
+          example: '#f76707'
+        error:
+          type: string
+          description: Colore errore
+          example: '#fa5252'
+        danger:
+          type: string
+          description: Colore pericolo
+          example: '#c92a2a'
+        info:
+          type: string
+          description: Colore informativo
+          example: '#15aabf'
+      required:
+        - primary
+        - secondary
+        - accent
+        - success
+        - warning
+        - alert
+        - error
+        - danger
+        - info
+    ThemePrimaryShadeDto:
+      type: object
+      properties:
+        light:
+          type: number
+          description: Shade filled nello scheme chiaro (0–9)
+          example: 8
+        dark:
+          type: number
+          description: Shade filled nello scheme scuro (0–9)
+          example: 5
+      required:
+        - light
+        - dark
+    ThemeGradientDto:
+      type: object
+      properties:
+        from:
+          type: string
+          description: Colore di partenza
+          example: '#228be6'
+        to:
+          type: string
+          description: Colore di arrivo
+          example: '#15aabf'
+        deg:
+          type: number
+          description: Angolo in gradi (0–360)
+          example: 45
+      required:
+        - from
+        - to
+        - deg
+    ThemeFontSizesDto:
+      type: object
+      properties:
+        xs:
+          type: number
+          description: Dimensione testo xs
+          example: 12
+        sm:
+          type: number
+          description: Dimensione testo sm
+          example: 14
+        md:
+          type: number
+          description: Dimensione testo md
+          example: 16
+        lg:
+          type: number
+          description: Dimensione testo lg
+          example: 18
+        xl:
+          type: number
+          description: Dimensione testo xl
+          example: 20
+      required:
+        - xs
+        - sm
+        - md
+        - lg
+        - xl
+    ThemeLineHeightsDto:
+      type: object
+      properties:
+        xs:
+          type: number
+          description: Interlinea xs
+          example: 1.4
+        sm:
+          type: number
+          description: Interlinea sm
+          example: 1.45
+        md:
+          type: number
+          description: Interlinea md
+          example: 1.55
+        lg:
+          type: number
+          description: Interlinea lg
+          example: 1.6
+        xl:
+          type: number
+          description: Interlinea xl
+          example: 1.65
+      required:
+        - xs
+        - sm
+        - md
+        - lg
+        - xl
+    ThemeHeadingSizeDto:
+      type: object
+      properties:
+        fontSize:
+          type: number
+          description: Dimensione font
+          example: 34
+        lineHeight:
+          type: number
+          description: Interlinea (0.8–3)
+          example: 1.3
+      required:
+        - fontSize
+        - lineHeight
+    ThemeHeadingSizesDto:
+      type: object
+      properties:
+        h1:
+          description: Titolo h1
+          allOf:
+            - $ref: '#/components/schemas/ThemeHeadingSizeDto'
+        h2:
+          description: Titolo h2
+          allOf:
+            - $ref: '#/components/schemas/ThemeHeadingSizeDto'
+        h3:
+          description: Titolo h3
+          allOf:
+            - $ref: '#/components/schemas/ThemeHeadingSizeDto'
+        h4:
+          description: Titolo h4
+          allOf:
+            - $ref: '#/components/schemas/ThemeHeadingSizeDto'
+        h5:
+          description: Titolo h5
+          allOf:
+            - $ref: '#/components/schemas/ThemeHeadingSizeDto'
+        h6:
+          description: Titolo h6
+          allOf:
+            - $ref: '#/components/schemas/ThemeHeadingSizeDto'
+      required:
+        - h1
+        - h2
+        - h3
+        - h4
+        - h5
+        - h6
+    ThemeHeadingsDto:
+      type: object
+      properties:
+        fontFamily:
+          type: string
+          description: Font dei titoli (ID whitelisted)
+          enum:
+            - inter
+            - system
+            - humanist
+            - geometric
+            - rounded
+            - serif
+            - slab
+          example: inter
+        fontWeight:
+          type: string
+          description: Peso dei titoli
+          enum:
+            - '300'
+            - '400'
+            - '500'
+            - '600'
+            - '700'
+            - '800'
+            - '900'
+          example: '700'
+        fontSizeUnit:
+          type: string
+          description: Unità CSS condivisa dalla dimensione di ogni livello h1–h6 (v7)
+          enum:
+            - px
+            - em
+            - rem
+            - '%'
+          example: px
+        sizes:
+          description: Dimensioni h1–h6
+          allOf:
+            - $ref: '#/components/schemas/ThemeHeadingSizesDto'
+      required:
+        - fontFamily
+        - fontWeight
+        - fontSizeUnit
+        - sizes
+    ThemeTypographyDto:
+      type: object
+      properties:
+        fontFamily:
+          type: string
+          description: Font del testo (ID whitelisted)
+          enum:
+            - inter
+            - system
+            - humanist
+            - geometric
+            - rounded
+            - serif
+            - slab
+          example: inter
+        fontFamilyMonospace:
+          type: string
+          description: Font monospace (ID whitelisted)
+          enum:
+            - system-mono
+            - courier
+          example: system-mono
+        fontSizes:
+          description: Dimensioni testo xs–xl
+          allOf:
+            - $ref: '#/components/schemas/ThemeFontSizesDto'
+        fontSizeUnit:
+          type: string
+          description: Unità CSS di fontSizes (v7)
+          enum:
+            - px
+            - em
+            - rem
+            - '%'
+          example: px
+        lineHeights:
+          description: Interlinee xs–xl
+          allOf:
+            - $ref: '#/components/schemas/ThemeLineHeightsDto'
+        headings:
+          description: Configurazione titoli
+          allOf:
+            - $ref: '#/components/schemas/ThemeHeadingsDto'
+      required:
+        - fontFamily
+        - fontFamilyMonospace
+        - fontSizes
+        - fontSizeUnit
+        - lineHeights
+        - headings
+    ThemeSpacingDto:
+      type: object
+      properties:
+        xs:
+          type: number
+          description: Spaziatura xs
+          example: 10
+        sm:
+          type: number
+          description: Spaziatura sm
+          example: 12
+        md:
+          type: number
+          description: Spaziatura md
+          example: 16
+        lg:
+          type: number
+          description: Spaziatura lg
+          example: 20
+        xl:
+          type: number
+          description: Spaziatura xl
+          example: 32
+      required:
+        - xs
+        - sm
+        - md
+        - lg
+        - xl
+    ThemeRadiusScaleDto:
+      type: object
+      properties:
+        xs:
+          type: number
+          description: Radius xs
+          example: 2
+        sm:
+          type: number
+          description: Radius sm
+          example: 4
+        md:
+          type: number
+          description: Radius md
+          example: 8
+        lg:
+          type: number
+          description: Radius lg
+          example: 16
+        xl:
+          type: number
+          description: Radius xl
+          example: 32
+      required:
+        - xs
+        - sm
+        - md
+        - lg
+        - xl
+    ThemeShadowSpecDto:
+      type: object
+      properties:
+        'y':
+          type: number
+          description: Offset verticale
+          example: 1
+        blur:
+          type: number
+          description: Sfocatura
+          example: 3
+        spread:
+          type: number
+          description: Espansione
+          example: 0
+        opacity:
+          type: number
+          description: Opacità del nero (0–1)
+          example: 0.05
+      required:
+        - 'y'
+        - blur
+        - spread
+        - opacity
+    ThemeShadowsDto:
+      type: object
+      properties:
+        xs:
+          description: Ombra xs
+          allOf:
+            - $ref: '#/components/schemas/ThemeShadowSpecDto'
+        sm:
+          description: Ombra sm
+          allOf:
+            - $ref: '#/components/schemas/ThemeShadowSpecDto'
+        md:
+          description: Ombra md
+          allOf:
+            - $ref: '#/components/schemas/ThemeShadowSpecDto'
+        lg:
+          description: Ombra lg
+          allOf:
+            - $ref: '#/components/schemas/ThemeShadowSpecDto'
+        xl:
+          description: Ombra xl
+          allOf:
+            - $ref: '#/components/schemas/ThemeShadowSpecDto'
+      required:
+        - xs
+        - sm
+        - md
+        - lg
+        - xl
+    ThemeButtonDefaultsDto:
+      type: object
+      properties:
+        variant:
+          type: string
+          description: Variant di default
+          enum:
+            - unset
+            - filled
+            - light
+            - outline
+            - subtle
+            - default
+            - gradient
+          example: unset
+        size:
+          type: string
+          description: Size di default
+          enum:
+            - unset
+            - xs
+            - sm
+            - md
+            - lg
+            - xl
+          example: unset
+        radius:
+          type: string
+          description: Radius di default
+          enum:
+            - unset
+            - xs
+            - sm
+            - md
+            - lg
+            - xl
+          example: unset
+      required:
+        - variant
+        - size
+        - radius
+    ThemeActionIconDefaultsDto:
+      type: object
+      properties:
+        variant:
+          type: string
+          description: Variant di default
+          enum:
+            - unset
+            - filled
+            - light
+            - outline
+            - subtle
+            - default
+            - transparent
+          example: unset
+        radius:
+          type: string
+          description: Radius di default
+          enum:
+            - unset
+            - xs
+            - sm
+            - md
+            - lg
+            - xl
+          example: unset
+      required:
+        - variant
+        - radius
+    ThemeBadgeDefaultsDto:
+      type: object
+      properties:
+        variant:
+          type: string
+          description: Variant di default
+          enum:
+            - unset
+            - filled
+            - light
+            - outline
+            - dot
+            - default
+          example: unset
+        size:
+          type: string
+          description: Size di default
+          enum:
+            - unset
+            - xs
+            - sm
+            - md
+            - lg
+            - xl
+          example: unset
+        radius:
+          type: string
+          description: Radius di default
+          enum:
+            - unset
+            - xs
+            - sm
+            - md
+            - lg
+            - xl
+          example: unset
+      required:
+        - variant
+        - size
+        - radius
+    ThemeInputDefaultsDto:
+      type: object
+      properties:
+        variant:
+          type: string
+          description: Variant di default
+          enum:
+            - unset
+            - default
+            - filled
+            - unstyled
+          example: unset
+        size:
+          type: string
+          description: Size di default
+          enum:
+            - unset
+            - xs
+            - sm
+            - md
+            - lg
+            - xl
+          example: unset
+        radius:
+          type: string
+          description: Radius di default
+          enum:
+            - unset
+            - xs
+            - sm
+            - md
+            - lg
+            - xl
+          example: unset
+      required:
+        - variant
+        - size
+        - radius
+    ThemeCardDefaultsDto:
+      type: object
+      properties:
+        shadow:
+          type: string
+          description: Ombra di default
+          enum:
+            - unset
+            - none
+            - xs
+            - sm
+            - md
+            - lg
+            - xl
+          example: unset
+        radius:
+          type: string
+          description: Radius di default
+          enum:
+            - unset
+            - xs
+            - sm
+            - md
+            - lg
+            - xl
+          example: unset
+        padding:
+          type: string
+          description: Padding di default
+          enum:
+            - unset
+            - xs
+            - sm
+            - md
+            - lg
+            - xl
+          example: unset
+        withBorder:
+          type: boolean
+          description: Bordo visibile (withBorder)
+          example: false
+      required:
+        - shadow
+        - radius
+        - padding
+        - withBorder
+    ThemeModalDefaultsDto:
+      type: object
+      properties:
+        radius:
+          type: string
+          description: Radius di default
+          enum:
+            - unset
+            - xs
+            - sm
+            - md
+            - lg
+            - xl
+          example: unset
+        shadow:
+          type: string
+          description: Ombra di default
+          enum:
+            - unset
+            - none
+            - xs
+            - sm
+            - md
+            - lg
+            - xl
+          example: unset
+        padding:
+          type: string
+          description: Padding di default
+          enum:
+            - unset
+            - xs
+            - sm
+            - md
+            - lg
+            - xl
+          example: unset
+        overlayBlur:
+          type: number
+          description: Blur overlay (0–12)
+          example: 0
+        centered:
+          type: boolean
+          description: Modale centrata verticalmente
+          example: false
+      required:
+        - radius
+        - shadow
+        - padding
+        - overlayBlur
+        - centered
+    ThemeTableDefaultsDto:
+      type: object
+      properties:
+        striped:
+          type: boolean
+          description: Righe alternate
+          example: false
+        highlightOnHover:
+          type: boolean
+          description: Evidenzia riga al passaggio
+          example: false
+        withTableBorder:
+          type: boolean
+          description: Bordo esterno tabella
+          example: false
+        withColumnBorders:
+          type: boolean
+          description: Bordi tra le colonne
+          example: false
+        verticalSpacing:
+          type: string
+          description: Spaziatura verticale delle celle
+          enum:
+            - unset
+            - xs
+            - sm
+            - md
+            - lg
+            - xl
+          example: unset
+      required:
+        - striped
+        - highlightOnHover
+        - withTableBorder
+        - withColumnBorders
+        - verticalSpacing
+    ThemeTooltipDefaultsDto:
+      type: object
+      properties:
+        withArrow:
+          type: boolean
+          description: Freccia sul tooltip
+          example: false
+        radius:
+          type: string
+          description: Radius di default
+          enum:
+            - unset
+            - xs
+            - sm
+            - md
+            - lg
+            - xl
+          example: unset
+      required:
+        - withArrow
+        - radius
+    ThemeLoaderDefaultsDto:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Tipo di animazione
+          enum:
+            - unset
+            - oval
+            - bars
+            - dots
+          example: unset
+      required:
+        - type
+    ThemeComponentsDto:
+      type: object
+      properties:
+        button:
+          description: Default Button
+          allOf:
+            - $ref: '#/components/schemas/ThemeButtonDefaultsDto'
+        actionIcon:
+          description: Default ActionIcon
+          allOf:
+            - $ref: '#/components/schemas/ThemeActionIconDefaultsDto'
+        badge:
+          description: Default Badge
+          allOf:
+            - $ref: '#/components/schemas/ThemeBadgeDefaultsDto'
+        input:
+          description: Default campi input
+          allOf:
+            - $ref: '#/components/schemas/ThemeInputDefaultsDto'
+        card:
+          description: Default Paper/Card
+          allOf:
+            - $ref: '#/components/schemas/ThemeCardDefaultsDto'
+        modal:
+          description: Default Modal/Drawer
+          allOf:
+            - $ref: '#/components/schemas/ThemeModalDefaultsDto'
+        table:
+          description: Default Table
+          allOf:
+            - $ref: '#/components/schemas/ThemeTableDefaultsDto'
+        tooltip:
+          description: Default Tooltip
+          allOf:
+            - $ref: '#/components/schemas/ThemeTooltipDefaultsDto'
+        loader:
+          description: Default Loader
+          allOf:
+            - $ref: '#/components/schemas/ThemeLoaderDefaultsDto'
+      required:
+        - button
+        - actionIcon
+        - badge
+        - input
+        - card
+        - modal
+        - table
+        - tooltip
+        - loader
+    ThemeSchemeTokensDto:
+      type: object
+      properties:
+        pageBg:
+          type: string
+          description: Sfondo applicativo
+          example: '#f8f9fa'
+        cardBg:
+          type: string
+          description: Sfondo card / superfici contenuto
+          example: '#ffffff'
+        cardBorder:
+          type: string
+          description: Bordo card
+          example: '#ffffff'
+        textPrimary:
+          type: string
+          description: Testo principale
+          example: '#000000'
+        textSecondary:
+          type: string
+          description: Testo secondario/dimmed
+          example: '#868e96'
+        headingH1:
+          type: string
+          description: Colore del titolo H1
+          example: '#000000'
+        headingH2:
+          type: string
+          description: Colore del titolo H2
+          example: '#000000'
+        headingH3:
+          type: string
+          description: Colore del titolo H3
+          example: '#000000'
+        headingH4:
+          type: string
+          description: Colore del titolo H4
+          example: '#000000'
+        headingH5:
+          type: string
+          description: Colore del titolo H5
+          example: '#000000'
+        headingH6:
+          type: string
+          description: Colore del titolo H6
+          example: '#000000'
+        navbarBg:
+          type: string
+          description: Sfondo sidebar
+          example: '#242424'
+        navbarText:
+          type: string
+          description: Testo voci navbar
+          example: '#b8b8b8'
+        navbarHoverBg:
+          type: string
+          description: Sfondo hover voce navbar
+          example: '#2e2e2e'
+        navbarActiveBg:
+          type: string
+          description: Sfondo voce navbar attiva
+          example: '#1971c2'
+        navbarActiveText:
+          type: string
+          description: Testo voce navbar attiva
+          example: '#ffffff'
+        navbarBorder:
+          type: string
+          description: Bordi interni sidebar
+          example: '#3b3b3b'
+      required:
+        - pageBg
+        - cardBg
+        - cardBorder
+        - textPrimary
+        - textSecondary
+        - headingH1
+        - headingH2
+        - headingH3
+        - headingH4
+        - headingH5
+        - headingH6
+        - navbarBg
+        - navbarText
+        - navbarHoverBg
+        - navbarActiveBg
+        - navbarActiveText
+        - navbarBorder
+    ThemeConfigDto:
+      type: object
+      properties:
+        version:
+          type: number
+          description: Versione del contratto ThemeConfig
+          example: 7
+          enum:
+            - 7
+        navbarWidth:
+          type: number
+          description: Larghezza sidebar espansa
+          example: 210
+        navbarWidthUnit:
+          type: string
+          description: Unità CSS di navbarWidth (v7)
+          enum:
+            - px
+            - em
+            - rem
+            - '%'
+          example: px
+        navbarDefaultCollapsed:
+          type: boolean
+          description: Sidebar chiusa (solo icone) di default al caricamento
+          example: false
+        navbarEdgeStyle:
+          type: string
+          description: >-
+            Stile del bordo destro della sidebar: bordo sottile o ombra
+            proiettata
+          enum:
+            - border
+            - shadow
+          example: border
+        navbarEdgeShadowIntensity:
+          type: number
+          description: >-
+            Intensità (0–1) dell'ombra del bordo destro sidebar quando
+            navbarEdgeStyle è 'shadow'
+          example: 0.16
+        colors:
+          description: I 9 colori semantici del tema
+          allOf:
+            - $ref: '#/components/schemas/ThemeColorsDto'
+        primaryShade:
+          description: Shade filled per scheme
+          allOf:
+            - $ref: '#/components/schemas/ThemePrimaryShadeDto'
+        radius:
+          type: string
+          description: Radius di default dei componenti
+          enum:
+            - xs
+            - sm
+            - md
+            - lg
+            - xl
+          example: md
+        focusRing:
+          type: string
+          description: Anello di focus
+          enum:
+            - auto
+            - always
+            - never
+          example: auto
+        cursorType:
+          type: string
+          description: Cursore sui controlli interattivi
+          enum:
+            - default
+            - pointer
+          example: default
+        respectReducedMotion:
+          type: boolean
+          description: Rispetta prefers-reduced-motion
+          example: false
+        autoContrast:
+          type: boolean
+          description: Contrasto automatico sui filled
+          example: false
+        luminanceThreshold:
+          type: number
+          description: Soglia di luminanza per autoContrast (0–1)
+          example: 0.3
+        scale:
+          type: number
+          description: Scala globale interfaccia (0.75–1.5)
+          example: 1
+        defaultGradient:
+          description: Gradiente di default
+          allOf:
+            - $ref: '#/components/schemas/ThemeGradientDto'
+        typography:
+          description: Blocco tipografico
+          allOf:
+            - $ref: '#/components/schemas/ThemeTypographyDto'
+        spacing:
+          description: Scala di spaziatura xs–xl
+          allOf:
+            - $ref: '#/components/schemas/ThemeSpacingDto'
+        spacingUnit:
+          type: string
+          description: Unità CSS di spacing (v7)
+          enum:
+            - px
+            - em
+            - rem
+            - '%'
+          example: px
+        radiusScale:
+          description: Valori dei radius token xs–xl
+          allOf:
+            - $ref: '#/components/schemas/ThemeRadiusScaleDto'
+        radiusScaleUnit:
+          type: string
+          description: Unità CSS di radiusScale (v7)
+          enum:
+            - px
+            - em
+            - rem
+            - '%'
+          example: px
+        shadows:
+          description: Ombre xs–xl strutturate
+          allOf:
+            - $ref: '#/components/schemas/ThemeShadowsDto'
+        shadowUnit:
+          type: string
+          description: Unità CSS di shadows (v7) — solo lunghezze, mai %
+          enum:
+            - px
+            - em
+            - rem
+          example: px
+        components:
+          description: Default per-componente
+          allOf:
+            - $ref: '#/components/schemas/ThemeComponentsDto'
+        light:
+          description: Token per lo scheme chiaro
+          allOf:
+            - $ref: '#/components/schemas/ThemeSchemeTokensDto'
+        dark:
+          description: Token per lo scheme scuro
+          allOf:
+            - $ref: '#/components/schemas/ThemeSchemeTokensDto'
+      required:
+        - version
+        - navbarWidth
+        - navbarWidthUnit
+        - navbarDefaultCollapsed
+        - navbarEdgeStyle
+        - navbarEdgeShadowIntensity
+        - colors
+        - primaryShade
+        - radius
+        - focusRing
+        - cursorType
+        - respectReducedMotion
+        - autoContrast
+        - luminanceThreshold
+        - scale
+        - defaultGradient
+        - typography
+        - spacing
+        - spacingUnit
+        - radiusScale
+        - radiusScaleUnit
+        - shadows
+        - shadowUnit
+        - components
+        - light
+        - dark
+    UploadFileDto:
+      type: object
+      properties:
+        entity:
+          type: string
+          description: Nome tabella/dominio a cui associare il file
+          example: invoice
+          maxLength: 100
+        entityId:
+          type: string
+          description: Id/guid dell'entità di dominio da associare
+          example: a1b2c3d4e5f6a7b8
+          maxLength: 100
+    FileMetadataDto:
+      type: object
+      properties:
+        guid:
+          type: string
+          description: Identificatore pubblico del file, usato nelle URL
+          example: a1b2c3d4e5f6a7b8
+        originalName:
+          type: string
+          description: Nome file originale (solo display)
+          example: fattura-2026-001.pdf
+        mimeType:
+          type: string
+          description: MIME type dichiarato dal client
+          example: application/pdf
+        sizeBytes:
+          type: number
+          description: Dimensione del file in byte
+          example: 348213
+        entity:
+          type: object
+          description: Nome tabella/dominio a cui il file è associato, se presente
+          example: invoice
+          nullable: true
+        entityId:
+          type: object
+          description: Id/guid dell'entità di dominio associata, se presente
+          example: a1b2c3d4e5f6a7b8
+          nullable: true
+        createdAt:
+          format: date-time
+          type: string
+          description: Data di caricamento
+          example: '2026-07-23T10:00:00.000Z'
+      required:
+        - guid
+        - originalName
+        - mimeType
+        - sizeBytes
+        - createdAt
+    UnreadCountDto:
+      type: object
+      properties:
+        count:
+          type: number
+          description: Numero di notifiche non lette del chiamante
+          example: 3
+      required:
+        - count
+    NotificationDto:
+      type: object
+      properties:
+        guid:
+          type: string
+          description: Identificatore pubblico della notifica, usato nelle URL
+          example: a1b2c3d4e5f6a7b8
+        type:
+          type: string
+          description: Codice tipo libero, definito dal progetto verticale
+          example: system.info
+        title:
+          type: string
+          description: Titolo breve
+          example: Nuovo documento caricato
+        message:
+          type: string
+          description: Testo del messaggio
+          example: Il file "fattura.pdf" è stato caricato con successo.
+        link:
+          type: object
+          description: Percorso frontend su cui portare l'utente al click, se presente
+          example: /files
+          nullable: true
+        isRead:
+          type: boolean
+          description: Se la notifica è già stata letta
+          example: false
+        createdAt:
+          format: date-time
+          type: string
+          description: Data di creazione
+          example: '2026-07-23T10:00:00.000Z'
+      required:
+        - guid
+        - type
+        - title
+        - message
+        - isRead
+        - createdAt
+    MarkAllReadDto:
+      type: object
+      properties:
+        updated:
+          type: number
+          description: Numero di notifiche aggiornate
+          example: 3
+      required:
+        - updated

@@ -1,0 +1,17 @@
+info:
+  name: End Impersonation
+  type: http
+  seq: 16
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/end-impersonation"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

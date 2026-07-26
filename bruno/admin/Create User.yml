@@ -1,0 +1,27 @@
+info:
+  name: Create User
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/admin/users"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Mario",
+        "surname": "Rossi",
+        "email": "mario.rossi@example.com",
+        "role": 30,
+        "scopeId": null
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

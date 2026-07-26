@@ -1,0 +1,21 @@
+/* Card bianca per pagine non-elenco. Vedi ContentCard.tsx. */
+
+.card {
+  /* var(--mantine-color-body) segue già lo scheme chiaro/scuro: nessun override manuale. */
+  background: var(--app-card-bg, var(--mantine-color-body));
+  border-radius: 16px;
+  /*
+   * Il "bordo" card del customizer (--app-card-border, ADR-4) è reso come
+   * anello box-shadow e non come proprietà border: un border reale, anche
+   * transparent, sposterebbe il contenuto di 1px rompendo la pixel-identity
+   * con i default. Con il token assente l'anello è transparent = invisibile.
+   */
+  box-shadow: 0 0 0 1px var(--app-card-border, transparent), var(--mantine-shadow-sm);
+  padding: 24px;
+  /*
+   * Niente min-height: 100vh qui — il calcolo non conosce l'altezza del
+   * PageHeader che sta sopra (sull'area grigia), quindi su pagine con poco
+   * contenuto forzava la card a superare il viewport e mostrava la barra di
+   * scorrimento della pagina anche senza reale overflow di contenuto.
+   */
+}

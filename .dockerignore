@@ -1,0 +1,26 @@
+# Dipendenze e build locali — reinstallate/ricostruite dentro l'immagine
+node_modules
+**/node_modules
+dist
+**/dist
+
+# Ambiente/segreti — mai nel contesto di build
+.env
+.env.*
+!.env.example
+
+# Log
+logs
+**/logs
+*.log
+
+# VCS/CI/editor
+.git
+.github
+.vscode
+.idea
+
+# Documentazione e testing non necessari a runtime
+docs
+bruno
+*.md

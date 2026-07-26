@@ -1,0 +1,42 @@
+{
+  "name": "starter-kit",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "app/*"
+  ],
+  "overrides": {
+    "react": "^19",
+    "react-dom": "^19",
+    "esbuild": "^0.25.12",
+    "js-yaml": "^4.3.0"
+  },
+  "scripts": {
+    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run start:dev --workspace=app/backend",
+    "dev:frontend": "npm run dev --workspace=app/frontend",
+    "build:backend": "npm run build --workspace=app/backend",
+    "build:frontend": "npm run build --workspace=app/frontend",
+    "build": "npm run build:backend && npm run build:frontend",
+    "db:generate": "npm run db:generate --workspace=app/backend",
+    "db:migrate": "npm run db:migrate --workspace=app/backend",
+    "seed": "npm run seed --workspace=app/backend",
+    "openapi:export": "npm run openapi:export --workspace=app/backend",
+    "openapi:types": "openapi-typescript docs/openapi.yaml -o app/frontend/src/types/api.types.ts",
+    "test": "npm run test --workspace=app/backend && npm run test --workspace=app/frontend",
+    "test:e2e": "npm run test:e2e --workspace=app/backend -- --runInBand --forceExit",
+    "clean": "npx rimraf app/backend/dist app/frontend/dist node_modules app/backend/node_modules app/frontend/node_modules",
+    "lint:backend": "npm run lint --workspace=app/backend",
+    "lint:frontend": "npm run lint --workspace=app/frontend",
+    "lint": "npm run lint --workspaces --if-present",
+    "format:backend": "npm run format --workspace=app/backend",
+    "format:frontend": "npm run format --workspace=app/frontend",
+    "format": "npm run format --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "openapi-typescript": "^7.13.0",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.7.0"
+  }
+}

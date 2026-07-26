@@ -1,0 +1,31 @@
+/*
+ * Layout del Drawer di form: intestazione + barra azioni sticky in cima,
+ * campi scrollabili sotto. Il Drawer Mantine ha `padding=0`: la spaziatura
+ * è gestita qui per consentire all'intestazione di restare sticky a filo del
+ * bordo superiore dell'area di scroll.
+ */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+/* Intestazione + barra azioni: restano in cima durante lo scroll dei campi. */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--mantine-color-body);
+  /* Riga di chiusura sotto la barra azioni (delimita l'intera testata). */
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+}
+
+/* Riga sotto il titolo che separa l'intestazione dalla barra azioni. */
+.titleRow {
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+}
+
+.body {
+  padding: var(--mantine-spacing-md);
+}

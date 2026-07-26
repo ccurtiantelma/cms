@@ -1,0 +1,21 @@
+info:
+  name: Toggle Active User
+  type: http
+  seq: 5
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/app/admin/users/:guid/toggle-active"
+  params:
+    - name: guid
+      value: 0123456789abcdef
+      type: path
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

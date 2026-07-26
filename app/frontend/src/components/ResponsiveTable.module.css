@@ -1,0 +1,22 @@
+/* Stili di ResponsiveTable: header di colonna ordinabile (vedi ResponsiveTable.tsx). */
+
+/* Header colonne: minuscolo, maiuscoletto, grigio — coerente col design. */
+.table :global(thead th) {
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--app-text-secondary, var(--mantine-color-gray-6));
+}
+
+/* Bottone dell'header cliccabile per l'ordinamento: occupa tutta la cella. */
+.sortButton {
+  width: 100%;
+  font-weight: inherit;
+  font-size: inherit;
+}
+
+/* Icona "non ordinato": attenuata finché la colonna non è attiva. */
+.sortIconIdle {
+  color: var(--mantine-color-gray-5);
+}

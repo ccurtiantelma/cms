@@ -1,0 +1,30 @@
+info:
+  name: Update User
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/app/admin/users/:guid"
+  params:
+    - name: guid
+      value: 0123456789abcdef
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Mario",
+        "surname": "Rossi",
+        "role": 20,
+        "scopeId": null
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

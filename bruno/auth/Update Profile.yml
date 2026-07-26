@@ -1,0 +1,24 @@
+info:
+  name: Update Profile
+  type: http
+  seq: 10
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/auth/me"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Mario",
+        "surname": "Rossi"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

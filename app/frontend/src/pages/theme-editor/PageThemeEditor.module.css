@@ -1,0 +1,157 @@
+/*
+ * Layout dell'Editor tema (ADR-4): pagina confinata all'altezza disponibile
+ * (niente scrollbar di pagina) — header fisso in alto, sotto due colonne che
+ * scorrono ciascuna sul proprio asse: al centro (più ampia) le sezioni
+ * impilate con titolo + demo reale del componente (una vera `ContentCard` per
+ * "Card", testo reale per "Testi", ecc.), a destra i campi modificabili della
+ * sezione attiva (sincronizzata con l'ancora cliccata nella sidebar
+ * applicativa, vedi LayoutProtected).
+ *
+ * `.page` è alto quanto lo spazio reale disponibile in `AppShell.Main`
+ * (100dvh meno il padding top+bottom che l'AppShell applica al Main via la
+ * prop `padding="md"`) con `overflow: hidden`: il documento non scrolla mai,
+ * solo `.center` e `.panel` hanno un proprio scroll interno indipendente.
+ */
+
+.page {
+  height: calc(100dvh - (2 * var(--mantine-spacing-md)));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-md);
+  padding: 4px 0 16px;
+  /* `--mantine-color-body` (non `--mantine-color-gray-0`, sempre chiaro) segue
+     lo scheme attivo quando `--app-page-bg` non è impostato — stesso fix di
+     `.panelHeader` più sotto, stesso bug: a scheme scuro il vecchio fallback
+     restava chiaro, rendendo il titolo pressoché illeggibile. */
+  background-color: var(--app-page-bg, var(--mantine-color-body));
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+  margin-bottom: var(--mantine-spacing-md);
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  gap: var(--mantine-spacing-lg);
+}
+
+@media (max-width: 62em) {
+  .page {
+    height: auto;
+    overflow: visible;
+  }
+
+  .body {
+    flex-direction: column;
+  }
+}
+
+/* --- Colonna centrale (più ampia): sezioni impilate con demo reale, scroll
+   interno indipendente dal pannello a destra. Lo scroll nativo del browser è
+   sostituito da Mantine ScrollArea (stessa soluzione già usata per le voci di
+   navigazione in LayoutProtected): scrollbar sottile coerente col resto
+   dell'app, senza le frecce/zone morte della scrollbar nativa del sistema
+   operativo. */
+.center {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  border-radius: var(--mantine-radius-md);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+@media (max-width: 62em) {
+  .center {
+    height: auto;
+  }
+}
+
+.centerContent {
+  padding: var(--mantine-spacing-md) calc(var(--mantine-spacing-md) + 4px) var(--mantine-spacing-md)
+    var(--mantine-spacing-md);
+}
+
+@media (max-width: 62em) {
+  .centerContent {
+    padding: var(--mantine-spacing-md);
+  }
+}
+
+.section {
+  scroll-margin-top: var(--mantine-spacing-md);
+}
+
+/* Separatore di fine sezione: rende evidente, scorrendo, dove finisce la voce
+   di menu corrente e dove inizia la successiva. Chrome dell'editor stesso
+   (non un token brandizzabile), coerente col bordo fisso di `.panel`. */
+.sectionDivider {
+  margin: var(--mantine-spacing-xl) 0 calc(var(--mantine-spacing-xl) * 1.5);
+}
+
+/* --- Colonna destra: nessun riquadro, solo un bordino grigio a sinistra,
+   piena altezza della pagina, scroll interno indipendente dal centro. Come
+   `.center`, lo scroll nativo è sostituito da Mantine ScrollArea.
+   Niente padding orizzontale qui: deve restare all'header (`.panelHeader`) e
+   al corpo (`.panelBody`) separatamente, altrimenti il bordo sinistro resta
+   staccato dallo sfondo dell'header sticky (che è figlio del Viewport dello
+   ScrollArea, quindi erediterebbe lo stesso inset) invece di toccarlo. */
+.panel {
+  flex: 0 0 340px;
+  height: 100%;
+  border-left: 1px solid var(--mantine-color-gray-3);
+}
+
+@media (max-width: 62em) {
+  .panel {
+    flex: 1 1 auto;
+    width: 100%;
+    height: auto;
+    border-left: none;
+    border-top: 1px solid var(--mantine-color-gray-3);
+  }
+}
+
+/* Titolo della sezione attiva: resta ancorato in cima al pannello mentre i
+   campi sottostanti scorrono (stesso scroll container di `.panel`). Sfondo
+   opaco obbligatorio: senza, i campi che scorrono sotto restano visibili in
+   trasparenza dietro il titolo. `--mantine-color-body` (non
+   `--mantine-color-gray-0`, che resta chiaro anche a scheme scuro) segue
+   correttamente lo scheme attivo quando `--app-page-bg` non è impostato.
+   Occupa tutta la riga (nessun padding orizzontale su `.panel`): il padding
+   è qui, sul titolo, così resta ben distanziato dal bordo invece di esserci
+   appiccicato. `margin-bottom` separa l'header dal corpo sottostante
+   (`.panelBody`), che altrimenti gli resterebbe incollato. */
+.panelHeader {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--app-page-bg, var(--mantine-color-body));
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+  padding: var(--mantine-spacing-lg) var(--mantine-spacing-md) var(--mantine-spacing-sm);
+  margin-bottom: var(--mantine-spacing-md);
+}
+
+.panelBody {
+  padding: 0 var(--mantine-spacing-md) var(--mantine-spacing-md);
+}
+
+.emptyState {
+  height: 100%;
+  padding: 0 var(--mantine-spacing-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mantine-spacing-sm);
+  color: var(--mantine-color-gray-5);
+  text-align: center;
+}

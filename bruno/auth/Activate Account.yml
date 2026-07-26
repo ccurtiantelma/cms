@@ -1,0 +1,21 @@
+info:
+  name: Activate Account
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/activate"
+  body:
+    type: json
+    data: |-
+      {
+        "token": "activation-token-example",
+        "password": "Password123!"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

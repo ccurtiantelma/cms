@@ -1,0 +1,28 @@
+info:
+  name: List Notifications
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/app/notifications?p=1&i=20"
+  params:
+    - name: p
+      value: "1"
+      type: query
+    - name: i
+      value: "20"
+      type: query
+    - name: unreadOnly
+      value: "true"
+      type: query
+      disabled: true
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

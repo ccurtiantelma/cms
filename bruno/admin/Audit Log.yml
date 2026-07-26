@@ -1,0 +1,40 @@
+info:
+  name: Audit Log
+  type: http
+  seq: 7
+
+http:
+  method: GET
+  url: "{{baseUrl}}/app/admin/audit-log?p=1&i=20"
+  params:
+    - name: p
+      value: "1"
+      type: query
+    - name: i
+      value: "20"
+      type: query
+    - name: userId
+      value: ""
+      type: query
+      disabled: true
+    - name: action
+      value: ""
+      type: query
+      disabled: true
+    - name: dateFrom
+      value: ""
+      type: query
+      disabled: true
+    - name: dateTo
+      value: ""
+      type: query
+      disabled: true
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

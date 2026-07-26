@@ -1,0 +1,25 @@
+/* Stili delle demo dal vivo dell'Editor tema (vedi ThemeEditorDemos.tsx). */
+
+.demoCard {
+  max-width: 420px;
+  flex: 1 1 260px;
+}
+
+.shadowSample {
+  width: 72px;
+}
+
+.scaleLabel {
+  width: 24px;
+  flex-shrink: 0;
+}
+
+.spacingBar {
+  height: 10px;
+  border-radius: var(--mantine-radius-sm);
+  background: var(--mantine-primary-color-filled);
+}
+
+.inputsDemo {
+  max-width: 420px;
+}

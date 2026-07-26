@@ -1,0 +1,7 @@
+/* Stili dei pannelli di modifica dell'Editor tema (vedi ThemeEditorPanels.tsx). */
+
+.headingLabel {
+  width: 24px;
+  flex-shrink: 0;
+  padding-bottom: 8px;
+}

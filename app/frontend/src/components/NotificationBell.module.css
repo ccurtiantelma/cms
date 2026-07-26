@@ -1,0 +1,42 @@
+/* Bottone campanella: stesso stile "box bordato" dei tasti azione della sidebar (vedi LayoutProtected.module.css). */
+.bellButton {
+  border: 1px solid var(--app-navbar-border, var(--mantine-color-gray-4));
+  border-radius: 8px;
+}
+
+.bellButton:hover {
+  background-color: var(--app-navbar-hover-bg, var(--mantine-color-gray-1));
+}
+
+.header {
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+}
+
+.markAllButton {
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-blue-6);
+}
+
+.markAllButton:hover {
+  text-decoration: underline;
+}
+
+.item {
+  display: block;
+  width: 100%;
+  padding: var(--mantine-spacing-sm);
+  text-align: left;
+  border-bottom: 1px solid var(--mantine-color-gray-1);
+}
+
+.item:hover {
+  background-color: var(--mantine-color-gray-0);
+}
+
+.itemUnread {
+  background-color: var(--mantine-color-blue-0);
+}
+
+.itemUnread:hover {
+  background-color: var(--mantine-color-blue-1);
+}

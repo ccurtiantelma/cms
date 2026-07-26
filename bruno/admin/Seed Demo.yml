@@ -1,0 +1,17 @@
+info:
+  name: Seed Demo
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/admin/system/seed-demo"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

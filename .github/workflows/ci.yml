@@ -1,0 +1,179 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Nessun job scrive su repo/PR (solo checkout, lint, test, build, `git diff --exit-code`
+# locale in openapi-sync): GITHUB_TOKEN limitato in sola lettura, principio del privilegio minimo.
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  backend:
+    name: Backend (lint + test + build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies (workspaces)
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint:backend
+
+      - name: Unit test
+        run: npm run test --workspace=app/backend
+
+      - name: Build
+        run: npm run build:backend
+
+  frontend:
+    name: Frontend (lint + test + build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies (workspaces)
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint:frontend
+
+      - name: Unit test
+        run: npm run test --workspace=app/frontend
+
+      - name: Build
+        run: npm run build:frontend
+
+  backend-e2e:
+    name: Backend E2E (Postgres + Redis reali)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: app_db_test
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U app"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies (workspaces)
+        run: npm ci
+
+      - name: E2E test (migration + isolamento DB/Redis gestiti dalla suite stessa)
+        run: npm run test:e2e --workspace=app/backend
+
+  openapi-sync:
+    name: OpenAPI sync check (optional gate)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: app_db
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U app"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://app:app@localhost:5432/app_db
+      REDIS_URL: redis://localhost:6379
+      SECURITY_KEY: ci_only_dummy_key_min_32_characters_long
+      COOKIE_SECRET: ci_only_dummy_cookie_secret
+      COOKIE_DOMAIN: localhost
+      FRONTEND_URL: http://localhost:5173
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies (workspaces)
+        run: npm ci
+
+      - name: Apply DB migrations
+        run: npm run db:migrate --workspace=app/backend
+
+      - name: Regenerate docs/openapi.yaml
+        run: npm run openapi:export
+
+      - name: Regenerate frontend API types
+        run: npm run openapi:types
+
+      - name: Fail if generated files drifted from committed version
+        run: |
+          if ! git diff --exit-code -- docs/openapi.yaml app/frontend/src/types/api.types.ts; then
+            echo "::error::docs/openapi.yaml o app/frontend/src/types/api.types.ts non sono allineati al codice. Esegui 'npm run openapi:export && npm run openapi:types' in locale e committa il risultato."
+            exit 1
+          fi

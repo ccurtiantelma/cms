@@ -1,0 +1,21 @@
+info:
+  name: Impersonate
+  type: http
+  seq: 15
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/impersonate/:guid"
+  params:
+    - name: guid
+      value: 0123456789abcdef
+      type: path
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,23 @@
+info:
+  name: Request Activation
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/request-activation"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "user@example.com"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

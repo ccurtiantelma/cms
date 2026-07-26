@@ -1,0 +1,21 @@
+info:
+  name: Revoke Session
+  type: http
+  seq: 18
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/auth/sessions/:sessionId"
+  params:
+    - name: sessionId
+      value: 0123456789abcdef
+      type: path
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

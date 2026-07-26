@@ -1,0 +1,42 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+/**
+ * Metadata pubblica di un file caricato (mai `storageKey`/`checksumSha256`,
+ * dettagli interni del driver di storage — vedi ADR-8).
+ */
+export class FileMetadataDto {
+  @ApiProperty({
+    description: 'Identificatore pubblico del file, usato nelle URL',
+    example: 'a1b2c3d4e5f6a7b8',
+  })
+  guid!: string;
+
+  @ApiProperty({
+    description: 'Nome file originale (solo display)',
+    example: 'fattura-2026-001.pdf',
+  })
+  originalName!: string;
+
+  @ApiProperty({ description: 'MIME type dichiarato dal client', example: 'application/pdf' })
+  mimeType!: string;
+
+  @ApiProperty({ description: 'Dimensione del file in byte', example: 348213 })
+  sizeBytes!: number;
+
+  @ApiPropertyOptional({
+    description: 'Nome tabella/dominio a cui il file è associato, se presente',
+    example: 'invoice',
+    nullable: true,
+  })
+  entity?: string | null;
+
+  @ApiPropertyOptional({
+    description: "Id/guid dell'entità di dominio associata, se presente",
+    example: 'a1b2c3d4e5f6a7b8',
+    nullable: true,
+  })
+  entityId?: string | null;
+
+  @ApiProperty({ description: 'Data di caricamento', example: '2026-07-23T10:00:00.000Z' })
+  createdAt!: Date;
+}
