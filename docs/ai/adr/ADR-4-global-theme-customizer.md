@@ -1,10 +1,13 @@
 # ADR-4 — Global Theme Customizer (token semantici + cssVariablesResolver + app_settings)
 
 ## Status
-[x] In discussione · [ ] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
+[ ] In discussione · [x] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
 
 ## Data approvazione
-YYYY-MM-DD — approvato da: ___________
+2026-07-26 — approvato da: ccurti (via chat, approvazione retroattiva nell'ambito
+della chiusura della gap analysis del 2026-07-23/26: la feature era già
+implementata e in uso, ma lo status dell'ADR non era mai stato aggiornato dal
+placeholder)
 
 ## RFC di riferimento
 Nessuna RFC dedicata — bozza discussa direttamente in sessione con il maintainer

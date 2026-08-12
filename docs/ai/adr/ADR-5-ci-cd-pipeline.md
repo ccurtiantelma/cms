@@ -1,12 +1,12 @@
 # ADR-5 — Pipeline CI/CD (GitHub Actions): lint+test+build+e2e su PR, gate opzionale su sync OpenAPI
 
 ## Status
-[x] In discussione · [ ] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
+[ ] In discussione · [x] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
 
 ## Data approvazione
-N/D — in attesa di approvazione umana (bozza generata da AI, vedi `docs/instructions.md` →
-"Policy docs — chi scrive dove": gli ADR sono generati su richiesta e attendono
-approvazione, mai auto-approvati)
+2026-07-26 — approvato da: ccurti (via chat, approvazione retroattiva nell'ambito
+della chiusura della gap analysis del 2026-07-23/26: la pipeline era già
+implementata, testata e in uso da CI, ma l'ADR era rimasta in bozza)
 
 ## RFC di riferimento
 Nessuna RFC dedicata. Segue direttamente da ADR-3, che aveva scartato "Docker Compose

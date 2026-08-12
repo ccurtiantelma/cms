@@ -10,7 +10,7 @@ import PageNotFound from './components/PageNotFound';
 import PageServerError from './components/PageServerError';
 import LayoutProtected from './layouts/LayoutProtected';
 import { getToken, homePathForRole } from './utils/auth.utils';
-import { useAuth } from './hooks/useAuth';
+import { useAuthInit, useAuthStore } from './hooks/useAuth';
 import { AppUserRoles } from './types/common.types';
 
 /** Ruoli ammessi sulle rotte di amministrazione (`/users`, `/audit-log`). */
@@ -61,7 +61,8 @@ function RequireRole({
   allowed: AppUserRoles[];
   children: ReactNode;
 }): JSX.Element {
-  const { user, isLoading } = useAuth();
+  const user = useAuthStore((state) => state.user);
+  const isLoading = useAuthStore((state) => state.isLoading);
   // Senza dati utente non possiamo decidere il ruolo. Se sono ancora in caricamento
   // (GET /auth/me in corso, nessuna cache locale) mostriamo il loader per evitare un
   // flash della shell sbagliata; se il caricamento è finito senza utente il token non
@@ -77,6 +78,10 @@ function RequireRole({
 }
 
 export default function App(): JSX.Element {
+  // Sostituisce il vecchio <AuthProvider>: avvia la GET /auth/me una sola volta
+  // per sessione dell'app (vedi hooks/useAuth.ts).
+  useAuthInit();
+
   return (
     <ErrorBoundary>
       <Suspense fallback={<PageLoadingFallback />}>

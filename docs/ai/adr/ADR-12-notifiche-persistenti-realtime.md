@@ -163,6 +163,15 @@ persistita in campanella, non al suo posto — il gap descritto in Contesto era
   npx jest test/unit/notifications test/e2e/notifications.e2e-spec.ts
   --config test/e2e/jest-e2e.json` (e2e) `&& npx jest test/unit/notifications`
   (unit) dalla cartella `app/backend`; `npx tsc --noEmit` in
-  `app/frontend`. Verifica manuale end-to-end (bell in browser con
-  Postgres/Redis reali) non eseguita in questa sessione — ambiente DB/Redis
-  dev non disponibile; da fare al primo avvio reale dell'app.
+  `app/frontend`.
+
+### Addendum 2026-07-26 — verifica manuale (API)
+
+Verifica manuale eseguita (backend reale contro Postgres/Redis Docker):
+`GET /app/notifications` e `GET /app/notifications/unread-count` con JWT
+reale → `200`, roundtrip corretto contro il DB reale (lista vuota,
+nessun dato di dominio ancora creato — nessun modulo verticale chiama
+`NotificationsService.notify()` in questo starter-kit generico). Il push
+realtime via Socket.io (`AppGateway.emitToUser`) e la campanella lato
+browser restano verificati solo dai test automatici (unit + e2e con mock),
+non da un client Socket.io reale in questa sessione.

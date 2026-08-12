@@ -16,9 +16,8 @@ describe('FilesCleanupScheduler (unit)', () => {
     jest.doMock('../../../../src/common/app-constants', () => ({
       AppConstants: { filesCleanupEnabled: false, filesCleanupCronPattern: '0 3 * * *' },
     }));
-    const { FilesCleanupScheduler } = await import(
-      '../../../../src/queues/files-cleanup-queue/files-cleanup.scheduler'
-    );
+    const { FilesCleanupScheduler } =
+      await import('../../../../src/queues/files-cleanup-queue/files-cleanup.scheduler');
     const queue = buildQueue([]);
     const scheduler = new FilesCleanupScheduler(queue);
 
@@ -32,9 +31,8 @@ describe('FilesCleanupScheduler (unit)', () => {
     jest.doMock('../../../../src/common/app-constants', () => ({
       AppConstants: { filesCleanupEnabled: true, filesCleanupCronPattern: '0 3 * * *' },
     }));
-    const { FilesCleanupScheduler } = await import(
-      '../../../../src/queues/files-cleanup-queue/files-cleanup.scheduler'
-    );
+    const { FilesCleanupScheduler } =
+      await import('../../../../src/queues/files-cleanup-queue/files-cleanup.scheduler');
     const queue = buildQueue([]);
     const scheduler = new FilesCleanupScheduler(queue);
 
@@ -52,9 +50,8 @@ describe('FilesCleanupScheduler (unit)', () => {
     jest.doMock('../../../../src/common/app-constants', () => ({
       AppConstants: { filesCleanupEnabled: true, filesCleanupCronPattern: '0 3 * * *' },
     }));
-    const { FilesCleanupScheduler } = await import(
-      '../../../../src/queues/files-cleanup-queue/files-cleanup.scheduler'
-    );
+    const { FilesCleanupScheduler } =
+      await import('../../../../src/queues/files-cleanup-queue/files-cleanup.scheduler');
     const queue = buildQueue([{ key: 'existing-key', pattern: '0 3 * * *' }]);
     const scheduler = new FilesCleanupScheduler(queue);
 
@@ -68,9 +65,8 @@ describe('FilesCleanupScheduler (unit)', () => {
     jest.doMock('../../../../src/common/app-constants', () => ({
       AppConstants: { filesCleanupEnabled: true, filesCleanupCronPattern: '0 4 * * *' },
     }));
-    const { FilesCleanupScheduler } = await import(
-      '../../../../src/queues/files-cleanup-queue/files-cleanup.scheduler'
-    );
+    const { FilesCleanupScheduler } =
+      await import('../../../../src/queues/files-cleanup-queue/files-cleanup.scheduler');
     const queue = buildQueue([{ key: 'old-key', pattern: '0 3 * * *' }]);
     const scheduler = new FilesCleanupScheduler(queue);
 

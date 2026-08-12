@@ -178,8 +178,22 @@ come da identità del progetto.
   `docs/ai/progress-tracker.md`.
 - Come riverificare: `npm run build:backend && npm run lint:backend && npx jest
   test/unit/files --workspace=app/backend` (o dalla root con `--prefix
-  app/backend`). Verifica manuale end-to-end (upload reale con
-  `STORAGE_DRIVER=local` contro un DB/Redis avviati) non eseguita in questa
-  sessione — ambiente Postgres/Redis dev non disponibile (porte già occupate da
-  container di un altro progetto su questa macchina); da fare al primo avvio
-  reale dell'app.
+  app/backend`).
+
+### Addendum 2026-07-26 — verifica manuale end-to-end e test di integrazione
+
+Verifica manuale eseguita (backend reale contro Postgres/Redis Docker,
+`STORAGE_DRIVER=local`, default): upload di un file reale → `201` con
+metadata corretti; download → `200`, contenuto byte-per-byte identico
+all'originale; soft-delete → `204`; download successivo → `404`. Flusso
+completo confermato funzionante end-to-end.
+
+Aggiunto anche `app/backend/test/e2e/files.e2e-spec.ts` (7 test: upload
+happy-path, upload senza JWT → 401, download happy-path con header
+Content-Type/Content-Disposition corretti, download file inesistente → 404,
+delete come autore → 204, delete come utente diverso senza ruolo
+Admin/superiore → 403 RBAC, delete senza JWT → 401) — `DbService`,
+`STORAGE_DRIVER` e `AuditLogService` mockati, `AuthMiddleware` reale (stesso
+pattern di `notifications.e2e-spec.ts`); la verifica del driver reale resta
+sui test unit già esistenti (`local-disk.driver.spec.ts`,
+`s3-compatible.driver.spec.ts`).

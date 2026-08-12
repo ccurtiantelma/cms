@@ -234,8 +234,24 @@ VITE_SENTRY_DSN       default assente
   (4/4 verdi). Suite complete: `npm run build && npm test` dalla root — 88
   test backend + 48 test frontend verdi, lint pulito su tutti i file
   toccati da questo ADR (restano solo warning/errori preesistenti non
-  toccati da questo intervento, fuori scope). Verifica manuale end-to-end
-  (avvio reale con `SENTRY_ENABLED=true`/`METRICS_ENABLED=true` contro un
-  ambiente Postgres/Redis avviato) non eseguita in questa sessione — da
-  fare al primo avvio reale del progetto verticale che abilita
-  l'osservabilità.
+  toccati da questo intervento, fuori scope).
+
+### Addendum 2026-07-26 — verifica manuale end-to-end e bugfix `/metrics`
+
+Verifica manuale eseguita (backend reale contro Postgres/Redis Docker,
+`METRICS_ENABLED=true`): **`GET /metrics` rispondeva `401 Unauthorized`**
+nonostante l'esclusione `{ path: 'metrics', method: RequestMethod.ALL }` in
+`AppModule.configure()`. Causa: `MetricsController` è montato **fuori** dal
+prefisso globale `api/v1` (`app.setGlobalPrefix` con `exclude`, in
+`main.ts`), ma Nest applica comunque il prefisso alla risoluzione dei
+`RouteInfo` passati a `MiddlewareConsumer.exclude()` — quell'esclusione
+finiva quindi per confrontarsi con `api/v1/metrics` (mai servito), non con
+il path reale `/metrics`.
+
+Fix: bypass esplicito in cima a `AuthMiddleware.use()`
+(`app/backend/src/auth/auth.middleware.ts`) per `req.path === '/metrics'`,
+al posto dell'exclude (rimosso da `app.module.ts` con commento che spiega il
+perché). Riverificato manualmente: `GET /metrics` → `200`, formato
+Prometheus corretto, sia con token assente che con token invalido. Nessuna
+regressione: 20/20 suite unit (88 test) e 4/4 suite e2e esistenti
+(`sanity-isolation`, `auth`, `settings`, `notifications`) verdi dopo il fix.

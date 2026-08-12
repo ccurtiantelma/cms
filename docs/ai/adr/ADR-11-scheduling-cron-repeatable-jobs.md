@@ -1,12 +1,12 @@
 # ADR-11 — Scheduling: `@nestjs/schedule` (cron dichiarativo) + BullMQ repeatable jobs
 
 ## Status
-[x] In discussione · [ ] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
+[ ] In discussione · [x] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
 
 ## Data approvazione
-N/D — in attesa di approvazione umana (bozza generata da AI, vedi
-`docs/instructions.md` → "Policy docs — chi scrive dove": gli ADR sono generati
-su richiesta e attendono approvazione, mai auto-approvati).
+2026-07-26 — approvato da: ccurti (via chat, approvazione retroattiva nell'ambito
+della chiusura della gap analysis del 2026-07-23/26: scheduling e repeatable job
+erano già implementati e testati, ma l'ADR era rimasta in bozza).
 
 ## RFC di riferimento
 Nessuna RFC dedicata. Punto 6 di un'analisi/audit richiesta esplicitamente
@@ -169,7 +169,17 @@ e trattarlo come no-op.
   `test/unit` dopo le modifiche (14 suite).
 - Come riverificare: `npm run build:backend && npm run lint:backend && npx
   jest test/unit --workspace=app/backend` (o dalla root con `--prefix
-  app/backend`). Verifica manuale end-to-end (repeatable job reale contro
-  Redis avviato, con `FILES_CLEANUP_ENABLED=true` e file soft-deleted di test)
-  non eseguita in questa sessione — da fare al primo avvio reale dell'app con
-  infrastruttura Docker attiva.
+  app/backend`).
+
+### Addendum 2026-07-26 — verifica manuale (avvio)
+
+Verifica manuale eseguita (backend reale contro Postgres/Redis Docker,
+`FILES_CLEANUP_ENABLED` a default `false`): avvio pulito, log
+`[SchedulerModule]`/`[FilesCleanupQueueModule]` inizializzati senza errori,
+`[FilesCleanupScheduler] Cleanup blob orfani disabilitato
+(FILES_CLEANUP_ENABLED=false)` come atteso. L'esecuzione reale del
+repeatable job con `FILES_CLEANUP_ENABLED=true` e file soft-deleted di test
+resta verificata solo dai test automatici (`files-cleanup.processor.spec.ts`,
+`files-cleanup.scheduler.spec.ts`), non da un run a lungo termine in questa
+sessione (il cron `@Cron(CronExpression.EVERY_HOUR)` di `queue-health.task.ts`
+non è stato atteso dal vivo per lo stesso motivo).

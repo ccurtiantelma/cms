@@ -27,7 +27,7 @@ import { IconLock, IconMail, IconShield } from '@tabler/icons-react';
 import { loginApi, mfaVerifyApi } from '../../services/auth.service';
 import { getErrorMessage } from '../../utils/api.utils';
 import { homePathForRole } from '../../utils/auth.utils';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuthStore } from '../../hooks/useAuth';
 import loginStyles from './PageLogin.module.css';
 
 type LoginStep = 'credentials' | 'mfa';
@@ -95,7 +95,7 @@ function PasswordInputWithIcon({
  */
 export default function PageLogin(): JSX.Element {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const login = useAuthStore((state) => state.login);
   const [step, setStep] = useState<LoginStep>('credentials');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingTmpToken, setPendingTmpToken] = useState<string | null>(null);

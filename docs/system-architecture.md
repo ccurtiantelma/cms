@@ -327,9 +327,10 @@ app/backend/src/
   - `PATCH /api/v1/app/notifications/:guid/read` — segna letta (guid di un
     altro utente → 404, mai 403: non conferma l'esistenza della riga)
   - `PATCH /api/v1/app/notifications/read-all` — segna tutte lette
-- Frontend: hook `useNotifications` (`NotificationsProvider`, stesso pattern
-  di `useAuth`) + componente `NotificationBell` (badge + dropdown), montati
-  in `LayoutProtected` (sezione utente della sidebar, il layout non ha
+- Frontend: store `useNotificationsStore` (Zustand, stesso pattern di
+  `useAuthStore` — ADR-17) + componente `NotificationBell` (badge + dropdown).
+  Il canale (REST + Socket.io) è aperto da `useNotificationsInit()` in
+  `LayoutProtected` (sezione utente della sidebar, il layout non ha
   header). Il toast `notifications.show` resta per il feedback immediato,
   in aggiunta alla riga persistita, non al suo posto
 - Collezioni Bruno: `bruno/notifications/List Notifications.yml`,

@@ -1,12 +1,12 @@
 # ADR-7 — Health check applicativo con @nestjs/terminus (DB + Redis + BullMQ)
 
 ## Status
-[x] In discussione · [ ] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
+[ ] In discussione · [x] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
 
 ## Data approvazione
-N/D — in attesa di approvazione umana (bozza generata da AI, vedi `docs/instructions.md` →
-"Policy docs — chi scrive dove": gli ADR sono generati su richiesta e attendono
-approvazione, mai auto-approvati)
+2026-07-26 — approvato da: ccurti (via chat, approvazione retroattiva nell'ambito
+della chiusura della gap analysis del 2026-07-23/26: l'health check Terminus era
+già implementato e testato, ma l'ADR era rimasta in bozza)
 
 ## RFC di riferimento
 Nessuna RFC dedicata. Punto 3 di un'analisi/audit richiesta esplicitamente dall'umano.
@@ -104,3 +104,12 @@ richiesta).
   lint:backend` e l'intera suite `test/unit` (32/32) verdi dopo le modifiche.
 - Come riverificare: `npm run build:backend && npm run lint:backend && npx jest
   test/unit/health --workspace=app/backend` (o dalla root con `--prefix app/backend`).
+
+### Addendum 2026-07-26 — test di integrazione
+
+Aggiunto `app/backend/test/e2e/health.e2e-spec.ts` (2 test, `AppModule` reale
+contro Postgres/Redis di test, nessun mock sugli indicatori): happy path
+(`200`, tutti gli indicatori `up`) e verifica di regressione mirata che
+l'endpoint resti raggiungibile senza JWT (non `401`) — mancava una copertura
+automatica di questo secondo aspetto, a differenza della verifica manuale
+già fatta in precedenza.

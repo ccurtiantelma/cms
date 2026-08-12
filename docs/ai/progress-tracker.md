@@ -31,8 +31,10 @@
 | — | Scheduling: `@nestjs/schedule` (cron dichiarativo) + BullMQ repeatable job (pulizia blob orfani `FilesModule`) | docs/ai/adr/ADR-11-scheduling-cron-repeatable-jobs.md | ✅ Done | 2026-07-23 | 2026-07-23 |
 | — | Export liste/report — `ExportService` core (Excel via exceljs, PDF via pdfkit) | docs/ai/adr/ADR-10-export-liste-report.md | ✅ Done | 2026-07-23 | 2026-07-23 |
 | — | Notifiche persistenti (campanella/badge) + push realtime Socket.io (`NotificationsModule`, `RealtimeModule` montato) | docs/ai/adr/ADR-12-notifiche-persistenti-realtime.md | ✅ Done | 2026-07-23 | 2026-07-23 |
-| — | Gestione sessioni/dispositivi attivi (`GET/DELETE auth/sessions`, tab "Sessioni attive" in Profilo) | docs/ai/adr/ADR-13-gestione-sessioni-dispositivi.md (bozza) | ✅ Done | 2026-07-23 | 2026-07-23 |
+| — | Gestione sessioni/dispositivi attivi (`GET/DELETE auth/sessions`, tab "Sessioni attive" in Profilo) | docs/ai/adr/ADR-13-gestione-sessioni-dispositivi.md | ✅ Done | 2026-07-23 | 2026-07-23 |
 | — | Osservabilità opzionale: Sentry (backend+frontend) + endpoint Prometheus `/metrics`, entrambi opt-in dietro `AppConstants` | docs/ai/adr/ADR-15-observability-sentry-prometheus.md | ✅ Done | 2026-07-23 | 2026-07-23 |
+| — | E2E browser (Playwright): login → MFA → azione autenticata → logout | docs/ai/adr/ADR-16-e2e-browser-playwright.md | ✅ Done | 2026-07-26 | 2026-07-26 |
+| — | State management frontend con Zustand (auth/notifiche/tema, sostituisce i 3 React Context) | docs/ai/adr/ADR-17-state-management-zustand.md | ⚠️ Bloccata — codice implementato e verificato, ADR-17 in attesa di approvazione umana | 2026-08-05 | — |
 
 **Legenda**: ⏳ Pending · 🔄 In progress · ✅ Done · ⚠️ Bloccata
 

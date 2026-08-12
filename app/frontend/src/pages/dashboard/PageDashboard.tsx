@@ -8,14 +8,14 @@
 import { Card, Grid, Group, Text, Title } from '@mantine/core';
 import { IconHistory, IconUsers } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuthStore } from '../../hooks/useAuth';
 import ContentCard from '../../components/ContentCard';
 import PageHeader from '../../components/PageHeader';
 import { AppUserRoles, ROLE_LABELS } from '../../types/common.types';
 
 /** Pagina dashboard, landing page per tutti i ruoli autenticati. */
 export default function PageDashboard(): JSX.Element {
-  const { user } = useAuth();
+  const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
 
   const roleLabel =

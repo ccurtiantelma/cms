@@ -31,6 +31,20 @@ export class AuthMiddleware implements NestMiddleware {
 
   /** Verifica JWT + allowlist Redis + cookie rtk e popola `req.authInfo`. */
   async use(req: Request, res: Response, next: NextFunction): Promise<void> {
+    // `/metrics` (ADR-15) è montato FUORI dal prefisso globale `api/v1` (main.ts,
+    // `setGlobalPrefix` con `exclude`) apposta per uno scraper Prometheus, che non
+    // ha un JWT applicativo. L'`.exclude('metrics')` dichiarato in
+    // `AppModule.configure()` non basta da solo: Nest applica il prefisso globale
+    // anche alla risoluzione delle route info di `MiddlewareConsumer`, quindi quel
+    // filtro finisce per confrontarsi con `api/v1/metrics` (mai servito davvero),
+    // non con il path reale `/metrics` — verificato manualmente (401 anche con
+    // `MetricsModule` montato). Bypass esplicito qui per non dipendere da questa
+    // risoluzione implicita del prefisso.
+    if (req.path === '/metrics') {
+      next();
+      return;
+    }
+
     const auth = req.headers['authorization'];
     const rtk = req.signedCookies?.rtk;
 

@@ -19,7 +19,7 @@ import {
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { IconLogin, IconShieldOff, IconPencil, IconUser } from '@tabler/icons-react';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuthStore } from '../../hooks/useAuth';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { useColumnVisibility } from '../../hooks/useColumnVisibility';
 import { getErrorMessage } from '../../utils/api.utils';
@@ -100,7 +100,7 @@ function userToFormValues(user?: UserListItem): UserFormValues {
 
 /** Pagina di amministrazione utenti (Admin+). */
 export default function PageUsers(): JSX.Element {
-  const { user: currentUser } = useAuth();
+  const currentUser = useAuthStore((state) => state.user);
   const isSuperAdmin = currentUser?.role === AppUserRoles.SuperAdmin;
 
   const {

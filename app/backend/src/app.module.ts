@@ -119,9 +119,11 @@ export class AppModule {
       .apply(AuthMiddleware)
       .exclude(
         { path: 'health', method: RequestMethod.ALL },
-        // Scraper Prometheus (ADR-15): nessun JWT applicativo, esclusione innocua se
-        // MetricsModule non è registrato (METRICS_ENABLED=false, default).
-        { path: 'metrics', method: RequestMethod.ALL },
+        // `/metrics` (ADR-15) NON va escluso qui: essendo montato fuori dal
+        // prefisso globale `api/v1` (vedi main.ts), questo `.exclude()` finirebbe
+        // per confrontarsi con `api/v1/metrics` (mai servito) e non con il path
+        // reale — verificato manualmente (401 anche con l'entry qui). Il bypass
+        // per lo scraper Prometheus è quindi esplicito in `AuthMiddleware.use()`.
         { path: 'auth/login', method: RequestMethod.ALL },
         { path: 'auth/mfa-verify', method: RequestMethod.ALL },
         { path: 'auth/refresh', method: RequestMethod.ALL },

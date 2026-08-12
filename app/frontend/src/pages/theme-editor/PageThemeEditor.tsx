@@ -43,7 +43,7 @@ import { ThemeEditorColorPicker } from '../../components/theme-editor/ThemeEdito
 import { ThemeEditorSectionDemo } from '../../components/theme-editor/ThemeEditorDemos';
 import { ThemeEditorSectionPanel } from '../../components/theme-editor/ThemeEditorPanels';
 import { THEME_EDITOR_SECTIONS } from '../../config/themeEditorSections';
-import { useThemeColor } from '../../hooks/useThemeColor';
+import { useThemeColorStore } from '../../hooks/useThemeColor';
 import { DEFAULT_THEME_CONFIG, ThemeConfig, ThemeTokenName } from '../../theme';
 import { saveThemeConfigApi } from '../../services/settings.service';
 import classes from './PageThemeEditor.module.css';
@@ -57,7 +57,9 @@ const HEX_TOKEN_REGEX = /^#[0-9a-fA-F]{6}$/;
  * attiva in sidebar; anteprima live tramite `ThemeColorProvider`.
  */
 export default function PageThemeEditor(): JSX.Element {
-  const { themeConfig, setThemeConfig, applyServerConfig } = useThemeColor();
+  const themeConfig = useThemeColorStore((state) => state.themeConfig);
+  const setThemeConfig = useThemeColorStore((state) => state.setThemeConfig);
+  const applyServerConfig = useThemeColorStore((state) => state.applyServerConfig);
   const location = useLocation();
 
   const [editScheme, setEditScheme] = useState<'light' | 'dark'>('light');

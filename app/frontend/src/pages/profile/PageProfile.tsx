@@ -30,7 +30,7 @@ import {
   IconShieldLock,
   IconUserCircle,
 } from '@tabler/icons-react';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuthStore } from '../../hooks/useAuth';
 import { useColorScheme, type ColorScheme } from '../../hooks/useColorScheme';
 import { getErrorMessage } from '../../utils/api.utils';
 import { parseDeviceLabel } from '../../utils/device.utils';
@@ -69,7 +69,8 @@ interface MfaSetupState {
 /** Pagina Profilo Utente: tab "Dati anagrafici", "Cambio password", "Sicurezza MFA", "Tema". */
 export default function PageProfile(): JSX.Element {
   const { colorScheme, setColorScheme } = useColorScheme();
-  const { updateUserProfile, setMfaEnabled } = useAuth();
+  const updateUserProfile = useAuthStore((state) => state.updateUserProfile);
+  const setMfaEnabled = useAuthStore((state) => state.setMfaEnabled);
 
   // Tab preselezionato in navigazione (es. da MfaPromptModal → tab "mfa").
   const location = useLocation();

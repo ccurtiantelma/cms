@@ -15,7 +15,7 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconBell } from '@tabler/icons-react';
-import { useNotifications } from '../hooks/useNotifications';
+import { useNotificationsStore } from '../hooks/useNotifications';
 import classes from './NotificationBell.module.css';
 
 /** Formatta una data ISO nel formato locale italiano (data + ora), coerente con PageAuditLog. */
@@ -25,7 +25,10 @@ function formatDate(iso: string): string {
 
 export default function NotificationBell(): JSX.Element {
   const [opened, { toggle }] = useDisclosure(false);
-  const { items, unreadCount, markRead, markAllRead } = useNotifications();
+  const items = useNotificationsStore((state) => state.items);
+  const unreadCount = useNotificationsStore((state) => state.unreadCount);
+  const markRead = useNotificationsStore((state) => state.markRead);
+  const markAllRead = useNotificationsStore((state) => state.markAllRead);
 
   return (
     <Popover

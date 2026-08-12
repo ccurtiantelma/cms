@@ -1,12 +1,12 @@
 # ADR-6 — Containerizzazione di produzione: Dockerfile multi-stage + compose prod separato
 
 ## Status
-[x] In discussione · [ ] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
+[ ] In discussione · [x] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
 
 ## Data approvazione
-N/D — in attesa di approvazione umana (bozza generata da AI, vedi `docs/instructions.md` →
-"Policy docs — chi scrive dove": gli ADR sono generati su richiesta e attendono
-approvazione, mai auto-approvati)
+2026-07-26 — approvato da: ccurti (via chat, approvazione retroattiva nell'ambito
+della chiusura della gap analysis del 2026-07-23/26: Dockerfile e compose prod
+erano già implementati, ma l'ADR era rimasta in bozza)
 
 ## RFC di riferimento
 Nessuna RFC dedicata. Punto 2 di un'analisi/audit richiesta esplicitamente dall'umano.

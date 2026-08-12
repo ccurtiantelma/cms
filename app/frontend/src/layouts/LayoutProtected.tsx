@@ -31,9 +31,9 @@ import {
   IconPalette,
 } from '@tabler/icons-react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import { useThemeColor } from '../hooks/useThemeColor';
-import { NotificationsProvider } from '../hooks/useNotifications';
+import { useAuthStore } from '../hooks/useAuth';
+import { useThemeColorStore } from '../hooks/useThemeColor';
+import { useNotificationsInit } from '../hooks/useNotifications';
 import { formatNavbarWidth } from '../theme';
 import ImpersonationBanner from '../components/ImpersonationBanner';
 import MfaPromptModal from '../components/MfaPromptModal';
@@ -57,7 +57,8 @@ const THEME_EDITOR_PATH = '/theme-editor';
  * Sidebar collassabile a sinistra + area contenuto con card bianca.
  */
 export default function LayoutProtected(): JSX.Element {
-  const { reconcileThemeFromServer, themeConfig } = useThemeColor();
+  const reconcileThemeFromServer = useThemeColorStore((state) => state.reconcileThemeFromServer);
+  const themeConfig = useThemeColorStore((state) => state.themeConfig);
   // Stato espansione sidebar (desktop) e apertura drawer (mobile). Il default
   // segue `navbarDefaultCollapsed` del tema (anti-FOUC: valore già disponibile
   // sincronicamente da cache/default, vedi ThemeColorProvider) — da qui in poi
@@ -69,11 +70,18 @@ export default function LayoutProtected(): JSX.Element {
   const isMobile = useMediaQuery('(max-width: 48em)');
 
   const navigate = useNavigate();
-  // Stato MFA dell'utente (da GET /auth/me, recuperato una sola volta da AuthProvider)
+  // Stato MFA dell'utente (da GET /auth/me, recuperato una sola volta dall'auth store)
   // — determina se mostrare il modal "Proteggi il tuo account".
-  const { user, logout, isMfaEnabled } = useAuth();
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+  const isMfaEnabled = useAuthStore((state) => state.isMfaEnabled);
   const location = useLocation();
   const colorScheme = useComputedColorScheme('light');
+
+  // Connette il canale notifiche (REST + Socket.io) solo per utenti autenticati:
+  // questo layout è l'unico punto dell'app dove monta (sostituisce il vecchio
+  // <NotificationsProvider>).
+  useNotificationsInit();
 
   // Riconciliazione tema post-login (ADR-4 §4): questo layout monta solo ad
   // utente autenticato — la cache anti-FOUC già applicata viene riallineata
@@ -141,7 +149,7 @@ export default function LayoutProtected(): JSX.Element {
   );
 
   return (
-    <NotificationsProvider>
+    <>
       <div className={classes.appBg} data-mantine-color-scheme={colorScheme}>
         {isMfaEnabled !== null && <MfaPromptModal isMfaEnabled={isMfaEnabled} />}
         <AppTour ref={tourRef} />
@@ -377,6 +385,6 @@ export default function LayoutProtected(): JSX.Element {
           </AppShell.Main>
         </AppShell>
       </div>
-    </NotificationsProvider>
+    </>
   );
 }

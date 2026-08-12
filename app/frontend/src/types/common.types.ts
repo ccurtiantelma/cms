@@ -29,13 +29,6 @@ export interface AuthUser {
   scopeId: string | null;
 }
 
-/** Stato globale di autenticazione esposto da `useAuth`. */
-export interface AuthState {
-  user: AuthUser | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-}
-
 /**
  * Busta di paginazione standard restituita dagli endpoint elenco
  * (`?p=&i=&q=&o=&d=` → `Pagination<T>`).

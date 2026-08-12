@@ -1,10 +1,15 @@
 /**
- * Provider + hook del tema dell'app (ADR-4). Detiene l'intero `ThemeConfig`
- * v2 (primario/palette custom, tipografia, scale, ombre, component defaults,
- * 11 token light/dark) e lo applica tramite
- * `buildAppTheme()` + `cssVariablesResolver` di Mantine — nessuna iniezione
- * manuale di stili. Sostituisce `<MantineProvider theme={theme}>` in
- * `main.tsx` ed è l'unico punto dell'app che monta `MantineProvider`.
+ * Store Zustand del tema dell'app (ADR-4) + Provider che applica il
+ * `ThemeConfig` v2 corrente (primario/palette custom, tipografia, scale,
+ * ombre, component defaults, 11 token light/dark) a Mantine tramite
+ * `buildAppTheme()` + `cssVariablesResolver` — nessuna iniezione manuale di
+ * stili. `ThemeColorProvider` sostituisce `<MantineProvider theme={theme}>`
+ * in `main.tsx` ed è l'unico punto dell'app che monta `MantineProvider`.
+ *
+ * A differenza del precedente `ThemeColorContext`, il `ThemeConfig` vive in
+ * uno store Zustand (`useThemeColorStore`): ogni consumer (`LayoutProtected`,
+ * `PageThemeEditor`) legge/scrive solo i campi che gli servono, senza dover
+ * passare per un `<Provider>` dedicato.
  *
  * Bootstrap anti-FOUC (ADR-4 §4): al mount applica sincronicamente l'ultimo
  * `ThemeConfig` valido ricevuto dal server e cachato in localStorage (o i
@@ -15,16 +20,8 @@
  * cache/default. La chiave storica per-browser `theme_primary_color` è
  * deprecata: viene rimossa al mount, il primario vive solo nel config globale.
  */
-import {
-  createContext,
-  ReactNode,
-  useCallback,
-  useContext,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { useDeferredValue, useEffect, useMemo, type ReactNode } from 'react';
+import { create } from 'zustand';
 import { MantineProvider } from '@mantine/core';
 import {
   buildAppTheme,
@@ -59,7 +56,7 @@ function readCachedConfig(): ThemeConfig | null {
   }
 }
 
-interface ThemeColorContextValue {
+interface ThemeColorStoreState {
   /** Configurazione tema correntemente applicata all'app (salvata o draft). */
   themeConfig: ThemeConfig;
   /** Applica un draft (anteprima live del Drawer): NON tocca la cache locale. */
@@ -70,42 +67,43 @@ interface ThemeColorContextValue {
   reconcileThemeFromServer: () => Promise<void>;
 }
 
-const ThemeColorContext = createContext<ThemeColorContextValue | null>(null);
-
-/**
- * Wrappa `MantineProvider` esponendo il `ThemeConfig` attivo e le funzioni per
- * cambiarlo a runtime: ogni modifica rimemoizza tema e resolver e si riflette
- * live su tutta l'app.
- */
-export function ThemeColorProvider({ children }: { children: ReactNode }): JSX.Element {
+export const useThemeColorStore = create<ThemeColorStoreState>((set, get) => ({
   // Anti-FOUC: la cache valida è applicata sincronicamente al primo render.
-  const [themeConfig, setThemeConfig] = useState<ThemeConfig>(
-    () => readCachedConfig() ?? DEFAULT_THEME_CONFIG,
-  );
+  themeConfig: readCachedConfig() ?? DEFAULT_THEME_CONFIG,
 
-  useEffect(() => {
-    // Migrazione ADR-4 §4: la scelta per-browser del solo primario non esiste più.
-    localStorage.removeItem(LEGACY_PRIMARY_COLOR_KEY);
-  }, []);
+  setThemeConfig: (config) => set({ themeConfig: config }),
 
-  const applyServerConfig = useCallback((config: ThemeConfig): void => {
-    setThemeConfig(config);
+  applyServerConfig: (config) => {
+    set({ themeConfig: config });
     localStorage.setItem(THEME_CONFIG_CACHE_KEY, JSON.stringify(config));
-  }, []);
+  },
 
-  const reconcileThemeFromServer = useCallback(async (): Promise<void> => {
+  reconcileThemeFromServer: async () => {
     try {
       const config = await getThemeConfigApi();
       // Migra le v1 storiche e scarta versioni future non note a questo client.
       const migrated = migrateThemeConfig(config);
       if (migrated) {
-        applyServerConfig(migrated);
+        get().applyServerConfig(migrated);
       }
     } catch {
       // Errori di rete/HTTP già notificati dall'interceptor Axios: si resta su
       // cache locale o default di fabbrica finché il server non risponde.
     }
-  }, [applyServerConfig]);
+  },
+}));
+
+/**
+ * Wrappa `MantineProvider` applicando il `ThemeConfig` attivo dello store:
+ * ogni modifica rimemoizza tema e resolver e si riflette live su tutta l'app.
+ */
+export function ThemeColorProvider({ children }: { children: ReactNode }): JSX.Element {
+  const themeConfig = useThemeColorStore((state) => state.themeConfig);
+
+  useEffect(() => {
+    // Migrazione ADR-4 §4: la scelta per-browser del solo primario non esiste più.
+    localStorage.removeItem(LEGACY_PRIMARY_COLOR_KEY);
+  }, []);
 
   // L'Editor tema propaga ogni pixel di drag di Slider/ColorPicker qui dentro
   // (decine di eventi/sec): `themeConfig` resta sincrono per i controlli
@@ -122,29 +120,13 @@ export function ThemeColorProvider({ children }: { children: ReactNode }): JSX.E
     [deferredThemeConfig],
   );
 
-  const contextValue = useMemo(
-    () => ({ themeConfig, setThemeConfig, applyServerConfig, reconcileThemeFromServer }),
-    [themeConfig, applyServerConfig, reconcileThemeFromServer],
-  );
-
   return (
-    <ThemeColorContext.Provider value={contextValue}>
-      <MantineProvider
-        defaultColorScheme="auto"
-        theme={theme}
-        cssVariablesResolver={cssVariablesResolver}
-      >
-        {children}
-      </MantineProvider>
-    </ThemeColorContext.Provider>
+    <MantineProvider
+      defaultColorScheme="auto"
+      theme={theme}
+      cssVariablesResolver={cssVariablesResolver}
+    >
+      {children}
+    </MantineProvider>
   );
-}
-
-/** Hook per leggere/impostare il tema globale attivo dell'app. */
-export function useThemeColor(): ThemeColorContextValue {
-  const context = useContext(ThemeColorContext);
-  if (!context) {
-    throw new Error('useThemeColor deve essere usato dentro <ThemeColorProvider>');
-  }
-  return context;
 }

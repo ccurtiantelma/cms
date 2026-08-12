@@ -31,6 +31,11 @@ Thumbs.db
 # Vite
 app/frontend/.vite/
 
+# Playwright (ADR-16) — output relativo alla cwd di lancio (root), non a e2e/
+test-results/
+playwright-report/
+blob-report/
+
 # NestJS
 app/backend/dist/
 

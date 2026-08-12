@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Box, Button, Group, Text } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconUserExclamation } from '@tabler/icons-react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../hooks/useAuth';
 import { getImpersonatedBy, setToken, setStoredUser } from '../utils/auth.utils';
 import { getErrorMessage } from '../utils/api.utils';
 import { endImpersonationApi } from '../services/auth.service';
@@ -16,7 +16,7 @@ import { endImpersonationApi } from '../services/auth.service';
  * ripristinare il JWT originale del SuperAdmin.
  */
 export default function ImpersonationBanner(): JSX.Element | null {
-  const { user } = useAuth();
+  const user = useAuthStore((state) => state.user);
   const [submitting, setSubmitting] = useState(false);
 
   if (getImpersonatedBy() === null) return null;

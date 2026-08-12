@@ -25,6 +25,7 @@
     "openapi:types": "openapi-typescript docs/openapi.yaml -o app/frontend/src/types/api.types.ts",
     "test": "npm run test --workspace=app/backend && npm run test --workspace=app/frontend",
     "test:e2e": "npm run test:e2e --workspace=app/backend -- --runInBand --forceExit",
+    "test:e2e:browser": "playwright test --config=e2e/playwright.config.ts",
     "clean": "npx rimraf app/backend/dist app/frontend/dist node_modules app/backend/node_modules app/frontend/node_modules",
     "lint:backend": "npm run lint --workspace=app/backend",
     "lint:frontend": "npm run lint --workspace=app/frontend",
@@ -34,8 +35,10 @@
     "format": "npm run format --workspaces --if-present"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.0",
     "concurrently": "^8.2.2",
     "openapi-typescript": "^7.13.0",
+    "otplib": "^12.0.1",
     "rimraf": "^5.0.5",
     "typescript": "^5.7.0"
   }
