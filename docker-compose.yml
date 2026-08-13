@@ -1,25 +1,30 @@
+# Nome esplicito del progetto Compose: isola container, rete e volumi da quelli
+# degli altri stack docker presenti sulla stessa macchina, che usano gli stessi
+# nomi di servizio (postgres/redis/mailhog).
+name: cms
+
 services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_DB: app_db
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app
+      POSTGRES_DB: cms_db
+      POSTGRES_USER: cms
+      POSTGRES_PASSWORD: cms
     ports:
-      - '5434:5432'
+      - '5435:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
     ports:
-      - '6380:6379'
+      - '6381:6379'
 
   mailhog:
     image: mailhog/mailhog
     ports:
-      - '1025:1025'   # SMTP
-      - '8025:8025'   # Web UI → http://localhost:8025
+      - '1026:1025'   # SMTP
+      - '8026:8025'   # Web UI → http://localhost:8026
 
 volumes:
   pgdata:

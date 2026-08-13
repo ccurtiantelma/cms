@@ -31,7 +31,7 @@ describe('AuthController (integration)', () => {
   let redisDelMock: jest.Mock;
   let auditLogMock: jest.Mock;
 
-  const EMAIL = 'mario.rossi@starter-kit.test';
+  const EMAIL = 'mario.rossi@cms.test';
   const PASSWORD = 'Password123!Test';
 
   const baseUser = {

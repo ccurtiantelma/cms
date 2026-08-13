@@ -3,9 +3,9 @@
  *
  * Sidebar laterale collassabile (sfondo bianco) con due stati (compatta ~70px solo
  * icone / estesa a `themeConfig.navbarWidth`, personalizzabile dall'Editor
- * tema), branding testuale placeholder
- * "Starter Kit" (nessun logo immagine — ogni progetto che eredita questa
- * base personalizza `brandName`/`logoBox`), voce attiva su sfondo blu
+ * tema), branding testuale
+ * "CMS" (nessun logo immagine — personalizzabile via
+ * `brandName`/`logoBox`), voce attiva su sfondo blu
  * placeholder, sezione utente in basso (avatar + help/comprimi/logout).
  * Area contenuto grigio chiaro con card bianca arrotondata che si
  * ridimensiona al toggle della sidebar.
@@ -187,7 +187,7 @@ export default function LayoutProtected(): JSX.Element {
               </div>
               {!isCollapsed && (
                 <div className={classes.brandText}>
-                  <span className={classes.brandName}>Starter Kit</span>
+                  <span className={classes.brandName}>CMS</span>
                 </div>
               )}
             </div>

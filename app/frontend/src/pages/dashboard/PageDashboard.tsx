@@ -1,7 +1,7 @@
 /**
- * Dashboard di atterraggio post-login. Nello starter-kit non contiene ancora
- * logica di dominio: mostra un saluto, il ruolo dell'utente e collegamenti
- * rapidi ai moduli di esempio (Utenti, Audit Log) per i ruoli abilitati.
+ * Dashboard di atterraggio post-login. Non contiene ancora logica di dominio:
+ * mostra un saluto, il ruolo dell'utente e collegamenti rapidi ai moduli
+ * disponibili (Utenti, Audit Log) per i ruoli abilitati.
  * Ogni progetto che eredita questa base sostituisce questa pagina con le
  * proprie KPI/grafici.
  */

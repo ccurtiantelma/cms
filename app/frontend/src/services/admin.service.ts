@@ -1,6 +1,6 @@
 /**
- * Service per le chiamate API del modulo `app/admin` — esempio di gestione utenti
- * e audit log incluso nello starter-kit (vedi CONTRACT.md — tabella "Endpoint admin").
+ * Service per le chiamate API del modulo `app/admin` — gestione utenti
+ * e audit log (vedi CONTRACT.md — tabella "Endpoint admin").
  */
 
 import api from './api';

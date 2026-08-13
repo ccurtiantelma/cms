@@ -8,7 +8,7 @@ const logger = new Logger('RedisTestHelper');
 const EXPECTED_TEST_DB_INDEX = 1;
 
 /** Prefisso riservato alle chiavi create direttamente dalle fixture di test. */
-const TEST_KEY_PREFIX = 'starter-kit:test:';
+const TEST_KEY_PREFIX = 'cms:test:';
 
 let client: IORedis | undefined;
 
@@ -55,7 +55,7 @@ export async function flushTestRedis(): Promise<void> {
 }
 
 /**
- * Cancellazione selettiva delle sole chiavi con prefisso `starter-kit:test:` (o quello
+ * Cancellazione selettiva delle sole chiavi con prefisso `cms:test:` (o quello
  * passato esplicitamente), utile quando un test deve ripulire solo le proprie
  * fixture senza toccare altre chiavi di sessione create nello stesso DB di test.
  */

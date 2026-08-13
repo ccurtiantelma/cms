@@ -614,7 +614,7 @@ export class AuthService {
     }
 
     const secret = authenticator.generateSecret();
-    const otpauthUrl = authenticator.keyuri(user.email, 'Starter Kit', secret);
+    const otpauthUrl = authenticator.keyuri(user.email, 'CMS', secret);
     const qrCodeDataUrl = await qrcode.toDataURL(otpauthUrl);
 
     // Il secret non è ancora persistito su totpSecret: resta in attesa in Redis finché

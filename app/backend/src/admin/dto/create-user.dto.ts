@@ -29,7 +29,7 @@ export class CreateUserDto {
 
   @ApiPropertyOptional({
     description:
-      'Identificatore di scope multi-tenant/multi-sede (libero per il progetto che eredita lo starter-kit)',
+      'Identificatore di scope multi-tenant/multi-sede, a disposizione dei moduli del CMS',
   })
   @IsOptional()
   @IsString({ message: 'scopeId deve essere una stringa.' })

@@ -13,7 +13,7 @@ export interface PasswordStrengthResult {
 }
 
 /**
- * Valida la forza di una password secondo la policy dello starter-kit (NIST/OWASP):
+ * Valida la forza di una password secondo la policy del CMS (NIST/OWASP):
  * - Minimo 12 caratteri
  * - Almeno 3 delle 4 categorie: lettere maiuscole, lettere minuscole, numeri, simboli
  *

@@ -12,8 +12,7 @@ declare global {
 /**
  * Payload decodificato dal JWT di accesso e propagato su `req.authInfo`
  * dall'`AuthMiddleware`. `scopeId` è il campo generico di scoping
- * multi-tenant/multi-sede ereditato dal progetto che estende lo starter-kit
- * (vedi `Utils.applyScopeFilter`).
+ * multi-tenant/multi-sede del CMS (vedi `Utils.applyScopeFilter`).
  */
 export interface AuthInfo {
   userId: number;

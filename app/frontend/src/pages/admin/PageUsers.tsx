@@ -1,6 +1,6 @@
 /**
- * Pagina Amministrazione Utenti — esempio di pattern CRUD completo dello
- * starter-kit (`ResponsiveTable` + `ListToolbar` + `usePaginatedList` +
+ * Pagina Amministrazione Utenti — pattern CRUD completo di riferimento del
+ * CMS (`ResponsiveTable` + `ListToolbar` + `usePaginatedList` +
  * `FormDrawer`). Tabella utenti con toolbar sticky (paginazione + ricerca +
  * totale risultati) e azioni di riga a sole icone con tooltip.
  */

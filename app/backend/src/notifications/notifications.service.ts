@@ -19,8 +19,8 @@ export interface NotifyInput {
 /**
  * Notifiche persistenti per-utente (campanella con badge in UI, ADR-12).
  * `notify()` è il building block pensato per essere chiamato dai moduli di
- * dominio del progetto verticale su eventi applicativi (nessun trigger nello
- * starter-kit, che non contiene logica di dominio).
+ * dominio del CMS su eventi applicativi (nessun trigger registrato finché non
+ * esistono moduli di dominio che lo usano).
  */
 @Injectable()
 export class NotificationsService {

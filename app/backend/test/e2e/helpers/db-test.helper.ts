@@ -10,7 +10,7 @@ import { AppConstants } from '../../../src/common/app-constants';
 const logger = new Logger('DbTestHelper');
 
 /** Unico nome DB ammesso per gli helper e2e — evita di truncare per errore un DB di sviluppo/produzione. */
-const EXPECTED_TEST_DATABASE = 'app_db_test';
+const EXPECTED_TEST_DATABASE = 'cms_db_test';
 
 const MIGRATIONS_FOLDER = path.resolve(__dirname, '../../../src/db/migrations');
 
@@ -18,8 +18,8 @@ let pool: Pool | undefined;
 let db: NodePgDatabase<typeof schema> | undefined;
 
 /**
- * Verifica che `DATABASE_URL` punti esplicitamente al database `app_db_test`.
- * Blocca l'esecuzione se punta a un database diverso (es. `app_db` di sviluppo).
+ * Verifica che `DATABASE_URL` punti esplicitamente al database `cms_db_test`.
+ * Blocca l'esecuzione se punta a un database diverso (es. `cms_db` di sviluppo).
  */
 function assertTestDatabase(databaseUrl: string): void {
   const databaseName = new URL(databaseUrl).pathname.replace(/^\//, '');
@@ -31,7 +31,7 @@ function assertTestDatabase(databaseUrl: string): void {
   }
 }
 
-/** Restituisce (creandola al primo utilizzo) la connessione Drizzle condivisa verso `app_db_test`. */
+/** Restituisce (creandola al primo utilizzo) la connessione Drizzle condivisa verso `cms_db_test`. */
 export function getTestDb(): NodePgDatabase<typeof schema> {
   if (db) {
     return db;
@@ -46,7 +46,7 @@ export function getTestDb(): NodePgDatabase<typeof schema> {
 }
 
 /**
- * Applica tutte le migrazioni Drizzle su `app_db_test`. Idempotente: le
+ * Applica tutte le migrazioni Drizzle su `cms_db_test`. Idempotente: le
  * migrazioni già applicate vengono saltate (tracking in schema `drizzle`, non `public`).
  * Da invocare tipicamente in un `beforeAll` globale della suite e2e.
  */

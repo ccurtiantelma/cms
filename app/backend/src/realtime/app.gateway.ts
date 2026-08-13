@@ -19,7 +19,7 @@ interface JwtPayload {
 /**
  * Gateway WebSocket generico (Socket.io). NON importato in `app.module.ts`
  * (vedi commento in quel file): è fornito come base pronta all'uso per i
- * progetti che estendono lo starter-kit e necessitano di notifiche realtime.
+ * moduli del CMS che necessitano di notifiche realtime.
  *
  * Autenticazione a due livelli: firma JWT valida E allowlist di sessione su
  * Redis (`login:${token}`) — un JWT con firma valida ma la cui sessione è

@@ -2,7 +2,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { readFile, rm } from 'fs/promises';
 
-const mockStorageDir = path.join(os.tmpdir(), `starter-kit-test-storage-${Date.now()}`);
+const mockStorageDir = path.join(os.tmpdir(), `cms-test-storage-${Date.now()}`);
 
 jest.mock('../../../src/common/app-constants', () => ({
   AppConstants: { storageLocalPath: mockStorageDir },

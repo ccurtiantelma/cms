@@ -3,7 +3,7 @@
 # app/backend/, perché la build richiede package.json/package-lock.json di root
 # e i package.json di tutti i workspace ("app/*") per la risoluzione npm ci.
 #
-# docker build -f app/backend/Dockerfile -t starter-kit-backend .
+# docker build -f app/backend/Dockerfile -t cms-backend .
 
 # ─── deps ───────────────────────────────────────────────────────────────────
 # Installa TUTTE le dipendenze (dev incluse, servono per la build TypeScript).

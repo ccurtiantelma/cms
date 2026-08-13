@@ -4,8 +4,8 @@
  * realtime via Socket.io (`notification.new`, namespace `/realtime`) quando
  * `VITE_SOCKET_URL` è configurato e `RealtimeModule` è montato lato backend.
  * Se il socket non si connette la UI resta comunque funzionante (solo senza
- * push istantaneo): nessun polling di fallback nello starter-kit, il progetto
- * verticale lo aggiunge se serve davvero.
+ * push istantaneo): nessun polling di fallback, da aggiungere solo se
+ * servirà davvero.
  */
 import { useEffect } from 'react';
 import { create } from 'zustand';

@@ -1,6 +1,6 @@
 /**
  * Pagina Profilo Utente — dati anagrafici, cambio password, gestione MFA e
- * preferenza tema. Nessuna tab "Notifiche desktop" (fuori scope starter-kit).
+ * preferenza tema. Nessuna tab "Notifiche desktop" (non prevista).
  */
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';

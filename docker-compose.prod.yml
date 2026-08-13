@@ -20,18 +20,20 @@
 # - postgres/redis non pubblicano porte sull'host: raggiungibili solo dagli
 #   altri servizi sulla rete Docker interna del progetto.
 
+name: cms
+
 services:
   postgres:
     image: postgres:16
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-app_db}
-      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-cms_db}
+      POSTGRES_USER: ${POSTGRES_USER:-cms}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Imposta POSTGRES_PASSWORD in .env}
     volumes:
       - pgdata_prod:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-app_db}']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-cms} -d ${POSTGRES_DB:-cms_db}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -57,7 +59,12 @@ services:
       - .env
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app_db}
+      # PORT è pinnata a 3000 (non ereditata da .env, dove vale 3001 per lo
+      # sviluppo locale): dentro il container la porta è fissa e l'HEALTHCHECK di
+      # app/backend/Dockerfile interroga localhost:3000. La porta pubblicata
+      # sull'host resta la 3001, coerente con lo sviluppo.
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cms}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cms_db}
       REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
@@ -65,7 +72,7 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - '3000:3000'
+      - '3001:3000'
 
   frontend:
     build:

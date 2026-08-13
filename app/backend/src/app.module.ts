@@ -102,7 +102,7 @@ import { MetricsModule } from './metrics/metrics.module';
     // MetricsModule (ADR-15) montato solo se METRICS_ENABLED=true: opt-in esplicito,
     // nessun endpoint/interceptor registrato per i progetti che non lo abilitano.
     ...(AppConstants.metricsEnabled ? [MetricsModule] : []),
-    // TODO: aggiungere qui i moduli applicativi man mano che vengono creati dal progetto che eredita lo starter-kit.
+    // TODO: aggiungere qui i moduli applicativi del CMS man mano che vengono creati.
   ],
   controllers: [],
   providers: [],

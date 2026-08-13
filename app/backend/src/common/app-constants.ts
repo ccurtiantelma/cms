@@ -72,7 +72,7 @@ function bool(name: string, fallback: boolean): boolean {
 /**
  * Costanti applicative derivate dalle variabili d'ambiente, con default
  * difensivi e normalizzazione (trim apici, parsing porte/numeri robusto).
- * Vedi `/var/www/starter-kit/.env.example` per l'elenco completo e i default.
+ * Vedi `.env.example` nella root del repo per l'elenco completo e i default.
  */
 export class AppConstants {
   static readonly timezone = 'Europe/Rome';
@@ -98,7 +98,7 @@ export class AppConstants {
   static readonly smtpPort = parsePort(1025, process.env.SMTP_PORT);
   static readonly smtpUser = str('SMTP_USER');
   static readonly smtpPass = str('SMTP_PASS');
-  static readonly smtpFrom = str('SMTP_FROM', 'no-reply@starter-kit.local');
+  static readonly smtpFrom = str('SMTP_FROM', 'no-reply@cms.local');
 
   static readonly superAdminEmail = str('SUPERADMIN_EMAIL');
   static readonly superAdminPassword = str('SUPERADMIN_PASSWORD');

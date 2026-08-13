@@ -1,5 +1,5 @@
 /**
- * Tema Mantine dello Starter Kit + modello dati del Global Theme Customizer
+ * Tema Mantine del CMS + modello dati del Global Theme Customizer
  * (ADR-4, esteso a versione 7).
  *
  * Il tema personalizzabile è un singolo oggetto `ThemeConfig` versionato

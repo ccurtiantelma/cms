@@ -8,7 +8,7 @@ const ACCESS_TOKEN_KEY = 'access_token';
 const AUTH_USER_KEY = 'auth_user';
 
 /**
- * Path di atterraggio post-login. Nello starter-kit esiste un solo layout/area
+ * Path di atterraggio post-login. Esiste un solo layout/area
  * applicativa: ogni ruolo atterra su `/dashboard` (nessun secondo layout tipo
  * `LayoutOperator`, quel pattern resta documentato solo come esempio in `docs/`).
  * @param role Valore enum del ruolo utente, o undefined se non disponibile.

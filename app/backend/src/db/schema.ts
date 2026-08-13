@@ -1,7 +1,7 @@
 /**
- * Schema Drizzle ORM — Starter Kit.
- * Contiene solo le entità core (utenti, audit log) fornite dallo starter-kit.
- * Ogni progetto che eredita questa base aggiunge qui le proprie tabelle di dominio,
+ * Schema Drizzle ORM — CMS.
+ * Contiene per ora solo le entità core (utenti, audit log).
+ * Le tabelle di dominio del CMS si aggiungono qui,
  * seguendo la stessa convenzione di colonne base (id/guid/isActive/createdAt/
  * updatedAt/createdBy/updatedBy) e FK `{ onDelete: 'restrict', onUpdate: 'restrict' }`.
  * MAI modificare questo file senza generare una migrazione (`drizzle-kit generate`).
@@ -39,7 +39,7 @@ export const userEntity = pgTable(
     email: varchar('email', { length: 200 }).notNull(),
     pwd: text('pwd').notNull(),
     role: integer('role').notNull().default(AppUserRoles.User),
-    /** Campo generico di scoping multi-tenant/multi-sede: libero per il progetto che eredita lo starter-kit. */
+    /** Campo generico di scoping multi-tenant/multi-sede, a disposizione dei moduli del CMS. */
     scopeId: varchar('scope_id', { length: 100 }),
     isActive: boolean('is_active').notNull().default(true),
     pwdSet: boolean('pwd_set').notNull().default(false),

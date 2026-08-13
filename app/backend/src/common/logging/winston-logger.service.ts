@@ -44,8 +44,7 @@ export function sanitizeLogData(value: unknown, depth = 0): unknown {
  * `app.useLogger()` in main.ts: i `new Logger(NomeService.name)` già presenti in
  * tutto il codice continuano a funzionare invariati, instradati su questi transport.
  *
- * Oltre a Console + rotazione file giornaliera (cima), applica due protezioni
- * riprese dal pattern OpenBridge:
+ * Oltre a Console + rotazione file giornaliera, applica due protezioni:
  * - deduplica righe identiche consecutive entro una finestra breve (evita flood da retry/polling)
  * - rate-limit duro a `AppConstants.logMaxPerSec` messaggi/secondo
  */

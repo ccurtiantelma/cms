@@ -2,6 +2,13 @@
 
 > Usa questo template per creare nuove pagine frontend.
 > Regola base: Mantine out-of-the-box, senza wrapper custom e senza personalizzazione inline dei componenti Mantine.
+>
+> ⚠️ **Ambito di validità: interfaccia amministrativa e chrome dell'editor.**
+> I **componenti dei blocchi** (ciò che rende il contenuto di una Pagina) non seguono questo
+> template e **non importano Mantine**: usano esclusivamente CSS Modules propri e markup
+> semantico, perché il formato dei contenuti non va legato a una libreria UI — il contenuto
+> sopravvive al codice ed è reso anche da consumer esterni alla dashboard.
+> Vedi CLAUDE.md → "Regola Mantine — confine UI ↔ contenuto".
 > `mantine-datatable` è opzionale per tabelle complesse (nuova dipendenza → richiede approvazione, vedi CLAUDE.md → "Ask first").
 
 ---
@@ -349,6 +356,8 @@ export default function Form[Nome]({ initial, onSave, onCancel }: Props) {
 | Errori async     | `const error = err as AxiosError<{ message?: string }>` — mai `any` non commentato      |
 | ID nelle URL     | Usare sempre `guid` (mai l'ID numerico sequenziale)                                     |
 | Soft delete      | Usare `isActive: false` tramite il service — mai DELETE fisici                          |
+| Conflitto `409`  | Messaggio esplicito ("modificata da un altro utente") — mai sovrascrittura silenziosa    |
+| Blocchi          | I componenti dei blocchi non importano Mantine: solo CSS Modules + markup semantico      |
 
 ---
 

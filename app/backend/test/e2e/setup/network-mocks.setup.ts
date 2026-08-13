@@ -35,7 +35,7 @@ const sendMailMock = jest.fn<Promise<MockSentMessageInfo>, [MockMailOptions]>(
       ? mailOptions.to
       : [mailOptions.to].filter(Boolean);
     return {
-      messageId: `mock-${Date.now()}@starter-kit.test`,
+      messageId: `mock-${Date.now()}@cms.test`,
       accepted: recipients as string[],
       rejected: [],
       response: '250 OK (network-mocks.setup)',

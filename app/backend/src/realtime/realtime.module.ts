@@ -5,7 +5,7 @@ import { RedisModule } from '../redis/redis.module';
 /**
  * Modulo realtime (Socket.io) generico e completo, pronto all'uso ma
  * volutamente NON importato in `AppModule` (vedi commento in quel file):
- * lo starter-kit non contiene funzionalità realtime di dominio, quindi il
+ * il CMS non ha ancora funzionalità realtime di dominio, quindi il
  * modulo resta disponibile senza essere attivo di default.
  */
 @Global()

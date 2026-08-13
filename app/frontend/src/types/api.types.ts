@@ -672,7 +672,7 @@ export interface components {
              * @enum {number}
              */
             role: 5 | 10 | 20 | 30;
-            /** @description Identificatore di scope multi-tenant/multi-sede (libero per il progetto che eredita lo starter-kit) */
+            /** @description Identificatore di scope multi-tenant/multi-sede, a disposizione dei moduli del CMS */
             scopeId?: string;
         };
         UpdateUserDto: {

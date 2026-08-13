@@ -22,7 +22,7 @@ describe('AuthService (unit)', () => {
   let auditLogMock: jest.Mock;
   let enqueueEmailMock: jest.Mock;
 
-  const EMAIL = 'test.user@starter-kit.test';
+  const EMAIL = 'test.user@cms.test';
   const PASSWORD = 'Password123!Test';
 
   const baseUser = {

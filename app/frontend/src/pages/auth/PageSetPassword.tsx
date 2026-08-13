@@ -97,7 +97,7 @@ export default function PageSetPassword(): JSX.Element {
       <div className={setPasswordStyles.wrapper}>
         <Container size="xs" className={setPasswordStyles.container}>
           <Text ta="center" fw={800} size="xl" mb="md">
-            Starter Kit
+            CMS
           </Text>
 
           <Paper withBorder shadow="md" p="xl" radius="md" w="100%">
@@ -130,7 +130,7 @@ export default function PageSetPassword(): JSX.Element {
     <div className={setPasswordStyles.wrapper}>
       <Container size="xs" className={setPasswordStyles.container}>
         <Text ta="center" fw={800} size="xl" mb="md">
-          Starter Kit
+          CMS
         </Text>
 
         <Paper withBorder shadow="md" p="xl" radius="md" w="100%">

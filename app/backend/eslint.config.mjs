@@ -21,7 +21,7 @@ export default [
       ...tsPlugin.configs.recommended.rules,
       'prettier/prettier': 'error',
       '@typescript-eslint/no-explicit-any': ['warn', { ignoreRestArgs: true }],
-      // Enforcement policy JSDoc dello starter-kit (CLAUDE.md: "Ogni funzione pubblica con commento JSDoc")
+      // Enforcement policy JSDoc del progetto (CLAUDE.md: "Ogni funzione pubblica con commento JSDoc")
       'jsdoc/require-jsdoc': [
         'error',
         {

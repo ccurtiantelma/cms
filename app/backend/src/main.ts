@@ -37,7 +37,7 @@ async function bootstrap(): Promise<void> {
   if (!AppConstants.isProduction) {
     const { SwaggerModule, DocumentBuilder } = await import('@nestjs/swagger');
     const config = new DocumentBuilder()
-      .setTitle('Starter Kit API')
+      .setTitle('CMS API')
       .setDescription(
         'API REST del boilerplate aziendale (auth, RBAC, MFA, audit log, gestione utenti).',
       )

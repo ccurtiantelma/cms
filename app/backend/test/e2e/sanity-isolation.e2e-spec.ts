@@ -31,7 +31,7 @@ import {
  * pubblico reale (`POST /auth/login`) risponda con i codici HTTP attesi
  * contro dati realmente persistiti (nessun repository/service mockato).
  *
- * Richiede `DATABASE_URL` puntato a `app_db_test` e `REDIS_URL` al DB Redis
+ * Richiede `DATABASE_URL` puntato a `cms_db_test` e `REDIS_URL` al DB Redis
  * logico #1 — vedi guardie in `db-test.helper.ts` / `redis-test.helper.ts`,
  * che bloccano l'esecuzione (invece di eseguire truncate/flushdb) se le
  * variabili d'ambiente puntano a un database di sviluppo.
@@ -39,7 +39,7 @@ import {
 describe('Sanity e2e — isolamento ambiente (AppModule reale)', () => {
   let app: INestApplication;
 
-  const EMAIL = 'sanity.e2e@starter-kit.test';
+  const EMAIL = 'sanity.e2e@cms.test';
   const PASSWORD = 'Password123!Sanity';
 
   beforeAll(async () => {

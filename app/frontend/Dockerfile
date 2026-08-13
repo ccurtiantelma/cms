@@ -2,7 +2,7 @@
 # Contesto di build: la root del monorepo (stesso motivo del backend, vedi
 # app/backend/Dockerfile — npm workspaces).
 #
-# docker build -f app/frontend/Dockerfile --build-arg VITE_API_BASE_URL=https://api.example.com/api/v1 -t starter-kit-frontend .
+# docker build -f app/frontend/Dockerfile --build-arg VITE_API_BASE_URL=https://api.example.com/api/v1 -t cms-frontend .
 
 # ─── deps ───────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS deps

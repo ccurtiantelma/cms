@@ -92,7 +92,7 @@ export default function PageForgottenPassword(): JSX.Element {
       <div className={styles.wrapper}>
         <Container size="xs" className={styles.container}>
           <Text ta="center" fw={800} size="xl" mb="md">
-            Starter Kit
+            CMS
           </Text>
           <Paper withBorder shadow="md" p="xl" radius="md" w="100%">
             <Stack gap="md" align="center">
@@ -116,7 +116,7 @@ export default function PageForgottenPassword(): JSX.Element {
     <div className={styles.wrapper}>
       <Container size="xs" className={styles.container}>
         <Text ta="center" fw={800} size="xl" mb="md">
-          Starter Kit
+          CMS
         </Text>
         <Paper withBorder shadow="md" p="xl" radius="md" w="100%">
           <Stack gap="md">

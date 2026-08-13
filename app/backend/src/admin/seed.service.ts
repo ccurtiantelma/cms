@@ -6,9 +6,9 @@ import { AppConstants } from '../common/app-constants';
 import { AppUserRoles } from '../common/enums';
 
 /** Password demo fissa per gli utenti Admin/Manager/User creati dal seed (documentata nel log). */
-const DEMO_PASSWORD = 'StarterKit#2026';
+const DEMO_PASSWORD = 'CmsDemo#2026';
 /** Credenziali di fallback per SuperAdmin quando `SUPERADMIN_EMAIL`/`SUPERADMIN_PASSWORD` non sono valorizzate (solo sviluppo locale). */
-const FALLBACK_SUPERADMIN_EMAIL = 'superadmin@starter-kit.local';
+const FALLBACK_SUPERADMIN_EMAIL = 'superadmin@cms.local';
 const FALLBACK_SUPERADMIN_PASSWORD = 'SuperAdmin#2026';
 
 /**
@@ -50,21 +50,21 @@ export class SeedService {
       {
         name: 'Admin',
         surname: 'Demo',
-        email: 'admin.demo@starter-kit.local',
+        email: 'admin.demo@cms.local',
         password: DEMO_PASSWORD,
         role: AppUserRoles.Admin,
       },
       {
         name: 'Manager',
         surname: 'Demo',
-        email: 'manager.demo@starter-kit.local',
+        email: 'manager.demo@cms.local',
         password: DEMO_PASSWORD,
         role: AppUserRoles.Manager,
       },
       {
         name: 'Utente',
         surname: 'Demo',
-        email: 'user.demo@starter-kit.local',
+        email: 'user.demo@cms.local',
         password: DEMO_PASSWORD,
         role: AppUserRoles.User,
       },

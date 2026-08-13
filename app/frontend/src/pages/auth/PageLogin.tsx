@@ -195,9 +195,9 @@ export default function PageLogin(): JSX.Element {
   return (
     <div className={loginStyles.wrapper}>
       <Container size="xs" className={loginStyles.container}>
-        {/* Placeholder testuale al posto del logo immagine (nessun branding aziendale nello starter-kit). */}
+        {/* Placeholder testuale al posto del logo immagine (nessun logo aziendale definito). */}
         <Text ta="center" fw={800} size="xl" mb="md">
-          Starter Kit
+          CMS
         </Text>
 
         <Paper withBorder shadow="md" p="xl" radius="md" w="100%">

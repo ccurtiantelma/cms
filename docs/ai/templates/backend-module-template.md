@@ -103,9 +103,12 @@ export class <Modulo>Controller {
 }
 ```
 
-> Nota: `guid` è sempre l'identificativo esposto nelle URL pubbliche (MAI `id` numerico
-> sequenziale — vedi CLAUDE.md → "Divieti assoluti"). Il metodo `DELETE` qui sopra esegue
-> comunque un soft delete internamente (`isActive = false`), mai una `DELETE` SQL fisica.
+> Nota: `guid` è l'identificativo esposto nelle **URL amministrative** (MAI `id` numerico
+> sequenziale — vedi CLAUDE.md → "Divieti assoluti"). Le URL della superficie pubblica
+> `api/v1/public/*` usano invece lo `slug` (+ `locale`) e non passano da questo template:
+> sono di sola lettura, servono solo contenuto `published` e rispondono `404` — mai `403` —
+> per ciò che non è pubblicato. Il metodo `DELETE` qui sopra esegue comunque un soft delete
+> internamente (`isActive = false`), mai una `DELETE` SQL fisica.
 
 ---
 
@@ -113,7 +116,7 @@ export class <Modulo>Controller {
 
 ```typescript
 import {
-  Injectable, Logger, NotFoundException,
+  Injectable, Logger, NotFoundException, ConflictException,
 } from '@nestjs/common';
 import { eq, and, ilike, sql, desc, asc } from 'drizzle-orm';
 import { DbService } from '../db/db.service';
@@ -189,15 +192,30 @@ export class <Modulo>Service {
   async update(guid: string, dto: Update<Modulo>Dto, authInfo: AuthInfo) {
     await this.findOne(guid, authInfo); // verifica esistenza
 
+    // LOCK OTTIMISTICO OBBLIGATORIO — il client rimanda la `version` che ha letto.
+    // Zero righe aggiornate ⇒ qualcun altro ha scritto nel frattempo ⇒ 409.
+    // Mai sovrascrivere silenziosamente il lavoro di un altro utente.
     const [updated] = await this.db.db
       .update(<ModuloEntity>)
       .set({
         ...dto,
+        version: sql`${<ModuloEntity>.version} + 1`,
         updatedBy: authInfo.id,
         updatedAt: new Date(),
       })
-      .where(eq(<ModuloEntity>.guid, guid))
-      .returning({ guid: <ModuloEntity>.guid });
+      .where(
+        and(
+          eq(<ModuloEntity>.guid, guid),
+          eq(<ModuloEntity>.version, dto.version),
+        ),
+      )
+      .returning({ guid: <ModuloEntity>.guid, version: <ModuloEntity>.version });
+
+    if (!updated) {
+      throw new ConflictException(
+        'Il record è stato modificato da un altro utente. Ricarica e riprova.',
+      );
+    }
 
     return updated;
   }
@@ -248,10 +266,28 @@ export class Create<Modulo>Dto {
 
 ```typescript
 import { PartialType } from '@nestjs/mapped-types';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsInt, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 import { Create<Modulo>Dto } from './create-<modulo>.dto';
 
-export class Update<Modulo>Dto extends PartialType(Create<Modulo>Dto) {}
+export class Update<Modulo>Dto extends PartialType(Create<Modulo>Dto) {
+  /**
+   * Versione della riga letta dal client, base del lock ottimistico.
+   * Obbligatoria: senza, l'update sovrascriverebbe silenziosamente
+   * il lavoro di un altro utente (vietato — vedi CLAUDE.md → "Divieti assoluti").
+   */
+  @ApiProperty({ example: 1, description: 'Versione letta dal client (lock ottimistico)' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  version: number;
+}
 ```
+
+> `version` non è opzionale nemmeno in un DTO di update parziale: è il pegno di
+> concorrenza. Un client che non la manda riceve `400`; un client che ne manda una
+> superata riceve `409`.
 
 ---
 
@@ -261,7 +297,8 @@ export class Update<Modulo>Dto extends PartialType(Create<Modulo>Dto) {}
 - [ ] Guard applicato (`@UseGuards(GuardManager)`, `GuardAdmin` o `GuardSuperAdmin` secondo la soglia)
 - [ ] `Utils.applyScopeFilter(authInfo)` applicato se il modulo gestisce dati multi-tenant/multi-sede
 - [ ] Soft delete implementato (mai `DELETE` fisico)
-- [ ] `guid` usato nelle URL pubbliche, mai l'`id` numerico
+- [ ] Lock ottimistico su `update` (`WHERE version = :version` + incremento, zero righe ⇒ `409`)
+- [ ] `guid` usato nelle URL amministrative, mai l'`id` numerico (superficie pubblica: `slug`)
 - [ ] Audit trail: `createdBy` e `updatedBy` popolati
 - [ ] DTO con `class-validator` + `@ApiProperty()` su ogni campo
 - [ ] Logger NestJS inizializzato (`new Logger(NomeService.name)`)

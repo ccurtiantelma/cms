@@ -1,7 +1,7 @@
 opencollection: 1.0.0
 
 info:
-  name: Starter Kit API
+  name: CMS API
 bundled: false
 extensions:
   bruno:

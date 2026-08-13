@@ -2,7 +2,7 @@
  * Step del tour guidato generale (driver.js).
  *
  * I target "btn-nuovo" e "notifications-area" sono selettori convenzionali:
- * ogni progetto che eredita lo starter-kit li aggiunge ai propri componenti
+ * i componenti del CMS li applicano ai propri elementi
  * (pulsante "Nuovo" nelle liste, area notifiche nell'header). driver.js, a
  * differenza di react-joyride, non salta automaticamente gli step con target
  * assente dal DOM: il filtro viene applicato da `AppTour` all'avvio del tour.

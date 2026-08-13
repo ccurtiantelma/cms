@@ -16,7 +16,7 @@ async function exportOpenApi(): Promise<void> {
   app.setGlobalPrefix('api/v1');
 
   const config = new DocumentBuilder()
-    .setTitle('Starter Kit API')
+    .setTitle('CMS API')
     .setDescription(
       'API REST del boilerplate aziendale (auth, RBAC, MFA, audit log, gestione utenti).',
     )
