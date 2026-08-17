@@ -495,3 +495,34 @@ Stato dei quattro punti che la prima stesura di questo piano dichiarava da decid
 | 4 | `Manager` può eliminare? | ✅ **No, `DELETE` = Admin+.** Nessuna divergenza: SPEC-F01 e la matrice delle business rules dicono già la stessa cosa. Verificato, non deciso |
 
 Finché ADR-18 non è firmata, **T4 non parte**. I punti 2 e 3 sono isolati nella sezione "Punti che richiedono la firma umana" dell'ADR: correggerli in fase di firma tocca un predicato di query e un DTO, non lo schema.
+
+---
+
+## FASE D — Valutazione: anticipare `public/pages` (F03) prima di T7–T8
+
+> Prodotta dall'Orchestrator il 2026-08-17 su richiesta esplicita. F01 backend chiuso
+> (T1–T6). Verificata la fattibilità di anticipare, prima del frontend admin, la sola parte
+> di F03 che non dipende dalle ADR aperte: l'endpoint `public/pages` che restituisce
+> l'albero blocchi, senza consumer HTML e senza cache. **Esito: non si anticipa.** Nessun
+> file toccato oltre questo.
+
+### Cosa serve, verificato sul codice
+
+| # | Voce | Stato reale | Costo |
+|---|---|---|---|
+| 1 | Esclusione `public/*path` da `AuthMiddleware` | Una riga nell'array `.exclude()` ([app.module.ts:122-135](../../../app/backend/src/app.module.ts#L122-L135)), stessa sintassi wildcard della riga 136. `ValidationPipe` e `AllExceptionsFilter` sono globali via `main.ts` ([main.ts:52-55](../../../app/backend/src/main.ts#L52-L55)), non toccati dall'esclusione middleware: un endpoint pubblico li eredita identici | **Nullo** |
+| 2 | `ThrottlerGuard` sulla superficie pubblica | `ThrottlerModule.forRoot` ha un solo throttler `'auth'` (20/60s, [app.module.ts:80-82](../../../app/backend/src/app.module.ts#L80-L82)), applicato per-controller su `AuthController` ([auth.controller.ts:38](../../../app/backend/src/auth/auth.controller.ts#L38)), non come `APP_GUARD`. Renderlo globale farebbe controllare anche `/auth/*` contro il nuovo bucket `'public'` — comportamento nuovo su `AuthController`, oppure un edit a quel file per escluderlo. **Non registrare globalmente**: aggiungere una seconda voce nominata all'array esistente e applicare `@UseGuards(ThrottlerGuard)` + `@Throttle` sul solo controller pubblico nuovo, stesso pattern di `AuthController`. `non-functional-requirements.md:85` impone un limite **"separato e più stringente"** di `/auth/*` — non un default generoso | **Basso**, un file (l'array) + il controller nuovo. Zero righe in `auth.controller.ts` |
+| 3 | CORS aperto sul pubblico, chiuso sull'admin | `app.enableCors({ origin: AppConstants.frontendUrl, credentials: true })` ([main.ts:26-29](../../../app/backend/src/main.ts#L26-L29)) è una singola policy globale, senza distinzione di path. Serve sostituirla con un middleware che discrimina su `req.path` (permissivo senza `credentials` su `/api/v1/public`, invariato altrove) — codice security-sensitive, un errore qui allarga l'admin, non solo il pubblico | **Medio**, e rischioso se scritto sotto pressione temporale |
+| 4 | Risoluzione dello slug `(locale, percorso)` | **Nessuna** risoluzione per segmenti esiste nel codice: `pages.service.ts` ha solo un filtro piatto su `locale` per la lista admin ([pages.service.ts:86](../../../app/backend/src/pages/pages.service.ts#L86)). Le regole in `business-rules.md:166-183` dicono il *cosa* (unicità, 404 mai 403, slug riservati) ma non il *come* (fonte del `locale`: path/header/sottodominio; trailing slash; case; algoritmo di risalita). `CLAUDE.md` elenca **"routing slug"** alla lettera fra le decisioni con ADR obbligatoria — non un'inferenza, un vincolo scritto | **ADR 1.5 mancante — bloccante**, non aggirabile "formalizzando dopo": le regole scritte non bastano a scrivere l'algoritmo |
+| 5 | Cache e consumer HTML | Entrambi restano fuori per decisione già presa (ADR di caching, TODO 1.3; consumer HTML, decisione aperta in cima a questo file). Nascere senza cache è a costo funzionale nullo oggi (nessun traffico reale), a patto che la forma della risposta resti minimale e non presupponga già un layer di cache non deciso | **Nullo se la risposta resta minimale** |
+
+### Decisione: non si anticipa F03. Si procede con T7–T8
+
+Non per comodità, sul rischio:
+
+1. L'endpoint non può nascere senza tre pezzi corretti nello stesso commit (esclusione middleware, throttler più stringente di `/auth/*`, CORS che non allarga l'admin) **più un'ADR (1.5) che oggi non esiste** ed è dichiarata obbligatoria da `CLAUDE.md`. Il lavoro prima del controller è l'ADR, non il codice.
+2. Nessun consumer esiste per verificarlo end-to-end: senza T7-T8 non c'è un modo di creare/pubblicare una pagina reale attraverso l'interfaccia per collaudare la risoluzione — solo dati seminati a mano via Bruno.
+3. T7-T8 non ha blocchi architetturali aperti (nessuna dipendenza da ADR-17 non firmata, tipi già generati da T4/T5) e chiude il ciclo prodotto di F01.
+4. Il beneficio di anticipare è basso (nessuno consuma l'endpoint oggi) contro il costo di aprire, per la prima volta, la superficie a rischio più alto del progetto (anonima, su internet) con due pezzi di sicurezza scritti in fretta e una decisione architetturale non firmata.
+
+**Prossimo passo per F03, quando riaperto**: prima l'ADR 1.5 (routing slug), poi — nello stesso passaggio, mai separatamente — l'esclusione middleware, il throttler dedicato e il fix CORS. Nessuno dei tre da solo.

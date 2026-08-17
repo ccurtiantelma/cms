@@ -1777,6 +1777,11 @@ export interface components {
              * @description Data di creazione della Revisione (= data di pubblicazione)
              */
             createdAt: string;
+            /**
+             * @description Nome e cognome di chi ha pubblicato questa Revisione (business-rules.md § Revisioni, regola 1)
+             * @example Maria Rossi
+             */
+            authorName: string;
             /** @description Albero di blocchi al momento della pubblicazione (snapshot immutabile) */
             content: {
                 [key: string]: unknown;

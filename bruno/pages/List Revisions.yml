@@ -1,0 +1,53 @@
+info:
+  name: List Revisions
+  type: http
+  seq: 7
+
+http:
+  method: GET
+  url: "{{baseUrl}}/app/pages/:guid/revisions?p=1&i=20"
+  params:
+    - name: guid
+      value: a1b2c3d4e5f6a7b8
+      type: path
+    - name: p
+      value: "1"
+      type: query
+    - name: i
+      value: "20"
+      type: query
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 200, 403 or 404", function() {
+    expect([200, 403, 404]).to.include(res.getStatus());
+  });
+
+  test("su successo la lista e' paginata, piu' recenti prima", function() {
+    if (res.getStatus() === 200) {
+      const body = res.getBody();
+      expect(body).to.have.property("data");
+      expect(body).to.have.property("total");
+      const numbers = body.data.map((r) => r.revisionNumber);
+      const sorted = [...numbers].sort((a, b) => b - a);
+      expect(numbers).to.deep.equal(sorted);
+    }
+  });
+
+  test("le righe non espongono il content/seo dello snapshot", function() {
+    if (res.getStatus() === 200) {
+      const body = res.getBody();
+      for (const row of body.data) {
+        expect(row).to.not.have.property("content");
+        expect(row).to.not.have.property("seo");
+      }
+    }
+  });

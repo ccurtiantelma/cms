@@ -1,0 +1,38 @@
+info:
+  name: Detail Revision
+  type: http
+  seq: 8
+
+http:
+  method: GET
+  url: "{{baseUrl}}/app/pages/:guid/revisions/:revisionGuid"
+  params:
+    - name: guid
+      value: a1b2c3d4e5f6a7b8
+      type: path
+    - name: revisionGuid
+      value: b2c3d4e5f6a7b8c9
+      type: path
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 200, 403 or 404", function() {
+    expect([200, 403, 404]).to.include(res.getStatus());
+  });
+
+  test("su successo lo snapshot include content e seo", function() {
+    if (res.getStatus() === 200) {
+      const body = res.getBody();
+      expect(body).to.have.property("revisionNumber");
+      expect(body).to.have.property("content");
+      expect(body).to.have.property("seo");
+    }
+  });

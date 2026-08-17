@@ -1,0 +1,52 @@
+info:
+  name: Restore Revision
+  type: http
+  seq: 9
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/pages/:guid/revisions/:revisionGuid/restore"
+  params:
+    - name: guid
+      value: a1b2c3d4e5f6a7b8
+      type: path
+    - name: revisionGuid
+      value: b2c3d4e5f6a7b8c9
+      type: path
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 200, 403, 404 or 409 (mai 500: Manager+ richiesto dal guard)", function() {
+    expect([200, 403, 404, 409]).to.include(res.getStatus());
+  });
+
+  test("un 409 e' un conflitto di version, non di slug", function() {
+    if (res.getStatus() === 409) {
+      const body = res.getBody();
+      expect(body.code).to.equal("PAGE_VERSION_CONFLICT");
+    }
+  });
+
+  test("su successo la bozza e' aggiornata e la version e' avanzata", function() {
+    if (res.getStatus() === 200) {
+      const body = res.getBody();
+      expect(body).to.have.property("draftContent");
+      expect(body).to.have.property("draftSeo");
+      expect(body).to.have.property("version");
+    }
+  });
+
+  test("un utente sotto Manager riceve 403, non 500", function() {
+    if (res.getStatus() === 403) {
+      const body = res.getBody();
+      expect(body).to.have.property("message");
+    }
+  });

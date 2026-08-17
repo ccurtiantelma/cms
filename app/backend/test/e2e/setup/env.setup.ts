@@ -13,28 +13,26 @@
  * `DATABASE_URL` punta a `cms_db_test` e `REDIS_URL` al DB Redis logico #1,
  * come richiesto dalle guardie `assertTestDatabase` / `assertTestRedisDb`.
  *
- * Host/porte allineate a docker-compose.yml di questo progetto (5435/6381): NON
- * usare 5432/6379 né 5434/6380, occupate da altri servizi in ascolto sulla stessa
- * macchina — puntarci significherebbe far girare truncate e FLUSHDB sui loro dati.
+ * Host/porte allineate a docker-compose.yml di questo progetto (5432/6379).
  */
 
 process.env.NODE_ENV = 'test';
 process.env.DATABASE_URL =
-  process.env.DATABASE_URL || 'postgresql://cms:cms@localhost:5435/cms_db_test';
-process.env.REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6381/1';
+  process.env.DATABASE_URL || 'postgresql://cms:cms@localhost:5432/cms_db_test';
+process.env.REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379/1';
 process.env.SECURITY_KEY =
   process.env.SECURITY_KEY || 'e2e_test_security_key_min_32_characters_long';
 process.env.COOKIE_SECRET = process.env.COOKIE_SECRET || 'e2e_test_cookie_secret';
 process.env.COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || 'localhost';
 process.env.JWT_EXPIRATION = process.env.JWT_EXPIRATION || '15m';
 process.env.RTK_EXPIRATION = process.env.RTK_EXPIRATION || '604800';
-// Diversa dalla PORT di sviluppo (3001): la suite e2e usa supertest in-process e
+// Diversa dalla PORT di sviluppo (3000): la suite e2e usa supertest in-process e
 // non fa bind, ma tenerle distinte evita ambiguità nei log e un EADDRINUSE se in
 // futuro un test avviasse davvero il server.
 process.env.PORT = process.env.PORT || '3099';
-process.env.FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5175';
+process.env.FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 process.env.SMTP_HOST = process.env.SMTP_HOST || 'localhost';
-process.env.SMTP_PORT = process.env.SMTP_PORT || '1026';
+process.env.SMTP_PORT = process.env.SMTP_PORT || '1025';
 process.env.SMTP_FROM = process.env.SMTP_FROM || 'e2e@cms.test';
 process.env.SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'superadmin.e2e@cms.test';
 process.env.SUPERADMIN_PASSWORD = process.env.SUPERADMIN_PASSWORD || 'E2eSuperAdmin#2026';

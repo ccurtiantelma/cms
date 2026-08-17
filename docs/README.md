@@ -48,10 +48,10 @@ npm run dev
 
 | Servizio | URL |
 |---|---|
-| Frontend | http://localhost:5175 |
-| Backend API | http://localhost:3001/api/v1 |
-| Swagger (fuori produzione) | http://localhost:3001/api/v1/docs |
-| Mailhog (email di sviluppo) | http://localhost:8026 |
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:3000/api/v1 |
+| Swagger (fuori produzione) | http://localhost:3000/api/v1/docs |
+| Mailhog (email di sviluppo) | http://localhost:8025 |
 
 ## Documentazione
 

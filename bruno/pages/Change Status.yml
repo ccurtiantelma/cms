@@ -1,0 +1,55 @@
+info:
+  name: Change Status
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/pages/:guid/status"
+  params:
+    - name: guid
+      value: a1b2c3d4e5f6a7b8
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "status": "published"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 200, 400, 403, 404 or 409", function() {
+    expect([200, 400, 403, 404, 409]).to.include(res.getStatus());
+  });
+
+  test("un 400 di transizione non ammessa porta il code dedicato", function() {
+    if (res.getStatus() === 400) {
+      const body = res.getBody();
+      expect(body.code).to.equal("PAGE_STATUS_TRANSITION_NOT_ALLOWED");
+      expect(body.details).to.have.property("transition");
+    }
+  });
+
+  test("un 409 e' un conflitto di version, non di slug", function() {
+    if (res.getStatus() === 409) {
+      const body = res.getBody();
+      expect(body.code).to.equal("PAGE_VERSION_CONFLICT");
+    }
+  });
+
+  test("su successo la Pagina e' nello stato richiesto", function() {
+    if (res.getStatus() === 200) {
+      const body = res.getBody();
+      expect(body.status).to.equal("published");
+      expect(body).to.have.property("version");
+    }
+  });

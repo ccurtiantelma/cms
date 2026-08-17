@@ -13,8 +13,8 @@
 ```
 cms/
 ├── app/
-│   ├── backend/    ← NestJS 11, porta 3001
-│   └── frontend/   ← React 19 + Vite, porta 5175
+│   ├── backend/    ← NestJS 11, porta 3000
+│   └── frontend/   ← React 19 + Vite, porta 5173
 ├── bruno/          ← Collezioni API testing (OpenCollection YAML)
 ├── e2e/            ← Test browser Playwright
 └── docs/
@@ -48,7 +48,7 @@ Swagger UI (solo fuori produzione): `api/v1/docs`.
 ## Comunicazione Frontend ↔ Backend
 
 - Protocollo: **REST over HTTP**
-- Base URL dev: `http://localhost:3001/api/v1`
+- Base URL dev: `http://localhost:3000/api/v1`
 - Base URL prod: da variabile d'ambiente `VITE_API_BASE_URL`
 
 ---
@@ -96,7 +96,7 @@ Swagger UI (solo fuori produzione): `api/v1/docs`.
 
 ## Realtime — Socket.io
 
-- Server: NestJS Gateway sullo stesso processo HTTP (porta 3001), namespace `/realtime`
+- Server: NestJS Gateway sullo stesso processo HTTP (porta 3000), namespace `/realtime`
 - Client: `socket.io-client` nel frontend, dietro `VITE_SOCKET_URL` — se assente la UI
   resta funzionante ma senza push istantaneo (nessun polling di fallback)
 - Autenticazione socket: token JWT nell'handshake + verifica allowlist di sessione Redis
@@ -111,7 +111,7 @@ Swagger UI (solo fuori produzione): `api/v1/docs`.
 ## Database
 
 - **DBMS**: PostgreSQL (dev: `cms_db` / utente `cms` / password `cms`, via
-  `docker-compose.yml` in root, esposto sulla porta host **5435**)
+  `docker-compose.yml` in root, esposto sulla porta host **5432**)
 - **ORM**: Drizzle ORM — schema centralizzato in `app/backend/src/db/schema.ts`
 - **Migrazioni**: generate con `drizzle-kit generate`, applicate con `drizzle-kit migrate`
 - **Mai** eseguire `drizzle-kit push` in produzione
@@ -149,7 +149,7 @@ in `text` con JSON serializzato a mano.
 - Uso previsto dal dominio CMS: cache delle risposte pubbliche di contenuto, con
   **invalidazione per evento** (pubblicazione, archiviazione, cambio slug, modifica di una
   Sezione globale o di un Menu). Mai scadenza per solo TTL.
-- URL: variabile d'ambiente `REDIS_URL` (dev: porta host **6381**)
+- URL: variabile d'ambiente `REDIS_URL` (dev: porta host **6379**)
 
 ---
 
@@ -193,7 +193,7 @@ ha side-effect (pubblica contenuto, invalida cache) e non deve duplicarsi tra re
 - SMTP configurato tramite variabili d'ambiente (`SMTP_HOST/PORT/USER/PASS/FROM`)
 - Mai inviare email direttamente da un service — sempre tramite `src/queues/email-queue/`
 - Mock obbligatorio nei test (nessun invio spurio)
-- In sviluppo: Mailhog (`docker-compose.yml`, UI su `http://localhost:8026`)
+- In sviluppo: Mailhog (`docker-compose.yml`, UI su `http://localhost:8025`)
 
 ---
 
@@ -213,7 +213,7 @@ COOKIE_SECRET
 COOKIE_DOMAIN
 JWT_EXPIRATION       (default 15m)
 RTK_EXPIRATION       (default 604800 secondi)
-PORT                 (default 3001 in .env.example)
+PORT                 (default 3000 in .env.example)
 NODE_ENV
 FRONTEND_URL
 SMTP_HOST
@@ -243,7 +243,7 @@ METRICS_ENABLED          (default false)
 
 ### Frontend
 ```
-VITE_API_BASE_URL=http://localhost:3001/api/v1
+VITE_API_BASE_URL=http://localhost:3000/api/v1
 VITE_SOCKET_URL           (base Socket.io per il push realtime — ADR-12)
 VITE_SENTRY_ENABLED       (default assente/false)
 VITE_SENTRY_DSN
@@ -431,15 +431,15 @@ Decisione e alternative valutate: `docs/ai/adr/ADR-15-observability-sentry-prome
 
 | Servizio | Porta host | Porta container | Note |
 |---|---|---|---|
-| NestJS backend | 3001 | — | `PORT` in `.env` |
-| Vite frontend | 5175 | — | `vite.config.ts` |
-| PostgreSQL | 5435 | 5432 | `docker-compose.yml` |
-| Redis | 6381 | 6379 | `docker-compose.yml` |
-| Mailhog SMTP | 1026 | 1025 | `SMTP_PORT` |
-| Mailhog UI | 8026 | 8025 | http://localhost:8026 |
+| NestJS backend | 3000 | — | `PORT` in `.env` |
+| Vite frontend | 5173 | — | `vite.config.ts` |
+| PostgreSQL | 5432 | 5432 | `docker-compose.yml` |
+| Redis | 6379 | 6379 | `docker-compose.yml` |
+| Mailhog SMTP | 1025 | 1025 | `SMTP_PORT` |
+| Mailhog UI | 8025 | 8025 | http://localhost:8025 |
 
-Le porte host sono volutamente non standard: isolano questo stack dagli altri progetti
-Docker presenti sulla stessa macchina (il progetto Compose è nominato `cms`).
+Porte canoniche di ogni servizio: l'isolamento dagli altri progetti Docker sulla stessa
+macchina è garantito dal nome del progetto Compose (`name: cms`), non da porte alternative.
 
 ---
 

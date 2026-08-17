@@ -13,11 +13,16 @@ import { captureException } from '../observability/sentry.util';
 interface HttpExceptionResponseBody {
   message?: string | string[];
   code?: string;
+  details?: unknown;
 }
 
 /**
  * Filtro globale eccezioni (CLAUDE.md, Error Handling Policy): normalizza OGNI
- * errore nel formato uniforme `{ statusCode, message, code, timestamp, path }`.
+ * errore nel formato uniforme `{ statusCode, message, code, timestamp, path }`,
+ * più `details` (opzionale, solo se l'eccezione lo porta nel body di
+ * `getResponse()`) per dati strutturati specifici del dominio — es. il path
+ * del blocco colpevole o la transizione di stato rifiutata — che il client
+ * usa per evidenziare l'errore, non solo per leggerlo in `message`.
  * Gli errori 5xx sono loggati a livello `error` (stack incluso), i 4xx a `warn`;
  * lo stack trace non viene mai esposto nella risposta HTTP.
  */
@@ -64,6 +69,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       code,
       timestamp: new Date().toISOString(),
       path: request.url,
+      ...(responseBody?.details !== undefined ? { details: responseBody.details } : {}),
     };
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {

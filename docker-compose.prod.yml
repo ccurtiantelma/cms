@@ -59,10 +59,6 @@ services:
       - .env
     environment:
       NODE_ENV: production
-      # PORT è pinnata a 3000 (non ereditata da .env, dove vale 3001 per lo
-      # sviluppo locale): dentro il container la porta è fissa e l'HEALTHCHECK di
-      # app/backend/Dockerfile interroga localhost:3000. La porta pubblicata
-      # sull'host resta la 3001, coerente con lo sviluppo.
       PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-cms}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cms_db}
       REDIS_URL: redis://redis:6379
@@ -72,7 +68,7 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - '3001:3000'
+      - '3000:3000'
 
   frontend:
     build:

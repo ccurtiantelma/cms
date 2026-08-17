@@ -1,0 +1,98 @@
+/**
+ * Service per le chiamate API del modulo `app/pages` (F01 — Gestione Pagine).
+ * Ogni funzione è una chiamata Axios pura: gestione errori/notifiche resta
+ * alle pagine chiamanti (vedi CLAUDE.md — Convenzioni frontend).
+ */
+import api from './api';
+import type { Pagination, PaginationParams } from '../types/common.types';
+import type {
+  ChangeStatusPayload,
+  CreatePagePayload,
+  PageRecord,
+  PageRevisionDetail,
+  PageRevisionSummary,
+  PagesQueryParams,
+  UpdatePagePayload,
+} from '../types/pages.types';
+
+const PAGES_PREFIX = 'app/pages';
+
+/** `GET /app/pages` — elenco paginato (User: solo le proprie righe, ADR-18). */
+export async function fetchPages(params: PagesQueryParams): Promise<Pagination<PageRecord>> {
+  const { data } = await api.get<Pagination<PageRecord>>(PAGES_PREFIX, { params });
+  return data;
+}
+
+/** `GET /app/pages/:guid` — dettaglio Pagina, bozza corrente inclusa. */
+export async function fetchPage(guid: string): Promise<PageRecord> {
+  const { data } = await api.get<PageRecord>(`${PAGES_PREFIX}/${guid}`);
+  return data;
+}
+
+/** `POST /app/pages` — crea una Pagina in `draft`. */
+export async function createPage(payload: CreatePagePayload): Promise<PageRecord> {
+  const { data } = await api.post<PageRecord>(PAGES_PREFIX, payload);
+  return data;
+}
+
+/**
+ * `PATCH /app/pages/:guid` — aggiorna la bozza. `payload.version` è
+ * obbligatoria (lock ottimistico): `409 PAGE_VERSION_CONFLICT` se non
+ * combacia più, `409 PAGE_SLUG_DUPLICATE` se lo slug è già in uso.
+ */
+export async function updatePage(guid: string, payload: UpdatePagePayload): Promise<PageRecord> {
+  const { data } = await api.patch<PageRecord>(`${PAGES_PREFIX}/${guid}`, payload);
+  return data;
+}
+
+/**
+ * `POST /app/pages/:guid/status` — transizione di stato. `scheduledAt` è
+ * obbligatorio nel payload quando `status === 'scheduled'`.
+ */
+export async function changePageStatus(
+  guid: string,
+  payload: ChangeStatusPayload,
+): Promise<PageRecord> {
+  const { data } = await api.post<PageRecord>(`${PAGES_PREFIX}/${guid}/status`, payload);
+  return data;
+}
+
+/** `DELETE /app/pages/:guid` — soft-delete (Admin+). */
+export async function deletePage(guid: string): Promise<void> {
+  await api.delete(`${PAGES_PREFIX}/${guid}`);
+}
+
+/** `GET /app/pages/:guid/revisions` — elenco paginato Revisioni, più recenti prima. */
+export async function fetchPageRevisions(
+  guid: string,
+  params: PaginationParams,
+): Promise<Pagination<PageRevisionSummary>> {
+  const { data } = await api.get<Pagination<PageRevisionSummary>>(
+    `${PAGES_PREFIX}/${guid}/revisions`,
+    { params },
+  );
+  return data;
+}
+
+/** `GET /app/pages/:guid/revisions/:revisionGuid` — dettaglio Revisione, snapshot incluso. */
+export async function getPageRevision(
+  guid: string,
+  revisionGuid: string,
+): Promise<PageRevisionDetail> {
+  const { data } = await api.get<PageRevisionDetail>(
+    `${PAGES_PREFIX}/${guid}/revisions/${revisionGuid}`,
+  );
+  return data;
+}
+
+/**
+ * `POST /app/pages/:guid/revisions/:revisionGuid/restore` — ripristina una
+ * Revisione passata in una NUOVA bozza (Manager+). Non tocca la Revisione
+ * online né ripubblica automaticamente.
+ */
+export async function restorePageRevision(guid: string, revisionGuid: string): Promise<PageRecord> {
+  const { data } = await api.post<PageRecord>(
+    `${PAGES_PREFIX}/${guid}/revisions/${revisionGuid}/restore`,
+  );
+  return data;
+}

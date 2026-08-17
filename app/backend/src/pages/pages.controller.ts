@@ -150,6 +150,7 @@ export class PagesController {
    * sulla propria riga, ADR-18 § D3) — il check vive nel service, non qui.
    */
   @Post(':guid/status')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Transizione di stato di una Pagina' })
   @ApiResponse({ status: 200, description: 'Stato aggiornato', type: PageDto })
   @ApiResponse({ status: 400, description: 'Transizione di stato non ammessa' })
@@ -208,6 +209,7 @@ export class PagesController {
    */
   @Post(':guid/revisions/:revisionGuid/restore')
   @UseGuards(GuardManager)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Ripristina una Revisione passata in una nuova bozza (Manager+)' })
   @ApiResponse({ status: 200, description: 'Bozza ripristinata dallo snapshot', type: PageDto })
   @ApiResponse({ status: 404, description: 'Pagina o Revisione non trovate' })

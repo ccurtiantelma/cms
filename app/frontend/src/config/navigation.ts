@@ -3,7 +3,7 @@
  * Riferimento ruoli: CONTRACT.md / `types/common.types.ts` → `AppUserRoles`.
  */
 import type { Icon as TablerIcon } from '@tabler/icons-react';
-import { IconLayoutDashboard, IconUsers, IconHistory } from '@tabler/icons-react';
+import { IconFileText, IconLayoutDashboard, IconUsers, IconHistory } from '@tabler/icons-react';
 import { AppUserRoles } from '../types/common.types';
 
 /** Voce di navigazione della sidebar. */
@@ -24,6 +24,13 @@ export const navigationItems: NavigationItem[] = [
     label: 'Dashboard',
     path: '/dashboard',
     icon: IconLayoutDashboard,
+  },
+  {
+    label: 'Pagine',
+    path: '/pages',
+    icon: IconFileText,
+    // Nessuna restrizione di ruolo: l'API applica ownership per riga (ADR-18),
+    // un `User` vede/gestisce solo le proprie Pagine in `draft`.
   },
   {
     label: 'Utenti',

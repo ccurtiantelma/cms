@@ -4,9 +4,9 @@
 > attuale al prodotto completo. È il punto di ingresso per capire **a che punto siamo** e
 > **cosa serve decidere prima di procedere**.
 >
-> Creato il 2026-08-13. Ultimo aggiornamento: **2026-08-17** — decisioni A2/A3/A4/A5 prese,
-> ADR-18 prodotta, spec e plan di F01 corretti. Aggiornare a ogni passo completato o
-> decisione presa.
+> Creato il 2026-08-13. Ultimo aggiornamento: **2026-08-17** — **F01 chiusa**: ADR-18/19/20
+> firmate, T1–T8 completati, residui (autore Revisioni, dati di verifica) chiusi.
+> Aggiornare a ogni passo completato o decisione presa.
 
 ## Legenda
 
@@ -25,7 +25,7 @@
 |---|---|---|---|
 | 0.1 | Audit della cartella `docs/` | ✅ | 36 file scansionati. Nessuno scarto del vecchio gestionale: la duplicazione era il vero problema |
 | 0.2 | Eliminazione dei file duplicati (`instructions.md`, `MATRICE_AGENTI.md`, `RUNBOOK.md`) | ✅ | Contenuto preservato in `CLAUDE.md`, `constitution.md`, `GUIDA_UTILIZZO.md` |
-| 0.3 | Correzione della tabella porte (era sbagliata in 3 file) | ✅ | Valori reali: 3001 / 5173 / 5435 / 6381 / 8026 |
+| 0.3 | Correzione della tabella porte (era sbagliata in 3 file) | ✅ | Valori reali: 3000 / 5173 / 5435 / 6381 / 8026 |
 | 0.4 | Riscrittura `constitution.md` con la nuova identità headless | ✅ | + 3 principi nuovi: Content is Data, Headless by Default, Public Read is a Different Citizen |
 | 0.5 | Redazione delle business rules di dominio | ✅ | Sezione prima vuota, ora completa: stati, permessi, slug, revisioni, SEO/GEO, multilingua, media, form, chatbot, cache |
 | 0.6 | Riscrittura `glossary.md` con i termini di dominio | ✅ | |
@@ -47,10 +47,10 @@ ancora stata scritta.
 
 | # | ADR da produrre | Blocca | Stato |
 |---|---|---|---|
-| 1.0 | **Ownership per riga dei permessi editoriali** — `ADR-18-ownership-per-riga.md` | **F01 (T4)** | 🔍 **Prodotta il 2026-08-17, in attesa della tua firma.** Tre punti (P1/P2/P3) sono proposte da confermare o correggere |
+| 1.0 | **Ownership per riga dei permessi editoriali** — `ADR-18-ownership-per-riga.md` | **F01 (T4)** | ✅ Approvata il 2026-08-17 (P1/P2/P3 incluse) |
 | 1.1 | Formato e versionamento dello schema dei blocchi | F02, F04 | ⏳ Da fare — la più urgente dopo F01 |
-| 1.2 | Strategia di versionamento/revisioni (snapshot vs. diff) — `ADR-19` | **F01 (T2)** | ⏳ Da produrre: è il task T1(a) del plan di F01. Formalizza S1 e registra la contraddizione sulla potatura senza implementarla |
-| 1.2b | **Sanitizzazione HTML server-side** — RFC + scelta della dipendenza | **F01 (T3)** | ⏳ Da produrre: task T1(b) del plan. Va **proposta** con motivazione e alternative, mai installata d'iniziativa |
+| 1.2 | Strategia di versionamento/revisioni (snapshot vs. diff) — `ADR-19-revisioni-immutabili.md` | **F01 (T2)** | ✅ Approvata il 2026-08-17 |
+| 1.2b | **Sanitizzazione HTML server-side** — `ADR-20`, libreria `sanitize-html` | **F01 (T3)** | ✅ Approvata il 2026-08-17 |
 | 1.3 | Caching e invalidazione del contenuto pubblico | F03 | ⏳ Da fare |
 | 1.4 | Modello multilingua | F05 | 🔍 A3 confermata il 2026-08-17 (righe autonome + `translationGroupId` opaco); serve ancora l'ADR formale |
 | 1.5 | Routing e risoluzione degli slug | F03 | 🔍 Regole scritte in business-rules, serve ADR formale |
@@ -67,7 +67,7 @@ l'editor o il SEO prima del modello di contenuto significa doverli rifare.
 
 | # | Feature | Pilastro | Stato | Cosa manca |
 |---|---|---|---|---|
-| 2.1 | **F01 — Gestione Pagine** | fondativa | 🔍 | Feature scritta · spec corretta il 2026-08-17 · plan a 8 task pronto. Serve: firma ADR-18 + ADR-19 + RFC sanitizzazione → approvazione spec → approvazione schema DB → codice |
+| 2.1 | **F01 — Gestione Pagine** | fondativa | ✅ | Chiusa il 2026-08-17. T1–T8 completati (ADR-18/19/20 firmate, schema DB approvato, CRUD + macchina a stati + pubblicazione transazionale + revisioni + frontend). Ultimi due residui chiusi nello stesso passaggio: autore esposto in `PageRevisionSummaryDto`/`PageRevisionDetailDto`, dati di verifica T4–T8 soft-eliminati |
 | 2.2 | F02 — Registro e validazione dei Blocchi | 1 | ⏳ | Dipende da 1.1 e da F01 |
 | 2.3 | F03 — Superficie pubblica + cache | 2, 7 | ⏳ | Dipende da 1.3, 1.5, F01, F02 |
 | 2.4 | F04 — Editor visivo (page builder) | 1 | ⏳ | Dipende da F02. **Massimo rischio di over-engineering**: va costruita per incrementi |
@@ -92,6 +92,7 @@ l'editor o il SEO prima del modello di contenuto significa doverli rifare.
 | 3.4 | `exceljs@4.4.0` porta un `uuid` con vulnerabilità moderata (transitiva) | ⏳ | Da monitorare, nessuna versione upstream la risolve oggi. Vedi ADR-10 |
 | 3.5 | ADR-5, ADR-6, ADR-15 rinviano a file eliminati | ✅ | Non correggibile (ADR immutabili). Mappa dei rinvii in `progress-tracker.md` |
 | 3.6 | `AdminService` verifica l'unicità email con una `SELECT` preventiva (`admin.service.ts:187-191,264`) invece di intercettare il vincolo univoco, in violazione di `CLAUDE.md` § Backend ("unicità slug da constraint DB → 409, mai SELECT preventiva") | 🤝 | Debito preesistente a F01, non nato con `pages`. F01 (T3) ha introdotto `app/backend/src/common/db-error.mapper.ts`, riusabile per questo caso, ma **non ha rifattorizzato `AdminService`**: fuori scope del task. Va ripreso a sé, sostituendo la `SELECT` con l'`unique` constraint su `users.email` + `mapPgError` |
+| 3.7 | Il gate CI `backend-e2e` (`.github/workflows/ci.yml`) girava su Postgres/Redis reali senza `continue-on-error`, ma scattava solo su `pull_request` — mai su push diretto a `main`/`develop`, il flusso reale con cui questo repo è avanzato finora | ✅ | Chiuso il 2026-08-17, su autorizzazione esplicita: aggiunto `push: branches: [main, develop]` al trigger del workflow, accanto a `pull_request`. Un push diretto ora attiva lo stesso gate di una PR |
 
 ---
 
@@ -110,15 +111,15 @@ zero; dopo tre feature costa migrazioni di dati.
 | A5 | Una installazione = un sito, o più siti nella stessa installazione? | ✅ **Un sito, più lingue.** Nessun `siteId`; l'unico innesto futuro previsto è `Utils.applyScopeFilter` |
 | A6 | Il chatbot risponde solo sui contenuti del sito o è un assistente generalista? | ⏳ **Aperta** — non blocca: F11 è l'ultima della fila |
 
-### D1b — Le tre firme che bloccano il primo commit di codice di F01
+### D1b — Le tre firme che bloccavano il primo commit di codice di F01 — chiusa il 2026-08-17
 
-| # | Documento | Serve per |
-|---|---|---|
-| 1 | `ADR-18-ownership-per-riga.md` — prodotta, in attesa | T2 (indice `created_by`) e T4 (tutto l'impianto dei permessi) |
-| 2 | `ADR-19-revisioni-immutabili.md` — da produrre | T2 (schema `page_revisions`) |
-| 3 | RFC sanitizzazione + **approvazione della dipendenza npm** | T3, e quindi ogni percorso di persistenza di contenuto |
+| # | Documento | Serviva per | Esito |
+|---|---|---|---|
+| 1 | `ADR-18-ownership-per-riga.md` | T2 (indice `created_by`) e T4 (tutto l'impianto dei permessi) | ✅ Approvata |
+| 2 | `ADR-19-revisioni-immutabili.md` | T2 (schema `page_revisions`) | ✅ Approvata |
+| 3 | RFC sanitizzazione + approvazione della dipendenza npm (`ADR-20`) | T3, e quindi ogni percorso di persistenza di contenuto | ✅ Approvata |
 
-Più l'**approvazione esplicita dello schema DB**, che `CLAUDE.md` § Ask first richiede a parte.
+Schema DB approvato a parte, come richiesto da `CLAUDE.md` § Ask first.
 
 ### D2 — Provider del chatbot (voce 1.7)
 
@@ -135,13 +136,12 @@ rifiutate. Se rifiutate, il codice va rimosso.
 
 ## Prossimo passo consigliato
 
-1. **Firma o correggi `ADR-18-ownership-per-riga.md`** — in particolare i tre punti P1/P2/P3
-   in fondo, che sono proposte mie e non derivano da una regola già scritta
-2. Chiedimi **ADR-19** (revisioni immutabili) e l'**RFC sulla sanitizzazione** con le
-   alternative di libreria — sono il task T1 del plan, e li scrivo solo su tua richiesta
-3. Approva la dipendenza npm scelta nell'RFC (senza, F01 non può persistere contenuto)
-4. Approva o correggi la spec **F01**, in particolare la proposta di schema DB
-5. Da lì parte T2 e si comincia a scrivere codice
+F01 è chiusa. Il passo successivo è **F02 — Registro e validazione dei Blocchi**, bloccato
+da 1.1 (formato e versionamento dello schema dei blocchi — ADR da produrre).
+
+Decisione ancora aperta, non bloccante, emersa nella chiusura di F01: se serve un rate
+limit differenziato fra `/auth/*` e la superficie amministrativa `app/*` (oggi quest'ultima
+non ne ha nessuno — vedi nota in `docs/ai/progress-tracker.md` § "F01 — chiusura").
 
 Tutto il resto può aspettare senza bloccare nulla.
 

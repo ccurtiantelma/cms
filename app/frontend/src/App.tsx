@@ -21,6 +21,8 @@ const PageSetPassword = lazy(() => import('./pages/auth/PageSetPassword'));
 const PageForgottenPassword = lazy(() => import('./pages/auth/PageForgottenPassword'));
 const PageDashboard = lazy(() => import('./pages/dashboard/PageDashboard'));
 const PageProfile = lazy(() => import('./pages/profile/PageProfile'));
+const PagePages = lazy(() => import('./pages/pages/PagePages'));
+const PagePageDetail = lazy(() => import('./pages/pages/PagePageDetail'));
 const PageUsers = lazy(() => import('./pages/admin/PageUsers'));
 const PageAuditLog = lazy(() => import('./pages/admin/PageAuditLog'));
 const PageThemeEditor = lazy(() => import('./pages/theme-editor/PageThemeEditor'));
@@ -112,6 +114,9 @@ export default function App(): JSX.Element {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<PageDashboard />} />
             <Route path="profile" element={<PageProfile />} />
+            {/* Nessun `RequireRole`: ownership per riga (ADR-18) è applicata dal backend. */}
+            <Route path="pages" element={<PagePages />} />
+            <Route path="pages/:guid" element={<PagePageDetail />} />
             <Route
               path="users"
               element={

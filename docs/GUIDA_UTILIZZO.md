@@ -43,8 +43,8 @@ npm run dev
 ### Avvio
 ```bash
 npm run dev                  # backend + frontend insieme
-npm run dev:backend          # solo NestJS (porta 3001)
-npm run dev:frontend         # solo Vite (porta 5175)
+npm run dev:backend          # solo NestJS (porta 3000)
+npm run dev:frontend         # solo Vite (porta 5173)
 ```
 
 ### Database
@@ -128,12 +128,12 @@ npm run db:migrate && npm run seed
 bruno/<modulo>/<endpoint>.yml     # formato OpenCollection, richiede Bruno desktop >= 3.1
 ```
 `bruno/opencollection.yml` e `bruno/environments/local.yml` sono già presenti
-(`baseUrl = http://localhost:3001/api/v1`). Apri Bruno desktop → carica la cartella
+(`baseUrl = http://localhost:3000/api/v1`). Apri Bruno desktop → carica la cartella
 `bruno/` → seleziona ambiente `local` → esegui.
 
 ### Health check
 ```bash
-curl http://localhost:3001/api/v1/health
+curl http://localhost:3000/api/v1/health
 ```
 `200` se DB/Redis/coda BullMQ sono tutti raggiungibili, `503` altrimenti (con dettaglio
 per-check nel body). Dettagli: `docs/ai/adr/ADR-7-health-check-terminus.md`.
@@ -230,20 +230,20 @@ docker compose -f docker-compose.prod.yml up -d --build
 | `node_modules` corrotto | `npm run clean && npm install` |
 | Migrazione fallita | controlla `DATABASE_URL` in `app/backend/.env`, poi `npm run db:migrate` |
 | Tipi frontend non aggiornati | `npm run openapi:types` (richiede `openapi:export` prima, con backend avviato) |
-| Porta già in uso | `lsof -i :3001` (o `:5175`/`:5435`/`:6381`/`:8026`) poi `kill <PID>` |
-| Email non arrivano in dev | controlla Mailhog UI su http://localhost:8026 (SMTP finto, nessun invio reale) |
+| Porta già in uso | `lsof -i :3000` (o `:5173`/`:5432`/`:6379`/`:8025`) poi `kill <PID>` |
+| Email non arrivano in dev | controlla Mailhog UI su http://localhost:8025 (SMTP finto, nessun invio reale) |
 | 401 dopo login funzionante | verifica che il cookie `rtk` sia presente (httpOnly, signed) e `COOKIE_DOMAIN` coerente con l'host usato |
 
 ## Tabella porte
 
-> Valori reali da `docker-compose.yml`, `.env.example` e `vite.config.ts`. Volutamente non
-> standard, per isolare questo stack dagli altri progetti Docker sulla stessa macchina.
+> Valori reali da `docker-compose.yml`, `.env.example` e `vite.config.ts`. Porte canoniche
+> di ogni servizio, nessuna variante.
 
 | Servizio | Porta host | Porta container |
 |---|---|---|
-| Backend (NestJS) | 3001 | — |
-| Frontend (Vite) | 5175 | — |
-| PostgreSQL | 5435 | 5432 |
-| Redis | 6381 | 6379 |
-| Mailhog SMTP | 1026 | 1025 |
-| Mailhog UI | 8026 | 8025 |
+| Backend (NestJS) | 3000 | — |
+| Frontend (Vite) | 5173 | — |
+| PostgreSQL | 5432 | 5432 |
+| Redis | 6379 | 6379 |
+| Mailhog SMTP | 1025 | 1025 |
+| Mailhog UI | 8025 | 8025 |

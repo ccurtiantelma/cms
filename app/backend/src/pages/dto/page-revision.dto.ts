@@ -23,6 +23,13 @@ export class PageRevisionSummaryDto {
 
   @ApiProperty({ description: 'Data di creazione della Revisione (= data di pubblicazione)' })
   createdAt!: Date;
+
+  @ApiProperty({
+    description:
+      'Nome e cognome di chi ha pubblicato questa Revisione (business-rules.md § Revisioni, regola 1)',
+    example: 'Maria Rossi',
+  })
+  authorName!: string;
 }
 
 /**

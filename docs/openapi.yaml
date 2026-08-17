@@ -2697,6 +2697,12 @@ components:
           format: date-time
           type: string
           description: Data di creazione della Revisione (= data di pubblicazione)
+        authorName:
+          type: string
+          description: >-
+            Nome e cognome di chi ha pubblicato questa Revisione
+            (business-rules.md § Revisioni, regola 1)
+          example: Maria Rossi
         content:
           type: object
           description: >-
@@ -2715,5 +2721,6 @@ components:
         - title
         - slug
         - createdAt
+        - authorName
         - content
         - seo

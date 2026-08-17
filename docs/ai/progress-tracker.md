@@ -4,7 +4,7 @@
 > Le AI non lo modificano autonomamente: lo stato viene aggiornato a fine feature, su
 > richiesta esplicita.
 >
-> Ultima revisione: 2026-08-13 — aggiunta la sezione del dominio CMS.
+> Ultima revisione: 2026-08-17 — F01 chiusa.
 
 ---
 
@@ -53,7 +53,7 @@
 
 | # | Feature | Pilastro | Riferimento | Status |
 |---|---|---|---|---|
-| F01 | Gestione Pagine (modello, stati, slug, revisioni) | fondativa | features/F01-gestione-pagine.md · specs/SPEC-F01-gestione-pagine.md | 📝 Spec in bozza, in attesa di approvazione |
+| F01 | Gestione Pagine (modello, stati, slug, revisioni) | fondativa | features/F01-gestione-pagine.md · specs/SPEC-F01-gestione-pagine.md · plans/PLAN-F01-innesto.md | ✅ Done (2026-08-17) |
 | F02 | Registro e validazione dei Blocchi | 1 | — | ⏳ Pending |
 | F03 | Superficie pubblica di lettura + cache | 2, 7 | — | ⏳ Pending |
 | F04 | Editor visivo (page builder) | 1 | — | ⏳ Pending |
@@ -125,3 +125,25 @@ e non conoscevano il confine Mantine ↔ componenti dei blocchi.
 
 **Prossimo passo atteso**: approvazione umana delle assunzioni A1–A6 in
 `docs/business-rules.md` e della spec F01.
+
+---
+
+## F01 — chiusura (2026-08-17)
+
+T1–T8 del plan completati (ADR-18 ownership, ADR-19 revisioni immutabili, ADR-20
+sanitizzazione approvate; CRUD Pagine, macchina a stati, pubblicazione transazionale,
+revisioni, frontend). Chiusi in questo passaggio i due residui rimasti aperti:
+
+- **Autore delle Revisioni**: `PageRevisionSummaryDto`/`PageRevisionDetailDto` espongono
+  ora `authorName` (join sulla relation `author` di `pageRevisionEntity`, mai l'`id`
+  numerico). Frontend aggiornato (colonna "Autore" in tabella + dettaglio), rimossa la nota
+  sul campo mancante. `openapi:export`/`openapi:types` rieseguiti.
+- **Dati di verifica T4–T8**: le due pagine di test (`8f34b83dcd4b749d`,
+  `44790deb055b5e4c`) sono state soft-eliminate via `DELETE /app/pages/:guid` (mai
+  `DELETE` fisico). Verificato che non restino altri residui in `pages`/`page_revisions`.
+- **Rate limit sulla superficie amministrativa**: verificato che `ThrottlerGuard` è
+  applicato solo su `AuthController` (`/auth/login`, `/auth/mfa-verify`, ecc., 5/60s), non
+  su `PagesController`/`app/pages`. Il 429 incontrato durante le verifiche T4–T8 veniva
+  quindi dal throttle di `/auth/login` (5 tentativi/60s), non da un limite sull'endpoint
+  `DELETE` stesso — che oggi non ha alcun rate limit. Nessuna modifica applicata: la
+  decisione se differenziare i limiti fra `/auth/*` e `app/*` resta da prendere insieme.

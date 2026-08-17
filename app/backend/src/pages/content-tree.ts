@@ -69,6 +69,6 @@ function invalidTree(path: string, reason: string): BadRequestException {
       ? `Albero blocchi non valido in "${path}": ${reason}.`
       : `Albero blocchi non valido: ${reason}.`,
     code: 'CONTENT_TREE_INVALID',
-    path: path || undefined,
+    ...(path ? { details: { path } } : {}),
   });
 }

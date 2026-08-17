@@ -35,6 +35,9 @@ import { PageRevisionDetailDto, PageRevisionSummaryDto } from './dto/page-revisi
 type PageRow = typeof pageEntity.$inferSelect;
 type PageRowWithParent = PageRow & { parent: { guid: string } | null };
 type PageRevisionRow = typeof pageRevisionEntity.$inferSelect;
+type PageRevisionRowWithAuthor = PageRevisionRow & {
+  author: { name: string; surname: string | null };
+};
 
 /** Soglia di elevazione editoriale (ADR-18 § D3): sopra `Manager` l'ownership per riga non si applica. */
 const OWNERSHIP_ELEVATED_THRESHOLD = AppUserRoles.Manager;
@@ -266,7 +269,7 @@ export class PagesService {
       throw new BadRequestException({
         message: `Transizione di stato non ammessa: "${fromStatus} -> ${dto.status}".`,
         code: 'PAGE_STATUS_TRANSITION_NOT_ALLOWED',
-        transition: `${fromStatus}->${dto.status}`,
+        details: { transition: `${fromStatus}->${dto.status}` },
       });
     }
     const toStatus = dto.status;
@@ -454,6 +457,7 @@ export class PagesService {
         orderBy: desc(pageRevisionEntity.revisionNumber),
         limit: perPage,
         offset: (page - 1) * perPage,
+        with: { author: { columns: { name: true, surname: true } } },
       }),
       this.db.db.select({ total: count() }).from(pageRevisionEntity).where(where),
     ]);
@@ -512,9 +516,16 @@ export class PagesService {
 
     const revision = await this.loadRevisionOrThrow(row.id, revisionGuid);
 
+    // La Revisione è stata sanitizzata con l'allowlist in vigore al momento
+    // della pubblicazione: ripassa dal sanitizzatore corrente prima di
+    // scrivere la bozza, altrimenti un'allowlist inasprita nel frattempo
+    // (F02, per tipo di blocco) verrebbe aggirata dal ripristino.
+    const sanitizedContent = this.treeSanitizer.sanitizeTree(revision.content);
+    const sanitizedSeo = this.treeSanitizer.sanitizeTree(revision.seo);
+
     const updatedRow = await this.updateOrMapConflict(row.id, row.version, {
-      draftContent: revision.content,
-      draftSeo: revision.seo,
+      draftContent: sanitizedContent,
+      draftSeo: sanitizedSeo,
       version: sql`${pageEntity.version} + 1`,
       updatedAt: new Date(),
       updatedBy: authInfo.userId,
@@ -651,9 +662,10 @@ export class PagesService {
   private async loadRevisionOrThrow(
     pageId: number,
     revisionGuid: string,
-  ): Promise<PageRevisionRow> {
+  ): Promise<PageRevisionRowWithAuthor> {
     const revision = await this.db.db.query.pageRevisionEntity.findFirst({
       where: and(eq(pageRevisionEntity.guid, revisionGuid), eq(pageRevisionEntity.pageId, pageId)),
+      with: { author: { columns: { name: true, surname: true } } },
     });
     if (!revision) {
       throw new NotFoundException('Revisione non trovata.');
@@ -661,17 +673,18 @@ export class PagesService {
     return revision;
   }
 
-  private toRevisionSummaryDto(row: PageRevisionRow): PageRevisionSummaryDto {
+  private toRevisionSummaryDto(row: PageRevisionRowWithAuthor): PageRevisionSummaryDto {
     return {
       guid: row.guid,
       revisionNumber: row.revisionNumber,
       title: row.title,
       slug: row.slug,
       createdAt: row.createdAt!,
+      authorName: row.author.surname ? `${row.author.name} ${row.author.surname}` : row.author.name,
     };
   }
 
-  private toRevisionDetailDto(row: PageRevisionRow): PageRevisionDetailDto {
+  private toRevisionDetailDto(row: PageRevisionRowWithAuthor): PageRevisionDetailDto {
     return {
       ...this.toRevisionSummaryDto(row),
       content: row.content as Record<string, unknown>,

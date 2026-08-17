@@ -123,7 +123,7 @@ JWT globale (access 15min, refresh 7gg cookie httpOnly firmato+rotation) · thro
 
 ## Error handling
 
-Backend: `AllExceptionsFilter` normalizza tutto in `{statusCode,message,code,timestamp,path}` · 5xx→`error` (stack solo log) · 4xx→`warn` · validazione blocchi→400 con path colpevoli · 409 concorrenza/slug con `code` distinti.
+Backend: `AllExceptionsFilter` normalizza tutto in `{statusCode,message,code,timestamp,path}`, più `details` opzionale quando l'eccezione lo porta (dati strutturati di dominio: path del blocco colpevole, transizione di stato rifiutata) — mai un sostituto di `message`/`code`, mai obbligatorio · 5xx→`error` (stack solo log) · 4xx→`warn` · validazione blocchi→400 con path colpevoli in `details` · 409 concorrenza/slug con `code` distinti.
 Frontend: Error Boundary globale + per-blocco. Interceptor Axios: `401`→refresh poi redirect login · `403`→notification · `404`→pagina/notification · `409`→messaggio esplicito, mai overwrite silenzioso · `5xx`→notification+log · rete assente→notification.
 
 ## Testing
