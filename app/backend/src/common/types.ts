@@ -58,3 +58,9 @@ export interface NotificationsQueryParams {
   i: number;
   unreadOnly?: boolean;
 }
+
+/** Parametri di filtro per GET /app/pages. */
+export interface PagesQueryParams extends PaginationParams {
+  status?: string;
+  locale?: string;
+}

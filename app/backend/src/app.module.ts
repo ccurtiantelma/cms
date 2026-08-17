@@ -20,6 +20,7 @@ import { SchedulerModule } from './scheduler/scheduler.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { PagesModule } from './pages/pages.module';
 
 @Module({
   imports: [
@@ -102,6 +103,7 @@ import { MetricsModule } from './metrics/metrics.module';
     // MetricsModule (ADR-15) montato solo se METRICS_ENABLED=true: opt-in esplicito,
     // nessun endpoint/interceptor registrato per i progetti che non lo abilitano.
     ...(AppConstants.metricsEnabled ? [MetricsModule] : []),
+    PagesModule,
     // TODO: aggiungere qui i moduli applicativi del CMS man mano che vengono creati.
   ],
   controllers: [],

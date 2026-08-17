@@ -553,6 +553,43 @@ export interface paths {
         patch: operations["NotificationsController_markAllRead"];
         trace?: never;
     };
+    "/api/v1/app/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista paginata delle Pagine (User: solo le proprie) */
+        get: operations["PagesController_findAll"];
+        put?: never;
+        /** Crea una Pagina in stato draft */
+        post: operations["PagesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/app/pages/{guid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dettaglio di una Pagina */
+        get: operations["PagesController_findOne"];
+        put?: never;
+        post?: never;
+        /** Elimina (soft-delete) una Pagina (Admin+) */
+        delete: operations["PagesController_remove"];
+        options?: never;
+        head?: never;
+        /** Aggiorna la bozza di una Pagina (richiede version per il lock ottimistico) */
+        patch: operations["PagesController_update"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1479,6 +1516,159 @@ export interface components {
              * @example 3
              */
             updated: number;
+        };
+        PageFaqEntryDto: {
+            /** @description Domanda */
+            question?: string;
+            /** @description Risposta */
+            answer?: string;
+        };
+        PageSeoDto: {
+            /** @description Titolo per i motori di ricerca (fallback al titolo Pagina) */
+            metaTitle?: string;
+            /** @description Descrizione per i motori di ricerca */
+            metaDescription?: string;
+            /** @description URL canonica (se vuota, calcolata dal percorso della Pagina) */
+            canonicalUrl?: string;
+            /**
+             * @description Direttiva indicizzazione
+             * @enum {string}
+             */
+            robotsIndex?: "index" | "noindex";
+            /**
+             * @description Direttiva crawling dei link
+             * @enum {string}
+             */
+            robotsFollow?: "follow" | "nofollow";
+            /** @description Titolo Open Graph (fallback a metaTitle) */
+            ogTitle?: string;
+            /** @description Descrizione Open Graph (fallback a metaDescription) */
+            ogDescription?: string;
+            /** @description Immagine Open Graph (fallback a immagine di copertina) */
+            ogImage?: string;
+            /** @description JSON-LD esteso a mano, oltre a quello generato dal sistema */
+            structuredData?: Record<string, never>;
+            /** @description Riassunto sintetico e autosufficiente per i motori generativi */
+            aiSummary?: string;
+            /** @description Affermazioni brevi e verificabili estratte dalla Pagina */
+            keyFacts?: string[];
+            /** @description Coppie domanda/risposta */
+            faq?: components["schemas"]["PageFaqEntryDto"][];
+            /** @description Entità/argomenti trattati dalla Pagina */
+            entities?: string[];
+            /** @description Consenso all'uso del contenuto da parte dei crawler AI (default: consentito) */
+            aiPolicyAllowed?: boolean;
+        };
+        CreatePageDto: {
+            /**
+             * @description Titolo della Pagina
+             * @example Chi siamo
+             */
+            title: string;
+            /**
+             * @description Slug proposto (normalizzato server-side); se assente, generato dal titolo
+             * @example chi-siamo
+             */
+            slug?: string;
+            /**
+             * @description Locale della Pagina
+             * @example it-IT
+             */
+            locale: string;
+            /**
+             * @description Guid della Pagina genitore; assente per una Pagina root
+             * @example a1b2c3d4e5f6a7b8
+             */
+            parentGuid?: string;
+            /** @description Albero di blocchi iniziale (default: albero vuoto) */
+            draftContent?: {
+                [key: string]: unknown;
+            };
+            /** @description Metadati SEO/GEO iniziali */
+            draftSeo?: components["schemas"]["PageSeoDto"];
+        };
+        PageDto: {
+            /**
+             * @description Identificatore pubblico della Pagina, usato nelle URL admin
+             * @example a1b2c3d4e5f6a7b8
+             */
+            guid: string;
+            /**
+             * @description Titolo della Pagina
+             * @example Chi siamo
+             */
+            title: string;
+            /**
+             * @description Slug, unico per locale + genitore fra le righe attive
+             * @example chi-siamo
+             */
+            slug: string;
+            /**
+             * @description Locale della Pagina
+             * @example it-IT
+             */
+            locale: string;
+            /** @description Guid della Pagina genitore, null per una Pagina root */
+            parentGuid?: Record<string, never> | null;
+            /**
+             * @description Chiave opaca del gruppo di traduzione
+             * @example f6a7b8a1b2c3d4e5
+             */
+            translationGroupId: string;
+            /**
+             * @description Stato del ciclo di vita
+             * @example draft
+             */
+            status: string;
+            /** @description Data di pubblicazione, se pubblicata */
+            publishedAt?: Record<string, never> | null;
+            /** @description Data di pubblicazione programmata, se impostata */
+            scheduledAt?: Record<string, never> | null;
+            /** @description Albero di blocchi della bozza corrente */
+            draftContent: {
+                [key: string]: unknown;
+            };
+            /** @description Metadati SEO/GEO della bozza corrente */
+            draftSeo: {
+                [key: string]: unknown;
+            };
+            /**
+             * @description Contatore di lock ottimistico, da inviare in ogni PATCH
+             * @example 3
+             */
+            version: number;
+            /**
+             * Format: date-time
+             * @description Data di creazione
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Data di ultimo aggiornamento della bozza
+             */
+            updatedAt: string;
+        };
+        UpdatePageDto: {
+            /**
+             * @description Version letta al caricamento della bozza (lock ottimistico)
+             * @example 3
+             */
+            version: number;
+            /** @description Titolo della Pagina */
+            title?: string;
+            /** @description Slug (normalizzato server-side); non rigenerato automaticamente dal titolo */
+            slug?: string;
+            /**
+             * @description Guid della nuova Pagina genitore; null per spostare in radice
+             * @example a1b2c3d4e5f6a7b8
+             */
+            parentGuid?: Record<string, never> | null;
+            /** @description Albero di blocchi aggiornato (sostituisce integralmente la bozza) */
+            draftContent?: {
+                [key: string]: unknown;
+            };
+            /** @description Metadati SEO/GEO aggiornati (sostituiscono integralmente i precedenti) */
+            draftSeo?: components["schemas"]["PageSeoDto"];
         };
     };
     responses: never;
@@ -2659,6 +2849,194 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["MarkAllReadDto"];
                 };
+            };
+        };
+    };
+    PagesController_findAll: {
+        parameters: {
+            query?: {
+                /** @description Pagina (default 1) */
+                p?: string;
+                /** @description Elementi per pagina (default 20) */
+                i?: string;
+                /** @description Ricerca testuale su titolo e slug */
+                q?: string;
+                /** @description Campo di ordinamento (title, slug, status, locale, createdAt, updatedAt) */
+                o?: string;
+                /** @description Direzione ordinamento (asc|desc, default desc) */
+                d?: string;
+                /** @description Filtro per stato */
+                status?: string;
+                /** @description Filtro per locale */
+                locale?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista Pagine paginata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PagesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePageDto"];
+            };
+        };
+        responses: {
+            /** @description Pagina creata */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageDto"];
+                };
+            };
+            /** @description Slug non valido/riservato, genitore inesistente o albero blocchi malformato */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Slug già in uso per questo locale/genitore */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PagesController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pagina trovata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageDto"];
+                };
+            };
+            /** @description La Pagina esiste ma non è del chiamante */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pagina non trovata o eliminata */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PagesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pagina eliminata */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pagina non trovata o già eliminata */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PagesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePageDto"];
+            };
+        };
+        responses: {
+            /** @description Bozza aggiornata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageDto"];
+                };
+            };
+            /** @description Slug non valido/riservato, ciclo di gerarchia o albero blocchi malformato */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Riga altrui, o propria ma non più in stato draft */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pagina non trovata o eliminata */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Slug già in uso, oppure version non più valida (conflitto di editing) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

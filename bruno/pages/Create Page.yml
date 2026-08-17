@@ -1,0 +1,51 @@
+info:
+  name: Create Page
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/pages"
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Chi siamo",
+        "locale": "it-IT",
+        "draftContent": {
+          "version": 1,
+          "blocks": [
+            {
+              "id": "b1a2c3d4",
+              "type": "richText",
+              "props": { "html": "<p>Testo di esempio</p>" },
+              "children": []
+            }
+          ]
+        },
+        "draftSeo": {
+          "metaTitle": "Chi siamo",
+          "aiPolicyAllowed": true
+        }
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("risposta contiene guid/slug/version", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("guid");
+    expect(body).to.have.property("slug", "chi-siamo");
+    expect(body).to.have.property("version", 1);
+  });

@@ -1,0 +1,26 @@
+info:
+  name: Delete Page
+  type: http
+  seq: 5
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/app/pages/:guid"
+  params:
+    - name: guid
+      value: a1b2c3d4e5f6a7b8
+      type: path
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 204, 403 or 404", function() {
+    expect([204, 403, 404]).to.include(res.getStatus());
+  });

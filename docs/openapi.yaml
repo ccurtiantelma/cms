@@ -834,6 +834,172 @@ paths:
       summary: Segna tutte le notifiche del chiamante come lette
       tags:
         - Notifications
+  /api/v1/app/pages:
+    get:
+      operationId: PagesController_findAll
+      parameters:
+        - name: p
+          required: false
+          in: query
+          description: Pagina (default 1)
+          schema:
+            type: string
+        - name: i
+          required: false
+          in: query
+          description: Elementi per pagina (default 20)
+          schema:
+            type: string
+        - name: q
+          required: false
+          in: query
+          description: Ricerca testuale su titolo e slug
+          schema:
+            type: string
+        - name: o
+          required: false
+          in: query
+          description: >-
+            Campo di ordinamento (title, slug, status, locale, createdAt,
+            updatedAt)
+          schema:
+            type: string
+        - name: d
+          required: false
+          in: query
+          description: Direzione ordinamento (asc|desc, default desc)
+          schema:
+            type: string
+        - name: status
+          required: false
+          in: query
+          description: Filtro per stato
+          schema:
+            type: string
+        - name: locale
+          required: false
+          in: query
+          description: Filtro per locale
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista Pagine paginata
+      security:
+        - access-token: []
+      summary: 'Lista paginata delle Pagine (User: solo le proprie)'
+      tags:
+        - Pages
+    post:
+      operationId: PagesController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePageDto'
+      responses:
+        '201':
+          description: Pagina creata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageDto'
+        '400':
+          description: >-
+            Slug non valido/riservato, genitore inesistente o albero blocchi
+            malformato
+        '409':
+          description: Slug già in uso per questo locale/genitore
+      security:
+        - access-token: []
+      summary: Crea una Pagina in stato draft
+      tags:
+        - Pages
+  /api/v1/app/pages/{guid}:
+    get:
+      operationId: PagesController_findOne
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pagina trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageDto'
+        '403':
+          description: La Pagina esiste ma non è del chiamante
+        '404':
+          description: Pagina non trovata o eliminata
+      security:
+        - access-token: []
+      summary: Dettaglio di una Pagina
+      tags:
+        - Pages
+    patch:
+      operationId: PagesController_update
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePageDto'
+      responses:
+        '200':
+          description: Bozza aggiornata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageDto'
+        '400':
+          description: >-
+            Slug non valido/riservato, ciclo di gerarchia o albero blocchi
+            malformato
+        '403':
+          description: Riga altrui, o propria ma non più in stato draft
+        '404':
+          description: Pagina non trovata o eliminata
+        '409':
+          description: >-
+            Slug già in uso, oppure version non più valida (conflitto di
+            editing)
+      security:
+        - access-token: []
+      summary: >-
+        Aggiorna la bozza di una Pagina (richiede version per il lock
+        ottimistico)
+      tags:
+        - Pages
+    delete:
+      operationId: PagesController_remove
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Pagina eliminata
+        '404':
+          description: Pagina non trovata o già eliminata
+      security:
+        - access-token: []
+      summary: Elimina (soft-delete) una Pagina (Admin+)
+      tags:
+        - Pages
 info:
   title: CMS API
   description: >-
@@ -2156,3 +2322,206 @@ components:
           example: 3
       required:
         - updated
+    PageFaqEntryDto:
+      type: object
+      properties:
+        question:
+          type: string
+          description: Domanda
+        answer:
+          type: string
+          description: Risposta
+    PageSeoDto:
+      type: object
+      properties:
+        metaTitle:
+          type: string
+          description: Titolo per i motori di ricerca (fallback al titolo Pagina)
+        metaDescription:
+          type: string
+          description: Descrizione per i motori di ricerca
+        canonicalUrl:
+          type: string
+          description: URL canonica (se vuota, calcolata dal percorso della Pagina)
+        robotsIndex:
+          type: string
+          description: Direttiva indicizzazione
+          enum:
+            - index
+            - noindex
+        robotsFollow:
+          type: string
+          description: Direttiva crawling dei link
+          enum:
+            - follow
+            - nofollow
+        ogTitle:
+          type: string
+          description: Titolo Open Graph (fallback a metaTitle)
+        ogDescription:
+          type: string
+          description: Descrizione Open Graph (fallback a metaDescription)
+        ogImage:
+          type: string
+          description: Immagine Open Graph (fallback a immagine di copertina)
+        structuredData:
+          type: object
+          description: JSON-LD esteso a mano, oltre a quello generato dal sistema
+        aiSummary:
+          type: string
+          description: Riassunto sintetico e autosufficiente per i motori generativi
+        keyFacts:
+          description: Affermazioni brevi e verificabili estratte dalla Pagina
+          type: array
+          items:
+            type: string
+        faq:
+          description: Coppie domanda/risposta
+          type: array
+          items:
+            $ref: '#/components/schemas/PageFaqEntryDto'
+        entities:
+          description: Entità/argomenti trattati dalla Pagina
+          type: array
+          items:
+            type: string
+        aiPolicyAllowed:
+          type: boolean
+          description: >-
+            Consenso all'uso del contenuto da parte dei crawler AI (default:
+            consentito)
+    CreatePageDto:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Titolo della Pagina
+          example: Chi siamo
+        slug:
+          type: string
+          description: >-
+            Slug proposto (normalizzato server-side); se assente, generato dal
+            titolo
+          example: chi-siamo
+        locale:
+          type: string
+          description: Locale della Pagina
+          example: it-IT
+        parentGuid:
+          type: string
+          description: Guid della Pagina genitore; assente per una Pagina root
+          example: a1b2c3d4e5f6a7b8
+        draftContent:
+          type: object
+          description: 'Albero di blocchi iniziale (default: albero vuoto)'
+          additionalProperties: true
+        draftSeo:
+          description: Metadati SEO/GEO iniziali
+          allOf:
+            - $ref: '#/components/schemas/PageSeoDto'
+      required:
+        - title
+        - locale
+    PageDto:
+      type: object
+      properties:
+        guid:
+          type: string
+          description: Identificatore pubblico della Pagina, usato nelle URL admin
+          example: a1b2c3d4e5f6a7b8
+        title:
+          type: string
+          description: Titolo della Pagina
+          example: Chi siamo
+        slug:
+          type: string
+          description: Slug, unico per locale + genitore fra le righe attive
+          example: chi-siamo
+        locale:
+          type: string
+          description: Locale della Pagina
+          example: it-IT
+        parentGuid:
+          type: object
+          description: Guid della Pagina genitore, null per una Pagina root
+          nullable: true
+        translationGroupId:
+          type: string
+          description: Chiave opaca del gruppo di traduzione
+          example: f6a7b8a1b2c3d4e5
+        status:
+          type: string
+          description: Stato del ciclo di vita
+          example: draft
+        publishedAt:
+          type: object
+          description: Data di pubblicazione, se pubblicata
+          nullable: true
+        scheduledAt:
+          type: object
+          description: Data di pubblicazione programmata, se impostata
+          nullable: true
+        draftContent:
+          type: object
+          description: Albero di blocchi della bozza corrente
+          additionalProperties: true
+        draftSeo:
+          type: object
+          description: Metadati SEO/GEO della bozza corrente
+          additionalProperties: true
+        version:
+          type: number
+          description: Contatore di lock ottimistico, da inviare in ogni PATCH
+          example: 3
+        createdAt:
+          format: date-time
+          type: string
+          description: Data di creazione
+        updatedAt:
+          format: date-time
+          type: string
+          description: Data di ultimo aggiornamento della bozza
+      required:
+        - guid
+        - title
+        - slug
+        - locale
+        - translationGroupId
+        - status
+        - draftContent
+        - draftSeo
+        - version
+        - createdAt
+        - updatedAt
+    UpdatePageDto:
+      type: object
+      properties:
+        version:
+          type: number
+          description: Version letta al caricamento della bozza (lock ottimistico)
+          example: 3
+        title:
+          type: string
+          description: Titolo della Pagina
+        slug:
+          type: string
+          description: >-
+            Slug (normalizzato server-side); non rigenerato automaticamente dal
+            titolo
+        parentGuid:
+          type: object
+          description: Guid della nuova Pagina genitore; null per spostare in radice
+          nullable: true
+          example: a1b2c3d4e5f6a7b8
+        draftContent:
+          type: object
+          description: Albero di blocchi aggiornato (sostituisce integralmente la bozza)
+          additionalProperties: true
+        draftSeo:
+          description: >-
+            Metadati SEO/GEO aggiornati (sostituiscono integralmente i
+            precedenti)
+          allOf:
+            - $ref: '#/components/schemas/PageSeoDto'
+      required:
+        - version
