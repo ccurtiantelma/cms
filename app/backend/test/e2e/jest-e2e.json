@@ -5,6 +5,9 @@
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
+  "transformIgnorePatterns": [
+    "node_modules/(?!(htmlparser2|domhandler|domutils|domelementtype|dom-serializer|entities)/)"
+  ],
   "testEnvironment": "node",
   "setupFiles": ["<rootDir>/test/e2e/setup/env.setup.ts"],
   "setupFilesAfterEnv": ["<rootDir>/test/e2e/setup/network-mocks.setup.ts"]
