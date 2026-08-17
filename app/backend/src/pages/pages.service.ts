@@ -9,10 +9,10 @@ import {
 import { and, asc, count, desc, eq, ilike, or, SQL, sql } from 'drizzle-orm';
 import { PgColumn } from 'drizzle-orm/pg-core';
 import { DbService } from '../db/db.service';
-import { pageEntity } from '../db/schema';
+import { auditLogEntity, pageEntity, pageRevisionEntity } from '../db/schema';
 import { AppUserRoles } from '../common/enums';
 import { AuditLogService } from '../common/audit-log.service';
-import { AuthInfo, PagesQueryParams } from '../common/types';
+import { AuthInfo, PagesQueryParams, PaginationParams } from '../common/types';
 import { Pagination } from '../common/pagination';
 import { Utils } from '../common/utils';
 import { assertRowOwnership, hasElevatedRowAccess, rowOwnershipFilter } from '../common/ownership';
@@ -20,11 +20,21 @@ import { mapPgError } from '../common/db-error.mapper';
 import { TreeSanitizerService } from '../common/sanitizer/tree-sanitizer.service';
 import { assertValidContentTreeShape } from './content-tree';
 import { isReservedSlug, normalizeSlug } from './slug.util';
+import {
+  isTransitionAllowed,
+  PageStatus,
+  auditActionForStatusTransition,
+  statusTransitionRequiresElevation,
+} from './pages.state-machine';
 import { CreatePageDto } from './dto/create-page.dto';
 import { UpdatePageDto } from './dto/update-page.dto';
+import { ChangeStatusDto } from './dto/change-status.dto';
 import { PageDto } from './dto/page.dto';
+import { PageRevisionDetailDto, PageRevisionSummaryDto } from './dto/page-revision.dto';
 
 type PageRow = typeof pageEntity.$inferSelect;
+type PageRowWithParent = PageRow & { parent: { guid: string } | null };
+type PageRevisionRow = typeof pageRevisionEntity.$inferSelect;
 
 /** Soglia di elevazione editoriale (ADR-18 § D3): sopra `Manager` l'ownership per riga non si applica. */
 const OWNERSHIP_ELEVATED_THRESHOLD = AppUserRoles.Manager;
@@ -234,6 +244,304 @@ export class PagesService {
     );
   }
 
+  /**
+   * Transizione di stato (F01/T5). La mappa delle transizioni ammesse è la
+   * costante {@link isTransitionAllowed}: ogni transizione fuori mappa è
+   * `400 PAGE_STATUS_TRANSITION_NOT_ALLOWED` con il nome della transizione
+   * rifiutata. La transizione verso `review` è consentita a un `User` solo
+   * sulla propria riga (ADR-18 § D3); ogni altra transizione richiede la
+   * soglia elevata (`Manager`+) indipendentemente dalla proprietà della riga.
+   * La transizione verso `published` è delegata a {@link publishTransactionally}.
+   */
+  async changeStatus(
+    guid: string,
+    dto: ChangeStatusDto,
+    authInfo: AuthInfo,
+    ip?: string,
+  ): Promise<PageDto> {
+    const row = await this.loadActiveByGuidWithParent(guid);
+    const fromStatus = row.status as PageStatus;
+
+    if (!isTransitionAllowed(fromStatus, dto.status)) {
+      throw new BadRequestException({
+        message: `Transizione di stato non ammessa: "${fromStatus} -> ${dto.status}".`,
+        code: 'PAGE_STATUS_TRANSITION_NOT_ALLOWED',
+        transition: `${fromStatus}->${dto.status}`,
+      });
+    }
+    const toStatus = dto.status;
+
+    if (statusTransitionRequiresElevation(toStatus)) {
+      if (!hasElevatedRowAccess(authInfo, OWNERSHIP_ELEVATED_THRESHOLD)) {
+        throw new ForbiddenException('Permessi insufficienti per questa transizione di stato.');
+      }
+    } else {
+      // toStatus === 'review': ammessa a un User, ma solo sulla propria riga.
+      assertRowOwnership(
+        authInfo,
+        row,
+        OWNERSHIP_ELEVATED_THRESHOLD,
+        'Puoi inviare in revisione solo le tue pagine.',
+      );
+    }
+
+    if (toStatus === 'published') {
+      return this.publishTransactionally(row, authInfo, ip);
+    }
+
+    const scheduledAt =
+      toStatus === 'scheduled' ? this.parseFutureScheduledAt(dto.scheduledAt) : null;
+
+    const updatedRow = await this.updateOrMapConflict(row.id, row.version, {
+      status: toStatus,
+      scheduledAt,
+      version: sql`${pageEntity.version} + 1`,
+      updatedAt: new Date(),
+      updatedBy: authInfo.userId,
+    });
+    if (!updatedRow) {
+      throw new ConflictException({
+        message: 'La pagina è stata modificata da un altro utente. Ricarica e riprova.',
+        code: 'PAGE_VERSION_CONFLICT',
+      });
+    }
+
+    this.logger.log(`Pagina guid=${guid}: transizione di stato ${fromStatus} -> ${toStatus}.`);
+    await this.auditLogService.log(
+      authInfo.userId,
+      auditActionForStatusTransition(fromStatus, toStatus),
+      'pages',
+      guid,
+      { from: fromStatus, to: toStatus },
+      authInfo.impersonatedBy,
+      ip,
+    );
+
+    return this.toDto(updatedRow, row.parent?.guid ?? null);
+  }
+
+  /**
+   * Pubblicazione transazionale (SPEC-F01 § Logica di servizio, punto 2):
+   * creazione della Revisione (snapshot sanitizzato di `draftContent`/`draftSeo`),
+   * aggiornamento di `pages` (`status`/`publishedAt`/`publishedRevisionId`) e
+   * scrittura dell'audit log avvengono in un'unica `db.transaction` (pattern
+   * di `admin.service.ts`). Il ciclo di FK si risolve inserendo prima la
+   * Revisione e aggiornando poi `publishedRevisionId`.
+   *
+   * `revisionNumber` NON è letto con una `SELECT MAX` prima dell'`UPDATE`
+   * (sarebbe la stessa race condition della SELECT preventiva sullo slug):
+   * l'`UPDATE ... WHERE version = :version` sulla riga `pages` viene eseguito
+   * per primo e acquisisce il lock di riga della transazione, serializzando
+   * ogni pubblicazione concorrente sulla stessa Pagina; il numero di
+   * revisione successivo è quindi calcolato **dopo** quel lock, all'interno
+   * della stessa transazione.
+   */
+  private async publishTransactionally(
+    row: PageRowWithParent,
+    authInfo: AuthInfo,
+    ip?: string,
+  ): Promise<PageDto> {
+    const sanitizedContent = this.treeSanitizer.sanitizeTree(row.draftContent);
+    const sanitizedSeo = this.treeSanitizer.sanitizeTree(row.draftSeo);
+
+    const finalRow = await this.db.db.transaction(async (tx) => {
+      const [lockedPage] = await tx
+        .update(pageEntity)
+        .set({
+          status: 'published',
+          publishedAt: new Date(),
+          scheduledAt: null,
+          version: sql`${pageEntity.version} + 1`,
+          updatedAt: new Date(),
+          updatedBy: authInfo.userId,
+        })
+        .where(
+          and(
+            eq(pageEntity.id, row.id),
+            eq(pageEntity.version, row.version),
+            eq(pageEntity.isActive, true),
+          ),
+        )
+        .returning();
+
+      if (!lockedPage) {
+        throw new ConflictException({
+          message: 'La pagina è stata modificata da un altro utente. Ricarica e riprova.',
+          code: 'PAGE_VERSION_CONFLICT',
+        });
+      }
+
+      const [{ maxRevisionNumber }] = await tx
+        .select({
+          maxRevisionNumber: sql<number>`coalesce(max(${pageRevisionEntity.revisionNumber}), 0)`,
+        })
+        .from(pageRevisionEntity)
+        .where(eq(pageRevisionEntity.pageId, lockedPage.id));
+
+      let revision: PageRevisionRow;
+      try {
+        [revision] = await tx
+          .insert(pageRevisionEntity)
+          .values({
+            guid: Utils.randomString(16),
+            pageId: lockedPage.id,
+            revisionNumber: maxRevisionNumber + 1,
+            title: lockedPage.title,
+            slug: lockedPage.slug,
+            content: sanitizedContent,
+            seo: sanitizedSeo,
+            createdBy: authInfo.userId,
+          })
+          .returning();
+      } catch (err) {
+        mapPgError(err); // rilancia sempre — 409 REVISION_NUMBER_CONFLICT su `page_revisions_page_number_uq`
+      }
+
+      const [publishedPage] = await tx
+        .update(pageEntity)
+        .set({ publishedRevisionId: revision.id })
+        .where(eq(pageEntity.id, lockedPage.id))
+        .returning();
+
+      // Audit log nella stessa transazione: se fallisce, l'intera pubblicazione
+      // viene annullata (SPEC-F01 § Logica di servizio, punto 2).
+      await tx.insert(auditLogEntity).values({
+        guid: Utils.randomString(16),
+        userId: authInfo.userId,
+        action: 'pages.publish',
+        entity: 'pages',
+        entityId: row.guid,
+        details: JSON.stringify({
+          revisionGuid: revision.guid,
+          revisionNumber: revision.revisionNumber,
+        }),
+        impersonatedBy: authInfo.impersonatedBy ?? null,
+        ip: ip ?? null,
+      });
+
+      return publishedPage;
+    });
+
+    this.logger.log(`Pagina pubblicata (guid=${row.guid}).`);
+    return this.toDto(finalRow, row.parent?.guid ?? null);
+  }
+
+  /**
+   * Elenco paginato delle Revisioni di una Pagina, più recenti prima.
+   * Stessa visibilità del dettaglio Pagina (ADR-18 § D6): `403` su riga
+   * altrui, `404` solo su guid inesistente/soft-deleted.
+   */
+  async listRevisions(
+    guid: string,
+    authInfo: AuthInfo,
+    params: PaginationParams,
+  ): Promise<Pagination<PageRevisionSummaryDto>> {
+    const row = await this.loadActiveByGuid(guid);
+    assertRowOwnership(
+      authInfo,
+      row,
+      OWNERSHIP_ELEVATED_THRESHOLD,
+      'Non puoi visualizzare le revisioni di una pagina di un altro utente.',
+    );
+
+    const page = params.p && params.p > 0 ? params.p : 1;
+    const perPage = params.i && params.i > 0 ? params.i : 20;
+    const where = eq(pageRevisionEntity.pageId, row.id);
+
+    const [rows, [{ total }]] = await Promise.all([
+      this.db.db.query.pageRevisionEntity.findMany({
+        where,
+        orderBy: desc(pageRevisionEntity.revisionNumber),
+        limit: perPage,
+        offset: (page - 1) * perPage,
+      }),
+      this.db.db.select({ total: count() }).from(pageRevisionEntity).where(where),
+    ]);
+
+    return new Pagination(
+      rows.map((r) => this.toRevisionSummaryDto(r)),
+      total,
+      page,
+      perPage,
+    );
+  }
+
+  /**
+   * Dettaglio di una Revisione, snapshot completo incluso (S1). Stessa
+   * visibilità dell'elenco: `403` su riga altrui, `404` se la Pagina o la
+   * Revisione non esistono/non appartengono l'una all'altra.
+   */
+  async getRevision(
+    guid: string,
+    revisionGuid: string,
+    authInfo: AuthInfo,
+  ): Promise<PageRevisionDetailDto> {
+    const row = await this.loadActiveByGuid(guid);
+    assertRowOwnership(
+      authInfo,
+      row,
+      OWNERSHIP_ELEVATED_THRESHOLD,
+      'Non puoi visualizzare le revisioni di una pagina di un altro utente.',
+    );
+
+    const revision = await this.loadRevisionOrThrow(row.id, revisionGuid);
+    return this.toRevisionDetailDto(revision);
+  }
+
+  /**
+   * Ripristina una Revisione: crea una **nuova bozza** a partire dallo
+   * snapshot scelto (`draftContent`/`draftSeo`), senza toccare la Revisione
+   * (immutabile, ADR-19) né lo stato della Pagina né la ripubblicazione, che
+   * restano una decisione separata dell'operatore (business-rules.md §
+   * Revisioni, regola 3). Riservato a `Manager`+ (`GuardManager` sul
+   * controller); il check qui è una difesa in profondità, non l'unica linea.
+   */
+  async restoreRevision(
+    guid: string,
+    revisionGuid: string,
+    authInfo: AuthInfo,
+    ip?: string,
+  ): Promise<PageDto> {
+    const row = await this.loadActiveByGuidWithParent(guid);
+    assertRowOwnership(
+      authInfo,
+      row,
+      AppUserRoles.Manager,
+      'Permessi insufficienti per ripristinare una revisione di questa pagina.',
+    );
+
+    const revision = await this.loadRevisionOrThrow(row.id, revisionGuid);
+
+    const updatedRow = await this.updateOrMapConflict(row.id, row.version, {
+      draftContent: revision.content,
+      draftSeo: revision.seo,
+      version: sql`${pageEntity.version} + 1`,
+      updatedAt: new Date(),
+      updatedBy: authInfo.userId,
+    });
+    if (!updatedRow) {
+      throw new ConflictException({
+        message: 'La pagina è stata modificata da un altro utente. Ricarica e riprova.',
+        code: 'PAGE_VERSION_CONFLICT',
+      });
+    }
+
+    this.logger.log(
+      `Pagina guid=${guid}: ripristinata bozza dalla revisione ${revision.revisionNumber}.`,
+    );
+    await this.auditLogService.log(
+      authInfo.userId,
+      'pages.restore-revision',
+      'pages',
+      guid,
+      { revisionGuid, revisionNumber: revision.revisionNumber },
+      authInfo.impersonatedBy,
+      ip,
+    );
+
+    return this.toDto(updatedRow, row.parent?.guid ?? null);
+  }
+
   // ─── Helpers privati ──────────────────────────────────────────────────────
 
   /** Normalizza uno slug/titolo e lo respinge se vuoto dopo normalizzazione o riservato. */
@@ -309,6 +617,66 @@ export class PagesService {
   /** Converte il DTO SEO (istanza di classe, eventualmente annidata) in un oggetto piano per il jsonb. */
   private toPlainSeo(dto: unknown): Record<string, unknown> {
     return dto ? (JSON.parse(JSON.stringify(dto)) as Record<string, unknown>) : {};
+  }
+
+  /**
+   * Valida `scheduledAt` per la transizione a `scheduled`
+   * (business-rules.md § Stati di una Pagina, regola 3: "richiede una data
+   * futura"). `400` se assente, non parsabile o non futura.
+   */
+  private parseFutureScheduledAt(input?: string): Date {
+    if (!input) {
+      throw new BadRequestException({
+        message: 'scheduledAt è obbligatorio per la transizione a "scheduled".',
+        code: 'PAGE_SCHEDULED_AT_REQUIRED',
+      });
+    }
+    const date = new Date(input);
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException({
+        message: 'scheduledAt non è una data valida.',
+        code: 'PAGE_SCHEDULED_AT_INVALID',
+      });
+    }
+    if (date.getTime() <= Date.now()) {
+      throw new BadRequestException({
+        message: 'scheduledAt deve essere una data futura.',
+        code: 'PAGE_SCHEDULED_AT_NOT_FUTURE',
+      });
+    }
+    return date;
+  }
+
+  /** Carica una Revisione per guid, verificando che appartenga alla Pagina indicata. */
+  private async loadRevisionOrThrow(
+    pageId: number,
+    revisionGuid: string,
+  ): Promise<PageRevisionRow> {
+    const revision = await this.db.db.query.pageRevisionEntity.findFirst({
+      where: and(eq(pageRevisionEntity.guid, revisionGuid), eq(pageRevisionEntity.pageId, pageId)),
+    });
+    if (!revision) {
+      throw new NotFoundException('Revisione non trovata.');
+    }
+    return revision;
+  }
+
+  private toRevisionSummaryDto(row: PageRevisionRow): PageRevisionSummaryDto {
+    return {
+      guid: row.guid,
+      revisionNumber: row.revisionNumber,
+      title: row.title,
+      slug: row.slug,
+      createdAt: row.createdAt!,
+    };
+  }
+
+  private toRevisionDetailDto(row: PageRevisionRow): PageRevisionDetailDto {
+    return {
+      ...this.toRevisionSummaryDto(row),
+      content: row.content as Record<string, unknown>,
+      seo: row.seo as Record<string, unknown>,
+    };
   }
 
   private async loadActiveByGuid(guid: string): Promise<PageRow> {

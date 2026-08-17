@@ -14,13 +14,15 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
-import { GuardAdmin } from '../auth/guard';
-import { AuthInfo, PagesQueryParams } from '../common/types';
+import { GuardAdmin, GuardManager } from '../auth/guard';
+import { AuthInfo, PagesQueryParams, PaginationParams } from '../common/types';
 import { Pagination } from '../common/pagination';
 import { PagesService } from './pages.service';
 import { CreatePageDto } from './dto/create-page.dto';
 import { UpdatePageDto } from './dto/update-page.dto';
+import { ChangeStatusDto } from './dto/change-status.dto';
 import { PageDto } from './dto/page.dto';
+import { PageRevisionDetailDto, PageRevisionSummaryDto } from './dto/page-revision.dto';
 
 /**
  * CRUD amministrativo delle Pagine (F01/T4). Nessun guard di ruolo su
@@ -140,5 +142,82 @@ export class PagesController {
   async remove(@Param('guid') guid: string, @Req() req: Request): Promise<void> {
     const authInfo = req['authInfo'] as AuthInfo;
     await this.pagesService.remove(guid, authInfo, req.ip);
+  }
+
+  /**
+   * Transizione di stato (F01/T5). Nessun `@UseGuards` di ruolo: la soglia
+   * dipende dalla transizione richiesta (verso `review` è ammessa a `User`
+   * sulla propria riga, ADR-18 § D3) — il check vive nel service, non qui.
+   */
+  @Post(':guid/status')
+  @ApiOperation({ summary: 'Transizione di stato di una Pagina' })
+  @ApiResponse({ status: 200, description: 'Stato aggiornato', type: PageDto })
+  @ApiResponse({ status: 400, description: 'Transizione di stato non ammessa' })
+  @ApiResponse({ status: 403, description: 'Permessi insufficienti per la transizione richiesta' })
+  @ApiResponse({ status: 404, description: 'Pagina non trovata o eliminata' })
+  @ApiResponse({ status: 409, description: 'Conflitto di editing (version non più valida)' })
+  async changeStatus(
+    @Param('guid') guid: string,
+    @Body() dto: ChangeStatusDto,
+    @Req() req: Request,
+  ): Promise<PageDto> {
+    const authInfo = req['authInfo'] as AuthInfo;
+    return this.pagesService.changeStatus(guid, dto, authInfo, req.ip);
+  }
+
+  /** Elenco paginato delle Revisioni di una Pagina, più recenti prima. */
+  @Get(':guid/revisions')
+  @ApiOperation({ summary: 'Elenco paginato delle Revisioni di una Pagina' })
+  @ApiQuery({ name: 'p', required: false, description: 'Pagina (default 1)' })
+  @ApiQuery({ name: 'i', required: false, description: 'Elementi per pagina (default 20)' })
+  @ApiResponse({ status: 200, description: 'Lista Revisioni paginata' })
+  @ApiResponse({ status: 403, description: 'La Pagina esiste ma non è del chiamante' })
+  @ApiResponse({ status: 404, description: 'Pagina non trovata o eliminata' })
+  async listRevisions(
+    @Param('guid') guid: string,
+    @Query('p') p: string,
+    @Query('i') i: string,
+    @Req() req: Request,
+  ): Promise<Pagination<PageRevisionSummaryDto>> {
+    const authInfo = req['authInfo'] as AuthInfo;
+    const params: PaginationParams = {
+      p: p ? parseInt(p, 10) : 1,
+      i: i ? parseInt(i, 10) : 20,
+    };
+    return this.pagesService.listRevisions(guid, authInfo, params);
+  }
+
+  /** Dettaglio di una Revisione, snapshot completo incluso. */
+  @Get(':guid/revisions/:revisionGuid')
+  @ApiOperation({ summary: 'Dettaglio di una Revisione' })
+  @ApiResponse({ status: 200, description: 'Revisione trovata', type: PageRevisionDetailDto })
+  @ApiResponse({ status: 403, description: 'La Pagina esiste ma non è del chiamante' })
+  @ApiResponse({ status: 404, description: 'Pagina o Revisione non trovate' })
+  async getRevision(
+    @Param('guid') guid: string,
+    @Param('revisionGuid') revisionGuid: string,
+    @Req() req: Request,
+  ): Promise<PageRevisionDetailDto> {
+    const authInfo = req['authInfo'] as AuthInfo;
+    return this.pagesService.getRevision(guid, revisionGuid, authInfo);
+  }
+
+  /**
+   * Ripristina una Revisione in una nuova bozza (Manager+). Non tocca la
+   * Revisione online né ripubblica automaticamente.
+   */
+  @Post(':guid/revisions/:revisionGuid/restore')
+  @UseGuards(GuardManager)
+  @ApiOperation({ summary: 'Ripristina una Revisione passata in una nuova bozza (Manager+)' })
+  @ApiResponse({ status: 200, description: 'Bozza ripristinata dallo snapshot', type: PageDto })
+  @ApiResponse({ status: 404, description: 'Pagina o Revisione non trovate' })
+  @ApiResponse({ status: 409, description: 'Conflitto di editing (version non più valida)' })
+  async restoreRevision(
+    @Param('guid') guid: string,
+    @Param('revisionGuid') revisionGuid: string,
+    @Req() req: Request,
+  ): Promise<PageDto> {
+    const authInfo = req['authInfo'] as AuthInfo;
+    return this.pagesService.restoreRevision(guid, revisionGuid, authInfo, req.ip);
   }
 }

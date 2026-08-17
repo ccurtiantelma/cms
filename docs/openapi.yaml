@@ -1000,6 +1000,134 @@ paths:
       summary: Elimina (soft-delete) una Pagina (Admin+)
       tags:
         - Pages
+  /api/v1/app/pages/{guid}/status:
+    post:
+      operationId: PagesController_changeStatus
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeStatusDto'
+      responses:
+        '200':
+          description: Stato aggiornato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageDto'
+        '400':
+          description: Transizione di stato non ammessa
+        '403':
+          description: Permessi insufficienti per la transizione richiesta
+        '404':
+          description: Pagina non trovata o eliminata
+        '409':
+          description: Conflitto di editing (version non più valida)
+      security:
+        - access-token: []
+      summary: Transizione di stato di una Pagina
+      tags:
+        - Pages
+  /api/v1/app/pages/{guid}/revisions:
+    get:
+      operationId: PagesController_listRevisions
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: p
+          required: false
+          in: query
+          description: Pagina (default 1)
+          schema:
+            type: string
+        - name: i
+          required: false
+          in: query
+          description: Elementi per pagina (default 20)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista Revisioni paginata
+        '403':
+          description: La Pagina esiste ma non è del chiamante
+        '404':
+          description: Pagina non trovata o eliminata
+      security:
+        - access-token: []
+      summary: Elenco paginato delle Revisioni di una Pagina
+      tags:
+        - Pages
+  /api/v1/app/pages/{guid}/revisions/{revisionGuid}:
+    get:
+      operationId: PagesController_getRevision
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: revisionGuid
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Revisione trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageRevisionDetailDto'
+        '403':
+          description: La Pagina esiste ma non è del chiamante
+        '404':
+          description: Pagina o Revisione non trovate
+      security:
+        - access-token: []
+      summary: Dettaglio di una Revisione
+      tags:
+        - Pages
+  /api/v1/app/pages/{guid}/revisions/{revisionGuid}/restore:
+    post:
+      operationId: PagesController_restoreRevision
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: revisionGuid
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Bozza ripristinata dallo snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageDto'
+        '404':
+          description: Pagina o Revisione non trovate
+        '409':
+          description: Conflitto di editing (version non più valida)
+      security:
+        - access-token: []
+      summary: Ripristina una Revisione passata in una nuova bozza (Manager+)
+      tags:
+        - Pages
 info:
   title: CMS API
   description: >-
@@ -2525,3 +2653,67 @@ components:
             - $ref: '#/components/schemas/PageSeoDto'
       required:
         - version
+    ChangeStatusDto:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Stato di destinazione
+          enum:
+            - draft
+            - review
+            - scheduled
+            - published
+            - archived
+          example: published
+        scheduledAt:
+          type: string
+          description: >-
+            Data/ora futura di pubblicazione programmata, obbligatoria se
+            status=scheduled
+          example: '2026-09-01T09:00:00.000Z'
+      required:
+        - status
+    PageRevisionDetailDto:
+      type: object
+      properties:
+        guid:
+          type: string
+          description: Identificatore pubblico della Revisione
+          example: b1a2c3d4e5f6a7b8
+        revisionNumber:
+          type: number
+          description: Progressivo della Revisione per questa Pagina
+          example: 3
+        title:
+          type: string
+          description: Titolo al momento dello snapshot
+          example: Chi siamo
+        slug:
+          type: string
+          description: Slug al momento dello snapshot
+          example: chi-siamo
+        createdAt:
+          format: date-time
+          type: string
+          description: Data di creazione della Revisione (= data di pubblicazione)
+        content:
+          type: object
+          description: >-
+            Albero di blocchi al momento della pubblicazione (snapshot
+            immutabile)
+          additionalProperties: true
+        seo:
+          type: object
+          description: >-
+            Metadati SEO/GEO al momento della pubblicazione (snapshot
+            immutabile)
+          additionalProperties: true
+      required:
+        - guid
+        - revisionNumber
+        - title
+        - slug
+        - createdAt
+        - content
+        - seo

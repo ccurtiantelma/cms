@@ -1,0 +1,47 @@
+import { ApiProperty } from '@nestjs/swagger';
+
+/**
+ * Voce di elenco di una Revisione (`GET /app/pages/:guid/revisions`). Mai
+ * `id`/`pageId` numerici: solo `guid` (CLAUDE.md, "id solo guid/slug nelle
+ * URL"). Nessun `content`/`seo`: lo snapshot completo è nel dettaglio.
+ */
+export class PageRevisionSummaryDto {
+  @ApiProperty({
+    description: 'Identificatore pubblico della Revisione',
+    example: 'b1a2c3d4e5f6a7b8',
+  })
+  guid!: string;
+
+  @ApiProperty({ description: 'Progressivo della Revisione per questa Pagina', example: 3 })
+  revisionNumber!: number;
+
+  @ApiProperty({ description: 'Titolo al momento dello snapshot', example: 'Chi siamo' })
+  title!: string;
+
+  @ApiProperty({ description: 'Slug al momento dello snapshot', example: 'chi-siamo' })
+  slug!: string;
+
+  @ApiProperty({ description: 'Data di creazione della Revisione (= data di pubblicazione)' })
+  createdAt!: Date;
+}
+
+/**
+ * Dettaglio completo di una Revisione (`GET /app/pages/:guid/revisions/:revisionGuid`):
+ * lo snapshot immutabile integrale (S1), mai modificabile da questo o da
+ * alcun altro endpoint (ADR-19).
+ */
+export class PageRevisionDetailDto extends PageRevisionSummaryDto {
+  @ApiProperty({
+    description: 'Albero di blocchi al momento della pubblicazione (snapshot immutabile)',
+    type: 'object',
+    additionalProperties: true,
+  })
+  content!: Record<string, unknown>;
+
+  @ApiProperty({
+    description: 'Metadati SEO/GEO al momento della pubblicazione (snapshot immutabile)',
+    type: 'object',
+    additionalProperties: true,
+  })
+  seo!: Record<string, unknown>;
+}

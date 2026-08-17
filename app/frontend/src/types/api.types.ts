@@ -590,6 +590,74 @@ export interface paths {
         patch: operations["PagesController_update"];
         trace?: never;
     };
+    "/api/v1/app/pages/{guid}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Transizione di stato di una Pagina */
+        post: operations["PagesController_changeStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/app/pages/{guid}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Elenco paginato delle Revisioni di una Pagina */
+        get: operations["PagesController_listRevisions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/app/pages/{guid}/revisions/{revisionGuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dettaglio di una Revisione */
+        get: operations["PagesController_getRevision"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/app/pages/{guid}/revisions/{revisionGuid}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ripristina una Revisione passata in una nuova bozza (Manager+) */
+        post: operations["PagesController_restoreRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1669,6 +1737,54 @@ export interface components {
             };
             /** @description Metadati SEO/GEO aggiornati (sostituiscono integralmente i precedenti) */
             draftSeo?: components["schemas"]["PageSeoDto"];
+        };
+        ChangeStatusDto: {
+            /**
+             * @description Stato di destinazione
+             * @example published
+             * @enum {string}
+             */
+            status: "draft" | "review" | "scheduled" | "published" | "archived";
+            /**
+             * @description Data/ora futura di pubblicazione programmata, obbligatoria se status=scheduled
+             * @example 2026-09-01T09:00:00.000Z
+             */
+            scheduledAt?: string;
+        };
+        PageRevisionDetailDto: {
+            /**
+             * @description Identificatore pubblico della Revisione
+             * @example b1a2c3d4e5f6a7b8
+             */
+            guid: string;
+            /**
+             * @description Progressivo della Revisione per questa Pagina
+             * @example 3
+             */
+            revisionNumber: number;
+            /**
+             * @description Titolo al momento dello snapshot
+             * @example Chi siamo
+             */
+            title: string;
+            /**
+             * @description Slug al momento dello snapshot
+             * @example chi-siamo
+             */
+            slug: string;
+            /**
+             * Format: date-time
+             * @description Data di creazione della Revisione (= data di pubblicazione)
+             */
+            createdAt: string;
+            /** @description Albero di blocchi al momento della pubblicazione (snapshot immutabile) */
+            content: {
+                [key: string]: unknown;
+            };
+            /** @description Metadati SEO/GEO al momento della pubblicazione (snapshot immutabile) */
+            seo: {
+                [key: string]: unknown;
+            };
         };
     };
     responses: never;
@@ -3032,6 +3148,173 @@ export interface operations {
                 content?: never;
             };
             /** @description Slug già in uso, oppure version non più valida (conflitto di editing) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PagesController_changeStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeStatusDto"];
+            };
+        };
+        responses: {
+            /** @description Stato aggiornato */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageDto"];
+                };
+            };
+            /** @description Transizione di stato non ammessa */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Permessi insufficienti per la transizione richiesta */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pagina non trovata o eliminata */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflitto di editing (version non più valida) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PagesController_listRevisions: {
+        parameters: {
+            query?: {
+                /** @description Pagina (default 1) */
+                p?: string;
+                /** @description Elementi per pagina (default 20) */
+                i?: string;
+            };
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista Revisioni paginata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La Pagina esiste ma non è del chiamante */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pagina non trovata o eliminata */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PagesController_getRevision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+                revisionGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revisione trovata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageRevisionDetailDto"];
+                };
+            };
+            /** @description La Pagina esiste ma non è del chiamante */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pagina o Revisione non trovate */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PagesController_restoreRevision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+                revisionGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bozza ripristinata dallo snapshot */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageDto"];
+                };
+            };
+            /** @description Pagina o Revisione non trovate */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflitto di editing (version non più valida) */
             409: {
                 headers: {
                     [name: string]: unknown;
