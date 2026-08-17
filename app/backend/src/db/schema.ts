@@ -21,7 +21,7 @@ import {
   uniqueIndex,
   AnyPgColumn,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import { Utils } from '../common/utils';
 import { AppUserRoles } from '../common/enums';
 
@@ -217,6 +217,135 @@ export const notificationEntity = pgTable(
   ],
 );
 
+// ─── PAGES ────────────────────────────────────────────────────────────────────
+// Entità centrale del CMS (F01). Il contenuto è un albero di blocchi in `jsonb`,
+// mai HTML opaco. Bozza e pubblicato coesistono: `draftContent`/`draftSeo` sono
+// il lavoro in corso, ciò che è online vive nella revisione puntata da
+// `publishedRevisionId`. Ogni riga ha un `locale`; le traduzioni sono righe
+// autonome legate da `translationGroupId` (A3/A5: mono-sito, più lingue, nessun
+// `siteId` e nessuno `scopeId` di dominio).
+// `version` è il lock ottimistico: ogni UPDATE gira con `WHERE version = :version`
+// e incrementa la colonna; zero righe aggiornate ⇒ 409.
+
+export const pageEntity = pgTable(
+  'pages',
+  {
+    id: serial().notNull().primaryKey(),
+    guid: char('guid', { length: 16 })
+      .notNull()
+      .$defaultFn(() => Utils.randomString(16)),
+
+    // Identità pubblica
+    title: varchar('title', { length: 255 }).notNull(),
+    /** Identificatore pubblico, unico per `locale` + genitore fra le righe attive. */
+    slug: varchar('slug', { length: 255 }).notNull(),
+    locale: varchar('locale', { length: 10 }).notNull(),
+    parentId: integer('parent_id').references((): AnyPgColumn => pageEntity.id, {
+      onDelete: 'restrict',
+      onUpdate: 'restrict',
+    }),
+    /** Chiave opaca condivisa dalle traduzioni della stessa Pagina (ADR/A3, scelta S4). */
+    translationGroupId: char('translation_group_id', { length: 16 }).notNull(),
+
+    // Ciclo di vita: draft | review | scheduled | published | archived
+    status: varchar('status', { length: 20 }).notNull().default('draft'),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
+    /**
+     * Revisione attualmente online. Nullable per necessità: `pages` e
+     * `page_revisions` si referenziano a vicenda, quindi la riga della pagina
+     * nasce senza revisione e viene aggiornata nella stessa transazione di
+     * pubblicazione, dopo l'INSERT della revisione.
+     */
+    publishedRevisionId: integer('published_revision_id').references(
+      (): AnyPgColumn => pageRevisionEntity.id,
+      { onDelete: 'restrict', onUpdate: 'restrict' },
+    ),
+
+    // Contenuto in lavorazione — albero di blocchi e metadati SEO/GEO della bozza
+    draftContent: jsonb('draft_content').notNull(),
+    draftSeo: jsonb('draft_seo').notNull(),
+
+    /** Lock ottimistico: incrementato a ogni UPDATE, confrontato nella WHERE. */
+    version: integer('version').notNull().default(1),
+
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Autore della riga: unica nozione di proprietà, immutabile (ADR-18 § D2). */
+    createdBy: integer('created_by')
+      .notNull()
+      .references(() => userEntity.id, { onDelete: 'restrict', onUpdate: 'restrict' }),
+    updatedBy: integer('updated_by')
+      .notNull()
+      .references(() => userEntity.id, { onDelete: 'restrict', onUpdate: 'restrict' }),
+  },
+  (t) => [
+    uniqueIndex('pages_guid_idx').on(t.guid),
+
+    // Unicità dello slug: DUE indici parziali, non uno solo.
+    // 1) Con `parent_id` nullable, in un indice univoco NULL != NULL: un indice
+    //    unico su (locale, parent_id, slug) NON protegge le pagine root.
+    // 2) Il soft delete è obbligatorio: senza il predicato su `is_active` una
+    //    pagina eliminata occuperebbe il proprio slug per sempre.
+    // Conseguenza approvata: il soft delete libera lo slug; ripristinare una
+    // pagina il cui slug è stato riassegnato fallisce con 409.
+    uniqueIndex('pages_slug_locale_root_uq')
+      .on(t.locale, t.slug)
+      .where(sql`${t.parentId} is null and ${t.isActive}`),
+    uniqueIndex('pages_slug_locale_child_uq')
+      .on(t.locale, t.parentId, t.slug)
+      .where(sql`${t.parentId} is not null and ${t.isActive}`),
+
+    index('pages_status_locale_idx').on(t.status, t.locale),
+    index('pages_translation_group_idx').on(t.translationGroupId),
+    index('pages_parent_idx').on(t.parentId),
+    /** Predicato di ownership degli elenchi paginati (ADR-18 § D6). */
+    index('pages_created_by_idx').on(t.createdBy),
+  ],
+);
+
+// ─── PAGE REVISIONS ───────────────────────────────────────────────────────────
+// Tabella APPEND-ONLY (ADR-19): una riga viene inserita alla pubblicazione e non
+// è mai più toccata. Struttura ridotta a id/guid/createdAt/createdBy come da
+// CLAUDE.md § Database — deliberatamente SENZA `updatedAt`/`updatedBy` (che
+// dichiarerebbero un percorso di modifica inesistente), SENZA `isActive` (lo
+// scivolo verso una cancellazione logica vietata) e SENZA `version` (non c'è
+// concorrenza su righe che non si aggiornano). Lo snapshot è completo (S1):
+// nessun diff, nessun rimando alla riga viva. La potatura delle revisioni
+// eccedenti NON è implementata ed è rinviata da ADR-19.
+
+export const pageRevisionEntity = pgTable(
+  'page_revisions',
+  {
+    id: serial().notNull().primaryKey(),
+    guid: char('guid', { length: 16 })
+      .notNull()
+      .$defaultFn(() => Utils.randomString(16)),
+
+    pageId: integer('page_id')
+      .notNull()
+      .references(() => pageEntity.id, { onDelete: 'restrict', onUpdate: 'restrict' }),
+    /** Progressivo per pagina: unico insieme a `page_id`, mai riusato. */
+    revisionNumber: integer('revision_number').notNull(),
+
+    // Snapshot immutabile del contenuto pubblicato
+    title: varchar('title', { length: 255 }).notNull(),
+    slug: varchar('slug', { length: 255 }).notNull(),
+    content: jsonb('content').notNull(),
+    seo: jsonb('seo').notNull(),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: integer('created_by')
+      .notNull()
+      .references(() => userEntity.id, { onDelete: 'restrict', onUpdate: 'restrict' }),
+  },
+  (t) => [
+    uniqueIndex('page_revisions_guid_idx').on(t.guid),
+    uniqueIndex('page_revisions_page_number_uq').on(t.pageId, t.revisionNumber),
+  ],
+);
+
 // ─── RELATIONS ──────────────────────────────────────────────────────────────────
 
 export const usersRelations = relations(userEntity, ({ one, many }) => ({
@@ -251,6 +380,40 @@ export const filesRelations = relations(fileEntity, ({ one }) => ({
   }),
   updatedByUser: one(userEntity, {
     fields: [fileEntity.updatedBy],
+    references: [userEntity.id],
+  }),
+}));
+
+export const pagesRelations = relations(pageEntity, ({ one, many }) => ({
+  parent: one(pageEntity, {
+    fields: [pageEntity.parentId],
+    references: [pageEntity.id],
+    relationName: 'pageHierarchy',
+  }),
+  children: many(pageEntity, { relationName: 'pageHierarchy' }),
+  revisions: many(pageRevisionEntity),
+  publishedRevision: one(pageRevisionEntity, {
+    fields: [pageEntity.publishedRevisionId],
+    references: [pageRevisionEntity.id],
+    relationName: 'publishedRevision',
+  }),
+  author: one(userEntity, {
+    fields: [pageEntity.createdBy],
+    references: [userEntity.id],
+  }),
+  updatedByUser: one(userEntity, {
+    fields: [pageEntity.updatedBy],
+    references: [userEntity.id],
+  }),
+}));
+
+export const pageRevisionsRelations = relations(pageRevisionEntity, ({ one }) => ({
+  page: one(pageEntity, {
+    fields: [pageRevisionEntity.pageId],
+    references: [pageEntity.id],
+  }),
+  author: one(userEntity, {
+    fields: [pageRevisionEntity.createdBy],
     references: [userEntity.id],
   }),
 }));
