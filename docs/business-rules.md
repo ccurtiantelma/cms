@@ -3,8 +3,9 @@
 > Regole di dominio. Priorità: dopo Constitution. Le AI non le modificano di propria
 > iniziativa (vedi `docs/constitution.md` → "Documentation Policy").
 >
-> Ultima revisione: 2026-08-13 — sezione di dominio del CMS a pagine redatta su
-> richiesta esplicita dell'umano nell'ambito della ristrutturazione documentale.
+> Ultima revisione: 2026-08-17 — conferma delle assunzioni A2, A3, A4, A5 su richiesta
+> esplicita dell'umano. Revisione precedente: 2026-08-13 — sezione di dominio del CMS a
+> pagine redatta nell'ambito della ristrutturazione documentale.
 
 ---
 
@@ -18,17 +19,24 @@ una regola approvata**.
 | # | Assunzione presa | Alternativa scartata | Stato |
 |---|---|---|---|
 | A1 | **GEO = Generative Engine Optimization** (ottimizzazione per motori di risposta generativi: ChatGPT, Perplexity, AI Overviews) | GEO = geolocalizzazione / geo-targeting dei contenuti per area geografica | ✅ **Confermata** da ccurti il 2026-08-13: "visibilità non sui motori di ricerca ma per l'AI" |
-| A2 | Il **contenuto di pagina è un albero di blocchi JSON** validato server-side | Contenuto come HTML salvato dall'editor | ⏳ Da confermare |
-| A3 | Le **traduzioni sono righe autonome** legate da un gruppo di traduzione | Traduzioni come colonne/campi affiancati sulla stessa riga | ⏳ Da confermare |
-| A4 | Si riusano le **4 soglie di ruolo esistenti** (SuperAdmin/Admin/Manager/User) mappandole sui permessi editoriali | Introdurre nuovi ruoli dedicati (Editor, Autore, Revisore) | ⏳ Da confermare |
-| A5 | Il CMS è **mono-sito**: un'unica installazione serve un solo sito, con più lingue | Multi-sito / multi-tenant con più siti nella stessa installazione | ⏳ Da confermare |
-| A6 | Il **chatbot risponde solo su contenuti pubblicati** del sito, non è un assistente generalista | Chatbot generalista con conoscenza esterna | ⏳ Da confermare |
+| A2 | Il **contenuto di pagina è un albero di blocchi JSON** validato server-side | Contenuto come HTML salvato dall'editor | ✅ **Confermata** da ccurti il 2026-08-17: è già l'architettura. Allinea lo status all'obbligo costituzionale (Principle 6, `constitution.md` § Modello di contenuto, regola 2) |
+| A3 | Le **traduzioni sono righe autonome** legate da un gruppo di traduzione | Traduzioni come colonne/campi affiancati sulla stessa riga | ✅ **Confermata** da ccurti il 2026-08-17. Il legame è la colonna opaca `translationGroupId` (`char(16)`), **non** una tabella `translation_groups` (assunzione S4 di SPEC-F01, confermata nella stessa sede) |
+| A4 | Si riusano le **4 soglie di ruolo esistenti** (SuperAdmin/Admin/Manager/User) mappandole sui permessi editoriali | Introdurre nuovi ruoli dedicati (Editor, Autore, Revisore) | ✅ **Confermata con correzione** da ccurti il 2026-08-17: nessun ruolo nuovo, ma le sole soglie non bastano — serve un **controllo di ownership per riga** per la voce "Pagina propria (bozza)". Vedi la nota sotto la tabella dei permessi editoriali e `docs/ai/adr/ADR-18-ownership-per-riga.md` |
+| A5 | Il CMS è **mono-sito**: un'unica installazione serve un solo sito, con più lingue | Multi-sito / multi-tenant con più siti nella stessa installazione | ✅ **Confermata** da ccurti il 2026-08-17: mono-sito, più lingue. **Nessuna colonna `siteId`** su alcuna tabella di dominio |
+| A6 | Il **chatbot risponde solo su contenuti pubblicati** del sito, non è un assistente generalista | Chatbot generalista con conoscenza esterna | ⏳ Da confermare — non blocca nulla: F11 è l'ultima della fila (`docs/roadmap.md`) |
 
 Stato di avanzamento e decisioni ancora aperte: `docs/TODO.md`.
 
-Il campo `scopeId` su `users` resta generico e inutilizzato dal dominio finché A5 non
-viene ribaltata: se il CMS diventasse multi-sito, `scopeId` sarebbe l'aggancio naturale
-per il filtro `Utils.applyScopeFilter`.
+### Conseguenza di A5 — l'unico punto di innesto del multi-sito
+
+Con A5 confermata il dominio è mono-sito: nessuna tabella di contenuto porta una colonna
+di sito e nessuna query di dominio filtra per sito.
+
+Se un giorno servisse il multi-sito, **il punto di innesto previsto è uno solo**:
+`Utils.applyScopeFilter(authInfo)` sul campo `scopeId` già presente e nullable su `users`.
+Non se ne implementa nulla oggi — nessuna colonna, nessun filtro, nessun parametro
+"in previsione". Introdurre lo scaffolding di una feature non richiesta è la definizione
+di over-engineering; dichiarare dove entrerebbe costa una riga e non costa migrazioni.
 
 ---
 
@@ -119,6 +127,16 @@ privilegio maggiore).
 
 Ogni pubblicazione, depubblicazione, archiviazione, ripristino di revisione e soft delete
 di una Pagina viene registrato in `audit_log`.
+
+> **Nota su "Pagina propria (bozza)" (A4, correzione del 2026-08-17).** Questa è l'unica
+> riga della tabella che **non** è esprimibile come soglia di ruolo: i guard esistenti
+> (`GuardSuperAdmin`/`GuardAdmin`/`GuardManager`) confrontano solo `authInfo.role` con una
+> soglia e non conoscono la riga. Serve un controllo di **ownership per riga**
+> (`createdBy = authInfo.userId` + stato della riga) eseguito nel service, più un predicato
+> di filtro negli elenchi paginati. Il pattern è già in produzione in
+> `app/backend/src/files/files.service.ts` (`softDelete`). Regole, helper e codici di
+> errore sono fissati in `docs/ai/adr/ADR-18-ownership-per-riga.md` — **da firmare prima
+> dell'implementazione**.
 
 ---
 
@@ -361,9 +379,13 @@ esatto (es. impersonificazione, funzioni di sistema: solo `role === AppUserRoles
 - `null` se `authInfo.role <= elevatedThreshold` (vede tutto)
 - `authInfo.scopeId` altrimenti (filtra ai soli dati del proprio scope)
 
-Il campo `scopeId` su `users` è generico e nullable. Con l'assunzione A5 (CMS mono-sito)
-il dominio non lo usa; resta l'aggancio pronto se il prodotto evolvesse a multi-sito.
-Applicazione **obbligatoria** su ogni query che diventasse multi-tenant.
+Il campo `scopeId` su `users` è generico e nullable. Con **A5 confermata il 2026-08-17**
+(CMS mono-sito) il dominio **non lo usa**: nessuna query di dominio del CMS chiama
+`applyScopeFilter`, perché non c'è nulla da segmentare.
+
+Questa funzione resta l'**unico punto di innesto previsto** per un eventuale multi-sito
+futuro (vedi § "Conseguenza di A5"). Applicazione **obbligatoria** su ogni query che
+diventasse multi-tenant.
 
 ---
 

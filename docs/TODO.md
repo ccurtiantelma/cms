@@ -4,7 +4,9 @@
 > attuale al prodotto completo. È il punto di ingresso per capire **a che punto siamo** e
 > **cosa serve decidere prima di procedere**.
 >
-> Creato il 2026-08-13. Aggiornare a ogni passo completato o decisione presa.
+> Creato il 2026-08-13. Ultimo aggiornamento: **2026-08-17** — decisioni A2/A3/A4/A5 prese,
+> ADR-18 prodotta, spec e plan di F01 corretti. Aggiornare a ogni passo completato o
+> decisione presa.
 
 ## Legenda
 
@@ -23,7 +25,7 @@
 |---|---|---|---|
 | 0.1 | Audit della cartella `docs/` | ✅ | 36 file scansionati. Nessuno scarto del vecchio gestionale: la duplicazione era il vero problema |
 | 0.2 | Eliminazione dei file duplicati (`instructions.md`, `MATRICE_AGENTI.md`, `RUNBOOK.md`) | ✅ | Contenuto preservato in `CLAUDE.md`, `constitution.md`, `GUIDA_UTILIZZO.md` |
-| 0.3 | Correzione della tabella porte (era sbagliata in 3 file) | ✅ | Valori reali: 3001 / 5175 / 5435 / 6381 / 8026 |
+| 0.3 | Correzione della tabella porte (era sbagliata in 3 file) | ✅ | Valori reali: 3001 / 5173 / 5435 / 6381 / 8026 |
 | 0.4 | Riscrittura `constitution.md` con la nuova identità headless | ✅ | + 3 principi nuovi: Content is Data, Headless by Default, Public Read is a Different Citizen |
 | 0.5 | Redazione delle business rules di dominio | ✅ | Sezione prima vuota, ora completa: stati, permessi, slug, revisioni, SEO/GEO, multilingua, media, form, chatbot, cache |
 | 0.6 | Riscrittura `glossary.md` con i termini di dominio | ✅ | |
@@ -31,7 +33,9 @@
 | 0.8 | Creazione `roadmap.md` (7 pilastri → F01–F12) | ✅ | Con grafo delle dipendenze e fuori scope dichiarato |
 | 0.9 | Riscrittura completa di `CLAUDE.md` | ✅ | 670 righe. Ripristinata il 2026-08-13 dopo che una versione condensata (260 righe) aveva perso le definizioni inline dei 4 ruoli e l'intera Testing Policy |
 | 0.10 | Conferma di A1: GEO = Generative Engine Optimization | ✅ | Confermata da ccurti il 2026-08-13 |
-| 0.11 | Conferma delle assunzioni A2–A6 | 🤝 | **Vedi sezione "Decisioni aperte" — è il prossimo passo** |
+| 0.11 | Conferma delle assunzioni A2–A6 | ✅ **parziale** | A2, A3, A4 (con correzione ownership), A5 confermate da ccurti il 2026-08-17. **A6 resta aperta** e non blocca: F11 è l'ultima della fila |
+| 0.13 | Correzione della regola sulle colonne obbligatorie (`CLAUDE.md`) | ✅ | Riscritta il 2026-08-17: entità mutabili → struttura completa; tabelle append-only → `id`/`guid`/`createdAt`/`createdBy`. Due eccezioni chieste caso per caso sono diventate una regola sola |
+| 0.14 | Correzione della contraddizione nella Documentation Policy | ✅ | Risolta il 2026-08-17: progress-tracker e roadmap si aggiornano **a fine feature, su richiesta umana esplicita**, che vale come autorizzazione puntuale |
 | 0.12 | Allineamento dei template in `docs/ai/templates/` alle nuove regole | ✅ | Backend: lock ottimistico su `version` (mancava: il template insegnava la sovrascrittura silenziosa). Frontend: confine Mantine ↔ componenti dei blocchi |
 
 ---
@@ -43,13 +47,15 @@ ancora stata scritta.
 
 | # | ADR da produrre | Blocca | Stato |
 |---|---|---|---|
+| 1.0 | **Ownership per riga dei permessi editoriali** — `ADR-18-ownership-per-riga.md` | **F01 (T4)** | 🔍 **Prodotta il 2026-08-17, in attesa della tua firma.** Tre punti (P1/P2/P3) sono proposte da confermare o correggere |
 | 1.1 | Formato e versionamento dello schema dei blocchi | F02, F04 | ⏳ Da fare — la più urgente dopo F01 |
-| 1.2 | Strategia di versionamento/revisioni (snapshot vs. diff) | F01 | 🔍 Proposta in SPEC-F01 (assunzione S1: snapshot completo), serve ADR formale |
+| 1.2 | Strategia di versionamento/revisioni (snapshot vs. diff) — `ADR-19` | **F01 (T2)** | ⏳ Da produrre: è il task T1(a) del plan di F01. Formalizza S1 e registra la contraddizione sulla potatura senza implementarla |
+| 1.2b | **Sanitizzazione HTML server-side** — RFC + scelta della dipendenza | **F01 (T3)** | ⏳ Da produrre: task T1(b) del plan. Va **proposta** con motivazione e alternative, mai installata d'iniziativa |
 | 1.3 | Caching e invalidazione del contenuto pubblico | F03 | ⏳ Da fare |
-| 1.4 | Modello multilingua | F05 | 🔍 Proposto in business-rules (A3), serve ADR formale |
+| 1.4 | Modello multilingua | F05 | 🔍 A3 confermata il 2026-08-17 (righe autonome + `translationGroupId` opaco); serve ancora l'ADR formale |
 | 1.5 | Routing e risoluzione degli slug | F03 | 🔍 Regole scritte in business-rules, serve ADR formale |
 | 1.6 | Pipeline di trasformazione media e trattamento SVG | F09 | ⏳ Da fare |
-| 1.7 | Scelta e confine del provider del chatbot | F11 | 🤝 Richiede una tua decisione su provider, costi e trattamento dati |
+| 1.7 | Scelta e confine del provider del chatbot | F11 | 🤝 Richiede una tua decisione su provider, costi e trattamento dati. Legata ad A6, unica assunzione ancora aperta |
 | 1.8 | Generazione di sitemap e structured data | F07 | ⏳ Da fare |
 
 ---
@@ -61,7 +67,7 @@ l'editor o il SEO prima del modello di contenuto significa doverli rifare.
 
 | # | Feature | Pilastro | Stato | Cosa manca |
 |---|---|---|---|---|
-| 2.1 | **F01 — Gestione Pagine** | fondativa | 🔍 | Feature scritta + spec in bozza. Serve: approvazione spec → approvazione schema DB → plan → codice |
+| 2.1 | **F01 — Gestione Pagine** | fondativa | 🔍 | Feature scritta · spec corretta il 2026-08-17 · plan a 8 task pronto. Serve: firma ADR-18 + ADR-19 + RFC sanitizzazione → approvazione spec → approvazione schema DB → codice |
 | 2.2 | F02 — Registro e validazione dei Blocchi | 1 | ⏳ | Dipende da 1.1 e da F01 |
 | 2.3 | F03 — Superficie pubblica + cache | 2, 7 | ⏳ | Dipende da 1.3, 1.5, F01, F02 |
 | 2.4 | F04 — Editor visivo (page builder) | 1 | ⏳ | Dipende da F02. **Massimo rischio di over-engineering**: va costruita per incrementi |
@@ -85,6 +91,7 @@ l'editor o il SEO prima del modello di contenuto significa doverli rifare.
 | 3.3 | ADR-4 disallineata dal codice (descrive fino a `version: 7`, il codice è oltre) | 🤝 | Va chiusa con una **nuova** ADR, non riscrivendo quella approvata |
 | 3.4 | `exceljs@4.4.0` porta un `uuid` con vulnerabilità moderata (transitiva) | ⏳ | Da monitorare, nessuna versione upstream la risolve oggi. Vedi ADR-10 |
 | 3.5 | ADR-5, ADR-6, ADR-15 rinviano a file eliminati | ✅ | Non correggibile (ADR immutabili). Mappa dei rinvii in `progress-tracker.md` |
+| 3.6 | `AdminService` verifica l'unicità email con una `SELECT` preventiva (`admin.service.ts:187-191,264`) invece di intercettare il vincolo univoco, in violazione di `CLAUDE.md` § Backend ("unicità slug da constraint DB → 409, mai SELECT preventiva") | 🤝 | Debito preesistente a F01, non nato con `pages`. F01 (T3) ha introdotto `app/backend/src/common/db-error.mapper.ts`, riusabile per questo caso, ma **non ha rifattorizzato `AdminService`**: fuori scope del task. Va ripreso a sé, sostituendo la `SELECT` con l'`unique` constraint su `users.email` + `mapPgError` |
 
 ---
 
@@ -93,17 +100,25 @@ l'editor o il SEO prima del modello di contenuto significa doverli rifare.
 Queste sono le uniche cose che mi bloccano davvero. Ognuna è ribaltabile **ora** a costo
 zero; dopo tre feature costa migrazioni di dati.
 
-### D1 — Assunzioni A2–A6 (`docs/business-rules.md`)
+### D1 — Assunzioni: **chiusa per A2–A5** il 2026-08-17
 
-| # | Domanda | Cosa ho assunto | Perché conta |
-|---|---|---|---|
-| A2 | Il contenuto è un albero di blocchi JSON validato, o HTML salvato dall'editor? | Blocchi JSON | Decide se il contenuto resta portabile, diffabile e traducibile, o diventa markup opaco |
-| A3 | Le traduzioni sono pagine autonome o campi affiancati? | Pagine autonome legate da un gruppo | Decide se una lingua può essere pubblicata mentre un'altra è in bozza |
-| A4 | Servono ruoli editoriali dedicati (Editor, Autore, Revisore) o bastano le 4 soglie esistenti? | Bastano le 4 esistenti | Ruoli nuovi = nuovo sistema di permessi da costruire e mantenere |
-| A5 | Una installazione = un sito, o più siti nella stessa installazione? | Un sito, più lingue | Il multi-sito va deciso **prima**: cambia ogni query del sistema |
-| A6 | Il chatbot risponde solo sui contenuti del sito o è un assistente generalista? | Solo contenuti pubblicati | Decide costi, rischio e complessità dell'intera F11 |
+| # | Domanda | Esito |
+|---|---|---|
+| A2 | Il contenuto è un albero di blocchi JSON validato, o HTML salvato dall'editor? | ✅ Blocchi JSON — era già l'architettura |
+| A3 | Le traduzioni sono pagine autonome o campi affiancati? | ✅ Pagine autonome legate da `translationGroupId` (colonna opaca, non tabella) |
+| A4 | Servono ruoli editoriali dedicati o bastano le 4 soglie esistenti? | ✅ Bastano le 4 esistenti, **con** un controllo di ownership per riga (ADR-18) |
+| A5 | Una installazione = un sito, o più siti nella stessa installazione? | ✅ **Un sito, più lingue.** Nessun `siteId`; l'unico innesto futuro previsto è `Utils.applyScopeFilter` |
+| A6 | Il chatbot risponde solo sui contenuti del sito o è un assistente generalista? | ⏳ **Aperta** — non blocca: F11 è l'ultima della fila |
 
-**La più critica è A5**: le altre quattro si correggono, il multi-sito no.
+### D1b — Le tre firme che bloccano il primo commit di codice di F01
+
+| # | Documento | Serve per |
+|---|---|---|
+| 1 | `ADR-18-ownership-per-riga.md` — prodotta, in attesa | T2 (indice `created_by`) e T4 (tutto l'impianto dei permessi) |
+| 2 | `ADR-19-revisioni-immutabili.md` — da produrre | T2 (schema `page_revisions`) |
+| 3 | RFC sanitizzazione + **approvazione della dipendenza npm** | T3, e quindi ogni percorso di persistenza di contenuto |
+
+Più l'**approvazione esplicita dello schema DB**, che `CLAUDE.md` § Ask first richiede a parte.
 
 ### D2 — Provider del chatbot (voce 1.7)
 
@@ -120,9 +135,22 @@ rifiutate. Se rifiutate, il codice va rimosso.
 
 ## Prossimo passo consigliato
 
-1. Rispondi alle 5 domande di **D1** (bastano cinque righe)
-2. Approva o correggi la spec **F01** (`docs/ai/specs/SPEC-F01-gestione-pagine.md`),
-   in particolare la proposta di schema DB
-3. Da lì genero il plan operativo di F01 e si comincia a scrivere codice
+1. **Firma o correggi `ADR-18-ownership-per-riga.md`** — in particolare i tre punti P1/P2/P3
+   in fondo, che sono proposte mie e non derivano da una regola già scritta
+2. Chiedimi **ADR-19** (revisioni immutabili) e l'**RFC sulla sanitizzazione** con le
+   alternative di libreria — sono il task T1 del plan, e li scrivo solo su tua richiesta
+3. Approva la dipendenza npm scelta nell'RFC (senza, F01 non può persistere contenuto)
+4. Approva o correggi la spec **F01**, in particolare la proposta di schema DB
+5. Da lì parte T2 e si comincia a scrivere codice
 
 Tutto il resto può aspettare senza bloccare nulla.
+
+### Debito documentale ancora aperto (segnalato, non sanato)
+
+- Le quattro tabelle **mutabili** esistenti non hanno `version`: divergenza dalla regola di
+  `CLAUDE.md`, allineamento come task a sé, mai dentro una feature di dominio
+- `audit_log` usa FK `onDelete:'set null'` dove `CLAUDE.md` prescrive `restrict`
+- `createdAt`/`updatedAt` sono nullable su tutte le tabelle esistenti, mentre le nuove
+  nascono `.notNull()`
+- Nessuna gestione del codice PG `23505` esiste oggi nel repository: la mappatura
+  constraint → `409` va costruita in F01 (T3), altrimenti uno slug duplicato risponde `500`

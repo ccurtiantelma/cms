@@ -21,7 +21,7 @@ Regole comuni a tutti i ruoli: leggono la constitution prima di tutto · solo il
 
 ### Orchestrator
 Senior Solution Architect. Audit + piano operativo (max 8 task, con agente/output/dipendenze/Done per ciascuno). **Non scrive codice applicativo, non usa il terminale, non modifica sorgenti.** Scrive solo in `docs/ai/rfc/`, `docs/ai/specs/`, `docs/ai/plans/` su richiesta esplicita.
-Verifica sempre: rispetto delle 8 regole del modello di contenuto · nessuna feature costruita su assunzioni A2–A6 non confermate o decisioni aperte bloccanti (in tal caso il primo task è sbloccarle) · over-engineering (rischio concentrato in editor visivo e chatbot) · presenza di ADR per le decisioni architetturali (altrimenti primo task = RFC).
+Verifica sempre: rispetto delle 8 regole del modello di contenuto · nessuna feature costruita su assunzioni non confermate o decisioni aperte bloccanti (in tal caso il primo task è sbloccarle) · over-engineering (rischio concentrato in editor visivo e chatbot) · presenza di ADR per le decisioni architetturali (altrimenti primo task = RFC).
 ADR obbligatoria per: schema blocchi e versionamento, revisioni, caching/invalidazione pubblica, modello multilingua, routing slug, pipeline media/SVG, provider chatbot, sitemap/structured data, consumer HTML pubblico, ownership permessi editoriali, nuove dipendenze npm pesanti, e ogni altra decisione architetturale (auth, ORM, eventi, websocket, integrazioni esterne). ADR approvata non si modifica: si supera con nuova ADR (`Superseded da ADR-XXX`). ADR 1–17 = lessico storico, non si aggiornano.
 
 ### Backend Developer
@@ -38,6 +38,11 @@ Dominio CMS: ogni blocco in Error Boundary dedicato · selettori Zustand mirati 
 Solo test/`e2e/`/`bruno/`. **Mai logica applicativa** — bug trovati si segnalano, non si correggono. Legge: constitution → spec → plan → openapi.
 Ogni endpoint nuovo/modificato → `bruno/<mod>/*.yml` (OpenCollection, `Authorization: Bearer {{token}}`) · integration test Supertest con JWT+cookie simulati · mock obbligatori per servizi esterni (SMTP, Socket.io, LLM) · no `any` su mock/payload, no test placeholder.
 Copertura minima/endpoint: happy path, 1 errore, 1 RBAC non autorizzato. Copertura dominio obbligatoria: XSS neutralizzato a DB · blocchi con type/nesting/props invalidi sempre respinti per intero · ogni transizione di stato non ammessa → 400 · pagina non pubblicata mai raggiungibile (404) · doppio salvataggio concorrente → 409 senza perdita dati · autore non modifica bozze altrui · Revisioni immutabili senza eccezioni · cache invalidata dopo archiviazione.
+
+## Architecture
+
+**Una ADR sta in una pagina.** Struttura obbligatoria e sufficiente: **decisione** · **alternative scartate, una riga ciascuna** · **conseguenza**. Nient'altro. Niente ricostruzione del contesto già scritto altrove, niente sezioni di conformità, niente tabelle di scenari, niente citazioni estese del codice: quel materiale vive nella **spec** (cosa si costruisce) o nel **codice** (come funziona davvero). Una ADR registra una decisione e la rende contestabile in futuro — non la documenta.
+Vale dalla ADR-19 in poi. ADR 1–18 restano com'erano scritte: non si riformattano (una ADR approvata non si modifica).
 
 ## Superfici API
 
@@ -67,16 +72,29 @@ Prefix globale `api/v1`. JWT middleware esclude `auth/*`, `health`, `/metrics`, 
 ## Decisioni aperte — non costruirci sopra
 
 - **Consumer HTML pubblico**: l'API non renderizza HTML ma i crawler AI non eseguono JS → serve ADR (SSR/SSG/prerender). Bloccante F03/F07/F08.
-- **Ownership per riga permessi editoriali** — bloccante F01.
-- **Assunzioni A2–A6** (`docs/business-rules.md`, dettaglio `docs/TODO.md`) da confermare; **A5** (mono vs multi-sito) è la più critica.
+- **Potatura delle Revisioni**: rinviata da ADR-19. Le regole 2 e 5 di `business-rules.md` § Revisioni si contraddicono e vanno sciolte **prima che esista contenuto in volume**. Nessuna retention si implementa nel frattempo.
+- ~~Ownership per riga permessi editoriali~~ → **chiusa**: ADR-18 approvata il 2026-08-17 (P1/P2/P3 incluse).
+- ~~Sanitizzazione HTML server-side~~ → **chiusa**: ADR-20 approvata il 2026-08-17, libreria `sanitize-html`.
+- **Assunzioni**: A1–A5 confermate (A2/A3/A4/A5 il 2026-08-17, vedi `docs/business-rules.md`); resta aperta solo **A6** (chatbot), che non blocca nulla. **A5 = mono-sito, più lingue**: nessun `siteId`, unico innesto futuro `Utils.applyScopeFilter(authInfo)`.
 
 ## Database
 
 Schema unico `app/backend/src/db/schema.ts` — ogni modifica richiede approvazione umana.
+
+**Struttura obbligatoria — dipende dalla natura della tabella.**
+
+*Entità mutabile* (riga che si aggiorna nel tempo: `users`, `app_settings`, `files`, `notifications`, `pages`) → struttura completa:
 ```
 id serial PK · guid char(16) (URL admin) · version int NOT NULL DEFAULT 1 (lock ottimistico)
 isActive boolean (soft delete) · createdAt/updatedAt · createdBy/updatedBy → users.id
 ```
+*Tabella append-only* (riga scritta una volta e mai più toccata: `audit_log`, `page_revisions`) → **solo**:
+```
+id serial PK · guid char(16) · createdAt · createdBy → users.id
+```
+Su una tabella append-only `updatedAt`/`updatedBy` sono colonne morte che dichiarano un percorso di modifica inesistente, `isActive` è lo scivolo verso una cancellazione logica vietata, e `version` protegge da una concorrenza che non esiste. L'immutabilità si afferma nello schema, non solo nei commenti. (`audit_log` usa `userId` nel ruolo di `createdBy`.)
+
+> Le quattro entità mutabili già in produzione non hanno `version`: divergenza nota e **non sanata**, il cui allineamento è un task a sé — non si retrofitta dentro una feature di dominio.
 FK sempre `{onDelete:'restrict', onUpdate:'restrict'}` · `relations()` dopo le tabelle · migrazioni `drizzle-kit generate → migrate`, mai `push` in prod · contenuto in `jsonb`, mai testo JSON serializzato · indici su `slug`/`locale`/`status`/ogni FK · `Utils.applyScopeFilter(authInfo)` se multi-tenant · password con `Utils.hashPassword`/`verifyPassword` (bcrypt cost 12).
 Presenti: `users`, `audit_log`, `app_settings`, `files`, `notifications`. Previste (da approvare): `pages`, `page_revisions`, `redirects`, `menus`, `forms`, `form_submissions`.
 
@@ -89,7 +107,7 @@ Presenti: `users`, `audit_log`, `app_settings`, `files`, `notifications`. Previs
 | Manager | 20 | Editoriale + pubblicazione |
 | User | 30 | Autore: **proprie** bozze, non pubblica |
 
-> "Proprie bozze" è ownership per riga, non soglia — le guard esistenti (`GuardSuperAdmin/Admin/Manager`) confrontano solo livelli. Serve check esplicito nel service (`createdBy=authInfo.userId` + stato riga), da fissare in ADR prima dell'implementazione.
+> "Proprie bozze" è ownership per riga, non soglia — le guard esistenti (`GuardSuperAdmin/Admin/Manager`) confrontano solo livelli. Serve check esplicito nel service (`createdBy=authInfo.userId` + stato riga) più un predicato nella `WHERE` degli elenchi. Regolato da `docs/ai/adr/ADR-18-ownership-per-riga.md` (**approvata il 2026-08-17**). Superficie admin: `403` su riga altrui, `404` solo se inesistente o soft-deleted.
 
 ## Security
 
@@ -127,4 +145,15 @@ File in `docs/` e business rules (ADR approvata → si supera, mai si modifica) 
 
 ## Documentation Policy
 
-Documentazione = codice: ogni modifica significativa aggiorna spec correlate, `openapi:export`, progress-tracker, roadmap. Contenuto sopravvive al codice: nessun breaking change allo schema blocchi senza strategia di migrazione dei contenuti già salvati.
+Documentazione = codice. Ma **chi** aggiorna cosa, e **quando**, non è uguale per tutti i documenti:
+
+| Documento | Quando si aggiorna | Chi |
+|---|---|---|
+| `docs/openapi.yaml` + `api.types.ts` | Dopo ogni endpoint nuovo/modificato, sempre | Script (`openapi:export` + `openapi:types`) — non è scrittura manuale in `docs/` |
+| Spec/plan della feature corrente | Quando l'implementazione devia da quanto scritto | Ruolo AI del task, **solo se l'umano lo chiede per quel file** |
+| `docs/ai/progress-tracker.md`, `docs/roadmap.md` | **A fine feature**, non a ogni commit | Ruolo AI, **solo su richiesta umana esplicita** — quella richiesta vale come autorizzazione puntuale a scrivere in `docs/` per quei file |
+| Tutto il resto di `docs/` | Mai d'iniziativa | Umano |
+
+Il divieto "modifica file `docs/`" resta il default per ogni ruolo AI: la richiesta umana esplicita e circostanziata è l'unica deroga, vale per i file nominati in quella richiesta e si esaurisce con il task. Nessuna deroga implicita "perché la policy lo impone".
+
+Contenuto sopravvive al codice: nessun breaking change allo schema blocchi senza strategia di migrazione dei contenuti già salvati.
