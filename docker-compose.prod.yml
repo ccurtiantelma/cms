@@ -82,6 +82,19 @@ services:
     ports:
       - '80:80'
 
+  public-site:
+    build:
+      context: .
+      dockerfile: app/public-site/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      PUBLIC_API_BASE_URL: http://backend:3000
+    depends_on:
+      - backend
+    ports:
+      - '4000:4000'
+
 volumes:
   pgdata_prod:
   redisdata_prod:

@@ -60,8 +60,9 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
 
   switch (resolution.kind) {
     case 'ok': {
+      const html = isHead ? undefined : renderPageDocument(resolution.page, css.href);
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(isHead ? undefined : renderPageDocument(resolution.page, css.href));
+      res.end(html);
       return;
     }
     case 'redirect': {

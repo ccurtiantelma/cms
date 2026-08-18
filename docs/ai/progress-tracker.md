@@ -4,7 +4,7 @@
 > Le AI non lo modificano autonomamente: lo stato viene aggiornato a fine feature, su
 > richiesta esplicita.
 >
-> Ultima revisione: 2026-08-17 — F01 chiusa.
+> Ultima revisione: 2026-08-18 — F03/T6-T7.
 
 ---
 
@@ -147,3 +147,48 @@ revisioni, frontend). Chiusi in questo passaggio i due residui rimasti aperti:
   quindi dal throttle di `/auth/login` (5 tentativi/60s), non da un limite sull'endpoint
   `DELETE` stesso — che oggi non ha alcun rate limit. Nessuna modifica applicata: la
   decisione se differenziare i limiti fra `/auth/*` e `app/*` resta da prendere insieme.
+
+---
+
+## F03 — T6/T7 (2026-08-18)
+
+`docs/ai/plans/PLAN-F03-superficie-pubblica.md`. T2–T5 già chiusi in un passaggio
+precedente (API pubblica, cache/invalidazione, test T4, `app/public-site` SSR). Chiuso in
+questo passaggio:
+
+- **T6 — invariante di escaping e test di rendering**: mancava il terzo controllo previsto
+  dal plan (`app/public-site/test/ssr-error.spec.ts`, nuovo) — un blocco che solleva durante
+  `renderToStaticMarkup` deve dare `500` pulito, mai HTML parziale (ADR-22 § 2: nessun Error
+  Boundary gira in SSR). Scrivendolo si è trovato un bug reale in
+  `app/public-site/src/server.ts`: nel caso `'ok'`, `res.writeHead(200, ...)` veniva chiamato
+  **prima** di valutare `renderPageDocument(...)` come argomento di `res.end(...)` — un
+  errore di rendering arrivava quindi dopo che gli header `200` erano già stati inviati, e il
+  client riceveva `200 OK` con corpo vuoto invece di `500` (peggio di una pagina mutilata: un
+  "successo" silenzioso e vuoto). Corretto spostando il rendering in una variabile locale
+  prima di `writeHead`. Suite `app/public-site` verde: 5/5 test.
+- **T7 — distribuzione e chiusura**: `app/public-site/Dockerfile` (stesso pattern 4-stage di
+  `app/backend/Dockerfile`; verificato costruendo l'immagine e avviandola, non solo
+  buildandola — `docker run` + `curl /healthz` → `200 ok`, nessun `MODULE_NOT_FOUND`,
+  `docker inspect` → `healthy`), servizio `public-site` in `docker-compose.prod.yml` (porta
+  `4000:4000`, `PUBLIC_API_BASE_URL=http://backend:3000` sulla rete Docker interna),
+  `PUBLIC_API_BASE_URL` documentata in `.env.example`, script root `dev:public-site` /
+  `build:public-site` / `clean` estesi. Il job CI `public-site` (lint/test/build) esisteva
+  già da T5, non toccato.
+
+**Residui**:
+
+- `SPEC-F03-superficie-pubblica.md` (T1) non è ancora redatta/approvata — gate esplicito di
+  chiusura dichiarato in `PLAN-F03`. F03 non è dichiarabile ✅ Done finché non c'è.
+- Lo step "Typecheck" del job CI `public-site` fallisce (`TS5103`: `ignoreDeprecations:
+  "6.0"` in `app/public-site/tsconfig.json` non è un valore valido per `typescript@5.9.3`,
+  la versione installata dal lockfile). Preesistente, non introdotto da T6/T7 (verificato:
+  nessuna modifica a `tsconfig.json` o alla versione di `typescript` in questo passaggio) —
+  ma va corretto perché il criterio di Done di T7 ("CI verde su tutti i job") non è
+  soddisfatto finché resta rosso.
+- Verifica end-to-end manuale "pubblicare una pagina dall'admin e leggerla via `curl` senza
+  JavaScript" (T7) **non eseguita per intero**: le porte dev 5432/6379 di questa macchina
+  sono occupate da un altro progetto Docker non correlato (`inventory-*`), quindi non è
+  stato possibile alzare lo stack completo in sicurezza. Coperto per via indiretta
+  dall'e2e Supertest di T4 (API pubblica con Postgres/Redis reali) più dalla suite SSR di
+  T6 (server reale + mock dell'API) — ma resta da eseguire una volta sciolto il conflitto di
+  porte.
