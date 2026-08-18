@@ -18,6 +18,7 @@ http:
             {
               "id": "b1a2c3d4",
               "type": "richText",
+              "v": 1,
               "props": { "html": "<p>Testo di esempio</p>" },
               "children": []
             }
@@ -48,4 +49,10 @@ tests: |-
     expect(body).to.have.property("guid");
     expect(body).to.have.property("slug", "chi-siamo");
     expect(body).to.have.property("version", 1);
+  });
+
+  test("contentIssues è presente e vuoto su un albero integro (SPEC-F02-blocchi.md § 4.3)", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("contentIssues");
+    expect(body.contentIssues).to.deep.equal([]);
   });

@@ -23,6 +23,8 @@
     "seed": "npm run seed --workspace=app/backend",
     "openapi:export": "npm run openapi:export --workspace=app/backend",
     "openapi:types": "openapi-typescript docs/openapi.yaml -o app/frontend/src/types/api.types.ts",
+    "blocks:export": "npm run blocks:export --workspace=app/backend",
+    "blocks:types": "node generate-blocks-types.js",
     "test": "npm run test --workspace=app/backend && npm run test --workspace=app/frontend",
     "test:e2e": "npm run test:e2e --workspace=app/backend -- --runInBand --forceExit",
     "test:e2e:browser": "playwright test --config=e2e/playwright.config.ts",

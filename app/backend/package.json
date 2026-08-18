@@ -11,6 +11,7 @@
     "db:migrate": "drizzle-kit migrate",
     "seed": "tsx src/db/seed.ts",
     "openapi:export": "ts-node export-openapi.ts",
+    "blocks:export": "ts-node export-blocks.ts",
     "test": "jest",
     "test:e2e": "NODE_ENV=test jest --config ./test/e2e/jest-e2e.json --runInBand --forceExit",
     "lint": "eslint .",

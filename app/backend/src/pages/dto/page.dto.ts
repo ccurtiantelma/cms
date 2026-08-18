@@ -73,4 +73,19 @@ export class PageDto {
 
   @ApiProperty({ description: 'Data di ultimo aggiornamento della bozza' })
   updatedAt!: Date;
+
+  @ApiPropertyOptional({
+    description:
+      'Nodi dell\'albero blocchi che falliscono migrazione o validazione in lettura (mai un\'eccezione: il nodo resta esposto come persistito). Assente solo dove non calcolato per costo (liste); array vuoto quando l\'albero è integro.',
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        path: { type: 'string' },
+        code: { type: 'string' },
+        details: { type: 'object', additionalProperties: true },
+      },
+    },
+  })
+  contentIssues?: Array<{ path: string; code: string; details: unknown }>;
 }

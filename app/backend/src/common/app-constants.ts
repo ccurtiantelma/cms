@@ -93,6 +93,20 @@ export class AppConstants {
   static readonly rtkExpiration = num('RTK_EXPIRATION', 604800);
 
   static readonly frontendUrl = str('FRONTEND_URL', 'http://localhost:5173');
+  /**
+   * Origine del sito pubblico SSR (`app/public-site`, ADR-22/F03/T5), workspace
+   * separato non ancora presente in T2: aggiunta qui perché CORS deve ammetterla
+   * fin da subito, senza wildcard (`main.ts`).
+   */
+  static readonly publicSiteUrl = str('PUBLIC_SITE_URL', 'http://localhost:4000');
+
+  /**
+   * Lingua di default del sito (ADR-24 § 5/§ 7): usata dalla risoluzione pubblica
+   * degli slug finché F05 non introduce `app_settings`/Locale come impostazione
+   * runtime. Assunzione dichiarata, non una regola approvata: il valore fisso
+   * qui è il solo punto da cambiare quando F05 arriverà.
+   */
+  static readonly defaultLocale = str('DEFAULT_LOCALE', 'it-IT');
 
   static readonly smtpHost = str('SMTP_HOST', 'localhost');
   static readonly smtpPort = parsePort(1025, process.env.SMTP_PORT);

@@ -9,7 +9,9 @@ export default [
   {
     // Generato da `openapi-typescript` (script `openapi:types`) — stile di
     // quoting non controllabile dal nostro Prettier, va rigenerato mai lintato a mano.
-    ignores: ['src/types/api.types.ts'],
+    // `blocks.types.ts` è generato allo stesso modo da `blocks:export`/`blocks:types`
+    // (PLAN-F02-blocchi.md T6): stessa ragione, stesso trattamento.
+    ignores: ['src/types/api.types.ts', 'src/types/blocks.types.ts'],
   },
   {
     files: ['src/**/*.{ts,tsx}'],

@@ -1,0 +1,53 @@
+info:
+  name: Create Page - Blocco Non Valido
+  type: http
+  seq: 10
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/pages"
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Pagina con blocco non valido",
+        "locale": "it-IT",
+        "draftContent": {
+          "version": 1,
+          "blocks": [
+            {
+              "id": "b1",
+              "type": "image",
+              "v": 1,
+              "props": { "mediaRef": "0123456789abcdef" },
+              "children": []
+            }
+          ]
+        }
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 400 (image.alt obbligatorio, SPEC-F02-blocchi.md § 3.5)", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+
+  test("code e path del nodo colpevole in details (CLAUDE.md § Error handling)", function() {
+    const body = res.getBody();
+    expect(body.code).to.equal("BLOCK_PROP_INVALID");
+    expect(body.details).to.have.property("path", "blocks[0].props.alt");
+    expect(body.details).to.have.property("reason", "required");
+  });
+
+  test("nessuna Pagina viene creata: l'albero non valido respinge l'intero salvataggio", function() {
+    const body = res.getBody();
+    expect(body).to.not.have.property("guid");
+  });

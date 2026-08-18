@@ -1,0 +1,7 @@
+.fallback {
+  border: 1px dashed #d0341c;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  color: #d0341c;
+  font-size: 0.85rem;
+}

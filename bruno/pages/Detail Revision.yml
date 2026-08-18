@@ -36,3 +36,11 @@ tests: |-
       expect(body).to.have.property("seo");
     }
   });
+
+  test("contentIssues è sempre presente (array, anche vuoto — SPEC-F02-blocchi.md § 4.3)", function() {
+    if (res.getStatus() === 200) {
+      const body = res.getBody();
+      expect(body).to.have.property("contentIssues");
+      expect(body.contentIssues).to.be.an("array");
+    }
+  });

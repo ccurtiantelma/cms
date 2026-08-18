@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -18,7 +19,15 @@ import { Utils } from '../common/utils';
 import { assertRowOwnership, hasElevatedRowAccess, rowOwnershipFilter } from '../common/ownership';
 import { mapPgError } from '../common/db-error.mapper';
 import { TreeSanitizerService } from '../common/sanitizer/tree-sanitizer.service';
-import { assertValidContentTreeShape } from './content-tree';
+import { BlockPropSanitizerService } from '../common/sanitizer/block-prop-sanitizer.service';
+import { BLOCK_REGISTRY_TOKEN, BlockRegistry } from '../blocks/block-registry';
+import { BlockTreeValidatorService } from '../blocks/validator/block-tree-validator.service';
+import { PublicPageCacheService } from './public-page-cache.service';
+import { ValidatableBlockNode } from '../blocks/validator/validatable-node.types';
+import { migrateEnvelope, ENVELOPE_VERSION } from '../blocks/migration/envelope-migration.engine';
+import { migrateBlockTree } from '../blocks/migration/block-tree-migration.engine';
+import { MigratableBlockNode } from '../blocks/migration/block-migration.types';
+import { assertValidContentTreeShape, assertPayloadWithinLimit, ContentTree } from './content-tree';
 import { isReservedSlug, normalizeSlug } from './slug.util';
 import {
   isTransitionAllowed,
@@ -42,6 +51,23 @@ type PageRevisionRowWithAuthor = PageRevisionRow & {
 /** Soglia di elevazione editoriale (ADR-18 § D3): sopra `Manager` l'ownership per riga non si applica. */
 const OWNERSHIP_ELEVATED_THRESHOLD = AppUserRoles.Manager;
 
+/**
+ * Esito dell'innesto della pipeline blocchi (F02/T5, ADR-21 § 3): envelope
+ * pronto per la persistenza, alla versione corrente, con `blocks` migrati,
+ * validati contro il registro e sanitizzati per `kind`.
+ */
+interface PersistableContent {
+  version: number;
+  blocks: ValidatableBlockNode[];
+}
+
+/** Un nodo dell'albero segnalato in lettura (SPEC-F02-blocchi.md § 4.3): mai un'eccezione, mai un albero mutato. */
+interface ContentIssue {
+  path: string;
+  code: string;
+  details: unknown;
+}
+
 /** Colonne ordinabili di `GET /app/pages` (`?o=`), lette per nome dal client. */
 const ORDERABLE_PAGE_COLUMNS: Record<string, PgColumn> = {
   title: pageEntity.title,
@@ -57,20 +83,33 @@ const ORDERABLE_PAGE_COLUMNS: Record<string, PgColumn> = {
  * pubblicazione transazionale sono fuori da questo service (T5): qui si
  * scrive solo la bozza (`draftContent`/`draftSeo`), mai `status`.
  *
- * Ordine vincolante di ogni percorso di scrittura: validazione della forma
- * dell'albero → sanitizzazione → ownership → persistenza. Nessuna `SELECT`
- * preventiva per l'unicità dello slug: il conflitto arriva dal constraint DB
- * e passa da {@link mapPgError}.
+ * Ordine vincolante di ogni percorso di scrittura dell'albero blocchi
+ * (ADR-21 § 3, F02/T5): forma envelope → migrazione → validazione registro →
+ * sanitizzazione per `kind` → persistenza. Nessuna `SELECT` preventiva per
+ * l'unicità dello slug: il conflitto arriva dal constraint DB e passa da
+ * {@link mapPgError}.
  */
 @Injectable()
 export class PagesService {
   private readonly logger = new Logger(PagesService.name);
 
-  /** Inietta l'accesso al DB, l'audit log e il sanitizzatore dell'albero blocchi (T3). */
+  /**
+   * Inietta l'accesso al DB, l'audit log, il sanitizzatore cieco (F01, resta
+   * per `draftSeo`), il validator di registro (T2), il sanitizzatore per
+   * `kind` (T3) dell'albero blocchi, e il registro dei tipi dietro il token
+   * `BLOCK_REGISTRY_TOKEN` (F02/T7): mai `DEFAULT_BLOCK_REGISTRY` importato come
+   * costante fissa qui, perché è questo il punto di consumo che un test e2e
+   * deve poter sovrascrivere con un registro di test per verificare la
+   * migrazione v1→v2 sul percorso HTTP reale.
+   */
   constructor(
     private readonly db: DbService,
     private readonly auditLogService: AuditLogService,
     private readonly treeSanitizer: TreeSanitizerService,
+    private readonly blockTreeValidator: BlockTreeValidatorService,
+    private readonly blockPropSanitizer: BlockPropSanitizerService,
+    @Inject(BLOCK_REGISTRY_TOKEN) private readonly blockRegistry: BlockRegistry,
+    private readonly publicPageCache: PublicPageCacheService,
   ) {}
 
   /** Lista paginata delle Pagine attive. Un `User` vede solo le proprie (ADR-18 § D6). */
@@ -121,9 +160,8 @@ export class PagesService {
     const slug = this.normalizeAndValidateSlug(dto.slug ?? dto.title);
     const parent = dto.parentGuid ? await this.loadActiveParentOrThrow(dto.parentGuid) : null;
 
-    const contentTree = dto.draftContent ?? { version: 1, blocks: [] };
-    assertValidContentTreeShape(contentTree);
-    const sanitizedContent = this.treeSanitizer.sanitizeTree(contentTree);
+    const contentInput = dto.draftContent ?? { version: ENVELOPE_VERSION, blocks: [] };
+    const content = this.runWriteContentPipeline(contentInput, authInfo);
     const seo = this.toPlainSeo(dto.draftSeo);
 
     const row = await this.insertOrMapConflict({
@@ -133,14 +171,14 @@ export class PagesService {
       locale: dto.locale,
       parentId: parent?.id ?? null,
       translationGroupId: Utils.randomString(16),
-      draftContent: sanitizedContent,
+      draftContent: content,
       draftSeo: seo,
       createdBy: authInfo.userId,
       updatedBy: authInfo.userId,
     });
 
     this.logger.log(`Pagina creata (guid=${row.guid}).`);
-    return this.toDto(row, parent?.guid ?? null);
+    return this.toDtoWithContentIssues(row, parent?.guid ?? null);
   }
 
   /** Dettaglio di una Pagina attiva. `403` su riga altrui, `404` solo su guid inesistente/soft-deleted (ADR-18 § D7). */
@@ -152,7 +190,7 @@ export class PagesService {
       OWNERSHIP_ELEVATED_THRESHOLD,
       'Non puoi visualizzare la pagina di un altro utente.',
     );
-    return this.toDto(row, row.parent?.guid ?? null);
+    return this.toDtoWithContentIssues(row, row.parent?.guid ?? null);
   }
 
   /**
@@ -202,12 +240,20 @@ export class PagesService {
     }
 
     if (dto.draftContent !== undefined) {
-      assertValidContentTreeShape(dto.draftContent);
-      setValues.draftContent = this.treeSanitizer.sanitizeTree(dto.draftContent);
+      setValues.draftContent = this.runWriteContentPipeline(dto.draftContent, authInfo);
     }
     if (dto.draftSeo !== undefined) {
       setValues.draftSeo = this.toPlainSeo(dto.draftSeo);
     }
+
+    // Percorso pubblico calcolato **prima** dell'UPDATE (ADR-23 § 4/§ 5): dopo
+    // il commit lo slug/genitore in database è già il nuovo, quindi non è più
+    // la chiave davvero cacheata. Solo `slug`/`parentGuid` toccano il
+    // percorso — un cambio di solo `title`/`draftContent` non muove nulla.
+    const pathMayChange = setValues.slug !== undefined || setValues.parentId !== undefined;
+    const staleLocations = pathMayChange
+      ? await this.publicPageCache.computeSubtreeLocationsBeforeWrite(row.id)
+      : [];
 
     const updatedRow = await this.updateOrMapConflict(row.id, dto.version, setValues);
     if (!updatedRow) {
@@ -217,7 +263,11 @@ export class PagesService {
       });
     }
 
-    return this.toDto(updatedRow, parentGuid);
+    if (staleLocations.length > 0) {
+      await this.publicPageCache.invalidateLocations(staleLocations, authInfo.userId);
+    }
+
+    return this.toDtoWithContentIssues(updatedRow, parentGuid);
   }
 
   /** Soft delete (Admin+, `GuardAdmin` sul controller). Traccia in audit log. */
@@ -230,10 +280,20 @@ export class PagesService {
       'Permessi insufficienti per eliminare questa pagina.',
     );
 
+    // Sottoalbero calcolato prima del soft delete (ADR-23 § 4): `isActive`
+    // rompe la risoluzione di un intero ramo (ogni antenato inattivo blocca
+    // la discesa a segmenti di T2), quindi anche il pubblico dei discendenti
+    // diventa stantio, non solo quello della riga eliminata.
+    const staleLocations = await this.publicPageCache.computeSubtreeLocationsBeforeWrite(row.id);
+
     await this.db.db
       .update(pageEntity)
       .set({ isActive: false, updatedAt: new Date(), updatedBy: authInfo.userId })
       .where(eq(pageEntity.id, row.id));
+
+    if (staleLocations.length > 0) {
+      await this.publicPageCache.invalidateLocations(staleLocations, authInfo.userId);
+    }
 
     this.logger.log(`Pagina eliminata (guid=${guid}).`);
     await this.auditLogService.log(
@@ -309,6 +369,12 @@ export class PagesService {
       });
     }
 
+    // Sola chiave della Pagina (ADR-23 § 4): nessuna transizione di stato
+    // tocca `slug`/`parentId`, quindi il percorso dei discendenti non è
+    // toccato. Invalidazione incondizionata: su una Pagina mai pubblicata è
+    // un `DEL` a vuoto, innocuo.
+    await this.publicPageCache.invalidatePage(row.id, authInfo.userId);
+
     this.logger.log(`Pagina guid=${guid}: transizione di stato ${fromStatus} -> ${toStatus}.`);
     await this.auditLogService.log(
       authInfo.userId,
@@ -320,7 +386,7 @@ export class PagesService {
       ip,
     );
 
-    return this.toDto(updatedRow, row.parent?.guid ?? null);
+    return this.toDtoWithContentIssues(updatedRow, row.parent?.guid ?? null);
   }
 
   /**
@@ -344,7 +410,13 @@ export class PagesService {
     authInfo: AuthInfo,
     ip?: string,
   ): Promise<PageDto> {
-    const sanitizedContent = this.treeSanitizer.sanitizeTree(row.draftContent);
+    // Bozza già persistita, non un payload client fresco: pipeline
+    // lettura-tollerante (senza richiedere "v"), ma comunque migrazione →
+    // validazione → sanitizzazione → controllo payload "persist" (ADR-21
+    // § 3). Un albero che ha smesso di essere valido (tipo diventato
+    // deprecated/enabled:false nel frattempo) blocca la pubblicazione con lo
+    // stesso 400 di una scrittura: non si pubblica un albero non valido.
+    const sanitizedContent = this.runPersistedContentPipeline(row.draftContent, authInfo);
     const sanitizedSeo = this.treeSanitizer.sanitizeTree(row.draftSeo);
 
     const finalRow = await this.db.db.transaction(async (tx) => {
@@ -425,8 +497,12 @@ export class PagesService {
       return publishedPage;
     });
 
+    // Dopo il commit (ADR-23 § 4): una lettura concorrente prima di questo
+    // punto ripopolerebbe la chiave con lo stato pre-pubblicazione.
+    await this.publicPageCache.invalidatePage(finalRow.id, authInfo.userId);
+
     this.logger.log(`Pagina pubblicata (guid=${row.guid}).`);
-    return this.toDto(finalRow, row.parent?.guid ?? null);
+    return this.toDtoWithContentIssues(finalRow, row.parent?.guid ?? null);
   }
 
   /**
@@ -516,11 +592,18 @@ export class PagesService {
 
     const revision = await this.loadRevisionOrThrow(row.id, revisionGuid);
 
-    // La Revisione è stata sanitizzata con l'allowlist in vigore al momento
-    // della pubblicazione: ripassa dal sanitizzatore corrente prima di
-    // scrivere la bozza, altrimenti un'allowlist inasprita nel frattempo
-    // (F02, per tipo di blocco) verrebbe aggirata dal ripristino.
-    const sanitizedContent = this.treeSanitizer.sanitizeTree(revision.content);
+    // La Revisione è stata sanitizzata/migrata con lo schema in vigore al
+    // momento della pubblicazione: ripassa dall'intera pipeline di lettura-
+    // tollerante (migrazione → validazione → sanitizzazione, senza
+    // richiedere "v" — la Revisione può essere pre-F02) prima di scrivere la
+    // bozza, altrimenti un'allowlist inasprita o un tipo diventato
+    // deprecated/enabled:false nel frattempo verrebbero aggirati dal
+    // ripristino. Il risultato porta ogni nodo già alla `v` corrente
+    // (prodotto dalla migrazione): coerente con "restore produce una bozza
+    // già alla versione corrente" (PLAN-F02 T5). Se la Revisione ripristinata
+    // fallisce la validazione di registro oggi, il ripristino è respinto con
+    // lo stesso 400 di una scrittura — non si scrive un albero non valido.
+    const sanitizedContent = this.runPersistedContentPipeline(revision.content, authInfo);
     const sanitizedSeo = this.treeSanitizer.sanitizeTree(revision.seo);
 
     const updatedRow = await this.updateOrMapConflict(row.id, row.version, {
@@ -550,7 +633,7 @@ export class PagesService {
       ip,
     );
 
-    return this.toDto(updatedRow, row.parent?.guid ?? null);
+    return this.toDtoWithContentIssues(updatedRow, row.parent?.guid ?? null);
   }
 
   // ─── Helpers privati ──────────────────────────────────────────────────────
@@ -684,11 +767,17 @@ export class PagesService {
     };
   }
 
+  /**
+   * `content` resta il valore **grezzo** come persistito (mai migrato a
+   * metà, mai mutato): `contentIssues` è calcolato a parte, in sola lettura,
+   * senza sostituire quel valore (SPEC-F02-blocchi.md § 4.3).
+   */
   private toRevisionDetailDto(row: PageRevisionRowWithAuthor): PageRevisionDetailDto {
     return {
       ...this.toRevisionSummaryDto(row),
       content: row.content as Record<string, unknown>,
       seo: row.seo as Record<string, unknown>,
+      contentIssues: this.migrateContentForRead(row.content).issues,
     };
   }
 
@@ -754,7 +843,13 @@ export class PagesService {
     }
   }
 
-  /** Converte una riga DB nel DTO pubblico (mai `id`/`createdBy`/`updatedBy` numerici). */
+  /**
+   * Converte una riga DB nel DTO pubblico (mai `id`/`createdBy`/`updatedBy`
+   * numerici). Senza `contentIssues`: usato da {@link findAll}, dove
+   * calcolarlo per ogni riga di una lista sarebbe un costo non richiesto
+   * (SPEC-F02-blocchi.md § 4.3 lo prescrive per il dettaglio, non per le
+   * liste). Per il dettaglio vedi {@link toDtoWithContentIssues}.
+   */
   private toDto(row: PageRow, parentGuid: string | null): PageDto {
     return {
       guid: row.guid,
@@ -772,5 +867,182 @@ export class PagesService {
       createdAt: row.createdAt!,
       updatedAt: row.updatedAt!,
     };
+  }
+
+  /**
+   * Come {@link toDto}, con `contentIssues` calcolato in sola lettura su
+   * `draftContent` (SPEC-F02-blocchi.md § 4.3) **e** `draftContent` sostituito
+   * dalla proiezione migrata (ADR-21 § 3.4/§ 1): un nodo pre-F02 privo di `v`
+   * arriva al client con `v` già riempito, altrimenti il client non ha alcun
+   * valore legittimo da restituire in un `PATCH` successivo — `v` è
+   * obbligatorio in scrittura (§ 1) ma non esisteva ancora quando F01 ha
+   * scritto la riga. La riga in DB resta invariata: la migrazione è una
+   * proiezione pura (§ 3.4), non un `UPDATE`.
+   */
+  private toDtoWithContentIssues(row: PageRow, parentGuid: string | null): PageDto {
+    const { content, issues } = this.migrateContentForRead(row.draftContent);
+    return {
+      ...this.toDto(row, parentGuid),
+      draftContent: content,
+      contentIssues: issues,
+    };
+  }
+
+  // ─── Pipeline blocchi (F02/T5, ADR-21 § 3) ────────────────────────────────
+
+  /**
+   * Pipeline di **scrittura**, applicata a un payload client fresco
+   * (`POST`/`PATCH`): forma envelope (`v` obbligatorio per nodo, limiti di
+   * profondità/numero di nodi/payload in ingresso) → migrazione → validazione
+   * contro il registro → sanitizzazione per `kind` → controllo payload
+   * "persist". Un albero non conforme è respinto **per intero** al primo
+   * errore incontrato — mai un salvataggio parziale.
+   */
+  private runWriteContentPipeline(input: unknown, authInfo: AuthInfo): PersistableContent {
+    assertValidContentTreeShape(input);
+    const tree = input as ContentTree;
+    const blocksAfterEnvelope = this.migrateEnvelopeOrThrow(
+      tree as unknown as Record<string, unknown>,
+      tree.version,
+    );
+    return this.migrateValidateSanitize(blocksAfterEnvelope, authInfo);
+  }
+
+  /**
+   * Pipeline di **lettura-tollerante**, applicata a un contenuto già
+   * persistito (bozza alla pubblicazione, snapshot di Revisione al
+   * ripristino): non richiede `v` per nodo (contenuto pre-F02) né i
+   * controlli di forma/limiti già passati alla scrittura originaria — esegue
+   * comunque migrazione → validazione → sanitizzazione → controllo payload
+   * "persist", perché un albero valido ieri può non esserlo più oggi (tipo
+   * diventato `deprecated`/`enabled:false`). Un fallimento qui rifiuta
+   * l'operazione con lo stesso `400` di una scrittura: non si
+   * pubblica/scrive un albero non valido.
+   */
+  private runPersistedContentPipeline(rawEnvelope: unknown, authInfo: AuthInfo): PersistableContent {
+    const envelope = this.asEnvelopeRecord(rawEnvelope);
+    const fromVersion = typeof envelope.version === 'number' ? envelope.version : 1;
+    const blocksInput = this.migrateEnvelopeOrThrow(envelope, fromVersion);
+    return this.migrateValidateSanitize(blocksInput, authInfo);
+  }
+
+  /**
+   * Proietta un contenuto già persistito alla forma migrata corrente
+   * (migrazione + validazione di registro, **senza** sanitizzazione — solo
+   * per la scrittura) e calcola `contentIssues` (SPEC-F02-blocchi.md § 4.3)
+   * nello stesso passaggio. Non modifica né rilancia mai un'eccezione HTTP:
+   * la lettura di una Pagina/Revisione non deve mai rompersi per contenuto
+   * malformato, solo segnalarlo con il path del nodo colpevole. `content` è
+   * ciò che il client deve poter rimandare inalterato in un `PATCH`
+   * successivo: se un nodo fallisce la migrazione dell'envelope l'intero
+   * contenuto torna così com'è persistito (nessuna proiezione possibile),
+   * altrimenti torna `{ version, blocks }` alla versione corrente con `v` per
+   * nodo sempre presente.
+   */
+  private migrateContentForRead(rawEnvelope: unknown): {
+    content: Record<string, unknown>;
+    issues: ContentIssue[];
+  } {
+    const envelope = this.asEnvelopeRecord(rawEnvelope);
+    const fromVersion = typeof envelope.version === 'number' ? envelope.version : 1;
+
+    const envelopeOutcome = migrateEnvelope(envelope, fromVersion);
+    if (envelopeOutcome.unsupported) {
+      return {
+        content: envelope,
+        issues: [
+          {
+            path: '',
+            code: 'CONTENT_ENVELOPE_VERSION_UNSUPPORTED',
+            details: envelopeOutcome.unsupported,
+          },
+        ],
+      };
+    }
+    const blocksInput = this.asMigratableBlocks(envelopeOutcome.envelope.blocks);
+
+    const migration = migrateBlockTree(blocksInput, this.blockRegistry);
+    const validation = this.blockTreeValidator.validateTree(
+      migration.blocks as ValidatableBlockNode[],
+      this.blockRegistry,
+    );
+
+    const issues = [...migration.errors, ...validation.errors].map((error) => ({
+      path: (error.details as { path: string }).path,
+      code: error.code,
+      details: error.details,
+    }));
+
+    return { content: { version: ENVELOPE_VERSION, blocks: migration.blocks }, issues };
+  }
+
+  /** Applica la catena di migrazione d'envelope, o rilancia `400 CONTENT_ENVELOPE_VERSION_UNSUPPORTED`. */
+  private migrateEnvelopeOrThrow(
+    envelope: Record<string, unknown>,
+    fromVersion: number,
+  ): MigratableBlockNode[] {
+    const outcome = migrateEnvelope(envelope, fromVersion);
+    if (outcome.unsupported) {
+      throw new BadRequestException({
+        message: `Versione d'envelope non supportata: ${outcome.unsupported.version} (corrente: ${outcome.unsupported.current}).`,
+        code: 'CONTENT_ENVELOPE_VERSION_UNSUPPORTED',
+        details: outcome.unsupported,
+      });
+    }
+    return this.asMigratableBlocks(outcome.envelope.blocks);
+  }
+
+  /** Stadi comuni a scrittura e lettura-tollerante: migrazione per nodo → validazione registro → sanitizzazione per `kind` → controllo payload "persist". */
+  private migrateValidateSanitize(
+    blocksInput: MigratableBlockNode[],
+    authInfo: AuthInfo,
+  ): PersistableContent {
+    const migration = migrateBlockTree(blocksInput, this.blockRegistry);
+    if (migration.errors.length > 0) {
+      throw this.blockErrorToBadRequest(migration.errors[0]);
+    }
+
+    const validation = this.blockTreeValidator.validateTree(
+      migration.blocks as ValidatableBlockNode[],
+      this.blockRegistry,
+      { roleLevel: authInfo.role },
+    );
+    if (!validation.valid) {
+      throw this.blockErrorToBadRequest(validation.errors[0]);
+    }
+
+    const sanitized = this.blockPropSanitizer.sanitizeTree(
+      migration.blocks as ValidatableBlockNode[],
+      this.blockRegistry,
+    );
+    if (sanitized.errors.length > 0) {
+      throw this.blockErrorToBadRequest(sanitized.errors[0]);
+    }
+
+    const resultEnvelope: PersistableContent = { version: ENVELOPE_VERSION, blocks: sanitized.tree };
+    assertPayloadWithinLimit(resultEnvelope, 'persist');
+    return resultEnvelope;
+  }
+
+  /** Un solo `400` per l'intero albero, con `code`/`details` del **primo** errore incontrato (mai salvataggio parziale). */
+  private blockErrorToBadRequest(error: { code: string; details: unknown }): BadRequestException {
+    return new BadRequestException({
+      message: `Albero blocchi non valido: ${error.code}.`,
+      code: error.code,
+      details: error.details,
+    });
+  }
+
+  /** Normalizza un contenuto grezzo (jsonb, potenzialmente `null`/malformato) in un record d'envelope trattabile dalla pipeline. */
+  private asEnvelopeRecord(rawEnvelope: unknown): Record<string, unknown> {
+    if (rawEnvelope !== null && typeof rawEnvelope === 'object' && !Array.isArray(rawEnvelope)) {
+      return rawEnvelope as Record<string, unknown>;
+    }
+    return { version: ENVELOPE_VERSION, blocks: [] };
+  }
+
+  /** Estrae `blocks` da un envelope migrato, tollerante a un valore assente/malformato (array vuoto). */
+  private asMigratableBlocks(blocks: unknown): MigratableBlockNode[] {
+    return Array.isArray(blocks) ? (blocks as MigratableBlockNode[]) : [];
   }
 }

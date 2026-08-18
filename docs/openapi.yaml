@@ -1128,6 +1128,32 @@ paths:
       summary: Ripristina una Revisione passata in una nuova bozza (Manager+)
       tags:
         - Pages
+  /api/v1/public/pages:
+    get:
+      operationId: PublicPagesController_getPage
+      parameters:
+        - name: path
+          required: true
+          in: query
+          description: Percorso pubblico da risolvere, es. "/chi-siamo" o "/" per la home
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pagina pubblicata trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicPageDto'
+        '308':
+          description: 'Percorso non in forma canonica: redirect verso la forma canonica'
+        '404':
+          description: >-
+            Nessuna Pagina pubblicata a questo percorso (inesistente, non
+            pubblicata, o non servibile)
+      summary: Risolve un percorso pubblico alla Pagina pubblicata corrispondente
+      tags:
+        - Public Pages
 info:
   title: CMS API
   description: >-
@@ -2609,6 +2635,23 @@ components:
           format: date-time
           type: string
           description: Data di ultimo aggiornamento della bozza
+        contentIssues:
+          type: array
+          description: >-
+            Nodi dell'albero blocchi che falliscono migrazione o validazione in
+            lettura (mai un'eccezione: il nodo resta esposto come persistito).
+            Assente solo dove non calcolato per costo (liste); array vuoto
+            quando l'albero è integro.
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+              code:
+                type: string
+              details:
+                type: object
+                additionalProperties: true
       required:
         - guid
         - title
@@ -2715,6 +2758,23 @@ components:
             Metadati SEO/GEO al momento della pubblicazione (snapshot
             immutabile)
           additionalProperties: true
+        contentIssues:
+          type: array
+          description: >-
+            Nodi dell'albero blocchi che falliscono migrazione o validazione in
+            lettura (mai un'eccezione: il nodo resta esposto come persistito,
+            mai migrato a metà). Array vuoto quando l'albero è integro
+            (SPEC-F02-blocchi.md § 4.3).
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+              code:
+                type: string
+              details:
+                type: object
+                additionalProperties: true
       required:
         - guid
         - revisionNumber
@@ -2722,5 +2782,39 @@ components:
         - slug
         - createdAt
         - authorName
+        - content
+        - seo
+        - contentIssues
+    PublicPageDto:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Titolo della Pagina, snapshot della Revisione pubblicata
+          example: Chi siamo
+        slug:
+          type: string
+          description: >-
+            Slug dell'ultimo segmento del percorso, snapshot della Revisione
+            pubblicata
+          example: chi-siamo
+        locale:
+          type: string
+          description: Locale della Pagina risolta
+          example: it-IT
+        content:
+          type: object
+          description: >-
+            Albero di blocchi della Revisione pubblicata, già migrato alla forma
+            corrente ({version, blocks})
+          additionalProperties: true
+        seo:
+          type: object
+          description: Metadati SEO/GEO della Revisione pubblicata
+          additionalProperties: true
+      required:
+        - title
+        - slug
+        - locale
         - content
         - seo

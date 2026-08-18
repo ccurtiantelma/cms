@@ -25,11 +25,11 @@ Verifica sempre: rispetto delle 8 regole del modello di contenuto · nessuna fea
 ADR obbligatoria per: schema blocchi e versionamento, revisioni, caching/invalidazione pubblica, modello multilingua, routing slug, pipeline media/SVG, provider chatbot, sitemap/structured data, consumer HTML pubblico, ownership permessi editoriali, nuove dipendenze npm pesanti, e ogni altra decisione architetturale (auth, ORM, eventi, websocket, integrazioni esterne). ADR approvata non si modifica: si supera con nuova ADR (`Superseded da ADR-XXX`). ADR 1–17 = lessico storico, non si aggiornano.
 
 ### Backend Developer
-Solo `app/backend/`. Mai frontend. Legge: constitution → business-rules → spec → plan. Modulo = `<mod>.module/controller/service.ts` + `dto/`. Env solo via `AppConstants`, mai `process.env`. Logger NestJS, mai `console.log`. DTO con class-validator + `@ApiProperty()`. Errori normalizzati da `AllExceptionsFilter`, mai dettagli SQL in risposta.
+Solo `app/backend/` **più la config di root del repository** (`Dockerfile`, `docker-compose.yml`, `.github/workflows/`, script di `package.json` root): assegnazione dichiarata il 2026-08-17, il ruolo ha già toccato il workflow CI in F02/T6. Mai frontend. Legge: constitution → business-rules → spec → plan. Modulo = `<mod>.module/controller/service.ts` + `dto/`. Env solo via `AppConstants`, mai `process.env`. Logger NestJS, mai `console.log`. DTO con class-validator + `@ApiProperty()`. Errori normalizzati da `AllExceptionsFilter`, mai dettagli SQL in risposta.
 Dominio CMS: validazione albero blocchi integrale (400 con path colpevoli, mai salvataggio parziale) · sanitizzazione rich text server-side pre-persistenza · macchina a stati esplicita · pubblicazione transazionale (Revisione+Pagina+audit) · concorrenza ottimistica (`WHERE version=:version`, 0 righe → 409) · unicità slug da constraint DB → 409, mai SELECT preventiva · ownership per riga per "proprie bozze" · endpoint `public/` sola lettura/solo published/404 mai 403 · API non renderizza mai HTML · invalidazione cache nella stessa operazione · email solo via coda BullMQ · job con side-effect come repeatable job, mai `@Cron`. Dopo ogni endpoint nuovo: `openapi:export` + `openapi:types`.
 
 ### Frontend Developer
-Solo `app/frontend/`, React 19 + Mantine v7. Mai server-side. Legge: constitution → spec → plan → `docs/openapi.yaml`. Consulta MCP `mantine` per props/pattern reali, mai a memoria.
+Solo `app/frontend/` **e `app/public-site/`**, React 19 + Mantine v7. Mai server-side — il divieto riguarda il codice **applicativo**: in `app/public-site` sono ammessi `node:http`, `fetch`, `react-dom/server` e i componenti dei blocchi, sono vietati database, ORM, code, autenticazione e sessioni (confine verificabile, ADR-22 § 5, emendamento firmato il 2026-08-17). Il sito pubblico non importa Mantine e non ha JavaScript client. Legge: constitution → spec → plan → `docs/openapi.yaml`. Consulta MCP `mantine` per props/pattern reali, mai a memoria.
 **Regola Mantine**: obbligatoria per chrome admin/editor (layout, pannelli, form, liste). **I componenti dei blocchi non importano Mantine** — solo CSS Modules e markup semantico (il contenuto sopravvive alla dashboard). Vietati ovunque: `createStyles`, Tailwind, altre UI lib, stili inline invasivi, wrapper custom su Mantine. Form chrome: `useForm`. Feedback: `notifications.show`. Icone: `@tabler/icons-react`. Conferme: `Modal`/`Drawer`, mai `window.confirm`.
 API solo da `src/services/<mod>.service.ts`, sempre try/catch + notifications. Struttura: `src/pages/<mod>/Page<Nome>.tsx`, `src/services/`, `src/types/`; hooks/layouts/libs/types flat, solo `components/` con sottocartelle. Riusa hook esistenti (`usePaginatedList`, `useColumnVisibility`, `useAuth`, `useColorScheme`).
 Dominio CMS: ogni blocco in Error Boundary dedicato · selettori Zustand mirati (mai render dell'intero albero) · 409 conflitto editing ≠ 409 slug duplicato, mai overwrite silenzioso · validazione client solo UX · alt-text immagine bloccante · checklist SEO/GEO consultive, mai bloccanti.
@@ -71,10 +71,13 @@ Prefix globale `api/v1`. JWT middleware esclude `auth/*`, `health`, `/metrics`, 
 
 ## Decisioni aperte — non costruirci sopra
 
-- **Consumer HTML pubblico**: l'API non renderizza HTML ma i crawler AI non eseguono JS → serve ADR (SSR/SSG/prerender). Bloccante F03/F07/F08.
+- ~~Consumer HTML pubblico~~ → **chiusa**: ADR-22 approvata il 2026-08-17 (SSR a richiesta in `app/public-site`, `renderToStaticMarkup`, componenti condivisi per alias di build). Resta in vigore il **vincolo ereditato da ADR-21**: ogni renderer escapa `plainText`, verificato sull'HTML prodotto come gate di CI.
+- ~~Caching e invalidazione pubblica~~ → **chiusa**: ADR-23 approvata il 2026-08-17 (chiave per percorso col token del registro, nessuna TTL, `DEL` post-commit, fallimento del `DEL` → `200` più job BullMQ di retry, nessun negative caching).
+- ~~Routing e risoluzione degli slug~~ → **chiusa**: ADR-24 approvata il 2026-08-17 (risoluzione iterativa per segmenti, `404` uniforme, canonica `308`, lingua di default senza prefisso, redirect fuori da F03).
 - **Potatura delle Revisioni**: rinviata da ADR-19. Le regole 2 e 5 di `business-rules.md` § Revisioni si contraddicono e vanno sciolte **prima che esista contenuto in volume**. Nessuna retention si implementa nel frattempo.
 - ~~Ownership per riga permessi editoriali~~ → **chiusa**: ADR-18 approvata il 2026-08-17 (P1/P2/P3 incluse).
 - ~~Sanitizzazione HTML server-side~~ → **chiusa**: ADR-20 approvata il 2026-08-17, libreria `sanitize-html`.
+- ~~Schema dei blocchi e versionamento~~ → **chiusa**: ADR-21 approvata il 2026-08-17 (`v` per nodo, registro nel backend, migrazioni in lettura, `kind` di sanitizzazione per prop, cinque tipi). Un sesto tipo o un nuovo `kind` richiede una nuova firma. Un incremento di `v` è un deploy a senso unico: il rollback del backend esige il rollback dei contenuti.
 - **Assunzioni**: A1–A5 confermate (A2/A3/A4/A5 il 2026-08-17, vedi `docs/business-rules.md`); resta aperta solo **A6** (chatbot), che non blocca nulla. **A5 = mono-sito, più lingue**: nessun `siteId`, unico innesto futuro `Utils.applyScopeFilter(authInfo)`.
 
 ## Database
@@ -112,7 +115,8 @@ Presenti: `users`, `audit_log`, `app_settings`, `files`, `notifications`. Previs
 ## Security
 
 JWT globale (access 15min, refresh 7gg cookie httpOnly firmato+rotation) · throttler su `/auth/*` · RBAC soglie + ownership dove serve · class-validator `forbidNonWhitelisted:true` · bcrypt cost 12 · Winston con redazione automatica (password/token/secret/email/phone) · audit trail `createdBy/updatedBy` + `AuditLogService` · Helmet in prod · mai stack trace in risposta.
-- Sanitizzazione HTML server-side sempre, pre-persistenza, contro allowlist.
+- **Rich text**: sanitizzazione HTML server-side sempre, pre-persistenza, contro allowlist (profilo nominato, ADR-20/ADR-21).
+- **Testo semplice** (`plainText`): nessuna sanitizzazione HTML e **nessun escaping alla persistenza** — si conserva verbatim (limite di lunghezza + rimozione dei caratteri di controllo). L'escaping è responsabilità dell'output: ogni renderer escapa `plainText`. La distinzione non si indovina a runtime dal contenuto della stringa: è dichiarata dal registro dei blocchi (ADR-21 § 4), e una prop non marcata è rich text.
 - Nessun blocco inietta `<script>`/iframe non allowlisted/`on*`/`javascript:`. Blocco HTML/embed: solo SuperAdmin, audit-logged, disabilitato finché non c'è ADR.
 - No `eval`, no plugin dinamici, no codice utente eseguito a runtime.
 - Upload: MIME da contenuto reale (non estensione), size limit, mai eseguiti, SVG = contenuto attivo.
@@ -141,7 +145,7 @@ File in `docs/` e business rules (ADR approvata → si supera, mai si modifica) 
 
 ## Divieti assoluti (tolleranza zero)
 
-`any` senza commento · `console.log` in prod · `process.env` diretto · secret/`.env` committati · endpoint/tabelle/DTO/business rules inventate · codice applicativo fuori da `app/`/`bruno/` (config/tooling repo — `package.json`, `docker-compose.yml`, `.github/workflows/`, `.mcp.json`, `.env.example` — restano in root) · `DELETE` fisico (soft-delete obbligatorio) · `drizzle-kit push` in prod · `id` numerico in URL (solo `guid`/`slug`) · modifica file `docs/` o scope fuori task, per qualunque ruolo · UI lib diversa da Mantine in admin, Mantine nei blocchi · HTML non sanitizzato persistito · rendering HTML nell'API · contenuto non pubblicato su `public/` · `eval`/plugin dinamici · email fuori coda · overwrite silenzioso (sempre 409) · refactor globali, rinomina moduli o nuove dipendenze senza approvazione · scorciatoie senza ADR+approvazione.
+`any` senza commento · `console.log` in prod · `process.env` diretto · secret/`.env` committati · endpoint/tabelle/DTO/business rules inventate · codice applicativo fuori da `app/`/`bruno/` (config/tooling repo — `package.json`, `docker-compose.yml`, `.github/workflows/`, `.mcp.json`, `.env.example` — restano in root) · `DELETE` fisico (soft-delete obbligatorio) · `drizzle-kit push` in prod · `id` numerico in URL (solo `guid`/`slug`) · modifica file `docs/` o scope fuori task, per qualunque ruolo · UI lib diversa da Mantine in admin, Mantine nei blocchi · **rich text** persistito senza sanitizzazione server-side · rendering HTML nell'API · contenuto non pubblicato su `public/` · `eval`/plugin dinamici · email fuori coda · overwrite silenzioso (sempre 409) · refactor globali, rinomina moduli o nuove dipendenze senza approvazione · scorciatoie senza ADR+approvazione.
 
 ## Documentation Policy
 

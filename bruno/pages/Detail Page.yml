@@ -24,3 +24,11 @@ tests: |-
   test("status is 200 or 403 or 404", function() {
     expect([200, 403, 404]).to.include(res.getStatus());
   });
+
+  test("su successo, contentIssues è sempre presente (array, anche vuoto — SPEC-F02-blocchi.md § 4.3)", function() {
+    if (res.getStatus() === 200) {
+      const body = res.getBody();
+      expect(body).to.have.property("contentIssues");
+      expect(body.contentIssues).to.be.an("array");
+    }
+  });

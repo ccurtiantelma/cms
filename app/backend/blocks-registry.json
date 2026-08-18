@@ -1,0 +1,130 @@
+{
+  "envelopeVersion": 1,
+  "rootAllowed": [
+    "section",
+    "heading",
+    "richText",
+    "image",
+    "button"
+  ],
+  "limits": {
+    "maxDepth": 5,
+    "maxNodes": 500,
+    "maxPayloadBytes": 524288
+  },
+  "types": [
+    {
+      "type": "section",
+      "v": 1,
+      "enabled": true,
+      "childrenAllow": [
+        "heading",
+        "richText",
+        "image",
+        "button"
+      ],
+      "props": [],
+      "meta": {
+        "label": "Sezione",
+        "category": "layout"
+      }
+    },
+    {
+      "type": "heading",
+      "v": 1,
+      "enabled": true,
+      "childrenAllow": [],
+      "props": [
+        {
+          "name": "level",
+          "kind": "enum",
+          "required": true,
+          "values": [
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6"
+          ]
+        },
+        {
+          "name": "text",
+          "kind": "plainText",
+          "required": true,
+          "maxLength": 200
+        }
+      ],
+      "meta": {
+        "label": "Titolo",
+        "category": "testo"
+      }
+    },
+    {
+      "type": "richText",
+      "v": 1,
+      "enabled": true,
+      "childrenAllow": [],
+      "props": [
+        {
+          "name": "html",
+          "kind": "richText",
+          "required": true,
+          "maxLength": 20000,
+          "profile": "basic"
+        }
+      ],
+      "meta": {
+        "label": "Testo",
+        "category": "testo"
+      }
+    },
+    {
+      "type": "image",
+      "v": 1,
+      "enabled": true,
+      "childrenAllow": [],
+      "props": [
+        {
+          "name": "mediaRef",
+          "kind": "mediaRef",
+          "required": true
+        },
+        {
+          "name": "alt",
+          "kind": "plainText",
+          "required": true,
+          "maxLength": 300,
+          "nonEmpty": true
+        }
+      ],
+      "meta": {
+        "label": "Immagine",
+        "category": "media"
+      }
+    },
+    {
+      "type": "button",
+      "v": 1,
+      "enabled": true,
+      "childrenAllow": [],
+      "props": [
+        {
+          "name": "label",
+          "kind": "plainText",
+          "required": true,
+          "maxLength": 80
+        },
+        {
+          "name": "href",
+          "kind": "url",
+          "required": true,
+          "maxLength": 2048
+        }
+      ],
+      "meta": {
+        "label": "Pulsante",
+        "category": "azione"
+      }
+    }
+  ]
+}

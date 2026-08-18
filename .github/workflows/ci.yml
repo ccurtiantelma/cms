@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 
 # Nessun job scrive su repo/PR (solo checkout, lint, test, build, `git diff --exit-code`
-# locale in openapi-sync): GITHUB_TOKEN limitato in sola lettura, principio del privilegio minimo.
+# locale in openapi-sync/blocks-sync): GITHUB_TOKEN limitato in sola lettura, principio del privilegio minimo.
 permissions:
   contents: read
 
@@ -72,6 +72,35 @@ jobs:
       - name: Build
         run: npm run build:frontend
 
+  public-site:
+    name: Public site (typecheck + test + build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies (workspaces)
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck --workspace=app/public-site
+
+      # Gate dell'invariante di escaping plainText ereditato da ADR-21 e reso
+      # esplicito da ADR-22 § 7 / PLAN-F03 T6: HTML prodotto da
+      # renderToStaticMarkup + unicità di dangerouslySetInnerHTML.
+      - name: Unit test
+        run: npm run test --workspace=app/public-site
+
+      - name: Build
+        run: npm run build --workspace=app/public-site
+
   backend-e2e:
     name: Backend E2E (Postgres + Redis reali)
     runs-on: ubuntu-latest
@@ -116,9 +145,8 @@ jobs:
         run: npm run test:e2e --workspace=app/backend
 
   openapi-sync:
-    name: OpenAPI sync check (optional gate)
+    name: OpenAPI sync check
     runs-on: ubuntu-latest
-    continue-on-error: true
     services:
       postgres:
         image: postgres:16
@@ -177,5 +205,35 @@ jobs:
         run: |
           if ! git diff --exit-code -- docs/openapi.yaml app/frontend/src/types/api.types.ts; then
             echo "::error::docs/openapi.yaml o app/frontend/src/types/api.types.ts non sono allineati al codice. Esegui 'npm run openapi:export && npm run openapi:types' in locale e committa il risultato."
+            exit 1
+          fi
+
+  blocks-sync:
+    name: Blocks registry sync check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies (workspaces)
+        run: npm ci
+
+      - name: Regenerate app/backend/blocks-registry.json
+        run: npm run blocks:export
+
+      - name: Regenerate app/frontend/src/types/blocks.types.ts
+        run: npm run blocks:types
+
+      - name: Fail if generated files drifted from committed version
+        run: |
+          if ! git diff --exit-code -- app/backend/blocks-registry.json app/frontend/src/types/blocks.types.ts; then
+            echo "::error::app/backend/blocks-registry.json o app/frontend/src/types/blocks.types.ts non sono allineati al registro blocchi. Esegui 'npm run blocks:export && npm run blocks:types' in locale e committa il risultato."
             exit 1
           fi

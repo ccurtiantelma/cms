@@ -1,0 +1,101 @@
+/**
+ * Descrittori di prop per il registro dei Blocchi (ADR-21 § 2/§ 4,
+ * SPEC-F02-blocchi.md § 3.7). Un solo interprete (`validator/`) li legge per
+ * validare qualunque albero — nessuna classe `class-validator` per tipo.
+ */
+
+/**
+ * Insieme **chiuso** dei `kind` di prop: è anche il contratto di
+ * sanitizzazione (ADR-21 § 4). Estenderlo è "nuovo schema di blocco" ai fini
+ * di `CLAUDE.md` § Ask first — richiede firma, non si aggiunge qui.
+ */
+export type PropKind =
+  'richText' | 'plainText' | 'number' | 'boolean' | 'enum' | 'url' | 'mediaRef';
+
+/**
+ * Campi comuni a ogni descrittore di prop. `default` non compare mai su una
+ * prop `required: true` (SPEC-F02 § 3: «un default su una prop obbligatoria
+ * significa che non è obbligatoria») — il registro dei cinque tipi del primo
+ * rilascio non lo usa affatto, ma resta disponibile per props opzionali
+ * future.
+ */
+interface BasePropSpec {
+  /** `true` se la chiave deve essere presente in `props` (SPEC-F02 § 3). */
+  required: boolean;
+  /** Valore di default, ammesso solo su prop non obbligatoria. */
+  default?: unknown;
+}
+
+/**
+ * Rich text: sanitizzato con un profilo **nominato** (ADR-21 § 4). Il
+ * profilo è dichiarato dalla prop, non dal tipo di blocco. `maxLength` è in
+ * code point, verificato sul valore sanitizzato (SPEC-F02 § 1.4) — la
+ * sanitizzazione vera e propria è T3, fuori scope per questo modulo.
+ */
+export interface RichTextPropSpec extends BasePropSpec {
+  kind: 'richText';
+  profile: 'inline' | 'basic';
+  maxLength?: number;
+}
+
+/**
+ * Testo semplice: nessun HTML, nessuno escaping alla persistenza — conservato
+ * verbatim (ADR-21 § 4). `nonEmpty` è il vincolo di non-vuoto dopo `trim`,
+ * usato **solo** da `image.alt` nel primo rilascio (SPEC-F02 § 3, unico caso
+ * con `reason: 'empty'`).
+ */
+export interface PlainTextPropSpec extends BasePropSpec {
+  kind: 'plainText';
+  maxLength?: number;
+  nonEmpty?: boolean;
+}
+
+/**
+ * Numero. Nessuna prop dei cinque tipi del primo rilascio lo usa
+ * (SPEC-F02 § 3.7). Nessun vincolo di intervallo: l'insieme chiuso dei
+ * `reason` di `BLOCK_PROP_INVALID` (SPEC-F02 § 4.1) non ne prevede uno per un
+ * range numerico, quindi il descrittore non lo dichiara — aggiungerlo
+ * richiederebbe un nuovo `reason` e quindi una revisione della spec.
+ */
+export interface NumberPropSpec extends BasePropSpec {
+  kind: 'number';
+}
+
+/** Booleano. Nessuna prop dei cinque tipi del primo rilascio lo usa (SPEC-F02 § 3.7). */
+export interface BooleanPropSpec extends BasePropSpec {
+  kind: 'boolean';
+}
+
+/** Valore da un elenco chiuso di stringhe ammesse. */
+export interface EnumPropSpec extends BasePropSpec {
+  kind: 'enum';
+  values: readonly string[];
+}
+
+/**
+ * URL: schemi ammessi `http`/`https`/`mailto`, root-relative con una sola
+ * barra iniziale (SPEC-F02 § 3.6). Nessuna `sanitize-html`: è validazione di
+ * schema, non HTML (ADR-21 § 4).
+ */
+export interface UrlPropSpec extends BasePropSpec {
+  kind: 'url';
+  maxLength?: number;
+}
+
+/**
+ * Riferimento a un file della media library: solo forma di `guid` (16 hex),
+ * nessuna verifica di esistenza — la risoluzione è di F09 (SPEC-F02 § 3.5).
+ */
+export interface MediaRefPropSpec extends BasePropSpec {
+  kind: 'mediaRef';
+}
+
+/** Unione discriminata su `kind` di tutti i descrittori di prop ammessi. */
+export type PropSpec =
+  | RichTextPropSpec
+  | PlainTextPropSpec
+  | NumberPropSpec
+  | BooleanPropSpec
+  | EnumPropSpec
+  | UrlPropSpec
+  | MediaRefPropSpec;

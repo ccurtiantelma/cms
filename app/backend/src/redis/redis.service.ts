@@ -67,6 +67,28 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return this.client.del(key);
   }
 
+  /**
+   * Elimina più chiavi in un solo comando `DEL`, restituendo il numero di
+   * chiavi rimosse. Unico metodo aggiunto per l'invalidazione della cache
+   * pubblica (ADR-23 § 5): l'insieme delle chiavi si calcola sempre dal
+   * database (mai `SCAN`/`KEYS`), questo metodo si limita a cancellarle.
+   * `[]` non genera alcuna chiamata Redis.
+   */
+  async delMany(keys: string[]): Promise<number> {
+    if (keys.length === 0) return 0;
+    return this.client.del(...keys);
+  }
+
+  /**
+   * Stato della connessione ioredis (`'ready'` = connesso e operativo).
+   * Distingue "Redis irraggiungibile" da "Redis raggiungibile ma il comando
+   * fallisce" (ADR-23 § 6), i due esiti che l'invalidazione della cache
+   * pubblica tratta diversamente.
+   */
+  isReady(): boolean {
+    return this.client?.status === 'ready';
+  }
+
   /** Verifica se una chiave esiste. */
   async exists(key: string): Promise<boolean> {
     const result = await this.client.exists(key);

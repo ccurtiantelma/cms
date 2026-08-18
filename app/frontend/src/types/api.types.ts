@@ -658,6 +658,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Risolve un percorso pubblico alla Pagina pubblicata corrispondente */
+        get: operations["PublicPagesController_getPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1715,6 +1732,14 @@ export interface components {
              * @description Data di ultimo aggiornamento della bozza
              */
             updatedAt: string;
+            /** @description Nodi dell'albero blocchi che falliscono migrazione o validazione in lettura (mai un'eccezione: il nodo resta esposto come persistito). Assente solo dove non calcolato per costo (liste); array vuoto quando l'albero è integro. */
+            contentIssues?: {
+                path?: string;
+                code?: string;
+                details?: {
+                    [key: string]: unknown;
+                };
+            }[];
         };
         UpdatePageDto: {
             /**
@@ -1787,6 +1812,39 @@ export interface components {
                 [key: string]: unknown;
             };
             /** @description Metadati SEO/GEO al momento della pubblicazione (snapshot immutabile) */
+            seo: {
+                [key: string]: unknown;
+            };
+            /** @description Nodi dell'albero blocchi che falliscono migrazione o validazione in lettura (mai un'eccezione: il nodo resta esposto come persistito, mai migrato a metà). Array vuoto quando l'albero è integro (SPEC-F02-blocchi.md § 4.3). */
+            contentIssues: {
+                path?: string;
+                code?: string;
+                details?: {
+                    [key: string]: unknown;
+                };
+            }[];
+        };
+        PublicPageDto: {
+            /**
+             * @description Titolo della Pagina, snapshot della Revisione pubblicata
+             * @example Chi siamo
+             */
+            title: string;
+            /**
+             * @description Slug dell'ultimo segmento del percorso, snapshot della Revisione pubblicata
+             * @example chi-siamo
+             */
+            slug: string;
+            /**
+             * @description Locale della Pagina risolta
+             * @example it-IT
+             */
+            locale: string;
+            /** @description Albero di blocchi della Revisione pubblicata, già migrato alla forma corrente ({version, blocks}) */
+            content: {
+                [key: string]: unknown;
+            };
+            /** @description Metadati SEO/GEO della Revisione pubblicata */
             seo: {
                 [key: string]: unknown;
             };
@@ -3321,6 +3379,43 @@ export interface operations {
             };
             /** @description Conflitto di editing (version non più valida) */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicPagesController_getPage: {
+        parameters: {
+            query: {
+                /** @description Percorso pubblico da risolvere, es. "/chi-siamo" o "/" per la home */
+                path: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pagina pubblicata trovata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicPageDto"];
+                };
+            };
+            /** @description Percorso non in forma canonica: redirect verso la forma canonica */
+            308: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Nessuna Pagina pubblicata a questo percorso (inesistente, non pubblicata, o non servibile) */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

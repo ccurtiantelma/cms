@@ -45,6 +45,12 @@ import { PagesModule } from './pages/pages.module';
           .valid('development', 'production', 'staging', 'test')
           .default('development'),
         FRONTEND_URL: Joi.string().default('http://localhost:5173'),
+        // Origine del sito pubblico SSR (ADR-22, app/public-site, F03/T5): CORS deve
+        // ammetterla insieme a FRONTEND_URL, mai un wildcard (main.ts).
+        PUBLIC_SITE_URL: Joi.string().default('http://localhost:4000'),
+        // Lingua di default per la risoluzione pubblica degli slug (ADR-24 § 5/§ 7):
+        // assunzione dichiarata in attesa di F05/app_settings, non una regola approvata.
+        DEFAULT_LOCALE: Joi.string().default('it-IT'),
         SMTP_HOST: Joi.string().optional(),
         SMTP_PORT: Joi.number().default(1025),
         SMTP_USER: Joi.string().allow('').optional(),
@@ -78,7 +84,15 @@ import { PagesModule } from './pages/pages.module';
     // dedicato; le rotte esposte a brute-force (login, mfa-verify, reset-password,
     // ecc.) sovrascrivono questo default in auth.controller.ts.
     ThrottlerModule.forRoot({
-      throttlers: [{ name: 'auth', ttl: 60_000, limit: 20 }],
+      throttlers: [
+        { name: 'auth', ttl: 60_000, limit: 20 },
+        // Throttler dedicato alla superficie pubblica (F03/T2, CLAUDE.md §
+        // Security "endpoint pubblici: rate limiting proprio"). 300/60s è un
+        // default ragionevole dichiarato in attesa di
+        // SPEC-F03-superficie-pubblica.md (non ancora scritta, PLAN-F03 T1
+        // residuo) — non un valore derivato da un documento approvato.
+        { name: 'public', ttl: 60_000, limit: 300 },
+      ],
     }),
     // Connessione Redis condivisa da tutte le code BullMQ (coda email in
     // src/queues/email-queue/). `maxRetriesPerRequest: null` è la
@@ -121,6 +135,9 @@ export class AppModule {
       .apply(AuthMiddleware)
       .exclude(
         { path: 'health', method: RequestMethod.ALL },
+        // Superficie pubblica di lettura (F03/T2, constitution.md § Convenzioni
+        // API): anonima per costruzione, mai dietro `AuthMiddleware`.
+        { path: 'public/*path', method: RequestMethod.ALL },
         // `/metrics` (ADR-15) NON va escluso qui: essendo montato fuori dal
         // prefisso globale `api/v1` (vedi main.ts), questo `.exclude()` finirebbe
         // per confrontarsi con `api/v1/metrics` (mai servito) e non con il path

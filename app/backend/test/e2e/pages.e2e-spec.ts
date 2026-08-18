@@ -130,25 +130,38 @@ describe('PagesController (e2e, DB/Redis reali)', () => {
       .set('Cookie', auth.cookie);
   }
 
-  /** Albero di blocchi minimo valido, con una prop di testo palesemente ostile (usato dai test XSS). */
-  function contentTreeWithMalicious(text: string): Record<string, unknown> {
+  /**
+   * Albero minimo valido con un blocco `richText` (kind `richText`, profilo
+   * `basic`) la cui prop `html` porta un payload palesemente ostile — usato
+   * dai test di sanitizzazione XSS (SPEC-F02-blocchi.md § 2/§ 3.4). `v: 1` è
+   * obbligatorio in scrittura (ADR-21 § 1).
+   */
+  function contentTreeWithMalicious(html: string): Record<string, unknown> {
     return {
       version: 1,
       blocks: [
         {
           id: 'b1',
-          type: 'text',
-          props: { text },
+          type: 'richText',
+          v: 1,
+          props: { html },
           children: [],
         },
       ],
     };
   }
 
+  /**
+   * Albero minimo valido, generico e innocuo, usato ovunque il contenuto non
+   * sia l'oggetto del test: un blocco `heading` (`level`/`text`, entrambi
+   * obbligatori — SPEC-F02-blocchi.md § 3.3). `text` è `plainText`: nessuna
+   * trasformazione HTML, la prop sopravvive verbatim (a parte i caratteri di
+   * controllo, assenti in questi valori).
+   */
   function safeContentTree(text = 'Testo lecito'): Record<string, unknown> {
     return {
       version: 1,
-      blocks: [{ id: 'b1', type: 'text', props: { text }, children: [] }],
+      blocks: [{ id: 'b1', type: 'heading', v: 1, props: { level: 'h2', text }, children: [] }],
     };
   }
 
@@ -579,7 +592,7 @@ describe('PagesController (e2e, DB/Redis reali)', () => {
     });
   });
 
-  // ─── 6. Sanitizzazione XSS a database ───────────────────────────────────
+  // ─── 6. Sanitizzazione XSS a database + testo semplice verbatim ────────
 
   describe('Sanitizzazione XSS — verifica diretta a database', () => {
     it('script/onerror/javascript: neutralizzati nel jsonb persistito, mai solo nella risposta HTTP', async () => {
@@ -621,6 +634,46 @@ describe('PagesController (e2e, DB/Redis reali)', () => {
 
       expect(persisted).not.toMatch(/javascript:/i);
       expect(persisted).not.toMatch(/onclick\s*=/i);
+    });
+
+    // Comportamento opposto e complementare al precedente, sulla stessa
+    // pipeline: `plainText` non passa MAI da `sanitize-html` e non subisce
+    // escaping alla persistenza (ADR-21 § 4) — chiude il limite noto di F01
+    // (`"5 < 10"` → `"5 &lt; 10"`). Verificato su `button.label`, l'unica
+    // prop `plainText` dei cinque tipi che non porta anche un vincolo di
+    // non-vuoto (a differenza di `image.alt`), per isolare solo il
+    // comportamento di escaping.
+    it('plainText: "5 < 10" sopravvive intatto a database, nessun escaping alla persistenza (ADR-21 § 4)', async () => {
+      const admin = await seedAuth(AppUserRoles.Admin, 'plaintext1');
+      const page = await createDraftPage(admin, {
+        title: 'Pagina con testo semplice',
+        draftContent: {
+          version: 1,
+          blocks: [
+            {
+              id: 'b1',
+              type: 'button',
+              v: 1,
+              props: { label: '5 < 10', href: 'https://esempio.it/pagina' },
+              children: [],
+            },
+          ],
+        },
+      });
+
+      // Verifica sulla risposta HTTP...
+      expect(page.draftContent).toMatchObject({
+        blocks: [expect.objectContaining({ props: expect.objectContaining({ label: '5 < 10' }) })],
+      });
+
+      // ...e a database, non solo sulla risposta (stesso principio dei test XSS sopra).
+      const db = getTestDb();
+      const dbPage = await db.query.pageEntity.findFirst({ where: eq(pageEntity.guid, page.guid) });
+      const persistedBlocks = (
+        dbPage!.draftContent as { blocks: Array<{ props: Record<string, unknown> }> }
+      ).blocks;
+      expect(persistedBlocks[0].props.label).toBe('5 < 10');
+      expect(JSON.stringify(dbPage!.draftContent)).not.toMatch(/&lt;/);
     });
   });
 
@@ -699,13 +752,16 @@ describe('PagesController (e2e, DB/Redis reali)', () => {
       const dbPage = await db.query.pageEntity.findFirst({ where: eq(pageEntity.guid, page.guid) });
       expect(dbPage).toBeDefined();
 
+      // Nodo senza `v`: rappresenta una Revisione "storica" scritta prima di
+      // ADR-21 (v per nodo assente in lettura ⇒ trattato come 1). `richText`
+      // è il tipo reale la cui prop `html` è sanitizzata come rich text.
       const dangerousContent = {
         version: 1,
         blocks: [
           {
             id: 'b1',
-            type: 'text',
-            props: { text: '<script>alert(1)</script><a href="javascript:alert(2)">link</a>' },
+            type: 'richText',
+            props: { html: '<script>alert(1)</script><a href="javascript:alert(2)">link</a>' },
             children: [],
           },
         ],

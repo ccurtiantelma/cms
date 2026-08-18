@@ -4,8 +4,10 @@
 > attuale al prodotto completo. È il punto di ingresso per capire **a che punto siamo** e
 > **cosa serve decidere prima di procedere**.
 >
-> Creato il 2026-08-13. Ultimo aggiornamento: **2026-08-17** — **F01 chiusa**: ADR-18/19/20
-> firmate, T1–T8 completati, residui (autore Revisioni, dati di verifica) chiusi.
+> Creato il 2026-08-13. Ultimo aggiornamento: **2026-08-17** — **F01 chiusa** (ADR-18/19/20
+> firmate, T1–T8 completati, residui chiusi), **ADR-21 firmata**: voce 1.1 chiusa, e
+> **SPEC-F02-blocchi.md approvata** da ccurti: T1 di `PLAN-F02-blocchi.md` chiuso senza residui,
+> F02 in esecuzione da T2 (registro dei tipi + interprete di validazione, backend-developer).
 > Aggiornare a ogni passo completato o decisione presa.
 
 ## Legenda
@@ -48,15 +50,16 @@ ancora stata scritta.
 | # | ADR da produrre | Blocca | Stato |
 |---|---|---|---|
 | 1.0 | **Ownership per riga dei permessi editoriali** — `ADR-18-ownership-per-riga.md` | **F01 (T4)** | ✅ Approvata il 2026-08-17 (P1/P2/P3 incluse) |
-| 1.1 | Formato e versionamento dello schema dei blocchi | F02, F04 | ⏳ Da fare — la più urgente dopo F01 |
+| 1.1 | **Formato e versionamento dello schema dei blocchi** — `ADR-21-schema-blocchi-versionamento.md` | **F02, F04** | ✅ Approvata il 2026-08-17, con tre integrazioni firmate (migrazioni difensive, policy di rollback, `plainText` verbatim) e i cinque tipi approvati uno per uno |
 | 1.2 | Strategia di versionamento/revisioni (snapshot vs. diff) — `ADR-19-revisioni-immutabili.md` | **F01 (T2)** | ✅ Approvata il 2026-08-17 |
 | 1.2b | **Sanitizzazione HTML server-side** — `ADR-20`, libreria `sanitize-html` | **F01 (T3)** | ✅ Approvata il 2026-08-17 |
-| 1.3 | Caching e invalidazione del contenuto pubblico | F03 | ⏳ Da fare |
+| 1.3 | **Caching e invalidazione del contenuto pubblico** — `ADR-23-caching-invalidazione-pubblica.md` | **F03** | ✅ Approvata il 2026-08-17, con una correzione firmata: un `DEL` fallito non dà più `500` ma `200` + job BullMQ di retry + audit con l'elenco delle chiavi (il `500` lasciava la pubblicazione in uno stato senza uscita) |
 | 1.4 | Modello multilingua | F05 | 🔍 A3 confermata il 2026-08-17 (righe autonome + `translationGroupId` opaco); serve ancora l'ADR formale |
-| 1.5 | Routing e risoluzione degli slug | F03 | 🔍 Regole scritte in business-rules, serve ADR formale |
+| 1.5 | **Routing e risoluzione degli slug** — `ADR-24-routing-risoluzione-slug.md` | **F03** | ✅ Approvata il 2026-08-17. Vincolo procedurale che ne discende: finché F07 non porta i redirect, **non si cambia lo slug di una pagina già indicizzata** |
 | 1.6 | Pipeline di trasformazione media e trattamento SVG | F09 | ⏳ Da fare |
 | 1.7 | Scelta e confine del provider del chatbot | F11 | 🤝 Richiede una tua decisione su provider, costi e trattamento dati. Legata ad A6, unica assunzione ancora aperta |
 | 1.8 | Generazione di sitemap e structured data | F07 | ⏳ Da fare |
+| 1.9 | **Consumer HTML pubblico** (SSR / SSG / prerender) — `ADR-22-consumer-html-pubblico.md` | **F03, F07, F08** | ✅ Approvata il 2026-08-17: SSR a richiesta in `app/public-site` (`node:http` + `renderToStaticMarkup`, nessun pacchetto nuovo), componenti dei blocchi condivisi con `app/frontend` per alias di build. **Il vincolo ereditato da ADR-21 resta in vigore e diventa un gate di CI**: ogni renderer escapa `plainText`, verificato sull'HTML prodotto (F03/T6), più il controllo che `dangerouslySetInnerHTML` compaia esattamente una volta in `components/blocks/`. Nota non intuitiva registrata in ADR-22 § 2: gli Error Boundary **non** girano in SSR, quindi sul pubblico la difesa è il rifiuto a monte dell'albero non servibile |
 
 ---
 
@@ -68,8 +71,8 @@ l'editor o il SEO prima del modello di contenuto significa doverli rifare.
 | # | Feature | Pilastro | Stato | Cosa manca |
 |---|---|---|---|---|
 | 2.1 | **F01 — Gestione Pagine** | fondativa | ✅ | Chiusa il 2026-08-17. T1–T8 completati (ADR-18/19/20 firmate, schema DB approvato, CRUD + macchina a stati + pubblicazione transazionale + revisioni + frontend). Ultimi due residui chiusi nello stesso passaggio: autore esposto in `PageRevisionSummaryDto`/`PageRevisionDetailDto`, dati di verifica T4–T8 soft-eliminati |
-| 2.2 | F02 — Registro e validazione dei Blocchi | 1 | ⏳ | Dipende da 1.1 e da F01 |
-| 2.3 | F03 — Superficie pubblica + cache | 2, 7 | ⏳ | Dipende da 1.3, 1.5, F01, F02 |
+| 2.2 | **F02 — Registro e validazione dei Blocchi** | 1 | ⏳ **In esecuzione — T2** | T1 chiuso: ADR-21 firmata e `SPEC-F02-blocchi.md` approvata da ccurti il 2026-08-17. In corso T2 (registro dei tipi + interprete di validazione, backend-developer). Vedi `docs/ai/plans/PLAN-F02-blocchi.md` |
+| 2.3 | F03 — Superficie pubblica + cache | 2, 7 | ⏳ | 1.3/1.5/1.9 chiuse il 2026-08-17: T1 di `PLAN-F03` è chiuso, resta la spec. Dipende ancora da F01 (chiusa) e F02 |
 | 2.4 | F04 — Editor visivo (page builder) | 1 | ⏳ | Dipende da F02. **Massimo rischio di over-engineering**: va costruita per incrementi |
 | 2.5 | F05 — Multilingua | 4 | ⏳ | Dipende da 1.4 e F01. Da fare presto: aggiungerla a sito popolato costa migrazioni |
 | 2.6 | F06 — Template e Sezioni globali | 1 | ⏳ | Dipende da F02 |
@@ -136,8 +139,15 @@ rifiutate. Se rifiutate, il codice va rimosso.
 
 ## Prossimo passo consigliato
 
-F01 è chiusa. Il passo successivo è **F02 — Registro e validazione dei Blocchi**, bloccato
-da 1.1 (formato e versionamento dello schema dei blocchi — ADR da produrre).
+F01 è chiusa e 1.1 è chiusa: ADR-21 è stata firmata il 2026-08-17. T1 di
+`docs/ai/plans/PLAN-F02-blocchi.md` è chiuso senza residui: ADR-21 firmata, cinque tipi
+approvati uno per uno, `docs/ai/specs/SPEC-F02-blocchi.md` approvata da ccurti lo stesso
+giorno (body parser 1 MiB solo su superficie admin — A-F02-1 —, profilo `inline` senza
+consumatori ma coperto da T7 — A-F02-2 —, `heading` senza `h1`). Il passo in corso è **T2**
+(registro dei tipi + interprete di validazione, backend-developer). Nessun blocco
+architetturale residuo: **1.3, 1.5 e 1.9 sono state firmate il 2026-08-17** (ADR-22/23/24),
+quindi T1 di `docs/ai/plans/PLAN-F03-superficie-pubblica.md` è chiuso salvo la redazione di
+`SPEC-F03`, e nessuna decisione architetturale blocca più né F02 né F03.
 
 Decisione ancora aperta, non bloccante, emersa nella chiusura di F01: se serve un rate
 limit differenziato fra `/auth/*` e la superficie amministrativa `app/*` (oggi quest'ultima
