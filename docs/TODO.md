@@ -4,17 +4,24 @@
 > attuale al prodotto completo. È il punto di ingresso per capire **a che punto siamo** e
 > **cosa serve decidere prima di procedere**.
 >
-> Creato il 2026-08-13. Ultimo aggiornamento: **2026-08-19** — **F04 chiusa**: T1–T6 di
-> `PLAN-F04-editor-visivo.md` completati, editor a blocchi funzionante dentro la scheda
-> "Contenuto" del dettaglio Pagina, copertura di test completa (unit sul motore dell'albero e
-> su undo/redo, component test sull'ispettore, E2E del criterio di Done e del conflitto
-> ottimistico) — tutte le suite verdi. Nessuna modifica al backend è stata necessaria.
-> Precedente: **F03 chiusa** (T1–T7 di `PLAN-F03-superficie-pubblica.md`,
-> `SPEC-F03-superficie-pubblica.md` redatta, verifica end-to-end manuale via `curl`),
-> **F01 chiusa** (ADR-18/19/20 firmate, T1–T8 completati, residui chiusi),
-> **ADR-21 firmata**: voce 1.1 chiusa, e **SPEC-F02-blocchi.md approvata** da ccurti: T1 di
-> `PLAN-F02-blocchi.md` chiuso senza residui, F02 in esecuzione da T2 (registro dei tipi +
-> interprete di validazione, backend-developer).
+> Creato il 2026-08-13. Ultimo aggiornamento: **2026-08-19** — **voce 1.10 chiusa** (anteprima
+> di una bozza non pubblicata, ADR-25 firmata, T1–T6 completati); registrate le voci **1.11**
+> (WYSIWYG rich text, ADR-26) e **1.12** (lettura pubblica dei media, ADR-27), entrambe in
+> discussione, non firmate — bloccano il proseguimento del round F04b oltre quanto già fatto.
+> Precedente: registrata la voce **3.10**
+> (etichette leggibili delle prop nell'ispettore), tagliata dal round F04b per restare sotto
+> il tetto di task e rinviata al giro successivo.
+> Precedente: **riconciliazione documentale**: F02 risultava ancora "in esecuzione, T2" qui e "⏳ Pending" nel progress
+> tracker, ma T1–T8 di `PLAN-F02-blocchi.md` sono tutti verificati nel repository (registro,
+> validatore, migrazioni, sanitizzazione per `kind`, innesto in `pages.service.ts`, contratto
+> generato + gate CI, test, componenti di sola lettura) e F04 ne consuma il registro da prima
+> della propria chiusura — **F02 è chiusa**, entrambi i documenti allineati.
+> Precedente: **F04 chiusa** (T1–T6 di `PLAN-F04-editor-visivo.md` completati, editor a
+> blocchi funzionante dentro la scheda "Contenuto" del dettaglio Pagina, copertura di test
+> completa — tutte le suite verdi, nessuna modifica al backend necessaria), **F03 chiusa**
+> (T1–T7 di `PLAN-F03-superficie-pubblica.md`, `SPEC-F03-superficie-pubblica.md` redatta,
+> verifica end-to-end manuale via `curl`), **F01 chiusa** (ADR-18/19/20 firmate, T1–T8
+> completati, residui chiusi).
 > Aggiornare a ogni passo completato o decisione presa.
 
 ## Legenda
@@ -67,7 +74,9 @@ ancora stata scritta.
 | 1.7 | Scelta e confine del provider del chatbot | F11 | 🤝 Richiede una tua decisione su provider, costi e trattamento dati. Legata ad A6, unica assunzione ancora aperta |
 | 1.8 | Generazione di sitemap e structured data | F07 | ⏳ Da fare |
 | 1.9 | **Consumer HTML pubblico** (SSR / SSG / prerender) — `ADR-22-consumer-html-pubblico.md` | **F03, F07, F08** | ✅ Approvata il 2026-08-17: SSR a richiesta in `app/public-site` (`node:http` + `renderToStaticMarkup`, nessun pacchetto nuovo), componenti dei blocchi condivisi con `app/frontend` per alias di build. **Il vincolo ereditato da ADR-21 resta in vigore e diventa un gate di CI**: ogni renderer escapa `plainText`, verificato sull'HTML prodotto (F03/T6), più il controllo che `dangerouslySetInnerHTML` compaia esattamente una volta in `components/blocks/`. Nota non intuitiva registrata in ADR-22 § 2: gli Error Boundary **non** girano in SSR, quindi sul pubblico la difesa è il rifiuto a monte dell'albero non servibile |
-| 1.10 | **Anteprima di una bozza non pubblicata** (meccanismo di token di anteprima) | F04 | 🤝 Aperta il 2026-08-19, emersa dall'uso reale dell'editor. Oggi si può solo **vedere** una Pagina già pubblicata (`app/public-site`, pulsante "Vedi pagina" del dettaglio): la superficie pubblica serve per costruzione solo contenuto `published` (ADR-24 § 2/§ 3, `404` uniforme), quindi un'anteprima della bozza non è un pulsante mancante ma un percorso di lettura che oggi non esiste. Serve una decisione architetturale prima di qualunque riga di codice: chi emette il token, quale scadenza, se la lettura passa da `public/` con un'eccezione allo stato o da una superficie separata, e come si evita che il token diventi un modo per far indicizzare una bozza. **È la funzione più richiesta dopo l'editor stesso**, quindi la prima candidata dopo la chiusura di F04 |
+| 1.10 | **Anteprima di una bozza non pubblicata** (meccanismo di token di anteprima) | F04 | ✅ Chiusa il 2026-08-19. `ADR-25-anteprima-bozza-non-pubblicata.md` approvata (JWT dedicato, 15 minuti, `purpose: 'page-preview'`); `PLAN-anteprima-bozza.md` T1–T6 completati: emissione token (`POST app/pages/:guid/preview-token`, ownership+RBAC, audit-logged), lettura dedicata (`GET api/v1/preview/pages/:token`, terzo prefisso accanto ad `app/`/`public/`, nessuna cache Redis, 404 uniforme), rotta `/__preview/:token` in `app/public-site` con `X-Robots-Tag: noindex` sempre, pulsante "Anteprima" nel dettaglio Pagina, copertura di test completa (unit sul token, integration RBAC/ownership/404, Bruno, e2e Playwright su header noindex) |
+| 1.11 | **Editor WYSIWYG per il rich text** — `ADR-26-wysiwyg-rich-text.md` | F04b | 🤝 In discussione, non firmata. Decisione proposta: Tiptap via `@mantine/tiptap` (cinque pacchetti npm nuovi), solo sulle prop `kind: 'richText'`, toolbar vincolata e verificata contro l'allowlist del profilo `basic` da unit test. `plainText` resta testo verbatim, nessun editor. Nessuna riga di codice finché non è firmata (dipendenza npm pesante, `CLAUDE.md` § Ask first) |
+| 1.12 | **Lettura pubblica dei media** (`GET public/media/:guid`) — `ADR-27-lettura-pubblica-media.md` | F04b, F09 | 🤝 In discussione, non firmata. Decisione proposta: rotta anonima per `guid`, solo righe `entity = 'page-media'`, MIME dal contenuto reale (allowlist raster, SVG sempre rifiutato — resta 1.6), nessuna cache Redis, `Cache-Control` lungo lato HTTP. Senza questa ADR il blocco `image` resta un placeholder: `mediaRef` non produce un `src` risolvibile. Nessuna riga di codice finché non è firmata |
 
 ---
 
@@ -79,7 +88,7 @@ l'editor o il SEO prima del modello di contenuto significa doverli rifare.
 | # | Feature | Pilastro | Stato | Cosa manca |
 |---|---|---|---|---|
 | 2.1 | **F01 — Gestione Pagine** | fondativa | ✅ | Chiusa il 2026-08-17. T1–T8 completati (ADR-18/19/20 firmate, schema DB approvato, CRUD + macchina a stati + pubblicazione transazionale + revisioni + frontend). Ultimi due residui chiusi nello stesso passaggio: autore esposto in `PageRevisionSummaryDto`/`PageRevisionDetailDto`, dati di verifica T4–T8 soft-eliminati |
-| 2.2 | **F02 — Registro e validazione dei Blocchi** | 1 | ⏳ **In esecuzione — T2** | T1 chiuso: ADR-21 firmata e `SPEC-F02-blocchi.md` approvata da ccurti il 2026-08-17. In corso T2 (registro dei tipi + interprete di validazione, backend-developer). Vedi `docs/ai/plans/PLAN-F02-blocchi.md` |
+| 2.2 | **F02 — Registro e validazione dei Blocchi** | 1 | ✅ | Chiusa (riconciliata il 2026-08-19). T1–T8 di `PLAN-F02-blocchi.md` verificati nel repository: registro dei tipi + validatore, catene di migrazione per nodo/envelope, sanitizzazione per `kind`, innesto nella pipeline di `pages.service.ts`, contratto generato (`blocks:export`/`blocks:types`) + gate CI `blocks-sync`, copertura di test (unit + e2e + Bruno), componenti di sola lettura in `app/frontend/src/components/blocks/` — già consumati da F04 prima che questa voce fosse aggiornata |
 | 2.3 | **F03 — Superficie pubblica + cache** | 2, 7 | ✅ | Chiusa il 2026-08-19. T1–T7 di `PLAN-F03` completati: `SPEC-F03-superficie-pubblica.md` redatta (residuo T1); API pubblica, cache/invalidazione, test T4, `app/public-site` SSR T5, invariante di escaping + test T6 (con i due bug corretti: `writeHead` prima del render, `TS5103` su `tsconfig.json`), Docker/compose/script root T7. Verifica end-to-end manuale eseguita: pagina pubblicata dall'admin e letta via `curl` senza JavaScript |
 | 2.4 | **F04 — Editor visivo (page builder)** | 1 | ✅ | Chiusa il 2026-08-19. T1–T6 di `PLAN-F04-editor-visivo.md` completati: motore dell'albero + store Zustand, shell dell'editor con salvataggio bozza, palette e ispettore **generati dal registro** (un solo componente per tutti i tipi, il rischio di over-engineering è stato disinnescato per costruzione), canvas con selezione/riordino/eliminazione sopra l'unico `BlockRenderer` di F02, copertura di test T6. **Scostamento dal piano**: l'editor non è una rotta separata ma la scheda "Contenuto" del dettaglio, e si pubblica dalla tendina di stato dell'intestazione (correzioni 3 e 4 del 2026-08-19). **Limite noto**: `richText` si edita come HTML grezzo — un WYSIWYG richiede l'approvazione di una nuova dipendenza npm. **Debito NFR rinviato**: la segnalazione dei salti di livello nei titoli resta fuori |
 | 2.5 | F05 — Multilingua | 4 | ⏳ | Dipende da 1.4 e F01. Da fare presto: aggiungerla a sito popolato costa migrazioni |
@@ -106,6 +115,8 @@ l'editor o il SEO prima del modello di contenuto significa doverli rifare.
 | 3.7 | Il gate CI `backend-e2e` (`.github/workflows/ci.yml`) girava su Postgres/Redis reali senza `continue-on-error`, ma scattava solo su `pull_request` — mai su push diretto a `main`/`develop`, il flusso reale con cui questo repo è avanzato finora | ✅ | Chiuso il 2026-08-17, su autorizzazione esplicita: aggiunto `push: branches: [main, develop]` al trigger del workflow, accanto a `pull_request`. Un push diretto ora attiva lo stesso gate di una PR |
 | 3.8 | **Debito UI** — "Pagina genitore" (`PagePageDetail.tsx:612-616`, scheda Metadati) è un `TextInput` libero che pretende un guid di 16 caratteri esadecimali scritto a mano | ⏳ | Emerso dall'uso reale il 2026-08-19, **non è un task di F04**: la scheda Metadati è F01, l'editor non la tocca. Deve diventare una tendina con i **titoli** delle pagine (`Select` Mantine, `value` = guid, `label` = titolo), alimentata dall'elenco già esposto da `GET api/v1/app/pages`. Da chiarire quando si affronta, non ora: esclusione della pagina stessa e dei suoi discendenti dalle opzioni (un genitore ciclico oggi è impedito solo lato server), e comportamento oltre le prime N pagine (l'elenco è paginato). Nessun endpoint nuovo previsto |
 | 3.9 | **Debito UI** — il campo Locale (`PagePageDetail.tsx:605-610`) rende `it-IT` con il grigio del testo disabilitato, che si legge come placeholder "campo vuoto" invece che come valore reale | ⏳ | Emerso dall'uso reale il 2026-08-19, **non è un task di F04**. Il campo è correttamente bloccato (il locale non è modificabile dopo la creazione, F05): il difetto è solo di resa. Va mostrato come valore leggibile — dato in sola lettura anziché `TextInput disabled`, oppure `readOnly` al posto di `disabled` — conservando la descrizione "Non modificabile dopo la creazione (F05)". Stesso trattamento da valutare per ogni altro campo bloccato che espone un valore vero |
+| 3.11 | **Upgrade editor F04b — copertura di test mancante** — undo/redo esposto in UI (scorciatoie `Ctrl+Z`/`Ctrl+Shift+Z`/`Ctrl+Y`, pulsanti), guardia sulle modifiche non salvate (`useUnsavedChangesGuard`, `beforeunload` + intercetto dei click di navigazione interna), inserimento posizionale ("Inserisci sopra/sotto" in `EditorBlockWrapper`), `moveNodeTo`/indent-outdent fra contenitori sono implementati e wired in `useBlockEditorStore.ts`/`block-tree.utils.ts`/`block-registry.utils.ts`, ma **nessun test li copre**: zero riferimenti nei file `*.spec.ts`/e2e esistenti | ⏳ | Emerso dal punto di controllo del 2026-08-19: codice completo, `test-engineer` non ancora passato. Serve prima di considerare il round F04b chiuso — copertura minima: unit su `moveNodeTo`/`isDirty` (`block-tree.utils.ts`, `useBlockEditorStore.ts`), e2e Playwright su undo/redo da tastiera e sul dialogo di conferma all'uscita con modifiche non salvate |
+| 3.10 | **Rifinitura editor** — l'ispettore delle proprietà mostra il **nome tecnico** della prop (`html`, `mediaRef`, `alt`, `level`) come etichetta del campo: `propLabel()` in `PropertyInspector.tsx` restituisce `prop.name` perché il registro dei blocchi non porta alcuna etichetta leggibile | ⏳ | **Tagliata da F04b il 2026-08-19**, rinviata al giro successivo: è comodità di lettura, non blocca "creo una pagina dall'inizio alla fine", ed era il settimo task di un round su un tetto di otto — il primo posto dove tagliare quando serve margine. Quando si riprende: l'etichetta appartiene ai **metadati d'editor del registro** (`meta`, opachi alla validazione, ADR-21 § 2), non a una mappa scritta nel frontend, altrimenti una prop nuova nel registro nasce di nuovo senza etichetta. Tocca quindi il backend (`blocks/types/*.block.ts` + `blocks:export`/`blocks:types`) prima del frontend |
 
 ---
 
@@ -149,30 +160,37 @@ rifiutate. Se rifiutate, il codice va rimosso.
 
 ## Prossimo passo consigliato
 
-F04 è chiusa (2026-08-19): l'editor visivo esiste, funziona e si può usare per costruire una
-Pagina vera dall'inizio alla fine. Le due voci che vengono ora, in quest'ordine:
+F02, F03, F04 e la voce 1.10 (anteprima bozza) sono chiuse: il registro dei blocchi,
+l'editor visivo, la superficie pubblica e l'anteprima di una bozza esistono, funzionano e si
+possono usare per costruire e rivedere una Pagina vera dall'inizio alla fine. Il round F04b
+(upgrade dell'editor) è **a metà**:
 
-1. **Voce 1.10 — anteprima di una bozza non pubblicata.** È la funzione più richiesta dopo
-   l'editor stesso, e ora che l'editor c'è la sua assenza si sente a ogni modifica: si può
-   vedere solo ciò che è già pubblicato. Serve una decisione architetturale prima di
-   qualunque riga di codice (chi emette il token, quale scadenza, quale superficie di
-   lettura, come si evita l'indicizzazione di una bozza).
-2. **Riconciliare lo stato di F02.** Qui risulta "in esecuzione, T2" e in
-   `docs/ai/progress-tracker.md` risulta ⏳ Pending, ma F04 ne consuma il registro generato
-   (`app/frontend/src/types/blocks.types.ts`) ed è chiusa. Va verificato quali task di
-   `PLAN-F02-blocchi.md` sono davvero rimasti aperti e allineate le due tabelle — in un
-   passaggio suo, non dentro la chiusura di un'altra feature.
+1. **Chiudere la voce 3.11 — copertura di test dell'upgrade editor.** Undo/redo, guardia
+   sulle modifiche non salvate, inserimento posizionale e `moveNodeTo` sono implementati e
+   usabili, ma senza un solo test: è il gate mancante prima di poter dire che questa parte
+   del round è finita, non un debito rinviabile a un giro successivo come 3.8/3.9/3.10.
+2. **Firmare ADR-26 e ADR-27** (voci 1.11/1.12) prima di scrivere qualunque riga della loro
+   parte di codice: WYSIWYG del rich text (dipendenza npm pesante) e lettura pubblica dei
+   media (senza la quale il blocco `image` resta un placeholder). Nessuna delle due ha
+   ancora codice — solo la decisione proposta.
 
 Restano aperte, senza bloccare: **A6** (chatbot, F11 è ultima della fila), l'**ADR formale
 sul modello multilingua** (voce 1.4, A3 già confermata), le firme di **ADR-13 e ADR-17**
-(voci 3.1/3.2), il **debito UI** delle voci 3.8/3.9 e la **potatura delle Revisioni**, che
-va sciolta prima che esista contenuto in volume.
+(voci 3.1/3.2), il **debito UI** delle voci 3.8/3.9/3.10 e la **potatura delle Revisioni**,
+che va sciolta prima che esista contenuto in volume.
 
-Decisione ancora aperta, non bloccante, ereditata dalla chiusura di F01: se serve un rate
-limit differenziato fra `/auth/*` e la superficie amministrativa `app/*` (oggi quest'ultima
-non ne ha nessuno). Nota emersa da T6: il limite di 5 login al minuto su `/auth/login` ha
-richiesto di autenticare la suite E2E una volta sola (`e2e/tests/admin.setup.ts`) — il
-limite è corretto, è la suite che non doveva ripetere la login.
+**Decisione ancora aperta, ora osservata due volte** — rate limit differenziato fra
+`/auth/*` e la superficie amministrativa `app/*` (oggi quest'ultima non ne ha nessuno).
+Emersa la prima volta durante le verifiche T4–T8 di F01 (429 su `/auth/login` durante i test
+manuali), poi di nuovo durante T6 di F04: il limite di 5 tentativi al minuto per IP su
+`/auth/login` ha fatto fallire la suite Playwright con una login per test, e ha richiesto di
+introdurre un progetto `setup` (`e2e/tests/admin.setup.ts`) che autentica una volta sola e
+riusa lo `storageState`. **Osservazione diretta, non solo teorica**: 5/minuto per IP è
+stretto sia per l'uso reale (un admin che sbaglia MFA due volte e riprova rimane fuori) sia
+per l'automazione dei test, che senza l'aggiramento del `setup` non riesce a girare per
+intero. La domanda non è più solo "serve differenziare" ma "il valore stesso di 5/minuto va
+alzato per l'uso amministrativo" — resta una decisione umana, non bloccante ma che si è
+ripresentata due volte in due feature diverse.
 
 ### Debito documentale ancora aperto (segnalato, non sanato)
 

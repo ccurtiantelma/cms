@@ -4,7 +4,14 @@
 > Le AI non lo modificano autonomamente: lo stato viene aggiornato a fine feature, su
 > richiesta esplicita.
 >
-> Ultima revisione: 2026-08-19 — F04 chiusa.
+> Ultima revisione: 2026-08-19 — F04 chiusa; stato di F02 riconciliato (era rimasto
+> "⏳ Pending" per un mancato aggiornamento, non per lavoro non fatto — vedi F04 § Due
+> incoerenze osservate durante T6) e tabella ADR mancanti allineata alle firme intercorse.
+> Aggiornamento successivo, stesso giorno: **anteprima bozza (voce 1.10) chiusa**, T1–T6 di
+> `PLAN-anteprima-bozza.md` completati; **round F04b (upgrade editor) a metà** — T2 (undo/redo,
+> guardia sulle modifiche non salvate, inserimento posizionale, `moveNodeTo`) implementato ma
+> senza copertura di test, T1 (ADR-26 WYSIWYG, ADR-27 media pubblici) redatto e in attesa di
+> firma, nessuna riga della sua parte di codice scritta.
 
 ---
 
@@ -54,9 +61,9 @@
 | # | Feature | Pilastro | Riferimento | Status |
 |---|---|---|---|---|
 | F01 | Gestione Pagine (modello, stati, slug, revisioni) | fondativa | features/F01-gestione-pagine.md · specs/SPEC-F01-gestione-pagine.md · plans/PLAN-F01-innesto.md | ✅ Done (2026-08-17) |
-| F02 | Registro e validazione dei Blocchi | 1 | — | ⏳ Pending |
+| F02 | Registro e validazione dei Blocchi | 1 | plans/PLAN-F02-blocchi.md | ✅ Done (2026-08-19, riconciliata) |
 | F03 | Superficie pubblica di lettura + cache | 2, 7 | specs/SPEC-F03-superficie-pubblica.md · plans/PLAN-F03-superficie-pubblica.md | ✅ Done (2026-08-19) |
-| F04 | Editor visivo (page builder) | 1 | plans/PLAN-F04-editor-visivo.md | ✅ Done (2026-08-19) |
+| F04 | Editor visivo (page builder) | 1 | plans/PLAN-F04-editor-visivo.md | ✅ Done (2026-08-19). Anteprima bozza (voce 1.10 di `docs/TODO.md`) chiusa lo stesso giorno — `plans/PLAN-anteprima-bozza.md`, ADR-25. Round successivo **F04b (upgrade editor)** 🔄 in progress: undo/redo + guardia + inserimento posizionale + `moveNodeTo` implementati, senza test; WYSIWYG (ADR-26) e media pubblici (ADR-27) in attesa di firma, zero codice |
 | F05 | Multilingua | 4 | — | ⏳ Pending |
 | F06 | Template e Sezioni globali | 1 | — | ⏳ Pending |
 | F07 | SEO per pagina | 2 | — | ⏳ Pending |
@@ -74,17 +81,24 @@
 
 Decisioni architetturali richieste dalla Architecture Policy e non ancora prese. Ognuna va
 proposta come RFC e approvata prima dell'implementazione della feature che la richiede.
+**Riconciliata il 2026-08-19**: quattro delle otto voci originarie sono state approvate nel
+frattempo (ADR-19, ADR-21, ADR-23, ADR-24) e non bloccano più nulla — restano solo le quattro
+sotto.
 
 | ADR da produrre | Blocca |
 |---|---|
-| Formato e versionamento dello schema dei blocchi | F02, F04 |
-| Strategia di versionamento/revisioni (snapshot vs. diff) | F01 |
-| Caching e invalidazione del contenuto pubblico | F03 |
 | Modello multilingua | F05 |
-| Routing e risoluzione degli slug | F03 |
 | Pipeline di trasformazione media e trattamento SVG | F09 |
 | Scelta e confine del provider del chatbot | F11 |
 | Generazione di sitemap e structured data | F07 |
+
+**Redatte, in attesa di firma** (non bloccano il roadmap-livello, bloccano solo la loro parte
+di codice nel round F04b):
+
+| ADR redatta | Blocca |
+|---|---|
+| `ADR-26-wysiwyg-rich-text.md` — editor WYSIWYG del rich text (Tiptap via `@mantine/tiptap`) | F04b (parte rich text) |
+| `ADR-27-lettura-pubblica-media.md` — `GET public/media/:guid` | F04b (blocco `image` usabile), F09 |
 
 ---
 
@@ -284,3 +298,91 @@ come il piano dichiarava. Non è stata implementata e non è coperta da test.
    stack isolato temporaneo (Postgres 5442, Redis 6389, backend 3100, frontend 5175,
    public-site 4100), senza toccare né i file del repository né i processi dell'altro
    progetto. Nessuna configurazione permanente è stata cambiata per aggirarlo.
+
+---
+
+## F02 — riconciliazione documentale (2026-08-19)
+
+Non un passaggio di sviluppo: la voce 1 delle "Due incoerenze osservate durante T6" sopra,
+sciolta nel suo passaggio dedicato come richiesto allora. Nessun codice toccato, solo
+verifica e allineamento di questa tabella e di `docs/TODO.md`.
+
+Verificati tutti gli output di T1–T8 di `PLAN-F02-blocchi.md` contro il repository:
+`app/backend/src/blocks/` (registro, validatore, catene di migrazione per nodo ed envelope,
+cinque tipi a `v: 1`), sanitizzazione per `kind` in
+`app/backend/src/common/sanitizer/block-prop-sanitizer.service.ts`, pipeline innestata in
+`pages.service.ts` (migrazione → validazione registro, sui percorsi di scrittura), script
+`blocks:export`/`blocks:types` presenti in root e in `app/backend/package.json`, job
+`blocks-sync` nel gate CI (`.github/workflows/ci.yml`), suite di test dedicate
+(`app/backend/test/unit/blocks/**`, `test/unit/common/sanitizer/block-prop-sanitizer.service.spec.ts`,
+tre file `test/e2e/pages-blocks*.e2e-spec.ts`, `bruno/pages/Create Page - Blocco Non
+Valido.yml` e `Create Page - Tipo Blocco Sconosciuto.yml`), componenti di sola lettura in
+`app/frontend/src/components/blocks/` consumati da F04. F02 è chiusa nei fatti da quando F04
+ha iniziato a consumarne il registro generato — la tabella qui e in `docs/TODO.md` erano
+semplicemente rimaste indietro di un aggiornamento, non descrivevano un lavoro mancante.
+
+---
+
+## Anteprima bozza — chiusura (2026-08-19)
+
+`docs/ai/plans/PLAN-anteprima-bozza.md`, ADR-25 approvata lo stesso giorno. T1–T6 completati:
+
+- **T2 — emissione del token**: `POST app/pages/:guid/preview-token` in `pages.controller.ts`/
+  `pages.service.ts`, DTO `PagePreviewTokenDto`. Stessa guard RBAC + ownership già in vigore
+  per la modifica della pagina. JWT firmato con `PAGE_PREVIEW_TOKEN_SECRET` (segreto dedicato
+  in `AppConstants`, distinto da access/refresh — aggiunto a `.env.example` e al job e2e di
+  `.github/workflows/ci.yml`), claim `pageGuid`/`purpose: 'page-preview'`/`exp` a 15 minuti,
+  nessun refresh. Emissione audit-logged.
+- **T3 — lettura dedicata**: nuovo modulo `app/backend/src/preview-pages/` —
+  `api/v1/preview/pages/:token`, terzo prefisso accanto ad `app/` e `public/`, escluso da
+  `AuthMiddleware`. Verifica firma+scadenza+`purpose` prima di ogni lettura; legge
+  `draftContent` attraverso la stessa pipeline di migrazione+validazione di F02. Nessuna
+  cache Redis. Token invalido/scaduto/pagina inesistente o soft-eliminata → 404 uniforme,
+  mai 401/403.
+- **T4 — rotta di anteprima pubblica**: `app/public-site/src/server.ts` +
+  `PreviewDocument.tsx` + `preview-api-client.ts` — rotta `/__preview/:token`, separata dal
+  routing per slug di ADR-24, `X-Robots-Tag: noindex, nofollow, noarchive` + meta `robots`
+  su ogni risposta senza eccezioni.
+- **T5 — pulsante "Anteprima"**: `PagePageDetail.tsx` + nuovo metodo in
+  `services/pages.service.ts`, apre l'URL in una nuova scheda, notification su errore,
+  nessuna persistenza del token oltre l'apertura.
+- **T6 — copertura di test**: `app/backend/test/unit/pages/preview-token.spec.ts` (verifica
+  del token: scadenza, `purpose` errato, firma invalida), `app/backend/test/e2e/pages-preview.e2e-spec.ts`
+  (RBAC/ownership sull'emissione, 404 uniforme sui quattro casi, draft modificato dopo
+  l'emissione resta leggibile fino a scadenza), `bruno/pages/Issue Preview Token.yml` +
+  `Get Preview By Token.yml`, `e2e/tests/page-preview.spec.ts` (genera anteprima dal
+  dettaglio, apre l'URL, verifica header e meta `robots`, verifica che il contenuto
+  pubblicato reale non cambi).
+
+`openapi:export`/`openapi:types` rieseguiti dopo T2 e T3.
+
+---
+
+## F04b — upgrade editor, a metà (2026-08-19)
+
+Round emerso dall'uso reale di F04, non ancora coperto da un plan scritto in
+`docs/ai/plans/` — a differenza degli altri round, qui il lavoro è partito prima che
+l'orchestrator producesse il documento. Due parti, stato molto diverso:
+
+**Fatto, senza test** — undo/redo esposto in UI (pulsanti + scorciatoie `Ctrl+Z`/
+`Ctrl+Shift+Z`/`Ctrl+Y` via `useHotkeys`, che ignora i campi di input dell'ispettore),
+guardia sulle modifiche non salvate (`useUnsavedChangesGuard.ts` — `beforeunload` per
+l'uscita dal documento, intercetto in fase di cattura dei click di navigazione interna per
+`<a href>` dello stesso router; **limite dichiarato**: il tasto Indietro del browser non è
+coperto, richiederebbe un data router), inserimento posizionale ("Inserisci sopra"/
+"Inserisci sotto" accanto a ogni blocco, non solo in fondo al contenitore), spostamento fra
+contenitori (`moveNodeTo` in `block-tree.utils.ts`, azioni "sposta dentro"/"porta fuori" in
+`EditorBlockWrapper.tsx`, ammissibilità verificata contro il registro tramite
+`block-registry.utils.ts::canContainType` — la stessa funzione che userà la palette, mai una
+regola scritta due volte). Tutto wired: store (`useBlockEditorStore.ts`, nuovo `savePoint`
+per calcolare `isDirty` in O(1) per riferimento, non per confronto dell'albero) e UI. **Nessun
+test lo copre**: zero riferimenti a `moveNodeTo`, `useUnsavedChangesGuard`, `useCanUndo`,
+`useHasUnsavedChanges` in qualunque `*.spec.ts`/e2e esistente — voce 3.11 di `docs/TODO.md`.
+
+**Non iniziato** — `ADR-26-wysiwyg-rich-text.md` (Tiptap via `@mantine/tiptap`) e
+`ADR-27-lettura-pubblica-media.md` (`GET public/media/:guid`) sono redatte, in discussione,
+non firmate. Verificato che non esiste alcun codice della loro parte: nessun pacchetto
+Tiptap in `app/frontend/package.json`, nessuna rotta `public/media` in
+`app/backend/src`. Corretto per costruzione — sono dipendenza npm pesante (ADR-26) e nuova
+superficie pubblica (ADR-27), entrambe `CLAUDE.md` § Ask first: nessuna riga finché non sono
+firmate.
