@@ -23,10 +23,12 @@ import {
   findLocation,
   findNode,
   moveBlock,
+  moveNodeTo,
   removeBlock,
   updateBlockProps,
   type BlockNode,
 } from '../pages/pages/editor/block-tree.utils';
+import { canContainType } from '../pages/pages/editor/block-registry.utils';
 
 /** Direzione opposta, usata per costruire l'inverso di un comando `move`. */
 function oppositeDirection(direction: 'up' | 'down'): 'up' | 'down' {
@@ -39,9 +41,32 @@ function oppositeDirection(direction: 'up' | 'down'): 'up' | 'down' {
  * Nessuno dei due porta uno snapshot: sono funzioni pure chiuse sui soli parametri
  * necessari all'operazione (patch), non sull'albero intero.
  */
-interface EditorCommand {
+export interface EditorCommand {
   apply: (tree: BlockNode[]) => BlockNode[];
   invert: (tree: BlockNode[]) => BlockNode[];
+}
+
+/**
+ * Il punto della history che corrisponde a ciò che il server ha davvero salvato.
+ * Non è solo una profondità: dopo un undo seguito da una modifica nuova la pila torna alla
+ * stessa lunghezza pur contenendo un ramo diverso, e la sola profondità direbbe "nessuna
+ * modifica da salvare" su un albero che invece è cambiato. Il comando in cima al momento
+ * del salvataggio identifica il ramo, e il confronto è per riferimento.
+ */
+export interface SavePoint {
+  depth: number;
+  top: EditorCommand | null;
+}
+
+/**
+ * `true` se l'albero in editing diverge da ciò che è stato salvato per ultimo.
+ * Costo O(1): nessun confronto dell'albero, solo lunghezza della pila e identità del
+ * comando in cima.
+ */
+function isDirty(state: BlockEditorState): boolean {
+  if (state.undoStack.length !== state.savePoint.depth) return true;
+  if (state.savePoint.depth === 0) return false;
+  return state.undoStack[state.savePoint.depth - 1] !== state.savePoint.top;
 }
 
 interface BlockEditorState {
@@ -60,6 +85,8 @@ interface BlockEditorState {
   undoStack: EditorCommand[];
   /** Pila dei comandi disfatti, disponibili per `redo()`. */
   redoStack: EditorCommand[];
+  /** Punto della history corrispondente all'ultimo contenuto salvato (vedi {@link SavePoint}). */
+  savePoint: SavePoint;
 
   /** Inizializza l'albero da `draftContent.blocks` esistente (nessun riordino spurio: ordine e struttura conservati com'è). Azzera history e selezione. */
   initTree: (blocks: BlockNode[]) => void;
@@ -74,6 +101,12 @@ interface BlockEditorState {
   ) => void;
   /** Sposta il nodo `id` di una posizione fra i suoi fratelli diretti. No-op ai bordi. */
   moveBlockAction: (id: string, direction: 'up' | 'down') => void;
+  /**
+   * Sposta il nodo `id` dentro `targetParentId` (radice se `null`) alla posizione `index`.
+   * No-op se il registro non ammette quel tipo in quel contenitore, o se lo spostamento è
+   * strutturalmente impossibile (dentro sé stesso o un proprio discendente).
+   */
+  moveNodeToAction: (id: string, targetParentId: string | null, index: number) => void;
   /** Rimuove il nodo `id` e i suoi discendenti. Deseleziona se il nodo rimosso era selezionato. */
   removeBlockAction: (id: string) => void;
   /** Merge delle `props` fornite sul nodo `id`. */
@@ -82,6 +115,14 @@ interface BlockEditorState {
   undo: () => void;
   /** Rifà l'ultimo comando disfatto, se presente. */
   redo: () => void;
+  /** Fotografa il punto di history corrispondente all'albero che si sta per inviare al server. */
+  currentSavePoint: () => SavePoint;
+  /**
+   * Dichiara salvato il punto fotografato **prima** della richiesta: le modifiche fatte
+   * mentre il salvataggio era in volo restano segnalate come non salvate, che è l'unico
+   * verso in cui vale la pena sbagliare.
+   */
+  markSaved: (point: SavePoint) => void;
 }
 
 /**
@@ -101,12 +142,15 @@ function pushCommand(state: BlockEditorState, command: EditorCommand): Partial<B
   };
 }
 
-export const useBlockEditorStore = create<BlockEditorState>((set) => ({
+const CLEAN_SAVE_POINT: SavePoint = { depth: 0, top: null };
+
+export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   tree: [],
   selectedId: null,
   generation: 0,
   undoStack: [],
   redoStack: [],
+  savePoint: CLEAN_SAVE_POINT,
 
   initTree: (blocks) => {
     set((state) => ({
@@ -115,6 +159,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set) => ({
       generation: state.generation + 1,
       undoStack: [],
       redoStack: [],
+      savePoint: CLEAN_SAVE_POINT,
     }));
   },
 
@@ -153,6 +198,28 @@ export const useBlockEditorStore = create<BlockEditorState>((set) => ({
       invert: (tree) => moveBlock(tree, id, oppositeDirection(direction)),
     };
     set((state) => pushCommand(state, command));
+  },
+
+  moveNodeToAction: (id, targetParentId, index) => {
+    set((state) => {
+      const node = findNode(state.tree, id);
+      const origin = findLocation(state.tree, id);
+      if (!node || !origin) return {};
+
+      // Il tipo del contenitore di destinazione decide l'ammissibilità: `undefined` alla
+      // radice, dove vale `ROOT_ALLOWED`. Un contenitore che non esiste più non è un errore
+      // da segnalare, è un'azione senza bersaglio.
+      const targetParent =
+        targetParentId === null ? undefined : findNode(state.tree, targetParentId);
+      if (targetParentId !== null && !targetParent) return {};
+      if (!canContainType(targetParent?.type, node.type)) return {};
+
+      const command: EditorCommand = {
+        apply: (tree) => moveNodeTo(tree, id, targetParentId, index),
+        invert: (tree) => moveNodeTo(tree, id, origin.parentId, origin.index),
+      };
+      return pushCommand(state, command);
+    });
   },
 
   removeBlockAction: (id) => {
@@ -215,6 +282,13 @@ export const useBlockEditorStore = create<BlockEditorState>((set) => ({
       };
     });
   },
+
+  currentSavePoint: () => {
+    const { undoStack } = get();
+    return { depth: undoStack.length, top: undoStack[undoStack.length - 1] ?? null };
+  },
+
+  markSaved: (point) => set({ savePoint: point }),
 }));
 
 /**
@@ -273,4 +347,23 @@ export function useTreeGeneration(): number {
 /** Selettore granulare: solo la radice dell'albero (uso raro — canvas T4 la consuma per iterare i nodi di primo livello). */
 export function useRootBlocks(): BlockNode[] {
   return useBlockEditorStore((state) => state.tree);
+}
+
+/** Selettore granulare: c'è almeno un comando da annullare. */
+export function useCanUndo(): boolean {
+  return useBlockEditorStore((state) => state.undoStack.length > 0);
+}
+
+/** Selettore granulare: c'è almeno un comando da ripristinare. */
+export function useCanRedo(): boolean {
+  return useBlockEditorStore((state) => state.redoStack.length > 0);
+}
+
+/**
+ * Selettore granulare: l'albero in editing diverge da ciò che è stato salvato per ultimo.
+ * È il segnale che l'editor non aveva — finora l'unico modo di sapere se una modifica era
+ * al sicuro era ricordarselo.
+ */
+export function useHasUnsavedChanges(): boolean {
+  return useBlockEditorStore(isDirty);
 }

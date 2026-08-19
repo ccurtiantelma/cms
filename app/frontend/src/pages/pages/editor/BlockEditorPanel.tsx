@@ -17,15 +17,23 @@
  * editor).
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Grid, Group, Stack, Text } from '@mantine/core';
+import { ActionIcon, Badge, Button, Grid, Group, Stack, Text, Tooltip } from '@mantine/core';
+import { useHotkeys } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { IconDeviceFloppy } from '@tabler/icons-react';
+import { IconArrowBackUp, IconArrowForwardUp, IconDeviceFloppy } from '@tabler/icons-react';
 import type { AxiosError } from 'axios';
 import { getErrorMessage } from '../../../utils/api.utils';
 import { updatePage } from '../../../services/pages.service';
 import type { PageRecord, PagesErrorData } from '../../../types/pages.types';
 import { BLOCK_TYPES, ENVELOPE_VERSION } from '../../../types/blocks.types';
-import { useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
+import {
+  useBlockEditorStore,
+  useCanRedo,
+  useCanUndo,
+  useHasUnsavedChanges,
+} from '../../../hooks/useBlockEditorStore';
+import { useUnsavedChangesGuard } from '../../../hooks/useUnsavedChangesGuard';
+import ConfirmModal from '../../../components/ConfirmModal';
 import type { BlockNode } from './block-tree.utils';
 import EditorCanvas from './EditorCanvas';
 import PropertyInspector from './PropertyInspector';
@@ -132,6 +140,27 @@ export default function BlockEditorPanel({
   const [invalidBlockId, setInvalidBlockId] = useState<string | null>(null);
 
   const initTree = useBlockEditorStore((state) => state.initTree);
+  const undo = useBlockEditorStore((state) => state.undo);
+  const redo = useBlockEditorStore((state) => state.redo);
+  const canUndo = useCanUndo();
+  const canRedo = useCanRedo();
+  const hasUnsavedChanges = useHasUnsavedChanges();
+
+  /**
+   * Guardia sull'uscita: finché l'albero diverge dalla bozza salvata, lasciare la scheda
+   * (o l'admin) chiede conferma. Senza, le modifiche ai blocchi sparivano senza un segnale
+   * — l'unica traccia era accorgersi, dopo, che il contenuto era quello di prima.
+   */
+  const guard = useUnsavedChangesGuard(hasUnsavedChanges);
+
+  // Le scorciatoie standard. `useHotkeys` ignora per default gli eventi originati da
+  // input/textarea/select: dentro un campo dell'ispettore Ctrl+Z resta l'annulla del
+  // campo, non quello dell'albero.
+  useHotkeys([
+    ['mod+Z', () => undo()],
+    ['mod+shift+Z', () => redo()],
+    ['mod+Y', () => redo()],
+  ]);
 
   /**
    * Firma del contenuto servito dal dettaglio. La dipendenza dell'effetto è il **valore**
@@ -184,6 +213,9 @@ export default function BlockEditorPanel({
   async function handleSaveDraft(): Promise<void> {
     setSaving(true);
     setInvalidBlockId(null);
+    // Fotografato **prima** della richiesta: ciò che si modifica mentre il salvataggio è in
+    // volo non è stato salvato, e deve continuare a risultare tale.
+    const savePoint = useBlockEditorStore.getState().currentSavePoint();
     try {
       const updated = await updatePage(page.guid, {
         version: page.version,
@@ -196,6 +228,7 @@ export default function BlockEditorPanel({
       // stato davvero salvato, così l'editor mostra il contenuto reale e non la versione
       // pre-sanitizzazione digitata dall'utente. Il rimontaggio dell'albero avviene
       // nell'effetto sopra, alla nuova `draftContent`.
+      useBlockEditorStore.getState().markSaved(savePoint);
       onPageUpdated(updated);
       notifications.show({ color: 'green', message: 'Bozza salvata' });
     } catch (err) {
@@ -217,16 +250,47 @@ export default function BlockEditorPanel({
   return (
     <Stack gap="md">
       <Group justify="space-between">
-        <Text size="sm" c="dimmed">
-          Le modifiche ai blocchi restano locali finché non salvi la bozza.
-        </Text>
-        <Button
-          leftSection={<IconDeviceFloppy size={16} />}
-          onClick={() => void handleSaveDraft()}
-          loading={saving}
-        >
-          Salva bozza
-        </Button>
+        <Group gap="xs">
+          <Tooltip label="Annulla (Ctrl+Z)" withArrow>
+            <ActionIcon
+              variant="default"
+              size="lg"
+              aria-label="Annulla l'ultima modifica"
+              disabled={!canUndo}
+              onClick={() => undo()}
+            >
+              <IconArrowBackUp size={18} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Ripristina (Ctrl+Shift+Z)" withArrow>
+            <ActionIcon
+              variant="default"
+              size="lg"
+              aria-label="Ripristina la modifica annullata"
+              disabled={!canRedo}
+              onClick={() => redo()}
+            >
+              <IconArrowForwardUp size={18} />
+            </ActionIcon>
+          </Tooltip>
+          <Text size="sm" c="dimmed">
+            Le modifiche ai blocchi restano locali finché non salvi la bozza.
+          </Text>
+        </Group>
+        <Group gap="sm">
+          {hasUnsavedChanges && (
+            <Badge color="orange" variant="light">
+              Modifiche non salvate
+            </Badge>
+          )}
+          <Button
+            leftSection={<IconDeviceFloppy size={16} />}
+            onClick={() => void handleSaveDraft()}
+            loading={saving}
+          >
+            Salva bozza
+          </Button>
+        </Group>
       </Group>
 
       <InvalidBlockProvider invalidBlockId={invalidBlockId}>
@@ -239,6 +303,19 @@ export default function BlockEditorPanel({
           </Grid.Col>
         </Grid>
       </InvalidBlockProvider>
+
+      {guard.pendingPath !== null && (
+        <ConfirmModal
+          opened
+          onClose={guard.stay}
+          onConfirm={guard.leaveAnyway}
+          title="Modifiche non salvate"
+          confirmLabel="Esci senza salvare"
+          confirmColor="red"
+        >
+          Le modifiche ai blocchi non sono ancora state salvate come bozza: uscendo ora vanno perse.
+        </ConfirmModal>
+      )}
     </Stack>
   );
 }

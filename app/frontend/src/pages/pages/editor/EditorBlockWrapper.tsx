@@ -1,7 +1,13 @@
 /**
  * Chrome dell'editor attorno a un singolo nodo dell'albero (PLAN-F04-editor-visivo.md T4):
- * selezione, riordino fra fratelli, eliminazione, e — sui contenitori — il trigger della
- * palette per aggiungere figli.
+ * selezione, riordino fra fratelli, spostamento dentro/fuori da un contenitore, inserimento
+ * posizionale di un blocco nuovo sopra o sotto questo, eliminazione, e — sui contenitori —
+ * il trigger della palette per aggiungere figli.
+ *
+ * Ogni azione che cambia la struttura passa dallo store, che la verifica contro il registro
+ * dei blocchi prima di applicarla: qui si decide solo se *offrirla*, e con la stessa
+ * funzione (`canContainType`) che lo store userà per accettarla — mai con una regola
+ * scritta due volte.
  *
  * **Un solo renderer.** Il contenuto del blocco è renderizzato dai componenti di F02 T8,
  * invariati: `BlockRenderer` per le foglie. Per un contenitore la chrome deve inserirsi
@@ -17,10 +23,17 @@
 import { createContext, memo, useContext, useState, type ReactNode } from 'react';
 import { ActionIcon, Group, Text, Tooltip, UnstyledButton } from '@mantine/core';
 import { useShallow } from 'zustand/react/shallow';
-import { IconArrowDown, IconArrowUp, IconTrash } from '@tabler/icons-react';
+import {
+  IconArrowDown,
+  IconArrowUp,
+  IconIndentDecrease,
+  IconIndentIncrease,
+  IconTrash,
+} from '@tabler/icons-react';
 import { BLOCK_TYPES, type BlockTypeDescriptor } from '../../../types/blocks.types';
 import { useBlockEditorStore, useNodeById } from '../../../hooks/useBlockEditorStore';
 import { findLocation, findNode, type BlockNode } from './block-tree.utils';
+import { canContainType } from './block-registry.utils';
 import BlockRenderer from '../../../components/blocks/BlockRenderer';
 import BlockErrorBoundary from '../../../components/blocks/BlockErrorBoundary';
 import Section from '../../../components/blocks/blocks/Section';
@@ -98,8 +111,59 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const isSelected = useBlockEditorStore((state) => state.selectedId === id);
   const isInvalid = useContext(InvalidBlockContext) === id;
 
+  /**
+   * Tipo del contenitore che ospita questo nodo (`undefined` alla radice): serve alle due
+   * palette di inserimento posizionale, che devono filtrare i tipi ammessi *accanto* a
+   * questo blocco, non dentro di lui.
+   */
+  const parentType = useBlockEditorStore((state) => {
+    const current = findLocation(state.tree, id);
+    return current?.parentId ? findNode(state.tree, current.parentId)?.type : undefined;
+  });
+
+  /**
+   * Destinazione di "sposta dentro": il fratello **precedente**, se è un contenitore che il
+   * registro ammette per questo tipo. `null` quando la mossa non è possibile — ed è il
+   * registro a dirlo, non un elenco di tipi scritto qui.
+   */
+  const indentTarget = useBlockEditorStore(
+    useShallow((state) => {
+      const node = findNode(state.tree, id);
+      const current = findLocation(state.tree, id);
+      if (!node || !current || current.index === 0) return null;
+      const siblings =
+        current.parentId === null
+          ? state.tree
+          : (findNode(state.tree, current.parentId)?.children ?? []);
+      const previous = siblings[current.index - 1];
+      if (!previous || !canContainType(previous.type, node.type)) return null;
+      return { parentId: previous.id, index: previous.children.length };
+    }),
+  );
+
+  /**
+   * Destinazione di "porta fuori": il livello del contenitore, subito dopo di lui. `null`
+   * se il nodo è già alla radice o se lì il suo tipo non è ammesso.
+   */
+  const outdentTarget = useBlockEditorStore(
+    useShallow((state) => {
+      const node = findNode(state.tree, id);
+      const current = findLocation(state.tree, id);
+      if (!node || !current || current.parentId === null) return null;
+      const parentLocation = findLocation(state.tree, current.parentId);
+      if (!parentLocation) return null;
+      const grandParentType =
+        parentLocation.parentId === null
+          ? undefined
+          : findNode(state.tree, parentLocation.parentId)?.type;
+      if (!canContainType(grandParentType, node.type)) return null;
+      return { parentId: parentLocation.parentId, index: parentLocation.index + 1 };
+    }),
+  );
+
   const selectNode = useBlockEditorStore((state) => state.selectNode);
   const moveBlockAction = useBlockEditorStore((state) => state.moveBlockAction);
+  const moveNodeToAction = useBlockEditorStore((state) => state.moveNodeToAction);
   const removeBlockAction = useBlockEditorStore((state) => state.removeBlockAction);
 
   const [confirmOpened, setConfirmOpened] = useState(false);
@@ -174,6 +238,39 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           </ActionIcon>
         </Tooltip>
 
+        <Tooltip
+          label={indentTarget ? 'Sposta dentro il blocco precedente' : 'Nessun contenitore sopra'}
+          withArrow
+        >
+          <ActionIcon
+            variant="subtle"
+            size="sm"
+            aria-label={`Sposta il blocco ${label} dentro il contenitore precedente`}
+            disabled={!indentTarget}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (indentTarget) moveNodeToAction(id, indentTarget.parentId, indentTarget.index);
+            }}
+          >
+            <IconIndentIncrease size={14} />
+          </ActionIcon>
+        </Tooltip>
+
+        <Tooltip label="Porta fuori dal contenitore" withArrow>
+          <ActionIcon
+            variant="subtle"
+            size="sm"
+            aria-label={`Porta il blocco ${label} fuori dal contenitore`}
+            disabled={!outdentTarget}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (outdentTarget) moveNodeToAction(id, outdentTarget.parentId, outdentTarget.index);
+            }}
+          >
+            <IconIndentDecrease size={14} />
+          </ActionIcon>
+        </Tooltip>
+
         <Tooltip label="Elimina" withArrow>
           <ActionIcon
             variant="subtle"
@@ -189,11 +286,34 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           </ActionIcon>
         </Tooltip>
 
+        {/*
+          Inserimento posizionale: un blocco nuovo si mette dove serve, non solo in fondo
+          all'albero. Il contenitore di destinazione è quello che ospita *questo* nodo, e
+          l'indice è il suo — quindi le due palette offrono esattamente i tipi ammessi in
+          quella posizione, non quelli ammessi dentro questo blocco.
+        */}
+        <BlockPalette
+          parentId={location.parentId}
+          parentType={parentType}
+          index={location.index}
+          label="Inserisci sopra"
+          size="xs"
+          variant="subtle"
+        />
+        <BlockPalette
+          parentId={location.parentId}
+          parentType={parentType}
+          index={location.index + 1}
+          label="Inserisci sotto"
+          size="xs"
+          variant="subtle"
+        />
+
         {isContainer && (
           <BlockPalette
             parentId={id}
             parentType={node.type}
-            label="Aggiungi qui"
+            label="Aggiungi dentro"
             size="xs"
             variant="subtle"
           />
@@ -211,7 +331,7 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           <ContainerComponent>
             {childIds.length === 0 ? (
               <div className={styles.emptyContainer}>
-                Contenitore vuoto — usa &laquo;Aggiungi qui&raquo; per inserire un blocco.
+                Contenitore vuoto — usa &laquo;Aggiungi dentro&raquo; per inserire un blocco.
               </div>
             ) : (
               <div className={styles.childrenArea}>

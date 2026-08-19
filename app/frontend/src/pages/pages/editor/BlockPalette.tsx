@@ -12,10 +12,10 @@ import { Button, Menu } from '@mantine/core';
 import { IconPlus } from '@tabler/icons-react';
 import {
   BLOCK_TYPES,
-  ROOT_ALLOWED,
   type BlockPropDescriptor,
   type BlockTypeDescriptor,
 } from '../../../types/blocks.types';
+import { allowedChildTypes } from './block-registry.utils';
 import { useAuthStore } from '../../../hooks/useAuth';
 import { useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
 
@@ -79,10 +79,7 @@ function allowedDescriptors(
   parentType: string | undefined,
   roleLevel: number | undefined,
 ): BlockTypeDescriptor[] {
-  const allowedTypes: readonly string[] =
-    parentType === undefined
-      ? ROOT_ALLOWED
-      : (BLOCK_TYPES.find((entry) => entry.type === parentType)?.childrenAllow ?? []);
+  const allowedTypes = allowedChildTypes(parentType);
 
   return BLOCK_TYPES.filter(
     (descriptor) =>
