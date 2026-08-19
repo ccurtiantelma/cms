@@ -21,8 +21,10 @@ import type { PageRecord } from '../types/pages.types';
 /**
  * Origine del sito pubblico SSR (`app/public-site`, ADR-22). Il default combacia con
  * `PUBLIC_SITE_URL` del backend e con `PublicSiteConfig.port` del workspace pubblico.
+ * Esportata perché è la stessa origine usata dal link di anteprima (ADR-25,
+ * `{PUBLIC_SITE_URL}/__preview/:token` in `PagePageDetail.tsx`), non una costante duplicata.
  */
-const PUBLIC_SITE_URL = import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:4000';
+export const PUBLIC_SITE_URL = import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:4000';
 
 /**
  * Tetto alle risalite verso gli antenati, allineato a `MAX_PUBLIC_PATH_SEGMENTS` del

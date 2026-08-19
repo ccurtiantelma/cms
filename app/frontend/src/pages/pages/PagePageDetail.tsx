@@ -11,9 +11,11 @@
  *   l'elenco completo degli stati, che porterebbe l'utente a scegliere qualcosa che il
  *   server rifiuta con `400`.
  * - **"Vedi pagina" compare solo su una Pagina pubblicata**, perché la superficie pubblica
- *   serve solo contenuto `published` (ADR-24). L'anteprima di una bozza non è un pulsante
- *   mancante ma un meccanismo che non esiste ancora (token di anteprima): è registrata come
- *   voce aperta in `docs/TODO.md` § FASE 1.
+ *   serve solo contenuto `published` (ADR-24). **"Anteprima" compare solo su una Pagina in
+ *   `draft`**, speculare: il backend nega il token (`403`) su ogni altro stato (ADR-25), e
+ *   mostrare un pulsante che risponderebbe sempre con un errore non aiuta nessuno. Genera un
+ *   token JWT effimero (15 minuti, non rinnovabile) e apre `{PUBLIC_SITE_URL}/__preview/:token`
+ *   in una nuova scheda — il token non viene mai persistito lato client.
  */
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -59,6 +61,7 @@ import {
   fetchPage,
   fetchPageRevisions,
   getPageRevision,
+  issuePagePreviewToken,
   restorePageRevision,
   updatePage,
 } from '../../services/pages.service';
@@ -76,7 +79,7 @@ import {
   type UpdatePagePayload,
 } from '../../types/pages.types';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
-import { usePublicPageUrl } from '../../hooks/usePublicPageUrl';
+import { PUBLIC_SITE_URL, usePublicPageUrl } from '../../hooks/usePublicPageUrl';
 import BlockEditorPanel from './editor/BlockEditorPanel';
 import PageHeader from '../../components/PageHeader';
 import PageNotFound from '../../components/PageNotFound';
@@ -194,6 +197,7 @@ export default function PagePageDetail(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const [transitionTarget, setTransitionTarget] = useState<PageStatus | null>(null);
   const [scheduleOpened, setScheduleOpened] = useState(false);
@@ -416,6 +420,27 @@ export default function PagePageDetail(): JSX.Element {
     }
   }
 
+  /**
+   * Genera un token di anteprima e apre subito la bozza corrente in una nuova scheda
+   * (ADR-25). Il token non viene mai conservato lato client oltre questa chiamata: niente
+   * `localStorage`/store, `window.open` lo consuma e basta.
+   */
+  async function handlePreview(): Promise<void> {
+    if (!page) return;
+    setPreviewLoading(true);
+    try {
+      const { token } = await issuePagePreviewToken(page.guid);
+      window.open(`${PUBLIC_SITE_URL}/__preview/${token}`, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      notifications.show({
+        color: 'red',
+        message: getErrorMessage(err, "Errore nella generazione dell'anteprima"),
+      });
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
   /** Carica e mostra lo snapshot completo di una Revisione. */
   async function handleViewRevision(revision: PageRevisionSummary): Promise<void> {
     if (!page) return;
@@ -558,6 +583,22 @@ export default function PagePageDetail(): JSX.Element {
                 leftSection={<IconExternalLink size={16} />}
               >
                 Vedi pagina
+              </Button>
+            )}
+            {/*
+              Solo su bozza (`draft`): il backend nega il token su ogni altro stato
+              (`403`, ADR-25) — coerente con "Vedi pagina" sopra, che è l'inverso e compare
+              solo su `published`. `onClick`, non `href`: il token va generato al momento,
+              mai anticipato in un URL statico.
+            */}
+            {status === 'draft' && (
+              <Button
+                variant="default"
+                leftSection={<IconEye size={16} />}
+                loading={previewLoading}
+                onClick={() => void handlePreview()}
+              >
+                Anteprima
               </Button>
             )}
             <Button

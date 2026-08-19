@@ -46,6 +46,12 @@ export type ChangeStatusPayload = components['schemas']['ChangeStatusDto'];
 export type PageRevisionDetail = components['schemas']['PageRevisionDetailDto'];
 
 /**
+ * Token di anteprima (`POST /app/pages/:guid/preview-token`, ADR-25) — riuso diretto.
+ * `token` va aperto in `{PUBLIC_SITE_URL}/__preview/:token`, mai persistito lato client.
+ */
+export type PagePreviewToken = components['schemas']['PagePreviewTokenDto'];
+
+/**
  * Rappresentazione di una Pagina come effettivamente restituita dall'API
  * (`PageDto` corretto — vedi nota 1 sopra).
  */

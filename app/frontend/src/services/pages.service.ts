@@ -8,6 +8,7 @@ import type { Pagination, PaginationParams } from '../types/common.types';
 import type {
   ChangeStatusPayload,
   CreatePagePayload,
+  PagePreviewToken,
   PageRecord,
   PageRevisionDetail,
   PageRevisionSummary,
@@ -94,5 +95,17 @@ export async function restorePageRevision(guid: string, revisionGuid: string): P
   const { data } = await api.post<PageRecord>(
     `${PAGES_PREFIX}/${guid}/revisions/${revisionGuid}/restore`,
   );
+  return data;
+}
+
+/**
+ * `POST /app/pages/:guid/preview-token` — emette un token di anteprima della bozza
+ * (JWT dedicato, scadenza 15 minuti, non rinnovabile — ADR-25). Stessa guard
+ * RBAC/ownership della modifica della Pagina: `403` su riga altrui o pagina non più in
+ * stato `draft`, `404` se non trovata/eliminata. Il token va aperto subito in
+ * `{PUBLIC_SITE_URL}/__preview/:token`, mai persistito lato client.
+ */
+export async function issuePagePreviewToken(guid: string): Promise<PagePreviewToken> {
+  const { data } = await api.post<PagePreviewToken>(`${PAGES_PREFIX}/${guid}/preview-token`);
   return data;
 }
