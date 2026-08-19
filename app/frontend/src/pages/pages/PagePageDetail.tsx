@@ -17,6 +17,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import {
+  Badge,
   Button,
   Center,
   Code,
@@ -33,11 +34,13 @@ import {
   Text,
   Textarea,
   TextInput,
+  Tooltip,
 } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import {
+  IconAlertTriangle,
   IconChevronDown,
   IconCirclePlus,
   IconExternalLink,
@@ -81,6 +84,13 @@ import ContentCard from '../../components/ContentCard';
 import ListToolbar from '../../components/ListToolbar';
 import ResponsiveTable, { type ResponsiveTableColumn } from '../../components/ResponsiveTable';
 import ConfirmModal from '../../components/ConfirmModal';
+
+/**
+ * Scarto entro cui `updatedAt` e `publishedAt` si considerano lo stesso istante. Copre le
+ * due `new Date()` distinte scritte dalla transazione di pubblicazione; un margine così
+ * corto non può mascherare una modifica reale, che arriva sempre da una richiesta separata.
+ */
+const PUBLISH_TIMESTAMP_TOLERANCE_MS = 2000;
 
 /** Etichetta azione per ogni stato di destinazione (macchina a stati). */
 const STATUS_ACTION_LABELS: Record<PageStatus, string> = {
@@ -436,6 +446,24 @@ export default function PagePageDetail(): JSX.Element {
   const status = page.status as PageStatus;
   const allowedTransitions = PAGE_STATUS_TRANSITIONS[status] ?? [];
 
+  /**
+   * La bozza è stata toccata dopo l'ultima pubblicazione: online c'è ancora la Revisione
+   * precedente. Il confronto è fra `updatedAt` della riga e `publishedAt`, gli unici due
+   * dati già disponibili nel contratto — non serve caricare la Revisione pubblicata per
+   * saperlo. Sovrastima di proposito: anche una modifica ai soli metadati SEO conta come
+   * "non pubblicata", perché in effetti lo è.
+   *
+   * La tolleranza non è cosmetica: la pubblicazione scrive `publishedAt` e `updatedAt` con
+   * due `new Date()` distinte nella stessa transazione (`pages.service.ts`), che possono
+   * cadere su millisecondi diversi. Senza margine il badge si accenderebbe sull'istante
+   * stesso della pubblicazione, che è il momento in cui è certamente falso.
+   */
+  const hasUnpublishedChanges =
+    status === 'published' &&
+    page.publishedAt !== null &&
+    new Date(page.updatedAt).getTime() - new Date(page.publishedAt).getTime() >
+      PUBLISH_TIMESTAMP_TOLERANCE_MS;
+
   const revisionColumns: ResponsiveTableColumn<PageRevisionSummary>[] = [
     { key: 'revisionNumber', label: '#', hideInCard: true },
     { key: 'title', label: 'Titolo' },
@@ -492,6 +520,24 @@ export default function PagePageDetail(): JSX.Element {
                 ))}
               </Menu.Dropdown>
             </Menu>
+            {/*
+              Il segnale che manca di più a chi scrive: la bozza è cambiata dopo l'ultima
+              pubblicazione, quindi ciò che si vede in "Vedi pagina" non è ciò che si sta
+              modificando. Senza, l'unico modo di accorgersene è aprire il sito pubblico e
+              non trovarci le proprie modifiche.
+            */}
+            {hasUnpublishedChanges && (
+              <Tooltip
+                withArrow
+                multiline
+                w={280}
+                label="La bozza è stata modificata dopo l'ultima pubblicazione. Online resta la Revisione precedente finché non ripubblichi."
+              >
+                <Badge color="orange" variant="light" leftSection={<IconAlertTriangle size={12} />}>
+                  Modifiche non pubblicate
+                </Badge>
+              </Tooltip>
+            )}
             <Text size="sm" c="dimmed">
               Versione {page.version} · Aggiornata {formatDate(page.updatedAt)}
             </Text>
@@ -778,7 +824,9 @@ export default function PagePageDetail(): JSX.Element {
         {transitionTarget === 'published' && (
           <>
             Pubblicare questa Pagina creerà una nuova Revisione immutabile e sostituirà
-            immediatamente il contenuto pubblicato online.
+            immediatamente il contenuto pubblicato online. Viene pubblicata la bozza{' '}
+            <strong>salvata</strong>: le modifiche ai blocchi non ancora salvate dalla scheda
+            &laquo;Contenuto&raquo; restano fuori dalla Revisione.
           </>
         )}
         {transitionTarget === 'archived' && (

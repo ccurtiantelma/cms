@@ -12,7 +12,7 @@
     "js-yaml": "^4.3.0"
   },
   "scripts": {
-    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev": "concurrently -n \"BACKEND,FRONTEND,PUBLIC\" -c \"cyan,magenta,green\" \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:public-site\"",
     "dev:backend": "npm run start:dev --workspace=app/backend",
     "dev:frontend": "npm run dev --workspace=app/frontend",
     "dev:public-site": "npm run build --workspace=app/public-site && npm run start --workspace=app/public-site",
