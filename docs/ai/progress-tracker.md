@@ -4,7 +4,7 @@
 > Le AI non lo modificano autonomamente: lo stato viene aggiornato a fine feature, su
 > richiesta esplicita.
 >
-> Ultima revisione: 2026-08-19 — F03 chiusa.
+> Ultima revisione: 2026-08-19 — F04 chiusa.
 
 ---
 
@@ -56,7 +56,7 @@
 | F01 | Gestione Pagine (modello, stati, slug, revisioni) | fondativa | features/F01-gestione-pagine.md · specs/SPEC-F01-gestione-pagine.md · plans/PLAN-F01-innesto.md | ✅ Done (2026-08-17) |
 | F02 | Registro e validazione dei Blocchi | 1 | — | ⏳ Pending |
 | F03 | Superficie pubblica di lettura + cache | 2, 7 | specs/SPEC-F03-superficie-pubblica.md · plans/PLAN-F03-superficie-pubblica.md | ✅ Done (2026-08-19) |
-| F04 | Editor visivo (page builder) | 1 | — | ⏳ Pending |
+| F04 | Editor visivo (page builder) | 1 | plans/PLAN-F04-editor-visivo.md | ✅ Done (2026-08-19) |
 | F05 | Multilingua | 4 | — | ⏳ Pending |
 | F06 | Template e Sezioni globali | 1 | — | ⏳ Pending |
 | F07 | SEO per pagina | 2 | — | ⏳ Pending |
@@ -198,3 +198,89 @@ questo passaggio:
   sulla stessa macchina — il suo server compilato è rimasto attivo e raggiungibile (verificato
   `GET /api/v1/health` → `200` subito dopo), ma il watcher che lo ricompila sui cambi di file
   va riavviato manualmente da chi lavora su quel progetto.
+
+---
+
+## F04 — chiusura (2026-08-19)
+
+`docs/ai/plans/PLAN-F04-editor-visivo.md`, T1–T6 completati. Nessuna riga di backend
+toccata: il piano lo aveva previsto (`PATCH app/pages/:guid` accettava già `draftContent`,
+`POST :guid/status` già la transizione) e la previsione ha tenuto fino alla fine — nessun
+gap emerso in corso d'opera, nessun `openapi:export` necessario.
+
+**Scostamento dal piano, deciso durante l'uso e non dopo**: T2 prevedeva l'editor come rotta
+separata (`pages/:guid/editor`) raggiunta da un pulsante "Apri editor". Le correzioni 3 e 4
+del 2026-08-19 l'hanno rimosso: l'editor vive nella scheda "Contenuto" del dettaglio, e la
+pubblicazione sta nella **tendina di stato** dell'intestazione invece di avere un pulsante
+proprio nell'editor. La ragione è che una Pagina si apre in un posto solo, e una transizione
+di stato è una sola cosa: duplicarla per scheda avrebbe prodotto due strade per lo stesso
+atto. I test di T6 partono dall'interfaccia reale, non da quella descritta nel piano.
+
+**T6 — copertura di test** (test-engineer), il passaggio chiuso in questo giro:
+
+- **Unit sul motore dell'albero** — `app/frontend/src/pages/pages/editor/block-tree.utils.test.ts`,
+  29 test. Oltre al comportamento, i tre invarianti su cui poggia tutto il resto: purezza
+  (l'albero d'ingresso è congelato in profondità, così una mutazione lancerebbe `TypeError`
+  invece di passare inosservata), structural sharing (i rami non toccati conservano lo
+  **stesso riferimento** — verificato con `toBe`, mai con `toEqual`: è la proprietà che rende
+  corretti i selettori per id e regge il vincolo NFR sui re-render), e no-op che restituisce
+  lo stesso albero anziché una copia identica.
+- **Unit su undo/redo** — `app/frontend/src/hooks/useBlockEditorStore.test.ts`, 18 test. La
+  history è per comandi invertibili, non per snapshot: un `invert` sbagliato non darebbe un
+  errore ma un albero plausibile e diverso, quindi le sequenze si verificano confrontando
+  l'albero **intero** serializzato. Coperti: ritorno esatto allo stato iniziale per ciascun
+  tipo di azione e per una sequenza mista di cinque, redo invalidato da una nuova modifica
+  (compreso che non resusciti il ramo abbandonato), azioni senza effetto che non entrano in
+  history.
+- **Component test sull'ispettore** — `app/frontend/src/pages/pages/editor/PropertyInspector.test.tsx`,
+  17 test, tutti e sette i `kind` su un solo componente (è il criterio strutturale di T5).
+  `boolean` e `number` non compaiono in nessuno dei cinque tipi approvati: sono coperti
+  aggiungendo un descrittore sintetico al **registro** via mock del modulo generato — cioè
+  esattamente il gesto che T5 dichiara debba bastare, senza toccare il componente. Verificati
+  anche `mediaRef` disabilitato (nessuna finta libreria media) e `richText` come `Textarea`
+  grezza con l'avviso di sanitizzazione server-side.
+- **E2E del criterio di Done** — `e2e/tests/page-editor.spec.ts`: creazione della Pagina,
+  editor, `section` con tre figli, proprietà, riordino, eliminazione, salvataggio,
+  pubblicazione dalla tendina di stato, e verifica sull'HTML servito da `app/public-site`.
+  L'URL pubblico non è costruito dal test ma letto dal pulsante "Vedi pagina", e la lettura
+  finale è l'unico passaggio fuori dal browser. Verificata anche l'invariante di escaping
+  ereditata da ADR-21 su un `plainText` che contiene `&` e `<b>`.
+- **E2E del conflitto ottimistico** — `e2e/tests/page-editor-conflitto.spec.ts`: due sessioni
+  vere (due contesti), la seconda salva su una `version` ormai vecchia e riceve il messaggio
+  dedicato di conflitto; si verifica che il lavoro della prima sia intatto **ricaricando
+  davvero**, che la seconda non si veda sostituire di soppiatto la propria modifica non
+  salvata, e che dopo il ricarico possa salvare. Il `409` in sé era già coperto lato API
+  (`pages.e2e-spec.ts`): qui si verifica ciò che il backend da solo non può dimostrare.
+
+**Modifica alla config di Playwright, resa necessaria dai test nuovi**: `POST /auth/login` ha
+un rate limit anti brute-force di 5 tentativi al minuto per IP (`auth.controller.ts`). Con una
+login per test la suite completa lo superava e falliva per `429` — per un motivo che non ha
+nulla a che vedere con ciò che i test verificano. Introdotto un progetto `setup`
+(`e2e/tests/admin.setup.ts`) che autentica una volta e salva lo `storageState` in `e2e/.auth/`
+(gitignored). Lo stato è **opt-in**, non un default del progetto: `auth-flow.spec.ts` deve
+poter partire anonimo, ed è ancora lui a coprire il percorso di login vero.
+
+**Esito delle suite** (tutte verdi prima della chiusura): frontend unit 112/112 (64 nuovi),
+backend unit 185/185, backend integration Supertest 111/111, Playwright browser 4/4, lint
+senza errori, `npm run build --workspace=app/frontend` verde.
+
+**Limite noto dichiarato in chiusura, come richiesto in approvazione del piano**: `richText`
+si edita come HTML grezzo in una `Textarea`. È la scelta corretta per questo rilascio (una
+libreria WYSIWYG è fuori perimetro e richiederebbe comunque l'approvazione di una nuova
+dipendenza npm, CLAUDE.md § Ask first), ma va detto a chi scrive: i tag si digitano a mano.
+Un editor di testo ricco è il primo candidato del rilascio successivo.
+
+**Debito NFR non perso**: la segnalazione dei salti di livello nella gerarchia dei titoli
+(`h2` seguito da `h4`, `non-functional-requirements.md` § Accessibilità) resta fuori da F04,
+come il piano dichiarava. Non è stata implementata e non è coperta da test.
+
+**Due incoerenze osservate durante T6, non sanate qui perché fuori dal task**:
+
+1. In questa tabella F02 risulta ancora ⏳ Pending mentre F04 — che ne consuma il registro
+   generato — è chiusa. In `docs/TODO.md` F02 è "in esecuzione, T2". Lo stato reale di F02 va
+   riconciliato in un passaggio suo, non dentro la chiusura di un'altra feature.
+2. L'ambiente di verifica di questa macchina ha ancora le porte di default occupate dal
+   progetto `omnidata` (già annotato nella chiusura F03). Le suite sono state eseguite su uno
+   stack isolato temporaneo (Postgres 5442, Redis 6389, backend 3100, frontend 5175,
+   public-site 4100), senza toccare né i file del repository né i processi dell'altro
+   progetto. Nessuna configurazione permanente è stata cambiata per aggirarlo.

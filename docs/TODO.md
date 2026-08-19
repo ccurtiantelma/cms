@@ -4,10 +4,14 @@
 > attuale al prodotto completo. È il punto di ingresso per capire **a che punto siamo** e
 > **cosa serve decidere prima di procedere**.
 >
-> Creato il 2026-08-13. Ultimo aggiornamento: **2026-08-19** — **F03 chiusa**: T1–T7 di
-> `PLAN-F03-superficie-pubblica.md` completati, `SPEC-F03-superficie-pubblica.md` redatta,
-> verifica end-to-end manuale eseguita (pagina pubblicata letta via `curl` senza JavaScript).
-> Precedente: **F01 chiusa** (ADR-18/19/20 firmate, T1–T8 completati, residui chiusi),
+> Creato il 2026-08-13. Ultimo aggiornamento: **2026-08-19** — **F04 chiusa**: T1–T6 di
+> `PLAN-F04-editor-visivo.md` completati, editor a blocchi funzionante dentro la scheda
+> "Contenuto" del dettaglio Pagina, copertura di test completa (unit sul motore dell'albero e
+> su undo/redo, component test sull'ispettore, E2E del criterio di Done e del conflitto
+> ottimistico) — tutte le suite verdi. Nessuna modifica al backend è stata necessaria.
+> Precedente: **F03 chiusa** (T1–T7 di `PLAN-F03-superficie-pubblica.md`,
+> `SPEC-F03-superficie-pubblica.md` redatta, verifica end-to-end manuale via `curl`),
+> **F01 chiusa** (ADR-18/19/20 firmate, T1–T8 completati, residui chiusi),
 > **ADR-21 firmata**: voce 1.1 chiusa, e **SPEC-F02-blocchi.md approvata** da ccurti: T1 di
 > `PLAN-F02-blocchi.md` chiuso senza residui, F02 in esecuzione da T2 (registro dei tipi +
 > interprete di validazione, backend-developer).
@@ -77,7 +81,7 @@ l'editor o il SEO prima del modello di contenuto significa doverli rifare.
 | 2.1 | **F01 — Gestione Pagine** | fondativa | ✅ | Chiusa il 2026-08-17. T1–T8 completati (ADR-18/19/20 firmate, schema DB approvato, CRUD + macchina a stati + pubblicazione transazionale + revisioni + frontend). Ultimi due residui chiusi nello stesso passaggio: autore esposto in `PageRevisionSummaryDto`/`PageRevisionDetailDto`, dati di verifica T4–T8 soft-eliminati |
 | 2.2 | **F02 — Registro e validazione dei Blocchi** | 1 | ⏳ **In esecuzione — T2** | T1 chiuso: ADR-21 firmata e `SPEC-F02-blocchi.md` approvata da ccurti il 2026-08-17. In corso T2 (registro dei tipi + interprete di validazione, backend-developer). Vedi `docs/ai/plans/PLAN-F02-blocchi.md` |
 | 2.3 | **F03 — Superficie pubblica + cache** | 2, 7 | ✅ | Chiusa il 2026-08-19. T1–T7 di `PLAN-F03` completati: `SPEC-F03-superficie-pubblica.md` redatta (residuo T1); API pubblica, cache/invalidazione, test T4, `app/public-site` SSR T5, invariante di escaping + test T6 (con i due bug corretti: `writeHead` prima del render, `TS5103` su `tsconfig.json`), Docker/compose/script root T7. Verifica end-to-end manuale eseguita: pagina pubblicata dall'admin e letta via `curl` senza JavaScript |
-| 2.4 | F04 — Editor visivo (page builder) | 1 | ⏳ | Dipende da F02. **Massimo rischio di over-engineering**: va costruita per incrementi |
+| 2.4 | **F04 — Editor visivo (page builder)** | 1 | ✅ | Chiusa il 2026-08-19. T1–T6 di `PLAN-F04-editor-visivo.md` completati: motore dell'albero + store Zustand, shell dell'editor con salvataggio bozza, palette e ispettore **generati dal registro** (un solo componente per tutti i tipi, il rischio di over-engineering è stato disinnescato per costruzione), canvas con selezione/riordino/eliminazione sopra l'unico `BlockRenderer` di F02, copertura di test T6. **Scostamento dal piano**: l'editor non è una rotta separata ma la scheda "Contenuto" del dettaglio, e si pubblica dalla tendina di stato dell'intestazione (correzioni 3 e 4 del 2026-08-19). **Limite noto**: `richText` si edita come HTML grezzo — un WYSIWYG richiede l'approvazione di una nuova dipendenza npm. **Debito NFR rinviato**: la segnalazione dei salti di livello nei titoli resta fuori |
 | 2.5 | F05 — Multilingua | 4 | ⏳ | Dipende da 1.4 e F01. Da fare presto: aggiungerla a sito popolato costa migrazioni |
 | 2.6 | F06 — Template e Sezioni globali | 1 | ⏳ | Dipende da F02 |
 | 2.7 | F07 — SEO per pagina | 2 | ⏳ | Dipende da 1.8, F03, F05 |
@@ -100,6 +104,8 @@ l'editor o il SEO prima del modello di contenuto significa doverli rifare.
 | 3.5 | ADR-5, ADR-6, ADR-15 rinviano a file eliminati | ✅ | Non correggibile (ADR immutabili). Mappa dei rinvii in `progress-tracker.md` |
 | 3.6 | `AdminService` verifica l'unicità email con una `SELECT` preventiva (`admin.service.ts:187-191,264`) invece di intercettare il vincolo univoco, in violazione di `CLAUDE.md` § Backend ("unicità slug da constraint DB → 409, mai SELECT preventiva") | 🤝 | Debito preesistente a F01, non nato con `pages`. F01 (T3) ha introdotto `app/backend/src/common/db-error.mapper.ts`, riusabile per questo caso, ma **non ha rifattorizzato `AdminService`**: fuori scope del task. Va ripreso a sé, sostituendo la `SELECT` con l'`unique` constraint su `users.email` + `mapPgError` |
 | 3.7 | Il gate CI `backend-e2e` (`.github/workflows/ci.yml`) girava su Postgres/Redis reali senza `continue-on-error`, ma scattava solo su `pull_request` — mai su push diretto a `main`/`develop`, il flusso reale con cui questo repo è avanzato finora | ✅ | Chiuso il 2026-08-17, su autorizzazione esplicita: aggiunto `push: branches: [main, develop]` al trigger del workflow, accanto a `pull_request`. Un push diretto ora attiva lo stesso gate di una PR |
+| 3.8 | **Debito UI** — "Pagina genitore" (`PagePageDetail.tsx:612-616`, scheda Metadati) è un `TextInput` libero che pretende un guid di 16 caratteri esadecimali scritto a mano | ⏳ | Emerso dall'uso reale il 2026-08-19, **non è un task di F04**: la scheda Metadati è F01, l'editor non la tocca. Deve diventare una tendina con i **titoli** delle pagine (`Select` Mantine, `value` = guid, `label` = titolo), alimentata dall'elenco già esposto da `GET api/v1/app/pages`. Da chiarire quando si affronta, non ora: esclusione della pagina stessa e dei suoi discendenti dalle opzioni (un genitore ciclico oggi è impedito solo lato server), e comportamento oltre le prime N pagine (l'elenco è paginato). Nessun endpoint nuovo previsto |
+| 3.9 | **Debito UI** — il campo Locale (`PagePageDetail.tsx:605-610`) rende `it-IT` con il grigio del testo disabilitato, che si legge come placeholder "campo vuoto" invece che come valore reale | ⏳ | Emerso dall'uso reale il 2026-08-19, **non è un task di F04**. Il campo è correttamente bloccato (il locale non è modificabile dopo la creazione, F05): il difetto è solo di resa. Va mostrato come valore leggibile — dato in sola lettura anziché `TextInput disabled`, oppure `readOnly` al posto di `disabled` — conservando la descrizione "Non modificabile dopo la creazione (F05)". Stesso trattamento da valutare per ogni altro campo bloccato che espone un valore vero |
 
 ---
 
@@ -143,21 +149,30 @@ rifiutate. Se rifiutate, il codice va rimosso.
 
 ## Prossimo passo consigliato
 
-F03 è chiusa (2026-08-19): T1–T7 di `docs/ai/plans/PLAN-F03-superficie-pubblica.md` completati,
-`SPEC-F03-superficie-pubblica.md` redatta come ultimo residuo, verifica end-to-end manuale
-eseguita via `curl` senza JavaScript. F01 è chiusa e 1.1 è chiusa: ADR-21 è stata firmata il
-2026-08-17. T1 di `docs/ai/plans/PLAN-F02-blocchi.md` è chiuso senza residui: ADR-21 firmata,
-cinque tipi approvati uno per uno, `docs/ai/specs/SPEC-F02-blocchi.md` approvata da ccurti lo
-stesso giorno (body parser 1 MiB solo su superficie admin — A-F02-1 —, profilo `inline` senza
-consumatori ma coperto da T7 — A-F02-2 —, `heading` senza `h1`). Il passo in corso è **T2**
-(registro dei tipi + interprete di validazione, backend-developer). Nessun blocco
-architetturale residuo: **1.3, 1.5 e 1.9 sono state firmate il 2026-08-17** (ADR-22/23/24).
+F04 è chiusa (2026-08-19): l'editor visivo esiste, funziona e si può usare per costruire una
+Pagina vera dall'inizio alla fine. Le due voci che vengono ora, in quest'ordine:
 
-Decisione ancora aperta, non bloccante, emersa nella chiusura di F01: se serve un rate
+1. **Voce 1.10 — anteprima di una bozza non pubblicata.** È la funzione più richiesta dopo
+   l'editor stesso, e ora che l'editor c'è la sua assenza si sente a ogni modifica: si può
+   vedere solo ciò che è già pubblicato. Serve una decisione architetturale prima di
+   qualunque riga di codice (chi emette il token, quale scadenza, quale superficie di
+   lettura, come si evita l'indicizzazione di una bozza).
+2. **Riconciliare lo stato di F02.** Qui risulta "in esecuzione, T2" e in
+   `docs/ai/progress-tracker.md` risulta ⏳ Pending, ma F04 ne consuma il registro generato
+   (`app/frontend/src/types/blocks.types.ts`) ed è chiusa. Va verificato quali task di
+   `PLAN-F02-blocchi.md` sono davvero rimasti aperti e allineate le due tabelle — in un
+   passaggio suo, non dentro la chiusura di un'altra feature.
+
+Restano aperte, senza bloccare: **A6** (chatbot, F11 è ultima della fila), l'**ADR formale
+sul modello multilingua** (voce 1.4, A3 già confermata), le firme di **ADR-13 e ADR-17**
+(voci 3.1/3.2), il **debito UI** delle voci 3.8/3.9 e la **potatura delle Revisioni**, che
+va sciolta prima che esista contenuto in volume.
+
+Decisione ancora aperta, non bloccante, ereditata dalla chiusura di F01: se serve un rate
 limit differenziato fra `/auth/*` e la superficie amministrativa `app/*` (oggi quest'ultima
-non ne ha nessuno — vedi nota in `docs/ai/progress-tracker.md` § "F01 — chiusura").
-
-Tutto il resto può aspettare senza bloccare nulla.
+non ne ha nessuno). Nota emersa da T6: il limite di 5 login al minuto su `/auth/login` ha
+richiesto di autenticare la suite E2E una volta sola (`e2e/tests/admin.setup.ts`) — il
+limite è corretto, è la suite che non doveva ripetere la login.
 
 ### Debito documentale ancora aperto (segnalato, non sanato)
 
