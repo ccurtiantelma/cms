@@ -47,6 +47,15 @@ interface EditorCommand {
 interface BlockEditorState {
   tree: BlockNode[];
   selectedId: string | null;
+  /**
+   * Contatore delle inizializzazioni dell'albero. Serve a distinguere "stesso nodo, stesso
+   * id" da "stesso nodo ricaricato dal server": gli id dei nodi sopravvivono a un
+   * salvataggio, quindi da soli non dicono a un form di editing che il valore sotto di lui
+   * è cambiato — ed è cambiato davvero, perché il server sanitizza il rich text prima di
+   * persistere e restituisce il contenuto ripulito. Chi tiene una bozza locale di una prop
+   * (`PropertyInspector`) la butta via quando questo valore cambia.
+   */
+  generation: number;
   /** Pila dei comandi applicati, disponibili per `undo()`. */
   undoStack: EditorCommand[];
   /** Pila dei comandi disfatti, disponibili per `redo()`. */
@@ -95,16 +104,18 @@ function pushCommand(state: BlockEditorState, command: EditorCommand): Partial<B
 export const useBlockEditorStore = create<BlockEditorState>((set) => ({
   tree: [],
   selectedId: null,
+  generation: 0,
   undoStack: [],
   redoStack: [],
 
   initTree: (blocks) => {
-    set({
+    set((state) => ({
       tree: cloneTree(blocks),
       selectedId: null,
+      generation: state.generation + 1,
       undoStack: [],
       redoStack: [],
-    });
+    }));
   },
 
   selectNode: (id) => set({ selectedId: id }),
@@ -252,6 +263,11 @@ export function useNodeById(id: string | null | undefined): BlockNode | undefine
 /** Selettore granulare: solo l'id selezionato, senza sottoscrivere l'intero nodo. */
 export function useSelectedId(): string | null {
   return useBlockEditorStore((state) => state.selectedId);
+}
+
+/** Selettore granulare: il contatore delle inizializzazioni dell'albero (vedi `generation`). */
+export function useTreeGeneration(): number {
+  return useBlockEditorStore((state) => state.generation);
 }
 
 /** Selettore granulare: solo la radice dell'albero (uso raro — canvas T4 la consuma per iterare i nodi di primo livello). */
