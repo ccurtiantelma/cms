@@ -21,9 +21,21 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
+    // Autenticazione una volta sola per l'intera suite: `POST /auth/login` ha un
+    // rate limit anti brute-force di 5 tentativi al minuto per IP, che una login
+    // per test supererebbe facendo fallire la suite per `429` — un motivo che
+    // non ha nulla a che vedere con ciò che i test verificano. Vedi
+    // `tests/admin.setup.ts`. Lo `storageState` prodotto qui è **opt-in**, non un
+    // default del progetto: `auth-flow.spec.ts` deve poter partire anonimo.
+    {
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
     },
   ],
 });

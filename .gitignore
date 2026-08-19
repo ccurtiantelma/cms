@@ -42,3 +42,6 @@ app/backend/dist/
 # Generated (committed intentionally — do NOT add these)
 # docs/openapi.yaml → versionato
 # app/frontend/src/types/api.types.ts → versionato
+
+# Sessione autenticata generata da e2e/tests/admin.setup.ts (contiene token)
+e2e/.auth/
