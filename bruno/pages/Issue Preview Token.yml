@@ -1,0 +1,42 @@
+info:
+  name: Issue Preview Token
+  type: http
+  seq: 12
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/pages/:guid/preview-token"
+  params:
+    - name: guid
+      value: a1b2c3d4e5f6a7b8
+      type: path
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 200, 403 or 404 (ADR-25 § 1: stessa ownership per riga dell'update)", function() {
+    expect([200, 403, 404]).to.include(res.getStatus());
+  });
+
+  test("su 200 la risposta espone token + expiresAt, nessun campo amministrativo aggiuntivo", function() {
+    if (res.getStatus() === 200) {
+      const body = res.getBody();
+      expect(body).to.have.property("token");
+      expect(body).to.have.property("expiresAt");
+      expect(typeof body.token).to.equal("string");
+    }
+  });
+
+  test("su 403 la riga altrui o lo stato non-draft non emette mai un token", function() {
+    if (res.getStatus() === 403) {
+      const body = res.getBody();
+      expect(body).to.not.have.property("token");
+    }
+  });

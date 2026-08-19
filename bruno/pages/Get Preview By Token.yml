@@ -1,0 +1,46 @@
+info:
+  name: Get Preview By Token
+  type: http
+  seq: 13
+
+http:
+  method: GET
+  url: "{{baseUrl}}/preview/pages/:token"
+  params:
+    - name: token
+      value: "{{previewToken}}"
+      type: path
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 200 (token valido) o 404 uniforme (token scaduto/invalido/purpose errato/pagina inesistente o soft-eliminata) — mai 401/403 (ADR-25 § 3)", function() {
+    expect([200, 404]).to.include(res.getStatus());
+    expect(res.getStatus()).to.not.equal(401);
+    expect(res.getStatus()).to.not.equal(403);
+  });
+
+  test("su successo espone la bozza corrente (title/slug/locale/content/seo), nessun campo amministrativo", function() {
+    if (res.getStatus() === 200) {
+      const body = res.getBody();
+      expect(body).to.have.property("title");
+      expect(body).to.have.property("slug");
+      expect(body).to.have.property("locale");
+      expect(body).to.have.property("content");
+      expect(body).to.have.property("seo");
+      expect(body).to.not.have.property("guid");
+      expect(body).to.not.have.property("id");
+      expect(body).to.not.have.property("status");
+      expect(body).to.not.have.property("draftContent");
+    }
+  });
+
+  test("nessun JWT richiesto: rotta anonima per costruzione, il token nel path è la prova", function() {
+    // Nessuna Authorization inviata in questa richiesta: se il middleware
+    // auth non fosse escluso da questo prefisso, ci si aspetterebbe 401.
+    expect(res.getStatus()).to.not.equal(401);
+  });
