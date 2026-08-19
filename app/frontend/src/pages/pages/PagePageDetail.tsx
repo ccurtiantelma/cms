@@ -2,8 +2,8 @@
  * Dettaglio Pagina (F01/T8): metadati + SEO/GEO (editabili), contenuto in
  * sola lettura, cambio di stato secondo la macchina a stati esatta di
  * `pages.state-machine.ts`, cronologia Revisioni + ripristino in nuova
- * bozza. NON è l'editor visivo dei blocchi (F04): il campo `draftContent`
- * è mostrato, mai modificato da questa pagina.
+ * bozza. NON è l'editor visivo dei blocchi (F04, `PagePageEditor.tsx`, raggiungibile
+ * dal tab "Contenuto"): il campo `draftContent` è qui mostrato, mai modificato.
  */
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -33,11 +33,12 @@ import {
   IconCirclePlus,
   IconEye,
   IconHistory,
+  IconLayoutGrid,
   IconRefresh,
   IconRestore,
   IconTrash,
 } from '@tabler/icons-react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import type { AxiosError } from 'axios';
 import { getErrorMessage } from '../../utils/api.utils';
 import type { PaginationParams } from '../../types/common.types';
@@ -650,14 +651,21 @@ export default function PagePageDetail(): JSX.Element {
             </form>
           </Tabs.Panel>
 
-          {/* --- Contenuto (sola lettura — F04 fuori scope) --- */}
+          {/* --- Contenuto (sola lettura: la modifica avviene nell'editor visivo, F04) --- */}
           <Tabs.Panel value="content" pt="md">
             <Stack gap="sm">
-              <Text size="sm" c="dimmed">
-                {blockCount} {blockCount === 1 ? 'blocco' : 'blocchi'} nell&apos;albero contenuto.
-                La modifica dei blocchi non è disponibile in questa interfaccia (editor visivo —
-                F04, non ancora sviluppato).
-              </Text>
+              <Group justify="space-between">
+                <Text size="sm" c="dimmed">
+                  {blockCount} {blockCount === 1 ? 'blocco' : 'blocchi'} nell&apos;albero contenuto.
+                </Text>
+                <Button
+                  component={Link}
+                  to={`/pages/${page.guid}/editor`}
+                  leftSection={<IconLayoutGrid size={16} />}
+                >
+                  Apri editor
+                </Button>
+              </Group>
               {contentTree.length > 0 ? (
                 <BlockTreeReadOnly blocks={contentTree} />
               ) : (

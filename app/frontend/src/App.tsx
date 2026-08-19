@@ -23,6 +23,7 @@ const PageDashboard = lazy(() => import('./pages/dashboard/PageDashboard'));
 const PageProfile = lazy(() => import('./pages/profile/PageProfile'));
 const PagePages = lazy(() => import('./pages/pages/PagePages'));
 const PagePageDetail = lazy(() => import('./pages/pages/PagePageDetail'));
+const PagePageEditor = lazy(() => import('./pages/pages/PagePageEditor'));
 const PageUsers = lazy(() => import('./pages/admin/PageUsers'));
 const PageAuditLog = lazy(() => import('./pages/admin/PageAuditLog'));
 const PageThemeEditor = lazy(() => import('./pages/theme-editor/PageThemeEditor'));
@@ -117,6 +118,7 @@ export default function App(): JSX.Element {
             {/* Nessun `RequireRole`: ownership per riga (ADR-18) è applicata dal backend. */}
             <Route path="pages" element={<PagePages />} />
             <Route path="pages/:guid" element={<PagePageDetail />} />
+            <Route path="pages/:guid/editor" element={<PagePageEditor />} />
             <Route
               path="users"
               element={
