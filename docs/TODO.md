@@ -4,10 +4,13 @@
 > attuale al prodotto completo. È il punto di ingresso per capire **a che punto siamo** e
 > **cosa serve decidere prima di procedere**.
 >
-> Creato il 2026-08-13. Ultimo aggiornamento: **2026-08-17** — **F01 chiusa** (ADR-18/19/20
-> firmate, T1–T8 completati, residui chiusi), **ADR-21 firmata**: voce 1.1 chiusa, e
-> **SPEC-F02-blocchi.md approvata** da ccurti: T1 di `PLAN-F02-blocchi.md` chiuso senza residui,
-> F02 in esecuzione da T2 (registro dei tipi + interprete di validazione, backend-developer).
+> Creato il 2026-08-13. Ultimo aggiornamento: **2026-08-19** — **F03 chiusa**: T1–T7 di
+> `PLAN-F03-superficie-pubblica.md` completati, `SPEC-F03-superficie-pubblica.md` redatta,
+> verifica end-to-end manuale eseguita (pagina pubblicata letta via `curl` senza JavaScript).
+> Precedente: **F01 chiusa** (ADR-18/19/20 firmate, T1–T8 completati, residui chiusi),
+> **ADR-21 firmata**: voce 1.1 chiusa, e **SPEC-F02-blocchi.md approvata** da ccurti: T1 di
+> `PLAN-F02-blocchi.md` chiuso senza residui, F02 in esecuzione da T2 (registro dei tipi +
+> interprete di validazione, backend-developer).
 > Aggiornare a ogni passo completato o decisione presa.
 
 ## Legenda
@@ -72,7 +75,7 @@ l'editor o il SEO prima del modello di contenuto significa doverli rifare.
 |---|---|---|---|---|
 | 2.1 | **F01 — Gestione Pagine** | fondativa | ✅ | Chiusa il 2026-08-17. T1–T8 completati (ADR-18/19/20 firmate, schema DB approvato, CRUD + macchina a stati + pubblicazione transazionale + revisioni + frontend). Ultimi due residui chiusi nello stesso passaggio: autore esposto in `PageRevisionSummaryDto`/`PageRevisionDetailDto`, dati di verifica T4–T8 soft-eliminati |
 | 2.2 | **F02 — Registro e validazione dei Blocchi** | 1 | ⏳ **In esecuzione — T2** | T1 chiuso: ADR-21 firmata e `SPEC-F02-blocchi.md` approvata da ccurti il 2026-08-17. In corso T2 (registro dei tipi + interprete di validazione, backend-developer). Vedi `docs/ai/plans/PLAN-F02-blocchi.md` |
-| 2.3 | F03 — Superficie pubblica + cache | 2, 7 | ⏳ | T2–T7 di `PLAN-F03` chiusi (API pubblica, cache/invalidazione, test T4, `app/public-site` SSR T5, invariante di escaping + test T6 completo, Docker/compose/script root T7). Residuo unico: `SPEC-F03-superficie-pubblica.md` (T1) non ancora redatta/approvata — gate esplicito di chiusura in `PLAN-F03`. Nota tecnica non bloccante per F03 ma da correggere: lo step "Typecheck" del job CI `public-site` fallisce (`TS5103`, `tsconfig.json` di `app/public-site` con `ignoreDeprecations: "6.0"` incompatibile col `typescript@5.9.3` installato) — preesistente, non introdotto da T6/T7 |
+| 2.3 | **F03 — Superficie pubblica + cache** | 2, 7 | ✅ | Chiusa il 2026-08-19. T1–T7 di `PLAN-F03` completati: `SPEC-F03-superficie-pubblica.md` redatta (residuo T1); API pubblica, cache/invalidazione, test T4, `app/public-site` SSR T5, invariante di escaping + test T6 (con i due bug corretti: `writeHead` prima del render, `TS5103` su `tsconfig.json`), Docker/compose/script root T7. Verifica end-to-end manuale eseguita: pagina pubblicata dall'admin e letta via `curl` senza JavaScript |
 | 2.4 | F04 — Editor visivo (page builder) | 1 | ⏳ | Dipende da F02. **Massimo rischio di over-engineering**: va costruita per incrementi |
 | 2.5 | F05 — Multilingua | 4 | ⏳ | Dipende da 1.4 e F01. Da fare presto: aggiungerla a sito popolato costa migrazioni |
 | 2.6 | F06 — Template e Sezioni globali | 1 | ⏳ | Dipende da F02 |
@@ -139,15 +142,15 @@ rifiutate. Se rifiutate, il codice va rimosso.
 
 ## Prossimo passo consigliato
 
-F01 è chiusa e 1.1 è chiusa: ADR-21 è stata firmata il 2026-08-17. T1 di
-`docs/ai/plans/PLAN-F02-blocchi.md` è chiuso senza residui: ADR-21 firmata, cinque tipi
-approvati uno per uno, `docs/ai/specs/SPEC-F02-blocchi.md` approvata da ccurti lo stesso
-giorno (body parser 1 MiB solo su superficie admin — A-F02-1 —, profilo `inline` senza
+F03 è chiusa (2026-08-19): T1–T7 di `docs/ai/plans/PLAN-F03-superficie-pubblica.md` completati,
+`SPEC-F03-superficie-pubblica.md` redatta come ultimo residuo, verifica end-to-end manuale
+eseguita via `curl` senza JavaScript. F01 è chiusa e 1.1 è chiusa: ADR-21 è stata firmata il
+2026-08-17. T1 di `docs/ai/plans/PLAN-F02-blocchi.md` è chiuso senza residui: ADR-21 firmata,
+cinque tipi approvati uno per uno, `docs/ai/specs/SPEC-F02-blocchi.md` approvata da ccurti lo
+stesso giorno (body parser 1 MiB solo su superficie admin — A-F02-1 —, profilo `inline` senza
 consumatori ma coperto da T7 — A-F02-2 —, `heading` senza `h1`). Il passo in corso è **T2**
 (registro dei tipi + interprete di validazione, backend-developer). Nessun blocco
-architetturale residuo: **1.3, 1.5 e 1.9 sono state firmate il 2026-08-17** (ADR-22/23/24),
-quindi T1 di `docs/ai/plans/PLAN-F03-superficie-pubblica.md` è chiuso salvo la redazione di
-`SPEC-F03`, e nessuna decisione architetturale blocca più né F02 né F03.
+architetturale residuo: **1.3, 1.5 e 1.9 sono state firmate il 2026-08-17** (ADR-22/23/24).
 
 Decisione ancora aperta, non bloccante, emersa nella chiusura di F01: se serve un rate
 limit differenziato fra `/auth/*` e la superficie amministrativa `app/*` (oggi quest'ultima

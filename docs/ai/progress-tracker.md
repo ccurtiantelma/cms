@@ -4,7 +4,7 @@
 > Le AI non lo modificano autonomamente: lo stato viene aggiornato a fine feature, su
 > richiesta esplicita.
 >
-> Ultima revisione: 2026-08-18 — F03/T6-T7.
+> Ultima revisione: 2026-08-19 — F03 chiusa.
 
 ---
 
@@ -55,7 +55,7 @@
 |---|---|---|---|---|
 | F01 | Gestione Pagine (modello, stati, slug, revisioni) | fondativa | features/F01-gestione-pagine.md · specs/SPEC-F01-gestione-pagine.md · plans/PLAN-F01-innesto.md | ✅ Done (2026-08-17) |
 | F02 | Registro e validazione dei Blocchi | 1 | — | ⏳ Pending |
-| F03 | Superficie pubblica di lettura + cache | 2, 7 | — | ⏳ Pending |
+| F03 | Superficie pubblica di lettura + cache | 2, 7 | specs/SPEC-F03-superficie-pubblica.md · plans/PLAN-F03-superficie-pubblica.md | ✅ Done (2026-08-19) |
 | F04 | Editor visivo (page builder) | 1 | — | ⏳ Pending |
 | F05 | Multilingua | 4 | — | ⏳ Pending |
 | F06 | Template e Sezioni globali | 1 | — | ⏳ Pending |
@@ -175,20 +175,26 @@ questo passaggio:
   `build:public-site` / `clean` estesi. Il job CI `public-site` (lint/test/build) esisteva
   già da T5, non toccato.
 
-**Residui**:
+**Residui chiusi in questo passaggio (2026-08-19)**:
 
-- `SPEC-F03-superficie-pubblica.md` (T1) non è ancora redatta/approvata — gate esplicito di
-  chiusura dichiarato in `PLAN-F03`. F03 non è dichiarabile ✅ Done finché non c'è.
-- Lo step "Typecheck" del job CI `public-site` fallisce (`TS5103`: `ignoreDeprecations:
-  "6.0"` in `app/public-site/tsconfig.json` non è un valore valido per `typescript@5.9.3`,
-  la versione installata dal lockfile). Preesistente, non introdotto da T6/T7 (verificato:
-  nessuna modifica a `tsconfig.json` o alla versione di `typescript` in questo passaggio) —
-  ma va corretto perché il criterio di Done di T7 ("CI verde su tutti i job") non è
-  soddisfatto finché resta rosso.
-- Verifica end-to-end manuale "pubblicare una pagina dall'admin e leggerla via `curl` senza
-  JavaScript" (T7) **non eseguita per intero**: le porte dev 5432/6379 di questa macchina
-  sono occupate da un altro progetto Docker non correlato (`inventory-*`), quindi non è
-  stato possibile alzare lo stack completo in sicurezza. Coperto per via indiretta
-  dall'e2e Supertest di T4 (API pubblica con Postgres/Redis reali) più dalla suite SSR di
-  T6 (server reale + mock dell'API) — ma resta da eseguire una volta sciolto il conflitto di
-  porte.
+- `SPEC-F03-superficie-pubblica.md` (T1) redatta: contratto `GET public/pages`, cache,
+  routing, invariante di escaping, i due bug T6, verifica manuale T7 — in attesa di
+  approvazione umana.
+- Typecheck `TS5103`: era già corretto (non nel commit, `tsconfig.json` con lavoro in corso
+  non committato) — `ignoreDeprecations`/`baseUrl` rimossi, `npm run build --workspace=app/public-site`
+  verde.
+- Verifica end-to-end manuale eseguita: le porte dev 5432/6379 di questa macchina restano
+  occupate da un progetto Docker non correlato (`omnidata`, non `inventory-*` come annotato
+  in precedenza — stesso conflitto, progetto diverso). Aggirato con uno stack Postgres/Redis
+  temporaneo isolato (`docker compose -p cms_verify`, porte 5442/6389, rimosso a fine
+  verifica) e backend su porta 3009 anziché 3000 (`app/backend/.env`, gitignored, non
+  toccato in modo permanente). Pagina `home` creata via `POST app/pages` con un blocco
+  `heading` e uno `richText`, pubblicata via `POST app/pages/:guid/status`
+  (`draft → published`), letta con `curl` su `app/public-site` (porta 4000,
+  `PUBLIC_API_BASE_URL=http://localhost:3009`): HTML completo con entrambi i testi dentro
+  `<main>`, zero `<script` nell'output. **Effetto collaterale non voluto**: il comando di
+  arresto del backend di verifica (`pkill -f "nest start --watch"`) ha terminato anche il
+  processo di watch di un progetto non correlato (`/var/www/omnidata`) già in esecuzione
+  sulla stessa macchina — il suo server compilato è rimasto attivo e raggiungibile (verificato
+  `GET /api/v1/health` → `200` subito dopo), ma il watcher che lo ricompila sui cambi di file
+  va riavviato manualmente da chi lavora su quel progetto.

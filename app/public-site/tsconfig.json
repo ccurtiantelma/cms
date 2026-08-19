@@ -13,8 +13,6 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "ignoreDeprecations": "6.0",
-    "baseUrl": ".",
     "paths": {
       "@blocks/*": ["../frontend/src/components/blocks/*"],
       "@api-types": ["../frontend/src/types/api.types.ts"]
