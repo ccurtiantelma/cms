@@ -7,8 +7,11 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import * as jwt from 'jsonwebtoken';
+import type { StringValue } from 'ms';
 import { and, asc, count, desc, eq, ilike, or, SQL, sql } from 'drizzle-orm';
 import { PgColumn } from 'drizzle-orm/pg-core';
+import { AppConstants } from '../common/app-constants';
 import { DbService } from '../db/db.service';
 import { auditLogEntity, pageEntity, pageRevisionEntity } from '../db/schema';
 import { AppUserRoles } from '../common/enums';
@@ -40,6 +43,7 @@ import { UpdatePageDto } from './dto/update-page.dto';
 import { ChangeStatusDto } from './dto/change-status.dto';
 import { PageDto } from './dto/page.dto';
 import { PageRevisionDetailDto, PageRevisionSummaryDto } from './dto/page-revision.dto';
+import { PagePreviewTokenDto } from './dto/page-preview-token.dto';
 
 type PageRow = typeof pageEntity.$inferSelect;
 type PageRowWithParent = PageRow & { parent: { guid: string } | null };
@@ -50,6 +54,23 @@ type PageRevisionRowWithAuthor = PageRevisionRow & {
 
 /** Soglia di elevazione editoriale (ADR-18 § D3): sopra `Manager` l'ownership per riga non si applica. */
 const OWNERSHIP_ELEVATED_THRESHOLD = AppUserRoles.Manager;
+
+/**
+ * Scadenza del JWT di anteprima (ADR-25 § 2): fissa a 15 minuti, non
+ * rinnovabile e non configurabile via env — è una decisione dell'ADR, non
+ * un parametro di deploy (a differenza di `AppConstants.jwtExpiration`
+ * dell'access token).
+ */
+const PAGE_PREVIEW_TOKEN_EXPIRATION: StringValue = '15m';
+
+/** `purpose` fisso del JWT di anteprima (ADR-25 § 1): distingue questo token da ogni altro JWT dell'app. */
+const PAGE_PREVIEW_TOKEN_PURPOSE = 'page-preview' as const;
+
+/** Payload del JWT di anteprima, firmato/verificato con il segreto dedicato `AppConstants.pagePreviewTokenSecret`. */
+export interface PagePreviewTokenPayload {
+  pageGuid: string;
+  purpose: typeof PAGE_PREVIEW_TOKEN_PURPOSE;
+}
 
 /**
  * Esito dell'innesto della pipeline blocchi (F02/T5, ADR-21 § 3): envelope
@@ -268,6 +289,65 @@ export class PagesService {
     }
 
     return this.toDtoWithContentIssues(updatedRow, parentGuid);
+  }
+
+  /**
+   * Emette un token di anteprima della bozza corrente (ADR-25 § 1). Stessa
+   * guard di ownership dell'aggiornamento della bozza: un `User` genera
+   * l'anteprima solo delle **proprie** pagine, e solo mentre sono in stato
+   * `draft` — esattamente la stessa condizione di {@link update}, non una
+   * nuova regola. Il token è un JWT stateless, firmato con un segreto
+   * dedicato (`AppConstants.pagePreviewTokenSecret`, mai quello di
+   * access/refresh), scadenza fissa a 15 minuti, nessun refresh. Emissione
+   * audit-logged; il token stesso non finisce mai nell'audit log per
+   * intero (business-rules.md § Security).
+   */
+  async issuePreviewToken(
+    guid: string,
+    authInfo: AuthInfo,
+    ip?: string,
+  ): Promise<PagePreviewTokenDto> {
+    const row = await this.loadActiveByGuid(guid);
+
+    assertRowOwnership(
+      authInfo,
+      row,
+      OWNERSHIP_ELEVATED_THRESHOLD,
+      "Non puoi generare l'anteprima della bozza di un altro utente.",
+    );
+    if (!hasElevatedRowAccess(authInfo, OWNERSHIP_ELEVATED_THRESHOLD) && row.status !== 'draft') {
+      // Stessa condizione di update() (ADR-18 § D4): la riga È tua, ma
+      // "propria bozza" significa propria E in draft.
+      throw new ForbiddenException(
+        'Puoi generare l\'anteprima solo delle tue pagine in stato "draft".',
+      );
+    }
+
+    const payload: PagePreviewTokenPayload = {
+      pageGuid: row.guid,
+      purpose: PAGE_PREVIEW_TOKEN_PURPOSE,
+    };
+    const token = jwt.sign(payload, AppConstants.pagePreviewTokenSecret, {
+      expiresIn: PAGE_PREVIEW_TOKEN_EXPIRATION,
+    });
+    const decoded = jwt.decode(token) as { exp: number };
+    const expiresAt = new Date(decoded.exp * 1000);
+
+    this.logger.log(
+      // Solo un prefisso del token nel log (business-rules.md § Security), mai per intero.
+      `Token di anteprima emesso per pagina guid=${guid} (token prefix=${token.substring(0, 10)}...).`,
+    );
+    await this.auditLogService.log(
+      authInfo.userId,
+      'pages.preview-token.issue',
+      'pages',
+      guid,
+      undefined,
+      authInfo.impersonatedBy,
+      ip,
+    );
+
+    return { token, expiresAt };
   }
 
   /** Soft delete (Admin+, `GuardAdmin` sul controller). Traccia in audit log. */
@@ -634,6 +714,42 @@ export class PagesService {
     );
 
     return this.toDtoWithContentIssues(updatedRow, row.parent?.guid ?? null);
+  }
+
+  /**
+   * Carica il contenuto di bozza di una Pagina attiva per l'anteprima
+   * (ADR-25 § 3, T3): riusa esattamente la pipeline di lettura-tollerante
+   * già impiegata per il dettaglio Pagina ({@link migrateContentForRead} —
+   * migrazione + validazione di registro, mai sanitizzazione: quella resta
+   * un passo di scrittura), non una lettura ad-hoc. `null` se la Pagina non
+   * esiste o è stata soft-eliminata — il chiamante (`PreviewPagesService`)
+   * traduce l'assenza in `404` uniforme, indistinguibile da un token
+   * invalido/scaduto (ADR-25 § 3). Nessun controllo di ownership qui: la
+   * prova di accesso è il token già verificato dal chiamante, non
+   * l'identità di chi legge.
+   */
+  async findDraftForPreview(pageGuid: string): Promise<{
+    title: string;
+    slug: string;
+    locale: string;
+    content: Record<string, unknown>;
+    seo: Record<string, unknown>;
+  } | null> {
+    const row = await this.db.db.query.pageEntity.findFirst({
+      where: and(eq(pageEntity.guid, pageGuid), eq(pageEntity.isActive, true)),
+    });
+    if (!row) {
+      return null;
+    }
+
+    const { content } = this.migrateContentForRead(row.draftContent);
+    return {
+      title: row.title,
+      slug: row.slug,
+      locale: row.locale,
+      content,
+      seo: (row.draftSeo as Record<string, unknown>) ?? {},
+    };
   }
 
   // ─── Helpers privati ──────────────────────────────────────────────────────

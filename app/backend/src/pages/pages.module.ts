@@ -24,11 +24,16 @@ import { PublicPageCacheService } from './public-page-cache.service';
  * superfici: letto/scritto da `PublicPagesService` sul percorso di lettura,
  * invalidato da `PagesService` sui percorsi di scrittura che cambiano
  * contenuto pubblico. `CacheInvalidationQueueModule` porta il ricorso
- * BullMQ di un `DEL` fallito (ADR-23 § 6).
+ * BullMQ di un `DEL` fallito (ADR-23 § 6). `PagesService` è esportato: la
+ * rotta di anteprima (`PreviewPagesModule`, ADR-25 § 3, terzo prefisso
+ * accanto ad `app/`/`public/`) riusa {@link PagesService.findDraftForPreview}
+ * — stessa pipeline di lettura-tollerante del dettaglio Pagina, mai una
+ * lettura ad-hoc duplicata in un altro modulo.
  */
 @Module({
   imports: [DbModule, BlocksModule, CacheInvalidationQueueModule],
   controllers: [PagesController, PublicPagesController],
   providers: [PagesService, PublicPagesService, PublicPageCacheService],
+  exports: [PagesService],
 })
 export class PagesModule {}

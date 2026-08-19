@@ -23,6 +23,7 @@ import { UpdatePageDto } from './dto/update-page.dto';
 import { ChangeStatusDto } from './dto/change-status.dto';
 import { PageDto } from './dto/page.dto';
 import { PageRevisionDetailDto, PageRevisionSummaryDto } from './dto/page-revision.dto';
+import { PagePreviewTokenDto } from './dto/page-preview-token.dto';
 
 /**
  * CRUD amministrativo delle Pagine (F01/T4). Nessun guard di ruolo su
@@ -130,6 +131,28 @@ export class PagesController {
   ): Promise<PageDto> {
     const authInfo = req['authInfo'] as AuthInfo;
     return this.pagesService.update(guid, dto, authInfo);
+  }
+
+  /**
+   * Emette un token di anteprima della bozza corrente (ADR-25 § 1). Nessun
+   * `@UseGuards` di ruolo: stessa ownership per riga dell'aggiornamento
+   * della bozza (`update`), applicata nel service — un `User` può generare
+   * l'anteprima solo delle proprie pagine in stato `draft`.
+   */
+  @Post(':guid/preview-token')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Emette un token di anteprima della bozza corrente (15 minuti, non rinnovabile)',
+  })
+  @ApiResponse({ status: 200, description: 'Token emesso', type: PagePreviewTokenDto })
+  @ApiResponse({ status: 403, description: 'Riga altrui, o propria ma non più in stato draft' })
+  @ApiResponse({ status: 404, description: 'Pagina non trovata o eliminata' })
+  async issuePreviewToken(
+    @Param('guid') guid: string,
+    @Req() req: Request,
+  ): Promise<PagePreviewTokenDto> {
+    const authInfo = req['authInfo'] as AuthInfo;
+    return this.pagesService.issuePreviewToken(guid, authInfo, req.ip);
   }
 
   /** Elimina (soft-delete) una Pagina — Admin+. */

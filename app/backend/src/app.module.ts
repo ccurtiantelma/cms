@@ -21,6 +21,7 @@ import { RealtimeModule } from './realtime/realtime.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { PagesModule } from './pages/pages.module';
+import { PreviewPagesModule } from './preview-pages/preview-pages.module';
 
 @Module({
   imports: [
@@ -35,6 +36,9 @@ import { PagesModule } from './pages/pages.module';
         DATABASE_URL: Joi.string().required(),
         REDIS_URL: Joi.string().required(),
         SECURITY_KEY: Joi.string().required(),
+        // Segreto dedicato del JWT di anteprima di una bozza (ADR-25 § 1),
+        // volutamente distinto da SECURITY_KEY (access/refresh).
+        PAGE_PREVIEW_TOKEN_SECRET: Joi.string().required(),
         COOKIE_SECRET: Joi.string().default('change_me_cookie_secret'),
         COOKIE_DOMAIN: Joi.string().default('localhost'),
         // Allineato ad AppConstants.jwtExpiration (fix: entrambi i default devono coincidere).
@@ -118,6 +122,7 @@ import { PagesModule } from './pages/pages.module';
     // nessun endpoint/interceptor registrato per i progetti che non lo abilitano.
     ...(AppConstants.metricsEnabled ? [MetricsModule] : []),
     PagesModule,
+    PreviewPagesModule,
     // TODO: aggiungere qui i moduli applicativi del CMS man mano che vengono creati.
   ],
   controllers: [],
@@ -138,6 +143,10 @@ export class AppModule {
         // Superficie pubblica di lettura (F03/T2, constitution.md § Convenzioni
         // API): anonima per costruzione, mai dietro `AuthMiddleware`.
         { path: 'public/*path', method: RequestMethod.ALL },
+        // Superficie di anteprima di una bozza (ADR-25 § 3): anonima per
+        // costruzione, il token stesso è la prova di accesso — non un JWT
+        // di sessione, quindi mai dietro `AuthMiddleware`.
+        { path: 'preview/*path', method: RequestMethod.ALL },
         // `/metrics` (ADR-15) NON va escluso qui: essendo montato fuori dal
         // prefisso globale `api/v1` (vedi main.ts), questo `.exclude()` finirebbe
         // per confrontarsi con `api/v1/metrics` (mai servito) e non con il path

@@ -22,6 +22,8 @@ process.env.DATABASE_URL =
 process.env.REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379/1';
 process.env.SECURITY_KEY =
   process.env.SECURITY_KEY || 'e2e_test_security_key_min_32_characters_long';
+process.env.PAGE_PREVIEW_TOKEN_SECRET =
+  process.env.PAGE_PREVIEW_TOKEN_SECRET || 'e2e_test_preview_token_secret_min_32_chars';
 process.env.COOKIE_SECRET = process.env.COOKIE_SECRET || 'e2e_test_cookie_secret';
 process.env.COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || 'localhost';
 process.env.JWT_EXPIRATION = process.env.JWT_EXPIRATION || '15m';

@@ -92,6 +92,16 @@ export class AppConstants {
   /** TTL del cookie/refresh token opaco `rtk`, in secondi (default 7 giorni). */
   static readonly rtkExpiration = num('RTK_EXPIRATION', 604800);
 
+  /**
+   * Segreto **dedicato** del JWT di anteprima di una bozza (ADR-25 § 1):
+   * volutamente distinto da `securityKey` (access/refresh) per limitare il
+   * danno di una fuga a questo solo uso. La durata del token (15 minuti,
+   * non rinnovabile) è fissata dalla decisione dell'ADR e non è
+   * configurabile via env: vive come costante nel codice del modulo
+   * `pages`, non qui.
+   */
+  static readonly pagePreviewTokenSecret = str('PAGE_PREVIEW_TOKEN_SECRET');
+
   static readonly frontendUrl = str('FRONTEND_URL', 'http://localhost:5173');
   /**
    * Origine del sito pubblico SSR (`app/public-site`, ADR-22/F03/T5), workspace

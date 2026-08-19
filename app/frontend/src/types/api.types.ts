@@ -590,6 +590,23 @@ export interface paths {
         patch: operations["PagesController_update"];
         trace?: never;
     };
+    "/api/v1/app/pages/{guid}/preview-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Emette un token di anteprima della bozza corrente (15 minuti, non rinnovabile) */
+        post: operations["PagesController_issuePreviewToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/app/pages/{guid}/status": {
         parameters: {
             query?: never;
@@ -667,6 +684,23 @@ export interface paths {
         };
         /** Risolve un percorso pubblico alla Pagina pubblicata corrispondente */
         get: operations["PublicPagesController_getPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/preview/pages/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Legge la bozza corrente di una Pagina tramite token di anteprima */
+        get: operations["PreviewPagesController_getByToken"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1763,6 +1797,19 @@ export interface components {
             /** @description Metadati SEO/GEO aggiornati (sostituiscono integralmente i precedenti) */
             draftSeo?: components["schemas"]["PageSeoDto"];
         };
+        PagePreviewTokenDto: {
+            /**
+             * @description JWT di anteprima, firmato con un segreto dedicato (mai quello di access/refresh). Claim: pageGuid, purpose="page-preview", exp a 15 minuti dall'emissione. Va passato a "GET api/v1/preview/pages/:token" (rotta separata, mai app/ o public/).
+             * @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+             */
+            token: string;
+            /**
+             * Format: date-time
+             * @description Scadenza del token (15 minuti dall'emissione, non rinnovabile: nessun refresh).
+             * @example 2026-08-19T10:15:00.000Z
+             */
+            expiresAt: string;
+        };
         ChangeStatusDto: {
             /**
              * @description Stato di destinazione
@@ -1845,6 +1892,31 @@ export interface components {
                 [key: string]: unknown;
             };
             /** @description Metadati SEO/GEO della Revisione pubblicata */
+            seo: {
+                [key: string]: unknown;
+            };
+        };
+        PagePreviewContentDto: {
+            /**
+             * @description Titolo della Pagina, snapshot della bozza corrente
+             * @example Chi siamo (bozza)
+             */
+            title: string;
+            /**
+             * @description Slug dell'ultimo segmento del percorso, snapshot della bozza corrente
+             * @example chi-siamo
+             */
+            slug: string;
+            /**
+             * @description Locale della Pagina
+             * @example it-IT
+             */
+            locale: string;
+            /** @description Albero di blocchi della bozza corrente, già migrato alla forma corrente ({version, blocks}) */
+            content: {
+                [key: string]: unknown;
+            };
+            /** @description Metadati SEO/GEO della bozza corrente */
             seo: {
                 [key: string]: unknown;
             };
@@ -3219,6 +3291,42 @@ export interface operations {
             };
         };
     };
+    PagesController_issuePreviewToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Token emesso */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagePreviewTokenDto"];
+                };
+            };
+            /** @description Riga altrui, o propria ma non più in stato draft */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pagina non trovata o eliminata */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     PagesController_changeStatus: {
         parameters: {
             query?: never;
@@ -3415,6 +3523,36 @@ export interface operations {
                 content?: never;
             };
             /** @description Nessuna Pagina pubblicata a questo percorso (inesistente, non pubblicata, o non servibile) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PreviewPagesController_getByToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description JWT di anteprima emesso da POST app/pages/:guid/preview-token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bozza corrente della Pagina */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagePreviewContentDto"];
+                };
+            };
+            /** @description Token invalido, scaduto, purpose errato, o pagina inesistente/soft-eliminata (404 uniforme, mai 401/403) */
             404: {
                 headers: {
                     [name: string]: unknown;

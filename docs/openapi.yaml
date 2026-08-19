@@ -1000,6 +1000,33 @@ paths:
       summary: Elimina (soft-delete) una Pagina (Admin+)
       tags:
         - Pages
+  /api/v1/app/pages/{guid}/preview-token:
+    post:
+      operationId: PagesController_issuePreviewToken
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Token emesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagePreviewTokenDto'
+        '403':
+          description: Riga altrui, o propria ma non più in stato draft
+        '404':
+          description: Pagina non trovata o eliminata
+      security:
+        - access-token: []
+      summary: >-
+        Emette un token di anteprima della bozza corrente (15 minuti, non
+        rinnovabile)
+      tags:
+        - Pages
   /api/v1/app/pages/{guid}/status:
     post:
       operationId: PagesController_changeStatus
@@ -1154,6 +1181,30 @@ paths:
       summary: Risolve un percorso pubblico alla Pagina pubblicata corrispondente
       tags:
         - Public Pages
+  /api/v1/preview/pages/{token}:
+    get:
+      operationId: PreviewPagesController_getByToken
+      parameters:
+        - name: token
+          required: true
+          in: path
+          description: JWT di anteprima emesso da POST app/pages/:guid/preview-token
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Bozza corrente della Pagina
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagePreviewContentDto'
+        '404':
+          description: >-
+            Token invalido, scaduto, purpose errato, o pagina
+            inesistente/soft-eliminata (404 uniforme, mai 401/403)
+      summary: Legge la bozza corrente di una Pagina tramite token di anteprima
+      tags:
+        - Preview Pages
 info:
   title: CMS API
   description: >-
@@ -2696,6 +2747,27 @@ components:
             - $ref: '#/components/schemas/PageSeoDto'
       required:
         - version
+    PagePreviewTokenDto:
+      type: object
+      properties:
+        token:
+          type: string
+          description: >-
+            JWT di anteprima, firmato con un segreto dedicato (mai quello di
+            access/refresh). Claim: pageGuid, purpose="page-preview", exp a 15
+            minuti dall'emissione. Va passato a "GET
+            api/v1/preview/pages/:token" (rotta separata, mai app/ o public/).
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        expiresAt:
+          format: date-time
+          type: string
+          description: >-
+            Scadenza del token (15 minuti dall'emissione, non rinnovabile:
+            nessun refresh).
+          example: '2026-08-19T10:15:00.000Z'
+      required:
+        - token
+        - expiresAt
     ChangeStatusDto:
       type: object
       properties:
@@ -2811,6 +2883,39 @@ components:
         seo:
           type: object
           description: Metadati SEO/GEO della Revisione pubblicata
+          additionalProperties: true
+      required:
+        - title
+        - slug
+        - locale
+        - content
+        - seo
+    PagePreviewContentDto:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Titolo della Pagina, snapshot della bozza corrente
+          example: Chi siamo (bozza)
+        slug:
+          type: string
+          description: >-
+            Slug dell'ultimo segmento del percorso, snapshot della bozza
+            corrente
+          example: chi-siamo
+        locale:
+          type: string
+          description: Locale della Pagina
+          example: it-IT
+        content:
+          type: object
+          description: >-
+            Albero di blocchi della bozza corrente, già migrato alla forma
+            corrente ({version, blocks})
+          additionalProperties: true
+        seo:
+          type: object
+          description: Metadati SEO/GEO della bozza corrente
           additionalProperties: true
       required:
         - title
