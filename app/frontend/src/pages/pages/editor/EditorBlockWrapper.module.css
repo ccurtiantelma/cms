@@ -1,0 +1,82 @@
+/* Chrome dell'editor attorno a un nodo renderizzato. Vedi EditorBlockWrapper.tsx. */
+
+.wrapper {
+  position: relative;
+  border: 1px dashed transparent;
+  border-radius: 6px;
+  padding: 4px 4px 4px 4px;
+  transition: border-color 120ms ease;
+}
+
+.wrapper:hover {
+  border-color: var(--mantine-color-gray-4);
+}
+
+.selected,
+.selected:hover {
+  border-style: solid;
+  border-color: var(--mantine-color-blue-5);
+}
+
+/* Nodo respinto dall'ultima validazione server-side (400 con path del colpevole). */
+.invalid,
+.invalid:hover {
+  border-style: solid;
+  border-color: var(--mantine-color-red-6);
+  background: var(--mantine-color-red-light);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  opacity: 0.35;
+  transition: opacity 120ms ease;
+}
+
+.wrapper:hover > .toolbar,
+.selected > .toolbar,
+.invalid > .toolbar {
+  opacity: 1;
+}
+
+/* Etichetta cliccabile: seleziona il blocco anche da tastiera. */
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--mantine-color-dimmed);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.label:hover,
+.label:focus-visible {
+  background: var(--mantine-color-gray-1);
+  color: var(--mantine-color-text);
+}
+
+/* Contenitore senza figli: senza questo segnaposto non sarebbe visibile né cliccabile. */
+.emptyContainer {
+  border: 1px dashed var(--mantine-color-gray-4);
+  border-radius: 6px;
+  padding: 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--mantine-color-dimmed);
+}
+
+/* Blocco che non produce output visibile (es. titolo con testo ancora vuoto). */
+.emptyLeaf {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--mantine-color-dimmed);
+}
+
+.childrenArea {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
