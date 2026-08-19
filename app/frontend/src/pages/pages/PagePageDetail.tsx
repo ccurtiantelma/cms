@@ -1,20 +1,29 @@
 /**
- * Dettaglio Pagina (F01/T8): metadati + SEO/GEO (editabili), contenuto in
- * sola lettura, cambio di stato secondo la macchina a stati esatta di
- * `pages.state-machine.ts`, cronologia Revisioni + ripristino in nuova
- * bozza. NON è l'editor visivo dei blocchi (F04, `PagePageEditor.tsx`, raggiungibile
- * dal tab "Contenuto"): il campo `draftContent` è qui mostrato, mai modificato.
+ * Dettaglio Pagina (F01/T8 + F04): l'unica destinazione di una Pagina. Metadati, SEO e
+ * GEO su schede separate — sono cose diverse e si compilano in momenti diversi —,
+ * contenuto modificato dall'editor visivo a blocchi (F04, `editor/BlockEditorPanel.tsx`)
+ * nella scheda "Contenuto", cronologia Revisioni + ripristino in nuova bozza.
+ *
+ * Due scelte di interfaccia con un motivo, non estetiche:
+ * - **Lo stato è una tendina nell'intestazione**, non una scheda: una scheda per una sola
+ *   voce è spazio sprecato, e lo stato va letto sempre, non cercato. La tendina offre solo
+ *   le transizioni ammesse da `PAGE_STATUS_TRANSITIONS` per lo stato corrente — mai
+ *   l'elenco completo degli stati, che porterebbe l'utente a scegliere qualcosa che il
+ *   server rifiuta con `400`.
+ * - **"Vedi pagina" compare solo su una Pagina pubblicata**, perché la superficie pubblica
+ *   serve solo contenuto `published` (ADR-24). L'anteprima di una bozza non è un pulsante
+ *   mancante ma un meccanismo che non esiste ancora (token di anteprima): è registrata come
+ *   voce aperta in `docs/TODO.md` § FASE 1.
  */
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Badge,
-  Box,
   Button,
   Center,
   Code,
   Divider,
   Group,
   Loader,
+  Menu,
   Modal,
   ScrollArea,
   Select,
@@ -24,21 +33,21 @@ import {
   Text,
   Textarea,
   TextInput,
-  Title,
 } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import {
+  IconChevronDown,
   IconCirclePlus,
+  IconExternalLink,
   IconEye,
   IconHistory,
-  IconLayoutGrid,
   IconRefresh,
   IconRestore,
   IconTrash,
 } from '@tabler/icons-react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import type { AxiosError } from 'axios';
 import { getErrorMessage } from '../../utils/api.utils';
 import type { PaginationParams } from '../../types/common.types';
@@ -64,6 +73,8 @@ import {
   type UpdatePagePayload,
 } from '../../types/pages.types';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
+import { usePublicPageUrl } from '../../hooks/usePublicPageUrl';
+import BlockEditorPanel from './editor/BlockEditorPanel';
 import PageHeader from '../../components/PageHeader';
 import PageNotFound from '../../components/PageNotFound';
 import ContentCard from '../../components/ContentCard';
@@ -79,13 +90,6 @@ const STATUS_ACTION_LABELS: Record<PageStatus, string> = {
   published: 'Pubblica',
   archived: 'Archivia',
 };
-
-/** Blocco dell'albero contenuto — sola lettura, forma non validata qui (F04 non è in scope). */
-interface ContentBlockNode {
-  id?: unknown;
-  type?: unknown;
-  children?: ContentBlockNode[];
-}
 
 /** Valori del form Metadati + SEO/GEO (locale e contenuto non sono editabili qui). */
 interface MetadataFormValues {
@@ -105,16 +109,6 @@ interface MetadataFormValues {
   entities: string;
   aiPolicyAllowed: boolean;
   faq: PageFaqEntry[];
-}
-
-/** Conta ricorsivamente i blocchi dell'albero contenuto (sola lettura). */
-function countBlocks(blocks: ContentBlockNode[] | undefined): number {
-  if (!Array.isArray(blocks)) return 0;
-  return blocks.reduce(
-    (acc, block) =>
-      acc + 1 + countBlocks(Array.isArray(block.children) ? block.children : undefined),
-    0,
-  );
 }
 
 /** Divide un testo multi-riga in un array di stringhe non vuote, o `undefined` se vuoto. */
@@ -182,30 +176,7 @@ function pageToFormValues(page: PageRecord): MetadataFormValues {
   };
 }
 
-/** Elenco ricorsivo (sola lettura) dell'albero blocchi — nessun rendering di contenuto (F04 fuori scope). */
-function BlockTreeReadOnly({ blocks }: { blocks: ContentBlockNode[] }): JSX.Element {
-  return (
-    <Box component="ul" pl="md">
-      {blocks.map((block, index) => {
-        const key = typeof block.id === 'string' ? block.id : `${index}`;
-        const children = Array.isArray(block.children) ? block.children : [];
-        return (
-          <Box component="li" key={key}>
-            <Text size="sm">
-              <Code>{typeof block.type === 'string' ? block.type : 'sconosciuto'}</Code>{' '}
-              <Text span c="dimmed" size="xs">
-                ({key}, {children.length} figli)
-              </Text>
-            </Text>
-            {children.length > 0 && <BlockTreeReadOnly blocks={children} />}
-          </Box>
-        );
-      })}
-    </Box>
-  );
-}
-
-/** Pagina di dettaglio di una Pagina (chrome amministrativa, F01/T8). */
+/** Pagina di dettaglio di una Pagina (chrome amministrativa, F01/T8 + editor F04). */
 export default function PagePageDetail(): JSX.Element {
   const { guid } = useParams<{ guid: string }>();
 
@@ -295,6 +266,9 @@ export default function PagePageDetail(): JSX.Element {
     errorMessage: 'Errore nel caricamento delle Revisioni',
     enabled: !!guid,
   });
+
+  /** URL pubblico della Pagina — `null` finché non è pubblicata (ADR-24). */
+  const publicUrl = usePublicPageUrl(page);
 
   /**
    * Notifica dedicata di conflitto di editing (`409 PAGE_VERSION_CONFLICT`),
@@ -461,8 +435,6 @@ export default function PagePageDetail(): JSX.Element {
 
   const status = page.status as PageStatus;
   const allowedTransitions = PAGE_STATUS_TRANSITIONS[status] ?? [];
-  const contentTree = (page.draftContent?.blocks as ContentBlockNode[] | undefined) ?? [];
-  const blockCount = countBlocks(contentTree);
 
   const revisionColumns: ResponsiveTableColumn<PageRevisionSummary>[] = [
     { key: 'revisionNumber', label: '#', hideInCard: true },
@@ -483,38 +455,105 @@ export default function PagePageDetail(): JSX.Element {
       <ContentCard>
         <Group justify="space-between" mb="md">
           <Group gap="sm">
-            <Badge color={PAGE_STATUS_COLORS[status] ?? 'gray'} size="lg">
-              {PAGE_STATUS_LABELS[status] ?? status}
-            </Badge>
+            {/*
+              Tendina di stato: le voci sono le sole transizioni ammesse dallo stato
+              corrente, non l'elenco degli stati. Un menu con lo stato corrente fra le
+              opzioni sarebbe fuorviante (sceglierlo non è una transizione) e uno con tutti
+              gli stati produrrebbe `400` prevedibili.
+            */}
+            <Menu shadow="md" position="bottom-start" withinPortal disabled={submitting}>
+              <Menu.Target>
+                <Button
+                  variant="light"
+                  color={PAGE_STATUS_COLORS[status] ?? 'gray'}
+                  rightSection={<IconChevronDown size={16} />}
+                  disabled={allowedTransitions.length === 0}
+                >
+                  {PAGE_STATUS_LABELS[status] ?? status}
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Label>Transizioni ammesse</Menu.Label>
+                {allowedTransitions.map((target) => (
+                  <Menu.Item
+                    key={target}
+                    color={PAGE_STATUS_COLORS[target]}
+                    onClick={() => {
+                      if (target === 'scheduled') {
+                        setScheduledAt(null);
+                        setScheduleOpened(true);
+                      } else {
+                        setTransitionTarget(target);
+                      }
+                    }}
+                  >
+                    {STATUS_ACTION_LABELS[target]}
+                  </Menu.Item>
+                ))}
+              </Menu.Dropdown>
+            </Menu>
             <Text size="sm" c="dimmed">
               Versione {page.version} · Aggiornata {formatDate(page.updatedAt)}
             </Text>
           </Group>
-          <Button
-            variant="default"
-            leftSection={<IconRefresh size={16} />}
-            onClick={() => void loadPage()}
-          >
-            Ricarica
-          </Button>
+          <Group gap="sm">
+            {/*
+              Solo su Pagina pubblicata: è l'unico stato che la superficie pubblica serve.
+              È un vero `href` (non un `onClick` che apre una finestra) così restano
+              disponibili apri-in-nuova-scheda, copia indirizzo e tasto centrale.
+            */}
+            {publicUrl && (
+              <Button
+                component="a"
+                href={publicUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="default"
+                leftSection={<IconExternalLink size={16} />}
+              >
+                Vedi pagina
+              </Button>
+            )}
+            <Button
+              variant="default"
+              leftSection={<IconRefresh size={16} />}
+              onClick={() => void loadPage()}
+            >
+              Ricarica
+            </Button>
+          </Group>
         </Group>
 
-        <Tabs defaultValue="metadata" keepMounted={false}>
+        {/*
+          `keepMounted` (default) e non `false`: l'albero in editing della scheda
+          "Contenuto" vive in uno store di sessione, ma smontare il pannello lo
+          reinizializzerebbe dalla bozza persistita — passare a "SEO" e tornare indietro
+          butterebbe via le modifiche ai blocchi non ancora salvate.
+        */}
+        <Tabs defaultValue="metadata">
           <Tabs.List>
-            <Tabs.Tab value="metadata">Metadati &amp; SEO</Tabs.Tab>
+            <Tabs.Tab value="metadata">Metadati</Tabs.Tab>
             <Tabs.Tab value="content">Contenuto</Tabs.Tab>
-            <Tabs.Tab value="status">Stato</Tabs.Tab>
+            <Tabs.Tab value="seo">SEO</Tabs.Tab>
+            <Tabs.Tab value="geo">GEO</Tabs.Tab>
             <Tabs.Tab value="revisions" leftSection={<IconHistory size={14} />}>
               Revisioni
             </Tabs.Tab>
           </Tabs.List>
 
-          {/* --- Metadati + SEO/GEO --- */}
+          {/*
+            Metadati, SEO e GEO sono tre schede ma **un solo** `useForm` e un solo
+            `PATCH`: sono campi della stessa Pagina, e il lock ottimistico è per riga, non
+            per sezione. Salvare da una qualunque delle tre invia sempre l'intero payload —
+            l'alternativa (tre salvataggi parziali) moltiplicherebbe i `409` senza dare
+            nulla in cambio.
+          */}
+
+          {/* --- Metadati (identità della Pagina: titolo, slug, posizione) --- */}
           <Tabs.Panel value="metadata" pt="md">
             <form onSubmit={form.onSubmit((values) => void handleMetadataSubmit(values))}>
               <Stack gap="lg">
                 <Stack gap="sm">
-                  <Title order={4}>Metadati</Title>
                   <TextInput label="Titolo" withAsterisk {...form.getInputProps('title')} />
                   <TextInput label="Slug" withAsterisk {...form.getInputProps('slug')} />
                   <TextInput
@@ -530,10 +569,29 @@ export default function PagePageDetail(): JSX.Element {
                   />
                 </Stack>
 
-                <Divider />
+                <Group justify="flex-end">
+                  <Button type="submit" loading={submitting} disabled={!form.isValid()}>
+                    Salva
+                  </Button>
+                </Group>
+              </Stack>
+            </form>
+          </Tabs.Panel>
 
+          {/* --- Contenuto: l'editor visivo a blocchi (F04) --- */}
+          <Tabs.Panel value="content" pt="md">
+            <BlockEditorPanel
+              page={page}
+              onPageUpdated={setPage}
+              onVersionConflict={notifyVersionConflict}
+            />
+          </Tabs.Panel>
+
+          {/* --- SEO (motori di ricerca classici) --- */}
+          <Tabs.Panel value="seo" pt="md">
+            <form onSubmit={form.onSubmit((values) => void handleMetadataSubmit(values))}>
+              <Stack gap="lg">
                 <Stack gap="sm">
-                  <Title order={4}>SEO</Title>
                   <TextInput label="Meta title" {...form.getInputProps('metaTitle')} />
                   <Textarea
                     label="Meta description"
@@ -575,10 +633,24 @@ export default function PagePageDetail(): JSX.Element {
                   />
                 </Stack>
 
-                <Divider />
+                <Group justify="flex-end">
+                  <Button type="submit" loading={submitting} disabled={!form.isValid()}>
+                    Salva
+                  </Button>
+                </Group>
+              </Stack>
+            </form>
+          </Tabs.Panel>
 
+          {/* --- GEO (motori generativi): non è "SEO avanzato", è un altro consumatore --- */}
+          <Tabs.Panel value="geo" pt="md">
+            <form onSubmit={form.onSubmit((values) => void handleMetadataSubmit(values))}>
+              <Stack gap="lg">
                 <Stack gap="sm">
-                  <Title order={4}>GEO (motori generativi)</Title>
+                  <Text size="sm" c="dimmed">
+                    GEO = Generative Engine Optimization: come il contenuto viene riassunto e citato
+                    dai motori generativi, non come viene indicizzato dai motori di ricerca.
+                  </Text>
                   <Textarea
                     label="Riassunto sintetico (aiSummary)"
                     autosize
@@ -649,70 +721,6 @@ export default function PagePageDetail(): JSX.Element {
                 </Group>
               </Stack>
             </form>
-          </Tabs.Panel>
-
-          {/* --- Contenuto (sola lettura: la modifica avviene nell'editor visivo, F04) --- */}
-          <Tabs.Panel value="content" pt="md">
-            <Stack gap="sm">
-              <Group justify="space-between">
-                <Text size="sm" c="dimmed">
-                  {blockCount} {blockCount === 1 ? 'blocco' : 'blocchi'} nell&apos;albero contenuto.
-                </Text>
-                <Button
-                  component={Link}
-                  to={`/pages/${page.guid}/editor`}
-                  leftSection={<IconLayoutGrid size={16} />}
-                >
-                  Apri editor
-                </Button>
-              </Group>
-              {contentTree.length > 0 ? (
-                <BlockTreeReadOnly blocks={contentTree} />
-              ) : (
-                <Text size="sm" c="dimmed">
-                  Albero contenuto vuoto.
-                </Text>
-              )}
-              <Divider label="JSON grezzo" labelPosition="left" />
-              <ScrollArea.Autosize mah={400}>
-                <Code block>{JSON.stringify(page.draftContent, null, 2)}</Code>
-              </ScrollArea.Autosize>
-            </Stack>
-          </Tabs.Panel>
-
-          {/* --- Cambio di stato --- */}
-          <Tabs.Panel value="status" pt="md">
-            <Stack gap="md">
-              <Text size="sm">
-                Stato corrente:{' '}
-                <Badge color={PAGE_STATUS_COLORS[status]}>{PAGE_STATUS_LABELS[status]}</Badge>
-              </Text>
-              {allowedTransitions.length === 0 ? (
-                <Text size="sm" c="dimmed">
-                  Nessuna transizione ammessa da questo stato.
-                </Text>
-              ) : (
-                <Group>
-                  {allowedTransitions.map((target) => (
-                    <Button
-                      key={target}
-                      variant="light"
-                      color={PAGE_STATUS_COLORS[target]}
-                      onClick={() => {
-                        if (target === 'scheduled') {
-                          setScheduledAt(null);
-                          setScheduleOpened(true);
-                        } else {
-                          setTransitionTarget(target);
-                        }
-                      }}
-                    >
-                      {STATUS_ACTION_LABELS[target]}
-                    </Button>
-                  ))}
-                </Group>
-              )}
-            </Stack>
           </Tabs.Panel>
 
           {/* --- Cronologia Revisioni + ripristino --- */}
