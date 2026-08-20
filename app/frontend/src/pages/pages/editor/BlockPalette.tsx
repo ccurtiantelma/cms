@@ -9,7 +9,16 @@
  */
 import { Fragment } from 'react';
 import { Button, Menu } from '@mantine/core';
-import { IconPlus } from '@tabler/icons-react';
+import {
+  IconAlignLeft,
+  IconBox,
+  IconHandClick,
+  IconHeading,
+  IconLayoutBoard,
+  IconPhoto,
+  IconPlus,
+  type Icon,
+} from '@tabler/icons-react';
 import {
   BLOCK_TYPES,
   type BlockPropDescriptor,
@@ -21,6 +30,28 @@ import { useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
 
 /** Categoria mostrata per i tipi che non ne dichiarano una nel registro. */
 const UNCATEGORIZED = 'Altro';
+
+/**
+ * Mappa esplicita `meta.icon` (registro backend, ADR-30 § 1) → componente Tabler. Nessun
+ * import dinamico/stringa-to-component: un nome fuori da questa mappa (tipo nuovo senza
+ * voce qui, o refuso nel registro) ricade sul fallback generico, mai su un crash a runtime.
+ */
+const ICON_MAP: Record<string, Icon> = {
+  'layout-board': IconLayoutBoard,
+  heading: IconHeading,
+  'align-left': IconAlignLeft,
+  photo: IconPhoto,
+  'hand-click': IconHandClick,
+};
+
+/** Icona generica per un `meta.icon` assente o non presente in {@link ICON_MAP}. */
+const FALLBACK_ICON: Icon = IconBox;
+
+/** Componente icona per il `meta.icon` di un tipo di blocco, con fallback generico. */
+function blockIcon(iconName: string | undefined): Icon {
+  if (!iconName) return FALLBACK_ICON;
+  return ICON_MAP[iconName] ?? FALLBACK_ICON;
+}
 
 interface BlockPaletteProps {
   /** Contenitore di destinazione: `null` = radice dell'albero. */
@@ -130,16 +161,20 @@ export default function BlockPalette({
         {groups.map(([category, descriptors]) => (
           <Fragment key={category}>
             <Menu.Label>{category}</Menu.Label>
-            {descriptors.map((descriptor) => (
-              <Menu.Item
-                key={descriptor.type}
-                onClick={() =>
-                  addBlockAction(parentId, descriptor.type, index, defaultPropsFor(descriptor))
-                }
-              >
-                {descriptor.meta?.label ?? descriptor.type}
-              </Menu.Item>
-            ))}
+            {descriptors.map((descriptor) => {
+              const DescriptorIcon = blockIcon(descriptor.meta?.icon);
+              return (
+                <Menu.Item
+                  key={descriptor.type}
+                  leftSection={<DescriptorIcon size={14} />}
+                  onClick={() =>
+                    addBlockAction(parentId, descriptor.type, index, defaultPropsFor(descriptor))
+                  }
+                >
+                  {descriptor.meta?.label ?? descriptor.type}
+                </Menu.Item>
+              );
+            })}
           </Fragment>
         ))}
       </Menu.Dropdown>

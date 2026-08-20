@@ -1,5 +1,6 @@
 /**
- * Ispettore delle proprietà del blocco selezionato (PLAN-F04-editor-visivo.md T5).
+ * Ispettore delle proprietà del blocco selezionato (PLAN-F04-editor-visivo.md T5,
+ * ispettore a schede PLAN-F04c-editor-maturo.md T6).
  *
  * **Un solo componente per tutti i tipi di blocco.** Non esiste — e non va introdotto —
  * un `HeadingInspector`/`ButtonInspector`: il form è generato leggendo il descrittore del
@@ -8,6 +9,13 @@
  * senza toccare questo file; aggiungere un tipo di blocco non richiede alcun file nuovo.
  * La mappa sotto è indicizzata per `kind`, mai per `type`: è la proprietà che rende vero
  * quanto sopra, e l'unica da preservare se il componente viene modificato.
+ *
+ * Le schede "Contenuto" e "Stile" (ADR-30 § 1) sono un raggruppamento dei descrittori
+ * *prima* dello `switch` su `kind`: non una seconda via di dispaccio per tipo di blocco.
+ * Un tipo senza alcuna prop `tab:'style'` mostra una sola scheda — mai una scheda vuota.
+ * Le etichette vengono **solo** da `meta.props[nome].label`: il nome tecnico resta un
+ * fallback per un difetto del registro, mai atteso sui cinque tipi reali (T3 li ha già
+ * compilati tutti).
  *
  * La validazione mostrata qui è **solo UX**: l'autorità resta il `400` del server, che
  * `PagePageDetail` traduce nel blocco colpevole. Nessun controllo di questo file blocca il
@@ -23,6 +31,7 @@ import {
   Select,
   Stack,
   Switch,
+  Tabs,
   Text,
   Textarea,
   TextInput,
@@ -30,6 +39,7 @@ import {
 import { IconInfoCircle } from '@tabler/icons-react';
 import {
   BLOCK_TYPES,
+  type BlockEditorPropMeta,
   type BlockPropDescriptor,
   type BlockTypeDescriptor,
 } from '../../../types/blocks.types';
@@ -54,9 +64,50 @@ const URL_PATTERNS = [/^https?:\/\/.+/i, /^mailto:.+/i, /^\/(?!\/).*/];
  */
 const MULTILINE_THRESHOLD = 300;
 
-/** Etichetta leggibile di una prop: il registro non ne porta una, si usa il nome tecnico. */
-function propLabel(prop: BlockPropDescriptor): string {
-  return prop.name;
+/** Mappa dei metadati di prop del tipo corrente, indicizzata per nome (ADR-30 § 1). */
+type PropsMeta = Record<string, BlockEditorPropMeta> | undefined;
+
+/**
+ * Etichetta leggibile di una prop (ADR-30 § 1). Legge `meta.props[nome].label` dal
+ * registro: il nome tecnico è solo un fallback per un difetto del registro (non deve
+ * succedere sui tipi reali — T3 compila una voce per ogni prop di ogni tipo).
+ */
+function propLabel(prop: BlockPropDescriptor, propsMeta: PropsMeta): string {
+  return propsMeta?.[prop.name]?.label ?? prop.name;
+}
+
+/** Scheda dichiarata dal registro per una prop; assente = `'content'` (ADR-30 § 1). */
+function propTab(prop: BlockPropDescriptor, propsMeta: PropsMeta): 'content' | 'style' {
+  return propsMeta?.[prop.name]?.tab ?? 'content';
+}
+
+/** Ordine dichiarato dal registro per una prop; assente = in fondo (dopo ogni prop ordinata). */
+function propOrder(prop: BlockPropDescriptor, propsMeta: PropsMeta): number {
+  return propsMeta?.[prop.name]?.order ?? Number.POSITIVE_INFINITY;
+}
+
+/**
+ * Raggruppa e ordina le props di un tipo in due schede, `content` e `style`, secondo
+ * `meta.props[nome].tab`/`.order`. L'ordinamento è stabile: a parità di `order` (comprese
+ * le props senza `order` dichiarato, tutte in fondo) resta l'ordine dichiarato dal registro.
+ */
+function groupPropsByTab(
+  props: readonly BlockPropDescriptor[],
+  propsMeta: PropsMeta,
+): { content: BlockPropDescriptor[]; style: BlockPropDescriptor[] } {
+  const ordered = props
+    .map((prop, index) => ({ prop, index }))
+    .sort((a, b) => {
+      const diff = propOrder(a.prop, propsMeta) - propOrder(b.prop, propsMeta);
+      return diff !== 0 ? diff : a.index - b.index;
+    });
+
+  const content: BlockPropDescriptor[] = [];
+  const style: BlockPropDescriptor[] = [];
+  for (const { prop } of ordered) {
+    (propTab(prop, propsMeta) === 'style' ? style : content).push(prop);
+  }
+  return { content, style };
 }
 
 /** Il valore corrente di una prop come stringa, qualunque cosa contenga il `jsonb`. */
@@ -66,6 +117,32 @@ function asString(value: unknown): string {
     : value === undefined || value === null
       ? ''
       : String(value);
+}
+
+/**
+ * Il default del breakpoint `default` dichiarato dal registro per una prop responsive
+ * (il `default` del descrittore è già un envelope `{ default, tablet?, mobile? }`,
+ * ADR-29 § 2/§ 3), come stringa. Stringa vuota se il registro non ne dichiara uno.
+ */
+function registryDefaultScalar(prop: BlockPropDescriptor): string {
+  const envelope = prop.default;
+  if (envelope && typeof envelope === 'object' && !Array.isArray(envelope)) {
+    return asString((envelope as Record<string, unknown>).default);
+  }
+  return '';
+}
+
+/**
+ * Il valore di una prop `responsive` come oggetto `{ default, tablet?, mobile? }`, mai
+ * uno scalare nudo (ADR-29 § 2/§ 3). Un nodo nuovo (nessun valore ancora scritto in store)
+ * riceve `{ default: <default del registro> }` — non uno scalare, per non far scrivere un
+ * controllo desktop successivo sopra un valore di forma sbagliata.
+ */
+function responsiveEnvelope(prop: BlockPropDescriptor, value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return { default: registryDefaultScalar(prop) };
 }
 
 /** Messaggio di errore UX per una prop, o `undefined` se il valore è accettabile. */
@@ -129,123 +206,174 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
     );
   }
 
-  return (
-    <Stack gap="md">
-      {descriptor.props.map((prop) => {
-        const value = draft[prop.name];
-        const label = propLabel(prop);
-        const error = uxError(prop, value);
-        const required = prop.required || prop.nonEmpty === true;
+  const propsMeta = descriptor.meta?.props;
 
-        // La mappa è per `kind` — mai per tipo di blocco: è il vincolo strutturale di T5.
-        switch (prop.kind) {
-          case 'enum':
-            return (
-              <Select
-                key={prop.name}
-                label={label}
-                withAsterisk={required}
-                allowDeselect={false}
-                data={[...(prop.values ?? [])]}
-                value={asString(value) || null}
-                error={error}
-                onChange={(next) => setAndCommit(prop.name, next ?? '')}
-              />
-            );
+  /**
+   * Rende il controllo Mantine di una singola prop. La mappa è per `kind` — mai per tipo
+   * di blocco: è il vincolo strutturale preservato da T5/T6.
+   */
+  function renderField(prop: BlockPropDescriptor): JSX.Element {
+    const value = draft[prop.name];
+    const label = propLabel(prop, propsMeta);
+    const required = prop.required || prop.nonEmpty === true;
+    // Il controllo UX legge sempre uno scalare: per una prop responsive è il breakpoint
+    // `default` dell'envelope, mai l'oggetto intero (che finirebbe stringificato).
+    const scalarForUx =
+      prop.responsive && value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as Record<string, unknown>).default
+        : value;
+    const error = uxError(prop, scalarForUx);
 
-          case 'boolean':
-            return (
-              <Switch
-                key={prop.name}
-                label={label}
-                checked={value === true}
-                onChange={(event) => setAndCommit(prop.name, event.currentTarget.checked)}
-              />
-            );
-
-          case 'number':
-            return (
-              <NumberInput
-                key={prop.name}
-                label={label}
-                withAsterisk={required}
-                value={typeof value === 'number' ? value : ''}
-                error={error}
-                onChange={(next) => setLocal(prop.name, next)}
-                onBlur={() =>
-                  commit(prop.name, typeof value === 'number' ? value : Number(value) || 0)
-                }
-              />
-            );
-
-          case 'mediaRef':
-            // Nessuna scorciatoia che finga una libreria media: F09 non è costruita, e un
-            // campo libero inviterebbe a incollare un riferimento che il server rifiuta.
-            return (
-              <TextInput
-                key={prop.name}
-                label={label}
-                withAsterisk={required}
-                disabled
-                value={asString(value)}
-                placeholder="Libreria media non disponibile (F09 non ancora costruita)"
-              />
-            );
-
-          case 'url':
-            return (
-              <TextInput
-                key={prop.name}
-                label={label}
-                withAsterisk={required}
-                maxLength={prop.maxLength}
-                value={asString(value)}
-                error={error}
-                placeholder="https://esempio.it/pagina"
-                onChange={(event) => setLocal(prop.name, event.currentTarget.value)}
-                onBlur={() => commit(prop.name, asString(value))}
-              />
-            );
-
-          case 'richText':
-            return (
-              <Textarea
-                key={prop.name}
-                label={label}
-                withAsterisk={required}
-                autosize
-                minRows={4}
-                maxLength={prop.maxLength}
-                value={asString(value)}
-                error={error}
-                description="HTML grezzo: viene ripulito dal server al salvataggio contro l'allowlist del profilo, quindi il contenuto salvato può differire da quello digitato."
-                onChange={(event) => setLocal(prop.name, event.currentTarget.value)}
-                onBlur={() => commit(prop.name, asString(value))}
-              />
-            );
-
-          case 'plainText':
-          default: {
-            const multiline = (prop.maxLength ?? 0) > MULTILINE_THRESHOLD;
-            const shared = {
-              label,
-              withAsterisk: required,
-              maxLength: prop.maxLength,
-              value: asString(value),
-              error,
-              onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-                setLocal(prop.name, event.currentTarget.value),
-              onBlur: () => commit(prop.name, asString(value)),
-            };
-            return multiline ? (
-              <Textarea key={prop.name} autosize minRows={3} {...shared} />
-            ) : (
-              <TextInput key={prop.name} {...shared} />
-            );
-          }
+    switch (prop.kind) {
+      case 'enum': {
+        if (prop.responsive) {
+          // Valore a oggetto `{ default, tablet?, mobile? }`: il controllo desktop legge e
+          // scrive solo `default`, preservando `tablet`/`mobile` già salvati (ADR-29 § 2/§ 3
+          // — sovrascrivere con lo scalare nudo li cancellerebbe in silenzio).
+          const envelope = responsiveEnvelope(prop, value);
+          return (
+            <Select
+              key={prop.name}
+              label={label}
+              withAsterisk={required}
+              allowDeselect={false}
+              data={[...(prop.values ?? [])]}
+              value={asString(envelope.default) || null}
+              error={error}
+              onChange={(next) => setAndCommit(prop.name, { ...envelope, default: next ?? '' })}
+            />
+          );
         }
-      })}
-    </Stack>
+        return (
+          <Select
+            key={prop.name}
+            label={label}
+            withAsterisk={required}
+            allowDeselect={false}
+            data={[...(prop.values ?? [])]}
+            value={asString(value) || null}
+            error={error}
+            onChange={(next) => setAndCommit(prop.name, next ?? '')}
+          />
+        );
+      }
+
+      case 'boolean':
+        return (
+          <Switch
+            key={prop.name}
+            label={label}
+            checked={value === true}
+            onChange={(event) => setAndCommit(prop.name, event.currentTarget.checked)}
+          />
+        );
+
+      case 'number':
+        return (
+          <NumberInput
+            key={prop.name}
+            label={label}
+            withAsterisk={required}
+            value={typeof value === 'number' ? value : ''}
+            error={error}
+            onChange={(next) => setLocal(prop.name, next)}
+            onBlur={() => commit(prop.name, typeof value === 'number' ? value : Number(value) || 0)}
+          />
+        );
+
+      case 'mediaRef':
+        // Nessuna scorciatoia che finga una libreria media: F09 non è costruita, e un
+        // campo libero inviterebbe a incollare un riferimento che il server rifiuta.
+        return (
+          <TextInput
+            key={prop.name}
+            label={label}
+            withAsterisk={required}
+            disabled
+            value={asString(value)}
+            placeholder="Libreria media non disponibile (F09 non ancora costruita)"
+          />
+        );
+
+      case 'url':
+        return (
+          <TextInput
+            key={prop.name}
+            label={label}
+            withAsterisk={required}
+            maxLength={prop.maxLength}
+            value={asString(value)}
+            error={error}
+            placeholder="https://esempio.it/pagina"
+            onChange={(event) => setLocal(prop.name, event.currentTarget.value)}
+            onBlur={() => commit(prop.name, asString(value))}
+          />
+        );
+
+      case 'richText':
+        return (
+          <Textarea
+            key={prop.name}
+            label={label}
+            withAsterisk={required}
+            autosize
+            minRows={4}
+            maxLength={prop.maxLength}
+            value={asString(value)}
+            error={error}
+            description="HTML grezzo: viene ripulito dal server al salvataggio contro l'allowlist del profilo, quindi il contenuto salvato può differire da quello digitato."
+            onChange={(event) => setLocal(prop.name, event.currentTarget.value)}
+            onBlur={() => commit(prop.name, asString(value))}
+          />
+        );
+
+      case 'plainText':
+      default: {
+        const multiline = (prop.maxLength ?? 0) > MULTILINE_THRESHOLD;
+        const shared = {
+          label,
+          withAsterisk: required,
+          maxLength: prop.maxLength,
+          value: asString(value),
+          error,
+          onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+            setLocal(prop.name, event.currentTarget.value),
+          onBlur: () => commit(prop.name, asString(value)),
+        };
+        return multiline ? (
+          <Textarea key={prop.name} autosize minRows={3} {...shared} />
+        ) : (
+          <TextInput key={prop.name} {...shared} />
+        );
+      }
+    }
+  }
+
+  const { content, style } = groupPropsByTab(descriptor.props, propsMeta);
+
+  // Un tipo senza alcuna prop `tab:'style'` mostra una sola scheda — mai una scheda vuota
+  // (ADR-30 § 1). Simmetricamente per l'ipotesi (oggi non reale sui cinque tipi) di un tipo
+  // interamente di stile: nessuna scelta da offrire quando c'è una sola scheda possibile.
+  if (style.length === 0) {
+    return <Stack gap="md">{content.map(renderField)}</Stack>;
+  }
+  if (content.length === 0) {
+    return <Stack gap="md">{style.map(renderField)}</Stack>;
+  }
+
+  return (
+    <Tabs defaultValue="content" keepMounted={false}>
+      <Tabs.List>
+        <Tabs.Tab value="content">Contenuto</Tabs.Tab>
+        <Tabs.Tab value="style">Stile</Tabs.Tab>
+      </Tabs.List>
+      <Tabs.Panel value="content" pt="md">
+        <Stack gap="md">{content.map(renderField)}</Stack>
+      </Tabs.Panel>
+      <Tabs.Panel value="style" pt="md">
+        <Stack gap="md">{style.map(renderField)}</Stack>
+      </Tabs.Panel>
+    </Tabs>
   );
 }
 

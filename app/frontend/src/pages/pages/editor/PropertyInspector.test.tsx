@@ -38,9 +38,26 @@ const SYNTHETIC_TYPE = {
   meta: { label: 'Sonda dei kind', category: 'test' },
 } as const;
 
+/**
+ * Tipo sintetico senza alcuna prop, per coprire il ramo "nessuna proprietà modificabile"
+ * dell'ispettore (T6). `section` non lo copre più: dalla Decisione 2 di RFC-F04c ha quattro
+ * props di stile (`styleSpaceBefore/After`, `stylePadding`, `styleBackground`).
+ */
+const EMPTY_PROPS_TYPE = {
+  type: 'emptyPropsProbe',
+  v: 1,
+  enabled: true,
+  childrenAllow: [] as const,
+  props: [] as const,
+  meta: { label: 'Sonda senza props', category: 'test' },
+} as const;
+
 vi.mock('../../../types/blocks.types', async (importOriginal) => {
   const original = await importOriginal<typeof import('../../../types/blocks.types')>();
-  return { ...original, BLOCK_TYPES: [...original.BLOCK_TYPES, SYNTHETIC_TYPE] };
+  return {
+    ...original,
+    BLOCK_TYPES: [...original.BLOCK_TYPES, SYNTHETIC_TYPE, EMPTY_PROPS_TYPE],
+  };
 });
 
 const { BLOCK_TYPES } = await import('../../../types/blocks.types');
@@ -88,10 +105,80 @@ describe('PropertyInspector — nessuna selezione e tipi fuori registro', () => 
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 
-  it('su un contenitore senza props dichiara che si configura con i figli', () => {
-    renderInspectorWith(node('sec-1', 'section'));
+  it('su un tipo senza alcuna prop dichiara che si configura con i figli', () => {
+    renderInspectorWith(node('e-1', 'emptyPropsProbe'));
 
     expect(screen.getByText(/non ha proprietà modificabili/i)).toBeInTheDocument();
+  });
+});
+
+describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
+  it('section (nessuna prop di contenuto, solo di stile) mostra una sola scheda, senza tab, con le etichette del registro', () => {
+    renderInspectorWith(node('sec-1', 'section'));
+
+    expect(screen.queryByRole('tab', { name: 'Contenuto' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Stile' })).not.toBeInTheDocument();
+    expect(screen.getByText('Spazio prima')).toBeInTheDocument();
+    expect(screen.getByText('Spazio dopo')).toBeInTheDocument();
+    expect(screen.getByText('Spaziatura interna')).toBeInTheDocument();
+    expect(screen.getByText('Sfondo')).toBeInTheDocument();
+    expect(screen.queryByText('styleSpaceBefore')).not.toBeInTheDocument();
+  });
+
+  it('un tipo senza alcuna prop tab:"style" mostra una sola scheda, senza tab', () => {
+    renderInspectorWith(node('k-1', 'kindProbe', { flag: false, quantita: 0, descrizione: '' }));
+
+    expect(screen.queryByRole('tab', { name: 'Contenuto' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Stile' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('descrizione')).toBeInTheDocument();
+  });
+
+  it('heading (props di contenuto e di stile) mostra le due schede con le etichette del registro', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
+
+    expect(screen.getByRole('tab', { name: 'Contenuto' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Livello' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Testo' })).toBeInTheDocument();
+
+    const styleTab = screen.getByRole('tab', { name: 'Stile' });
+    await user.click(styleTab);
+
+    expect(screen.getByText('Colore testo')).toBeInTheDocument();
+    expect(screen.getByText('Dimensione testo')).toBeInTheDocument();
+    expect(screen.getByText('Spessore testo')).toBeInTheDocument();
+  });
+
+  it('modificare il controllo desktop di una prop responsive lascia intatti tablet e mobile', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(
+      node('sec-1', 'section', {
+        styleSpaceBefore: { default: 'none', tablet: 'sm', mobile: 'lg' },
+      }),
+    );
+
+    const select = screen.getByRole('textbox', { name: 'Spazio prima' });
+    await user.click(select);
+    await user.click(screen.getByRole('option', { name: 'md' }));
+
+    expect(propsInStore('sec-1').styleSpaceBefore).toEqual({
+      default: 'md',
+      tablet: 'sm',
+      mobile: 'lg',
+    });
+  });
+
+  it('una prop responsive senza valore ancora scritto nasce come oggetto { default } dal registro, non uno scalare', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('sec-1', 'section'));
+
+    const select = screen.getByRole('textbox', { name: 'Spazio prima' });
+    expect(select).toHaveValue('none');
+
+    await user.click(select);
+    await user.click(screen.getByRole('option', { name: 'lg' }));
+
+    expect(propsInStore('sec-1').styleSpaceBefore).toEqual({ default: 'lg' });
   });
 });
 
@@ -100,7 +187,7 @@ describe('PropertyInspector — i sette kind del registro', () => {
     const user = userEvent.setup();
     renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
 
-    const select = screen.getByRole('textbox', { name: /^level/ });
+    const select = screen.getByRole('textbox', { name: 'Livello' });
     expect(select).toHaveAttribute('aria-haspopup', 'listbox');
     expect(select).toHaveValue('h2');
 
@@ -116,7 +203,7 @@ describe('PropertyInspector — i sette kind del registro', () => {
     const user = userEvent.setup();
     renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: '' }));
 
-    const input = screen.getByLabelText(/^text/);
+    const input = screen.getByRole('textbox', { name: 'Testo' });
     expect(input.tagName).toBe('INPUT');
     expect(input).toHaveAttribute('maxlength', '200');
 
@@ -139,7 +226,7 @@ describe('PropertyInspector — i sette kind del registro', () => {
     const user = userEvent.setup();
     renderInspectorWith(node('r-1', 'richText', { html: '' }));
 
-    const textarea = screen.getByLabelText(/^html/);
+    const textarea = screen.getByRole('textbox', { name: 'Contenuto' });
     expect(textarea.tagName).toBe('TEXTAREA');
     expect(textarea).toHaveAttribute('maxlength', '20000');
     expect(screen.getByText(/ripulito dal server al salvataggio/i)).toBeInTheDocument();
@@ -154,7 +241,7 @@ describe('PropertyInspector — i sette kind del registro', () => {
     const user = userEvent.setup();
     renderInspectorWith(node('b-1', 'button', { label: 'Vai', href: '' }));
 
-    const input = screen.getByLabelText(/^href/);
+    const input = screen.getByRole('textbox', { name: 'Link' });
     expect(input.tagName).toBe('INPUT');
     expect(input).toHaveAttribute('maxlength', '2048');
 
@@ -177,7 +264,7 @@ describe('PropertyInspector — i sette kind del registro', () => {
     const user = userEvent.setup();
     renderInspectorWith(node('i-1', 'image', { mediaRef: '', alt: '' }));
 
-    const input = screen.getByLabelText(/^mediaRef/);
+    const input = screen.getByRole('textbox', { name: 'File' });
     expect(input).toBeDisabled();
     expect(input).toHaveAttribute('placeholder', expect.stringContaining('F09'));
 
@@ -227,7 +314,7 @@ describe('PropertyInspector — obbligatorietà e cambio di selezione', () => {
     const user = userEvent.setup();
     renderInspectorWith(node('i-1', 'image', { mediaRef: '', alt: '' }));
 
-    const alt = screen.getByLabelText(/^alt/);
+    const alt = screen.getByRole('textbox', { name: 'Testo alternativo' });
     await user.type(alt, '   ');
     await user.tab();
 
@@ -239,13 +326,13 @@ describe('PropertyInspector — obbligatorietà e cambio di selezione', () => {
     const secondo = node('h-2', 'heading', { level: 'h4', text: 'Secondo' });
     const { rerender } = renderInspectorWith(primo, [primo, secondo]);
 
-    expect(screen.getByLabelText(/^text/)).toHaveValue('Primo');
+    expect(screen.getByRole('textbox', { name: 'Testo' })).toHaveValue('Primo');
 
     useBlockEditorStore.getState().selectNode('h-2');
     rerender(<PropertyInspector />);
 
-    expect(screen.getByLabelText(/^text/)).toHaveValue('Secondo');
-    expect(screen.getByRole('textbox', { name: /^level/ })).toHaveValue('h4');
+    expect(screen.getByRole('textbox', { name: 'Testo' })).toHaveValue('Secondo');
+    expect(screen.getByRole('textbox', { name: 'Livello' })).toHaveValue('h4');
   });
 
   it('una nuova initTree butta via la bozza locale non ancora committata (contenuto sanitizzato dal server)', async () => {
@@ -253,7 +340,7 @@ describe('PropertyInspector — obbligatorietà e cambio di selezione', () => {
     const nodo = node('r-1', 'richText', { html: '<p>originale</p>' });
     const { rerender } = renderInspectorWith(nodo, [nodo]);
 
-    const textarea = screen.getByLabelText(/^html/);
+    const textarea = screen.getByRole('textbox', { name: 'Contenuto' });
     await user.clear(textarea);
     await user.type(textarea, '<p>digitato ma non salvato</p>');
 
@@ -262,14 +349,17 @@ describe('PropertyInspector — obbligatorietà e cambio di selezione', () => {
     useBlockEditorStore.getState().selectNode('r-1');
     rerender(<PropertyInspector />);
 
-    expect(screen.getByLabelText(/^html/)).toHaveValue('<p>ripulito</p>');
+    expect(screen.getByRole('textbox', { name: 'Contenuto' })).toHaveValue('<p>ripulito</p>');
   });
 });
 
 describe('PropertyInspector — copertura del registro reale', () => {
   it('ogni kind dichiarato dai tipi approvati è coperto da un caso di questo file', () => {
     const kindsNelRegistro = new Set(
-      BLOCK_TYPES.filter((descriptor) => descriptor.type !== SYNTHETIC_TYPE.type)
+      BLOCK_TYPES.filter(
+        (descriptor) =>
+          descriptor.type !== SYNTHETIC_TYPE.type && descriptor.type !== EMPTY_PROPS_TYPE.type,
+      )
         .flatMap((descriptor) => descriptor.props)
         .map((prop) => prop.kind),
     );
