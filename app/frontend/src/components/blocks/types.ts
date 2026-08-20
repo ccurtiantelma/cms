@@ -10,3 +10,10 @@ export interface RenderableBlockNode {
   props: Record<string, unknown>;
   children: readonly RenderableBlockNode[];
 }
+
+/**
+ * Nomi di breakpoint di una prop di stile responsive (ADR-29 § 2), ricalcati
+ * su `RESPONSIVE_BREAKPOINTS` di `app/backend/src/blocks/prop-spec.types.ts`
+ * — non importato, per lo stesso vincolo di isolamento di `RenderableBlockNode`.
+ */
+export const RESPONSIVE_BREAKPOINTS = ['default', 'tablet', 'mobile'] as const;

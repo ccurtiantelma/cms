@@ -41,7 +41,12 @@ function renderNode(node: RenderableBlockNode) {
   switch (node.type) {
     case 'section':
       return (
-        <Section>
+        <Section
+          styleSpaceBefore={node.props.styleSpaceBefore}
+          styleSpaceAfter={node.props.styleSpaceAfter}
+          stylePadding={node.props.stylePadding}
+          styleBackground={node.props.styleBackground}
+        >
           {node.children.map((child) => (
             <BlockRenderer key={child.id} node={child} />
           ))}
@@ -54,12 +59,26 @@ function renderNode(node: RenderableBlockNode) {
         <Heading
           level={isHeadingLevel(level) ? level : 'h2'}
           text={typeof text === 'string' ? text : ''}
+          styleSpaceBefore={node.props.styleSpaceBefore}
+          styleSpaceAfter={node.props.styleSpaceAfter}
+          styleTextColor={node.props.styleTextColor}
+          styleFontSize={node.props.styleFontSize}
+          styleFontWeight={node.props.styleFontWeight}
         />
       );
     }
     case 'richText': {
       const html = node.props.html;
-      return <RichText html={typeof html === 'string' ? html : ''} />;
+      return (
+        <RichText
+          html={typeof html === 'string' ? html : ''}
+          styleSpaceBefore={node.props.styleSpaceBefore}
+          styleSpaceAfter={node.props.styleSpaceAfter}
+          styleTextColor={node.props.styleTextColor}
+          styleFontSize={node.props.styleFontSize}
+          styleFontWeight={node.props.styleFontWeight}
+        />
+      );
     }
     case 'image': {
       const mediaRef = node.props.mediaRef;
@@ -68,6 +87,8 @@ function renderNode(node: RenderableBlockNode) {
         <Image
           mediaRef={typeof mediaRef === 'string' ? mediaRef : ''}
           alt={typeof alt === 'string' ? alt : ''}
+          styleSpaceBefore={node.props.styleSpaceBefore}
+          styleSpaceAfter={node.props.styleSpaceAfter}
         />
       );
     }
@@ -78,6 +99,11 @@ function renderNode(node: RenderableBlockNode) {
         <Button
           label={typeof label === 'string' ? label : ''}
           href={typeof href === 'string' ? href : ''}
+          styleSpaceBefore={node.props.styleSpaceBefore}
+          styleSpaceAfter={node.props.styleSpaceAfter}
+          styleTextColor={node.props.styleTextColor}
+          styleFontSize={node.props.styleFontSize}
+          styleFontWeight={node.props.styleFontWeight}
         />
       );
     }

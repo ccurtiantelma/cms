@@ -21,9 +21,20 @@ RUN npm ci
 # (ADR-22 § 3: unica copia dei componenti di blocco, bundlata a build time
 # nell'output SSR — non un import runtime, niente node_modules/frontend a
 # runtime). Serve quindi anche il sorgente frontend in questo stage.
+#
+# VITE_PUBLIC_MEDIA_BASE_URL (ADR-27 § 6) è "baked" qui esattamente come
+# VITE_API_BASE_URL nel frontend (app/frontend/Dockerfile): Vite sostituisce
+# import.meta.env.VITE_* a build-time anche per `vite build --ssr`, verificato
+# empiricamente (stesso meccanismo, nessuna doppia risoluzione fra i due
+# workspace — è il punto che ADR-27 § 6 impone). Senza questo ARG il
+# componente `Image` condiviso ricadrebbe sempre sul default di sviluppo
+# (`http://localhost:3000`), diverso da quello reale usato dal frontend admin
+# in produzione: la stessa classe di divergenza che l'ADR vieta.
 FROM deps AS build
 COPY app/frontend/src ./app/frontend/src
 COPY app/public-site ./app/public-site
+ARG VITE_PUBLIC_MEDIA_BASE_URL
+ENV VITE_PUBLIC_MEDIA_BASE_URL=${VITE_PUBLIC_MEDIA_BASE_URL}
 RUN npm run build --workspace=app/public-site
 
 # ─── prod-deps ──────────────────────────────────────────────────────────────

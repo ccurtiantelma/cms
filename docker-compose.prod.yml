@@ -90,6 +90,8 @@ services:
     build:
       context: .
       dockerfile: app/public-site/Dockerfile
+      args:
+        VITE_PUBLIC_MEDIA_BASE_URL: ${VITE_PUBLIC_MEDIA_BASE_URL:?Imposta VITE_PUBLIC_MEDIA_BASE_URL in .env}
     restart: unless-stopped
     environment:
       PORT: 4000

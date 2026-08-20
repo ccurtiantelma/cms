@@ -1,0 +1,183 @@
+/**
+ * Vocabolario di token delle props di stile responsive (ADR-29). Unico
+ * foglio, importato da ogni componente di `components/blocks/blocks/` che
+ * dichiara props `styleXxx` — mai duplicato, mai `style` inline.
+ *
+ * Struttura in tre parti, in quest'ordine (l'ordine è la cascata: ADR-29 § 2
+ * "mobile assente ricade su tablet, tablet assente ricade su default", una
+ * sola direzione, implementata **solo** qui via ordine di dichiarazione +
+ * media query `max-width`):
+ *   1. Variabili CSS dei token (`:root`) — il solo punto che il tema di F09
+ *      potrà riscrivere senza toccare il contenuto salvato.
+ *   2. Le tre soglie di breakpoint — non esistono altrove nel repository
+ *      (RFC-F04c-editor-maturo.md § A.4): tablet ≤ 768px, mobile ≤ 480px.
+ *   3. Una classe per ogni combinazione (prop, breakpoint, token): il
+ *      renderer sceglie quali emettere in base a cosa è presente nel valore
+ *      salvato (mai tutte e tre incondizionatamente).
+ *
+ * Ogni classe della stessa prop applica la **stessa proprietà CSS**: la
+ * regola dichiarata più avanti nel file (tablet dopo default, mobile dopo
+ * tablet) vince a parità di specificità quando il suo media query è
+ * soddisfatto — è l'intera implementazione della cascata, senza codice.
+ */
+
+:root {
+  --cms-space-none: 0;
+  --cms-space-xs: 0.5rem;
+  --cms-space-sm: 1rem;
+  --cms-space-md: 1.75rem;
+  --cms-space-lg: 3rem;
+  --cms-space-xl: 5rem;
+
+  --cms-padding-none: 0;
+  --cms-padding-sm: 1rem;
+  --cms-padding-md: 1.75rem;
+  --cms-padding-lg: 3rem;
+
+  --cms-bg-none: transparent;
+  --cms-bg-subtle: #f4f4f5;
+  --cms-bg-accent: #eef2ff;
+  --cms-bg-inverse: #18181b;
+
+  --cms-text-color-default: inherit;
+  --cms-text-color-muted: #6b7280;
+  --cms-text-color-accent: #4338ca;
+  --cms-text-color-inverse: #ffffff;
+
+  --cms-font-size-sm: 0.875rem;
+  --cms-font-size-md: 1rem;
+  --cms-font-size-lg: 1.25rem;
+  --cms-font-size-xl: 1.75rem;
+
+  --cms-font-weight-regular: 400;
+  --cms-font-weight-medium: 500;
+  --cms-font-weight-bold: 700;
+}
+
+/* ─── styleSpaceBefore / styleSpaceAfter — tutti e cinque i tipi ────────── */
+
+.spaceBefore_default_none { margin-top: var(--cms-space-none); }
+.spaceBefore_default_xs { margin-top: var(--cms-space-xs); }
+.spaceBefore_default_sm { margin-top: var(--cms-space-sm); }
+.spaceBefore_default_md { margin-top: var(--cms-space-md); }
+.spaceBefore_default_lg { margin-top: var(--cms-space-lg); }
+.spaceBefore_default_xl { margin-top: var(--cms-space-xl); }
+
+.spaceAfter_default_none { margin-bottom: var(--cms-space-none); }
+.spaceAfter_default_xs { margin-bottom: var(--cms-space-xs); }
+.spaceAfter_default_sm { margin-bottom: var(--cms-space-sm); }
+.spaceAfter_default_md { margin-bottom: var(--cms-space-md); }
+.spaceAfter_default_lg { margin-bottom: var(--cms-space-lg); }
+.spaceAfter_default_xl { margin-bottom: var(--cms-space-xl); }
+
+/* ─── stylePadding / styleBackground — solo section ─────────────────────── */
+
+.padding_default_none { padding: var(--cms-padding-none); }
+.padding_default_sm { padding: var(--cms-padding-sm); }
+.padding_default_md { padding: var(--cms-padding-md); }
+.padding_default_lg { padding: var(--cms-padding-lg); }
+
+.background_default_none { background-color: var(--cms-bg-none); }
+.background_default_subtle { background-color: var(--cms-bg-subtle); }
+.background_default_accent { background-color: var(--cms-bg-accent); }
+.background_default_inverse { background-color: var(--cms-bg-inverse); }
+
+/* ─── styleTextColor / styleFontSize / styleFontWeight — heading/richText/button ─── */
+
+.textColor_default_default { color: var(--cms-text-color-default); }
+.textColor_default_muted { color: var(--cms-text-color-muted); }
+.textColor_default_accent { color: var(--cms-text-color-accent); }
+.textColor_default_inverse { color: var(--cms-text-color-inverse); }
+
+.fontSize_default_sm { font-size: var(--cms-font-size-sm); }
+.fontSize_default_md { font-size: var(--cms-font-size-md); }
+.fontSize_default_lg { font-size: var(--cms-font-size-lg); }
+.fontSize_default_xl { font-size: var(--cms-font-size-xl); }
+
+.fontWeight_default_regular { font-weight: var(--cms-font-weight-regular); }
+.fontWeight_default_medium { font-weight: var(--cms-font-weight-medium); }
+.fontWeight_default_bold { font-weight: var(--cms-font-weight-bold); }
+
+/* ─── Tablet (≤ 768px) — unica soglia dichiarata qui, in tutto il repo ──── */
+
+@media (max-width: 768px) {
+  .spaceBefore_tablet_none { margin-top: var(--cms-space-none); }
+  .spaceBefore_tablet_xs { margin-top: var(--cms-space-xs); }
+  .spaceBefore_tablet_sm { margin-top: var(--cms-space-sm); }
+  .spaceBefore_tablet_md { margin-top: var(--cms-space-md); }
+  .spaceBefore_tablet_lg { margin-top: var(--cms-space-lg); }
+  .spaceBefore_tablet_xl { margin-top: var(--cms-space-xl); }
+
+  .spaceAfter_tablet_none { margin-bottom: var(--cms-space-none); }
+  .spaceAfter_tablet_xs { margin-bottom: var(--cms-space-xs); }
+  .spaceAfter_tablet_sm { margin-bottom: var(--cms-space-sm); }
+  .spaceAfter_tablet_md { margin-bottom: var(--cms-space-md); }
+  .spaceAfter_tablet_lg { margin-bottom: var(--cms-space-lg); }
+  .spaceAfter_tablet_xl { margin-bottom: var(--cms-space-xl); }
+
+  .padding_tablet_none { padding: var(--cms-padding-none); }
+  .padding_tablet_sm { padding: var(--cms-padding-sm); }
+  .padding_tablet_md { padding: var(--cms-padding-md); }
+  .padding_tablet_lg { padding: var(--cms-padding-lg); }
+
+  .background_tablet_none { background-color: var(--cms-bg-none); }
+  .background_tablet_subtle { background-color: var(--cms-bg-subtle); }
+  .background_tablet_accent { background-color: var(--cms-bg-accent); }
+  .background_tablet_inverse { background-color: var(--cms-bg-inverse); }
+
+  .textColor_tablet_default { color: var(--cms-text-color-default); }
+  .textColor_tablet_muted { color: var(--cms-text-color-muted); }
+  .textColor_tablet_accent { color: var(--cms-text-color-accent); }
+  .textColor_tablet_inverse { color: var(--cms-text-color-inverse); }
+
+  .fontSize_tablet_sm { font-size: var(--cms-font-size-sm); }
+  .fontSize_tablet_md { font-size: var(--cms-font-size-md); }
+  .fontSize_tablet_lg { font-size: var(--cms-font-size-lg); }
+  .fontSize_tablet_xl { font-size: var(--cms-font-size-xl); }
+
+  .fontWeight_tablet_regular { font-weight: var(--cms-font-weight-regular); }
+  .fontWeight_tablet_medium { font-weight: var(--cms-font-weight-medium); }
+  .fontWeight_tablet_bold { font-weight: var(--cms-font-weight-bold); }
+}
+
+/* ─── Mobile (≤ 480px) — unica soglia dichiarata qui, in tutto il repo ──── */
+
+@media (max-width: 480px) {
+  .spaceBefore_mobile_none { margin-top: var(--cms-space-none); }
+  .spaceBefore_mobile_xs { margin-top: var(--cms-space-xs); }
+  .spaceBefore_mobile_sm { margin-top: var(--cms-space-sm); }
+  .spaceBefore_mobile_md { margin-top: var(--cms-space-md); }
+  .spaceBefore_mobile_lg { margin-top: var(--cms-space-lg); }
+  .spaceBefore_mobile_xl { margin-top: var(--cms-space-xl); }
+
+  .spaceAfter_mobile_none { margin-bottom: var(--cms-space-none); }
+  .spaceAfter_mobile_xs { margin-bottom: var(--cms-space-xs); }
+  .spaceAfter_mobile_sm { margin-bottom: var(--cms-space-sm); }
+  .spaceAfter_mobile_md { margin-bottom: var(--cms-space-md); }
+  .spaceAfter_mobile_lg { margin-bottom: var(--cms-space-lg); }
+  .spaceAfter_mobile_xl { margin-bottom: var(--cms-space-xl); }
+
+  .padding_mobile_none { padding: var(--cms-padding-none); }
+  .padding_mobile_sm { padding: var(--cms-padding-sm); }
+  .padding_mobile_md { padding: var(--cms-padding-md); }
+  .padding_mobile_lg { padding: var(--cms-padding-lg); }
+
+  .background_mobile_none { background-color: var(--cms-bg-none); }
+  .background_mobile_subtle { background-color: var(--cms-bg-subtle); }
+  .background_mobile_accent { background-color: var(--cms-bg-accent); }
+  .background_mobile_inverse { background-color: var(--cms-bg-inverse); }
+
+  .textColor_mobile_default { color: var(--cms-text-color-default); }
+  .textColor_mobile_muted { color: var(--cms-text-color-muted); }
+  .textColor_mobile_accent { color: var(--cms-text-color-accent); }
+  .textColor_mobile_inverse { color: var(--cms-text-color-inverse); }
+
+  .fontSize_mobile_sm { font-size: var(--cms-font-size-sm); }
+  .fontSize_mobile_md { font-size: var(--cms-font-size-md); }
+  .fontSize_mobile_lg { font-size: var(--cms-font-size-lg); }
+  .fontSize_mobile_xl { font-size: var(--cms-font-size-xl); }
+
+  .fontWeight_mobile_regular { font-weight: var(--cms-font-weight-regular); }
+  .fontWeight_mobile_medium { font-weight: var(--cms-font-weight-medium); }
+  .fontWeight_mobile_bold { font-weight: var(--cms-font-weight-bold); }
+}
