@@ -63,7 +63,7 @@
 | F01 | Gestione Pagine (modello, stati, slug, revisioni) | fondativa | features/F01-gestione-pagine.md · specs/SPEC-F01-gestione-pagine.md · plans/PLAN-F01-innesto.md | ✅ Done (2026-08-17) |
 | F02 | Registro e validazione dei Blocchi | 1 | plans/PLAN-F02-blocchi.md | ✅ Done (2026-08-19, riconciliata) |
 | F03 | Superficie pubblica di lettura + cache | 2, 7 | specs/SPEC-F03-superficie-pubblica.md · plans/PLAN-F03-superficie-pubblica.md | ✅ Done (2026-08-19) |
-| F04 | Editor visivo (page builder) | 1 | plans/PLAN-F04-editor-visivo.md | ✅ Done (2026-08-19). Anteprima bozza (voce 1.10 di `docs/TODO.md`) chiusa lo stesso giorno — `plans/PLAN-anteprima-bozza.md`, ADR-25. Round successivo **F04b (upgrade editor)** 🔄 in progress: undo/redo + guardia + inserimento posizionale + `moveNodeTo` implementati, senza test; WYSIWYG (ADR-26) e media pubblici (ADR-27) in attesa di firma, zero codice |
+| F04 | Editor visivo (page builder) | 1 | plans/PLAN-F04-editor-visivo.md | ✅ Done (2026-08-19). Anteprima bozza (voce 1.10 di `docs/TODO.md`) chiusa lo stesso giorno — `plans/PLAN-anteprima-bozza.md`, ADR-25. Round successivo **F04b (upgrade editor)** 🔄 in progress: undo/redo + guardia + inserimento posizionale + `moveNodeTo` ora coperti da test (152 test, 8 file, tutti verdi — voce 3.11 chiusa il 2026-08-20); WYSIWYG (ADR-26) e media pubblici (ADR-27) in attesa di firma, zero codice |
 | F05 | Multilingua | 4 | — | ⏳ Pending |
 | F06 | Template e Sezioni globali | 1 | — | ⏳ Pending |
 | F07 | SEO per pagina | 2 | — | ⏳ Pending |
