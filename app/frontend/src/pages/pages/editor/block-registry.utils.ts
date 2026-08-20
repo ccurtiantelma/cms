@@ -13,6 +13,7 @@
  * non offrire un'azione che verrà respinta, mai per sostituirlo.
  */
 import { BLOCK_TYPES, ROOT_ALLOWED } from '../../../types/blocks.types';
+import { findNode, isDescendantOf, type BlockNode } from './block-tree.utils';
 
 /**
  * Tipi ammessi come figli del contenitore indicato: `ROOT_ALLOWED` alla radice
@@ -35,4 +36,31 @@ export function allowedChildTypes(parentType: string | undefined): readonly stri
  */
 export function canContainType(parentType: string | undefined, type: string): boolean {
   return allowedChildTypes(parentType).includes(type);
+}
+
+/**
+ * `true` se il nodo `dragId` può essere spostato (drag & drop, PLAN-F04c-editor-maturo.md
+ * T7) fra i figli del contenitore `targetParentId` (`null` = radice). Predicato puro e
+ * unico per l'ammissibilità del drop: compone la guardia di discendenza già usata da
+ * `moveNodeTo` (`block-tree.utils.ts`, esportata come `isDescendantOf` — mai riscritta qui)
+ * con `canContainType` di questo file. Nessun controllo di `MAX_DEPTH`: fuori scope in
+ * questo round (l'unico contenitore, `section`, è a profondità 2 — irraggiungibile).
+ *
+ * `false` se: il nodo trascinato non esiste più nell'albero, la destinazione è il nodo
+ * stesso o un suo discendente (staccherebbe quel ramo dall'albero), il contenitore di
+ * destinazione non esiste, o il registro non ammette quel tipo lì.
+ */
+export function canDropInto(
+  tree: readonly BlockNode[],
+  dragId: string,
+  targetParentId: string | null,
+): boolean {
+  const node = findNode(tree, dragId);
+  if (!node) return false;
+  if (targetParentId === dragId) return false;
+  if (targetParentId === null) return canContainType(undefined, node.type);
+  if (isDescendantOf(node, targetParentId)) return false;
+  const targetParent = findNode(tree, targetParentId);
+  if (!targetParent) return false;
+  return canContainType(targetParent.type, node.type);
 }

@@ -17,9 +17,12 @@
  */
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
+import { notifications } from '@mantine/notifications';
 import {
   addBlock,
   cloneTree,
+  countNodes,
+  duplicateSubtree,
   findLocation,
   findNode,
   moveBlock,
@@ -29,6 +32,7 @@ import {
   type BlockNode,
 } from '../pages/pages/editor/block-tree.utils';
 import { canContainType } from '../pages/pages/editor/block-registry.utils';
+import { CONTENT_TREE_LIMITS } from '../types/blocks.types';
 
 /** Direzione opposta, usata per costruire l'inverso di un comando `move`. */
 function oppositeDirection(direction: 'up' | 'down'): 'up' | 'down' {
@@ -109,6 +113,14 @@ interface BlockEditorState {
   moveNodeToAction: (id: string, targetParentId: string | null, index: number) => void;
   /** Rimuove il nodo `id` e i suoi discendenti. Deseleziona se il nodo rimosso era selezionato. */
   removeBlockAction: (id: string) => void;
+  /**
+   * Duplica il sottoalbero del nodo `id`, inserendo la copia subito dopo l'originale fra
+   * gli stessi fratelli, con id rigenerati a ogni profondità (mai solo in radice). No-op con
+   * avviso (`notifications.show`, mai un salvataggio fallito con `400`) se la copia
+   * porterebbe l'albero oltre `CONTENT_TREE_LIMITS.maxNodes`. Il duplicato diventa il nodo
+   * selezionato.
+   */
+  duplicateNodeAction: (id: string) => void;
   /** Merge delle `props` fornite sul nodo `id`. */
   updateBlockPropsAction: (id: string, props: Record<string, unknown>) => void;
   /** Disfa l'ultimo comando applicato, se presente. */
@@ -237,6 +249,36 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
         ...patch,
         selectedId: state.selectedId === id ? null : state.selectedId,
       };
+    });
+  },
+
+  duplicateNodeAction: (id) => {
+    set((state) => {
+      const node = findNode(state.tree, id);
+      const location = findLocation(state.tree, id);
+      if (!node || !location) return {};
+
+      const copy = duplicateSubtree(node);
+      // Verificato PRIMA di inserire: MAX_NODES è quello di
+      // `app/backend/src/pages/content-tree.ts` (fonte di verità), riesposto qui via
+      // `CONTENT_TREE_LIMITS` generato dal registro — nessuna copia manuale del numero.
+      const projectedTotal = countNodes(state.tree) + countNodes([copy]);
+      if (projectedTotal > CONTENT_TREE_LIMITS.maxNodes) {
+        notifications.show({
+          color: 'red',
+          title: 'Duplicazione non eseguita',
+          message: `Il blocco duplicato porterebbe la pagina a ${projectedTotal} blocchi, oltre il limite di ${CONTENT_TREE_LIMITS.maxNodes}.`,
+        });
+        return {};
+      }
+
+      const command: EditorCommand = {
+        apply: (tree) => addBlockAtExact(tree, location.parentId, location.index + 1, copy),
+        invert: (tree) => removeBlock(tree, copy.id),
+      };
+      const patch = pushCommand(state, command);
+      if (!patch.tree) return patch;
+      return { ...patch, selectedId: copy.id };
     });
   },
 

@@ -20,12 +20,15 @@
  * "sono io il selezionato?"). Nessun componente legge l'intero `tree` (NFR § Performance —
  * editor).
  */
-import { createContext, memo, useContext, useState, type ReactNode } from 'react';
+import { createContext, Fragment, memo, useContext, useState, type ReactNode } from 'react';
 import { ActionIcon, Group, Text, Tooltip, UnstyledButton } from '@mantine/core';
 import { useShallow } from 'zustand/react/shallow';
+import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core';
 import {
   IconArrowDown,
   IconArrowUp,
+  IconCopy,
+  IconGripVertical,
   IconIndentDecrease,
   IconIndentIncrease,
   IconTrash,
@@ -33,7 +36,7 @@ import {
 import { BLOCK_TYPES, type BlockTypeDescriptor } from '../../../types/blocks.types';
 import { useBlockEditorStore, useNodeById } from '../../../hooks/useBlockEditorStore';
 import { findLocation, findNode, type BlockNode } from './block-tree.utils';
-import { canContainType } from './block-registry.utils';
+import { canContainType, canDropInto } from './block-registry.utils';
 import BlockRenderer from '../../../components/blocks/BlockRenderer';
 import BlockErrorBoundary from '../../../components/blocks/BlockErrorBoundary';
 import Section from '../../../components/blocks/blocks/Section';
@@ -92,6 +95,26 @@ function blankRequiredProps(
 
 interface EditorBlockWrapperProps {
   id: string;
+}
+
+/**
+ * Attributi `data-*` di una zona di rilascio (dnd-kit T7): se il puntatore ci sta sopra
+ * durante un trascinamento (`isOver`), e se quel drop sarebbe ammesso — letto con
+ * `canDropInto` sull'albero corrente (`getState().tree`, non una sottoscrizione: durante
+ * l'hover l'albero non cambia, è il solo `isOver`/`active` di dnd-kit a farlo, quindi non
+ * serve un re-render pilotato dallo store per questo calcolo). I tre segni di rilascio
+ * (linea, evidenziazione, rifiuto) sono tutti CSS su questi due attributi.
+ */
+function dropZoneAttrs(
+  isOver: boolean,
+  activeDragId: string | null,
+  targetParentId: string | null,
+): { 'data-over': boolean; 'data-rejected': boolean } {
+  const rejected =
+    isOver && activeDragId !== null
+      ? !canDropInto(useBlockEditorStore.getState().tree, activeDragId, targetParentId)
+      : false;
+  return { 'data-over': isOver, 'data-rejected': rejected };
 }
 
 /**
@@ -165,8 +188,38 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const moveBlockAction = useBlockEditorStore((state) => state.moveBlockAction);
   const moveNodeToAction = useBlockEditorStore((state) => state.moveNodeToAction);
   const removeBlockAction = useBlockEditorStore((state) => state.removeBlockAction);
+  const duplicateNodeAction = useBlockEditorStore((state) => state.duplicateNodeAction);
 
   const [confirmOpened, setConfirmOpened] = useState(false);
+
+  /**
+   * Drag & drop (dnd-kit, T7). Lo stato del trascinamento in corso non entra mai nello
+   * store Zustand: `active`/`isOver` vivono nel `DndContext` di `EditorCanvas.tsx`, letti
+   * qui solo per decidere cosa disegnare durante l'hover.
+   */
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+    isDragging,
+  } = useDraggable({
+    id,
+    data: { type: node?.type },
+  });
+  const { setNodeRef: setDropBeforeRef, isOver: isOverBefore } = useDroppable({
+    id: `before:${id}`,
+    data: { parentId: location?.parentId ?? null, index: location?.index ?? 0 },
+  });
+  const { setNodeRef: setDropAfterRef, isOver: isOverAfter } = useDroppable({
+    id: `after:${id}`,
+    data: { parentId: location?.parentId ?? null, index: (location?.index ?? 0) + 1 },
+  });
+  const { setNodeRef: setDropInsideRef, isOver: isOverInside } = useDroppable({
+    id: `inside:${id}`,
+    data: { parentId: id, index: childIds.length },
+  });
+  const { active } = useDndContext();
+  const activeDragId = active ? String(active.id) : null;
 
   // Il nodo può sparire dall'albero fra un render e l'altro (eliminato da questa stessa
   // toolbar): non è un errore, semplicemente non c'è più nulla da renderizzare.
@@ -182,188 +235,241 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
     styles.wrapper,
     isSelected ? styles.selected : '',
     isInvalid ? styles.invalid : '',
+    isDragging ? styles.dragging : '',
   ]
     .filter(Boolean)
     .join(' ');
 
   return (
-    <div
-      className={className}
-      data-block-type={node.type}
-      onClick={(event) => {
-        // Il click seleziona il nodo più interno: senza stop, la selezione risalirebbe
-        // fino alla sezione che lo contiene.
-        event.stopPropagation();
-        selectNode(id);
-      }}
-    >
-      <Group className={styles.toolbar} gap={4} wrap="nowrap">
-        <UnstyledButton
-          className={styles.label}
-          onClick={(event) => {
-            event.stopPropagation();
-            selectNode(id);
-          }}
-        >
-          {label}
-        </UnstyledButton>
+    <Fragment>
+      {/* Zona di rilascio "prima di questo nodo": riordino/spostamento fra fratelli. */}
+      <div
+        ref={setDropBeforeRef}
+        className={styles.dropZone}
+        {...dropZoneAttrs(isOverBefore, activeDragId, location.parentId)}
+      />
 
-        <Tooltip label="Sposta su" withArrow>
-          <ActionIcon
-            variant="subtle"
-            size="sm"
-            aria-label={`Sposta su il blocco ${label}`}
-            disabled={location.index === 0}
+      <div
+        ref={setDragRef}
+        className={className}
+        data-block-type={node.type}
+        onClick={(event) => {
+          // Il click seleziona il nodo più interno: senza stop, la selezione risalirebbe
+          // fino alla sezione che lo contiene.
+          event.stopPropagation();
+          selectNode(id);
+        }}
+      >
+        <Group className={styles.toolbar} gap={4} wrap="nowrap">
+          <UnstyledButton
+            className={styles.label}
             onClick={(event) => {
               event.stopPropagation();
-              moveBlockAction(id, 'up');
+              selectNode(id);
             }}
           >
-            <IconArrowUp size={14} />
-          </ActionIcon>
-        </Tooltip>
+            {label}
+          </UnstyledButton>
 
-        <Tooltip label="Sposta giù" withArrow>
-          <ActionIcon
-            variant="subtle"
-            size="sm"
-            aria-label={`Sposta giù il blocco ${label}`}
-            disabled={location.index === location.siblingsCount - 1}
-            onClick={(event) => {
-              event.stopPropagation();
-              moveBlockAction(id, 'down');
-            }}
+          <Tooltip label="Trascina per riordinare" withArrow>
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              className={styles.dragHandle}
+              aria-label={`Trascina per spostare il blocco ${label}`}
+              onClick={(event) => event.stopPropagation()}
+              {...attributes}
+              {...listeners}
+            >
+              <IconGripVertical size={14} />
+            </ActionIcon>
+          </Tooltip>
+
+          <Tooltip label="Sposta su" withArrow>
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              aria-label={`Sposta su il blocco ${label}`}
+              disabled={location.index === 0}
+              onClick={(event) => {
+                event.stopPropagation();
+                moveBlockAction(id, 'up');
+              }}
+            >
+              <IconArrowUp size={14} />
+            </ActionIcon>
+          </Tooltip>
+
+          <Tooltip label="Sposta giù" withArrow>
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              aria-label={`Sposta giù il blocco ${label}`}
+              disabled={location.index === location.siblingsCount - 1}
+              onClick={(event) => {
+                event.stopPropagation();
+                moveBlockAction(id, 'down');
+              }}
+            >
+              <IconArrowDown size={14} />
+            </ActionIcon>
+          </Tooltip>
+
+          <Tooltip
+            label={indentTarget ? 'Sposta dentro il blocco precedente' : 'Nessun contenitore sopra'}
+            withArrow
           >
-            <IconArrowDown size={14} />
-          </ActionIcon>
-        </Tooltip>
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              aria-label={`Sposta il blocco ${label} dentro il contenitore precedente`}
+              disabled={!indentTarget}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (indentTarget) moveNodeToAction(id, indentTarget.parentId, indentTarget.index);
+              }}
+            >
+              <IconIndentIncrease size={14} />
+            </ActionIcon>
+          </Tooltip>
 
-        <Tooltip
-          label={indentTarget ? 'Sposta dentro il blocco precedente' : 'Nessun contenitore sopra'}
-          withArrow
-        >
-          <ActionIcon
-            variant="subtle"
-            size="sm"
-            aria-label={`Sposta il blocco ${label} dentro il contenitore precedente`}
-            disabled={!indentTarget}
-            onClick={(event) => {
-              event.stopPropagation();
-              if (indentTarget) moveNodeToAction(id, indentTarget.parentId, indentTarget.index);
-            }}
-          >
-            <IconIndentIncrease size={14} />
-          </ActionIcon>
-        </Tooltip>
+          <Tooltip label="Porta fuori dal contenitore" withArrow>
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              aria-label={`Porta il blocco ${label} fuori dal contenitore`}
+              disabled={!outdentTarget}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (outdentTarget)
+                  moveNodeToAction(id, outdentTarget.parentId, outdentTarget.index);
+              }}
+            >
+              <IconIndentDecrease size={14} />
+            </ActionIcon>
+          </Tooltip>
 
-        <Tooltip label="Porta fuori dal contenitore" withArrow>
-          <ActionIcon
-            variant="subtle"
-            size="sm"
-            aria-label={`Porta il blocco ${label} fuori dal contenitore`}
-            disabled={!outdentTarget}
-            onClick={(event) => {
-              event.stopPropagation();
-              if (outdentTarget) moveNodeToAction(id, outdentTarget.parentId, outdentTarget.index);
-            }}
-          >
-            <IconIndentDecrease size={14} />
-          </ActionIcon>
-        </Tooltip>
+          <Tooltip label="Duplica" withArrow>
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              aria-label={`Duplica il blocco ${label}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                duplicateNodeAction(id);
+              }}
+            >
+              <IconCopy size={14} />
+            </ActionIcon>
+          </Tooltip>
 
-        <Tooltip label="Elimina" withArrow>
-          <ActionIcon
-            variant="subtle"
-            color="red"
-            size="sm"
-            aria-label={`Elimina il blocco ${label}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              setConfirmOpened(true);
-            }}
-          >
-            <IconTrash size={14} />
-          </ActionIcon>
-        </Tooltip>
+          <Tooltip label="Elimina" withArrow>
+            <ActionIcon
+              variant="subtle"
+              color="red"
+              size="sm"
+              aria-label={`Elimina il blocco ${label}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                setConfirmOpened(true);
+              }}
+            >
+              <IconTrash size={14} />
+            </ActionIcon>
+          </Tooltip>
 
-        {/*
+          {/*
           Inserimento posizionale: un blocco nuovo si mette dove serve, non solo in fondo
           all'albero. Il contenitore di destinazione è quello che ospita *questo* nodo, e
           l'indice è il suo — quindi le due palette offrono esattamente i tipi ammessi in
           quella posizione, non quelli ammessi dentro questo blocco.
         */}
-        <BlockPalette
-          parentId={location.parentId}
-          parentType={parentType}
-          index={location.index}
-          label="Inserisci sopra"
-          size="xs"
-          variant="subtle"
-        />
-        <BlockPalette
-          parentId={location.parentId}
-          parentType={parentType}
-          index={location.index + 1}
-          label="Inserisci sotto"
-          size="xs"
-          variant="subtle"
-        />
-
-        {isContainer && (
           <BlockPalette
-            parentId={id}
-            parentType={node.type}
-            label="Aggiungi dentro"
+            parentId={location.parentId}
+            parentType={parentType}
+            index={location.index}
+            label="Inserisci sopra"
             size="xs"
             variant="subtle"
           />
+          <BlockPalette
+            parentId={location.parentId}
+            parentType={parentType}
+            index={location.index + 1}
+            label="Inserisci sotto"
+            size="xs"
+            variant="subtle"
+          />
+
+          {isContainer && (
+            <BlockPalette
+              parentId={id}
+              parentType={node.type}
+              label="Aggiungi dentro"
+              size="xs"
+              variant="subtle"
+            />
+          )}
+        </Group>
+
+        {blankRequired.length > 0 && (
+          <Text className={styles.emptyLeaf} component="p" mb={4}>
+            Proprietà obbligatorie non compilate: {blankRequired.join(', ')}.
+          </Text>
         )}
-      </Group>
 
-      {blankRequired.length > 0 && (
-        <Text className={styles.emptyLeaf} component="p" mb={4}>
-          Proprietà obbligatorie non compilate: {blankRequired.join(', ')}.
-        </Text>
-      )}
-
-      {isContainer && ContainerComponent ? (
-        <BlockErrorBoundary>
-          <ContainerComponent>
-            {childIds.length === 0 ? (
-              <div className={styles.emptyContainer}>
-                Contenitore vuoto — usa &laquo;Aggiungi dentro&raquo; per inserire un blocco.
+        {isContainer && ContainerComponent ? (
+          <BlockErrorBoundary>
+            <ContainerComponent>
+              <div
+                ref={setDropInsideRef}
+                className={styles.containerDropZone}
+                {...dropZoneAttrs(isOverInside, activeDragId, id)}
+              >
+                {childIds.length === 0 ? (
+                  <div className={styles.emptyContainer}>
+                    Contenitore vuoto — usa &laquo;Aggiungi dentro&raquo; per inserire un blocco.
+                  </div>
+                ) : (
+                  <div className={styles.childrenArea}>
+                    {childIds.map((childId) => (
+                      <EditorBlockWrapper key={childId} id={childId} />
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className={styles.childrenArea}>
-                {childIds.map((childId) => (
-                  <EditorBlockWrapper key={childId} id={childId} />
-                ))}
-              </div>
-            )}
-          </ContainerComponent>
-        </BlockErrorBoundary>
-      ) : (
-        <BlockRenderer node={node} />
-      )}
+            </ContainerComponent>
+          </BlockErrorBoundary>
+        ) : (
+          <BlockRenderer node={node} />
+        )}
 
-      {confirmOpened && (
-        <ConfirmModal
-          opened
-          onClose={() => setConfirmOpened(false)}
-          onConfirm={() => {
-            removeBlockAction(id);
-            setConfirmOpened(false);
-          }}
-          title={`Elimina blocco "${label}"`}
-          confirmLabel="Elimina"
-          confirmColor="red"
-        >
-          {childIds.length > 0
-            ? `Il blocco e i suoi ${childIds.length} blocchi figli vengono rimossi dalla bozza. L'eliminazione diventa definitiva al salvataggio.`
-            : "Il blocco viene rimosso dalla bozza. L'eliminazione diventa definitiva al salvataggio."}
-        </ConfirmModal>
-      )}
-    </div>
+        {confirmOpened && (
+          <ConfirmModal
+            opened
+            onClose={() => setConfirmOpened(false)}
+            onConfirm={() => {
+              removeBlockAction(id);
+              setConfirmOpened(false);
+            }}
+            title={`Elimina blocco "${label}"`}
+            confirmLabel="Elimina"
+            confirmColor="red"
+          >
+            {childIds.length > 0
+              ? `Il blocco e i suoi ${childIds.length} blocchi figli vengono rimossi dalla bozza. L'eliminazione diventa definitiva al salvataggio.`
+              : "Il blocco viene rimosso dalla bozza. L'eliminazione diventa definitiva al salvataggio."}
+          </ConfirmModal>
+        )}
+      </div>
+
+      {/* Zona di rilascio "dopo questo nodo": chiude l'ultimo gap del suo livello. */}
+      <div
+        ref={setDropAfterRef}
+        className={styles.dropZone}
+        {...dropZoneAttrs(isOverAfter, activeDragId, location.parentId)}
+      />
+    </Fragment>
   );
 });
 

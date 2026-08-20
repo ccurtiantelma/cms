@@ -168,8 +168,13 @@ export function moveBlock(
   });
 }
 
-/** `true` se `candidateId` è un discendente di `node` (a qualunque profondità). */
-function isDescendantOf(node: BlockNode, candidateId: string): boolean {
+/**
+ * `true` se `candidateId` è un discendente di `node` (a qualunque profondità). Esportata
+ * (oltre che usata da `moveNodeTo`) perché `canDropInto` (`block-registry.utils.ts`,
+ * PLAN-F04c-editor-maturo.md T7) compone la stessa guardia di discendenza per il drag &
+ * drop — mai una regola scritta due volte.
+ */
+export function isDescendantOf(node: BlockNode, candidateId: string): boolean {
   return findNode(node.children, candidateId) !== undefined;
 }
 
@@ -267,4 +272,33 @@ export function updateBlockProps(
 /** Clona in profondità un intero albero (nuovi oggetti/array a ogni livello). */
 export function cloneTree(tree: readonly BlockNode[]): BlockNode[] {
   return tree.map(cloneNode);
+}
+
+/**
+ * Copia un sottoalbero rigenerando l'id di **ogni** nodo — la radice della copia e tutti i
+ * suoi discendenti, non solo il primo — con {@link generateBlockId}. Pura: non muta `node`.
+ * Un id rigenerato solo in radice produrrebbe due nodi con lo stesso id in profondità: un
+ * `findNode` che ne restituisce uno a caso, un guasto lontano dalla sua causa
+ * (PLAN-F04c-editor-maturo.md T7, § Falle evitate 4).
+ */
+export function duplicateSubtree(node: BlockNode): BlockNode {
+  return {
+    id: generateBlockId(),
+    type: node.type,
+    props: { ...node.props },
+    children: node.children.map(duplicateSubtree),
+  };
+}
+
+/**
+ * Conta i nodi di un albero (o di un sottoalbero), radice inclusa, a qualunque profondità.
+ * Usato per verificare `MAX_NODES` (`app/backend/src/pages/content-tree.ts`, fonte di
+ * verità del limite) **prima** di inserire una copia, non dopo un `400` al salvataggio.
+ */
+export function countNodes(tree: readonly BlockNode[]): number {
+  let count = 0;
+  for (const node of tree) {
+    count += 1 + countNodes(node.children);
+  }
+  return count;
 }

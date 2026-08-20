@@ -80,3 +80,64 @@
   flex-direction: column;
   gap: 4px;
 }
+
+/* Blocco attualmente trascinato (dnd-kit T7): resta al suo posto, solo attenuato — il
+   feedback visivo del trascinamento vive nel DragOverlay, non in un transform su questo
+   nodo (nessuno style inline). */
+.dragging {
+  opacity: 0.4;
+}
+
+/* Maniglia di trascinamento nella toolbar: mai il corpo del blocco. */
+.dragHandle {
+  cursor: grab;
+}
+
+/*
+  Zona di rilascio fra fratelli (prima/dopo un nodo). È una striscia di chrome, non un
+  blocco di contenuto: l'indicatore visivo (la linea di inserimento) è un vero
+  pseudo-elemento, mai un nodo separato che sposterebbe il layout durante l'hover.
+*/
+.dropZone {
+  position: relative;
+  height: 6px;
+  margin: -3px 0;
+}
+
+.dropZone::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  border-radius: 1px;
+  background: transparent;
+  transform: translateY(-50%) scaleY(1);
+  transition: background-color 100ms ease;
+}
+
+.dropZone[data-over='true']::before {
+  background: var(--mantine-color-blue-6);
+}
+
+.dropZone[data-over='true'][data-rejected='true']::before {
+  background: var(--mantine-color-red-6);
+}
+
+/* Evidenziazione del contenitore quando il drop corrente sarebbe "dentro" di lui. */
+.containerDropZone {
+  border-radius: 4px;
+  border: 1px dashed transparent;
+  transition: border-color 100ms ease, background-color 100ms ease;
+}
+
+.containerDropZone[data-over='true'] {
+  border-color: var(--mantine-color-blue-6);
+  background: var(--mantine-color-blue-light);
+}
+
+.containerDropZone[data-over='true'][data-rejected='true'] {
+  border-color: var(--mantine-color-red-6);
+  background: var(--mantine-color-red-light);
+}
