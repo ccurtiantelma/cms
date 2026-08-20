@@ -10,9 +10,17 @@
  *
  * Lo store è un singleton di modulo (come `useAuth`): ogni test riparte da `initTree`, che
  * per contratto azzera anche selezione e history.
+ *
+ * Round F04b (voce TODO 3.11): aggiunte qui le sezioni "savePoint/isDirty",
+ * "useCanUndo/useCanRedo/useHasUnsavedChanges" e "moveNodeToAction" — la prima
+ * implementazione arrivata senza alcun test. `moveNodeTo` come funzione pura (spostamento
+ * strutturale, indipendente dal registro dei tipi) è coperta invece in
+ * `block-tree.utils.test.ts`: qui si copre solo il punto in cui `moveNodeToAction`
+ * interroga `canContainType` prima di invocarla, e l'undo/redo del comando risultante.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useBlockEditorStore } from './useBlockEditorStore';
+import { useBlockEditorStore, useCanRedo, useCanUndo, useHasUnsavedChanges } from './useBlockEditorStore';
+import { renderHook, act } from '@testing-library/react';
 import type { BlockNode } from '../pages/pages/editor/block-tree.utils';
 
 /** Nodo di comodo con `children` sempre presente. */
@@ -245,5 +253,222 @@ describe('useBlockEditorStore — azioni senza effetto e selezione', () => {
     state().updateBlockPropsAction('head-1', { text: 'Solo il testo' });
 
     expect(state().tree[0].children[0].props).toEqual({ level: 'h2', text: 'Solo il testo' });
+  });
+});
+
+describe('useBlockEditorStore — savePoint e isDirty (useHasUnsavedChanges)', () => {
+  beforeEach(() => {
+    useBlockEditorStore.getState().initTree(initialTree());
+  });
+
+  it('appena inizializzato non è sporco', () => {
+    const { result } = renderHook(() => useHasUnsavedChanges());
+    expect(result.current).toBe(false);
+  });
+
+  it('una modifica sporca lo stato', () => {
+    const { result } = renderHook(() => useHasUnsavedChanges());
+
+    act(() => state().updateBlockPropsAction('head-1', { text: 'Cambiato' }));
+
+    expect(result.current).toBe(true);
+  });
+
+  it('markSaved sul punto corrente riporta lo stato a pulito', () => {
+    const { result } = renderHook(() => useHasUnsavedChanges());
+
+    act(() => {
+      state().updateBlockPropsAction('head-1', { text: 'Cambiato' });
+      const point = state().currentSavePoint();
+      state().markSaved(point);
+    });
+
+    expect(result.current).toBe(false);
+  });
+
+  it('una modifica successiva al salvataggio risporca lo stato', () => {
+    const { result } = renderHook(() => useHasUnsavedChanges());
+
+    act(() => {
+      state().updateBlockPropsAction('head-1', { text: 'Prima' });
+      state().markSaved(state().currentSavePoint());
+      state().updateBlockPropsAction('head-1', { text: 'Seconda' });
+    });
+
+    expect(result.current).toBe(true);
+  });
+
+  it('un undo che riporta esattamente al savePoint torna pulito, anche senza passare dalla depth 0', () => {
+    const { result } = renderHook(() => useHasUnsavedChanges());
+
+    act(() => {
+      state().updateBlockPropsAction('head-1', { text: 'Salvato' });
+      state().markSaved(state().currentSavePoint());
+      state().updateBlockPropsAction('head-1', { text: 'Non salvato' });
+    });
+    expect(result.current).toBe(true);
+
+    act(() => state().undo());
+
+    expect(result.current).toBe(false);
+  });
+
+  it('stessa profondità del savePoint ma ramo diverso (due undo oltre il savePoint, poi due azioni nuove): resta sporco', () => {
+    // Guardia sul motivo per cui `isDirty` confronta l'identità del comando in cima, non
+    // solo `undoStack.length`: si salva a profondità 2, si torna a 0 con due undo, e due
+    // azioni nuove (diverse dalle originali) riportano la pila alla stessa profondità 2 —
+    // ma il comando in cima non è quello salvato.
+    const { result } = renderHook(() => useHasUnsavedChanges());
+
+    act(() => {
+      state().updateBlockPropsAction('head-1', { text: 'A' });
+      state().updateBlockPropsAction('head-1', { text: 'B' });
+      state().markSaved(state().currentSavePoint());
+    });
+    expect(state().savePoint.depth).toBe(2);
+    expect(result.current).toBe(false);
+
+    act(() => {
+      state().undo();
+      state().undo();
+      state().updateBlockPropsAction('head-1', { text: "A'" });
+      state().updateBlockPropsAction('head-1', { text: "B'" });
+    });
+
+    expect(state().undoStack).toHaveLength(state().savePoint.depth);
+    expect(result.current).toBe(true);
+  });
+
+  it('redo che ripassa dal savePoint torna pulito, poi risporca oltre', () => {
+    const { result } = renderHook(() => useHasUnsavedChanges());
+
+    act(() => {
+      state().updateBlockPropsAction('head-1', { text: 'Salvato' });
+      state().markSaved(state().currentSavePoint());
+      state().updateBlockPropsAction('head-1', { text: 'Oltre' });
+      state().undo();
+      state().undo();
+    });
+    expect(result.current).toBe(true);
+
+    act(() => state().redo());
+    expect(result.current).toBe(false);
+
+    act(() => state().redo());
+    expect(result.current).toBe(true);
+  });
+
+  it('initTree azzera anche il savePoint (una nuova bozza caricata è per definizione pulita)', () => {
+    state().updateBlockPropsAction('head-1', { text: 'x' });
+    state().markSaved(state().currentSavePoint());
+
+    state().initTree(initialTree());
+
+    expect(state().savePoint).toEqual({ depth: 0, top: null });
+    expect(useBlockEditorStore.getState().undoStack).toHaveLength(0);
+  });
+});
+
+describe('useBlockEditorStore — useCanUndo/useCanRedo', () => {
+  beforeEach(() => {
+    useBlockEditorStore.getState().initTree(initialTree());
+  });
+
+  it('storia vuota: né annullare né ripristinare', () => {
+    const undoHook = renderHook(() => useCanUndo());
+    const redoHook = renderHook(() => useCanRedo());
+
+    expect(undoHook.result.current).toBe(false);
+    expect(redoHook.result.current).toBe(false);
+  });
+
+  it('dopo un’azione: si può annullare, non ripristinare', () => {
+    const undoHook = renderHook(() => useCanUndo());
+    const redoHook = renderHook(() => useCanRedo());
+
+    act(() => state().updateBlockPropsAction('head-1', { text: 'x' }));
+
+    expect(undoHook.result.current).toBe(true);
+    expect(redoHook.result.current).toBe(false);
+  });
+
+  it('dopo un annulla: si può ripristinare; se era l’unica azione, non si può più annullare', () => {
+    const undoHook = renderHook(() => useCanUndo());
+    const redoHook = renderHook(() => useCanRedo());
+
+    act(() => {
+      state().updateBlockPropsAction('head-1', { text: 'x' });
+      state().undo();
+    });
+
+    expect(undoHook.result.current).toBe(false);
+    expect(redoHook.result.current).toBe(true);
+  });
+
+  it('redo esaurito (nessun altro comando disfatto): torna a non poter ripristinare', () => {
+    const redoHook = renderHook(() => useCanRedo());
+
+    act(() => {
+      state().updateBlockPropsAction('head-1', { text: 'x' });
+      state().undo();
+      state().redo();
+    });
+
+    expect(redoHook.result.current).toBe(false);
+  });
+});
+
+describe('useBlockEditorStore — moveNodeToAction: rispetta il registro (canContainType)', () => {
+  beforeEach(() => {
+    useBlockEditorStore.getState().initTree(initialTree());
+  });
+
+  it('sposta un nodo di radice dentro un contenitore che lo ammette, e l’undo lo riporta esattamente al suo posto', () => {
+    // `head-root` (heading) alla radice → dentro `sec-1` (section, che ammette heading),
+    // in testa ai suoi figli.
+    state().moveNodeToAction('head-root', 'sec-1', 0);
+
+    expect(state().tree.map((n) => n.id)).toEqual(['sec-1']);
+    expect(state().tree[0].children.map((n) => n.id)).toEqual(['head-root', 'head-1', 'rich-1']);
+    expect(state().undoStack).toHaveLength(1);
+
+    state().undo();
+
+    expect(state().tree.map((n) => n.id)).toEqual(['sec-1', 'head-root']);
+    expect(state().tree[0].children.map((n) => n.id)).toEqual(['head-1', 'rich-1']);
+    expect(state().undoStack).toHaveLength(0);
+  });
+
+  it('rifiuta lo spostamento quando il contenitore di destinazione non ammette quel tipo: no-op, nessuna voce in history', () => {
+    // `head-1` è un heading; il registro dichiara `heading.childrenAllow: []` — non può
+    // ospitare un altro heading. Bug applicativo nel registro NON è sotto test qui: si
+    // verifica solo che `moveNodeToAction` rispetti il verdetto di `canContainType`.
+    const treeBefore = state().tree;
+
+    state().moveNodeToAction('head-root', 'head-1', 0);
+
+    expect(state().tree).toBe(treeBefore);
+    expect(state().undoStack).toHaveLength(0);
+  });
+
+  it('rifiuta lo spostamento verso un contenitore inesistente: no-op, nessuna eccezione', () => {
+    const treeBefore = state().tree;
+
+    state().moveNodeToAction('head-root', 'mai-esistito', 0);
+
+    expect(state().tree).toBe(treeBefore);
+    expect(state().undoStack).toHaveLength(0);
+  });
+
+  it('un movimento respinto non entra nel redo dopo un annullamento di un’altra azione', () => {
+    // Copertura dell’interazione fra `pushCommand` e il rifiuto anticipato di
+    // `moveNodeToAction`: un tentativo di spostamento respinto prima di costruire il
+    // comando non deve mai apparire nella history, nemmeno indirettamente via redo.
+    state().updateBlockPropsAction('head-1', { text: 'x' });
+    state().moveNodeToAction('head-root', 'head-1', 0);
+
+    expect(state().undoStack).toHaveLength(1);
+    state().undo();
+    expect(state().redoStack).toHaveLength(1);
   });
 });

@@ -25,6 +25,7 @@ import {
   findNode,
   generateBlockId,
   moveBlock,
+  moveNodeTo,
   removeBlock,
   updateBlockProps,
   type BlockNode,
@@ -358,5 +359,105 @@ describe('block-tree.utils — ricerca e localizzazione', () => {
     expect(findLocation(tree, 'btn-1')).toEqual({ parentId: 'sec-1', index: 2, siblingsCount: 3 });
     expect(findLocation(tree, 'img-1')).toEqual({ parentId: 'sec-2', index: 0, siblingsCount: 1 });
     expect(findLocation(tree, 'mai-esistito')).toBeUndefined();
+  });
+});
+
+/**
+ * `moveNodeTo` (round F04b, voce TODO 3.11 — implementata senza alcun test). Qui si
+ * verificano solo le regole **strutturali** che la funzione conosce da sola (nodo/genitore
+ * esistenti, non-dentro-sé-stesso, non-dentro-un-proprio-discendente, no-op sulla stessa
+ * posizione): l'ammissibilità del tipo nel contenitore di destinazione (`canContainType`)
+ * non è un fatto che questa funzione conosca — è verificata a monte da `moveNodeToAction`
+ * (`useBlockEditorStore.test.ts`), come dichiara il commento della funzione stessa.
+ */
+describe('block-tree.utils — moveNodeTo', () => {
+  it('non muta l’albero passato', () => {
+    const tree = makeTree();
+    const snapshot = JSON.stringify(tree);
+
+    moveNodeTo(tree, 'head-root', 'sec-1', 0);
+
+    expect(JSON.stringify(tree)).toBe(snapshot);
+  });
+
+  it('sposta un nodo di radice dentro un contenitore diverso, alla posizione richiesta', () => {
+    const tree = makeTree();
+
+    const next = moveNodeTo(tree, 'head-root', 'sec-1', 1);
+
+    expect(childIds(next, null)).toEqual(['sec-1', 'sec-2']);
+    expect(childIds(next, 'sec-1')).toEqual(['head-1', 'head-root', 'rich-1', 'btn-1']);
+    expect(findLocation(next, 'head-root')).toEqual({ parentId: 'sec-1', index: 1, siblingsCount: 4 });
+  });
+
+  it('sposta un nodo da un contenitore alla radice', () => {
+    const tree = makeTree();
+
+    const next = moveNodeTo(tree, 'img-1', null, 0);
+
+    expect(childIds(next, null)).toEqual(['img-1', 'sec-1', 'head-root', 'sec-2']);
+    expect(findNode(next, 'sec-2')!.children).toEqual([]);
+  });
+
+  it('sposta un nodo fra due contenitori diversi (non solo verso/dalla radice)', () => {
+    const tree = makeTree();
+
+    const next = moveNodeTo(tree, 'btn-1', 'sec-2', 0);
+
+    expect(childIds(next, 'sec-1')).toEqual(['head-1', 'rich-1']);
+    expect(childIds(next, 'sec-2')).toEqual(['btn-1', 'img-1']);
+  });
+
+  it('l’indice di destinazione è interpretato dopo la rimozione del nodo dalla sua posizione di partenza', () => {
+    // Riordino all’interno dello stesso contenitore: spostare `head-1` (indice 0) alla
+    // posizione 2 dei fratelli-dopo-rimozione lo mette in coda, non al terzultimo posto
+    // di una lista che includesse ancora sé stesso.
+    const tree = makeTree();
+
+    const next = moveNodeTo(tree, 'head-1', 'sec-1', 2);
+
+    expect(childIds(next, 'sec-1')).toEqual(['rich-1', 'btn-1', 'head-1']);
+  });
+
+  it('un indice oltre la fine della destinazione è ristretto (clamp), mai un’eccezione', () => {
+    const tree = makeTree();
+
+    const next = moveNodeTo(tree, 'head-root', 'sec-2', 99);
+
+    expect(childIds(next, 'sec-2')).toEqual(['img-1', 'head-root']);
+  });
+
+  it('no-op: id inesistente', () => {
+    const tree = makeTree();
+    expect(moveNodeTo(tree, 'mai-esistito', 'sec-1', 0)).toBe(tree);
+  });
+
+  it('no-op: contenitore di destinazione inesistente', () => {
+    const tree = makeTree();
+    expect(moveNodeTo(tree, 'head-root', 'mai-esistito', 0)).toBe(tree);
+  });
+
+  it('no-op: un nodo non può diventare figlio di sé stesso', () => {
+    const tree = makeTree();
+    expect(moveNodeTo(tree, 'sec-1', 'sec-1', 0)).toBe(tree);
+  });
+
+  it('no-op: un nodo non può essere spostato dentro un proprio discendente (staccherebbe il ramo)', () => {
+    const tree = makeTree();
+    expect(moveNodeTo(tree, 'sec-1', 'head-1', 0)).toBe(tree);
+  });
+
+  it('no-op: stesso contenitore, stessa posizione di partenza — nessun cambiamento reale', () => {
+    const tree = makeTree();
+    expect(moveNodeTo(tree, 'head-1', 'sec-1', 0)).toBe(tree);
+  });
+
+  it('struttura conservata per identità sui rami non toccati dallo spostamento', () => {
+    const tree = makeTree();
+
+    const next = moveNodeTo(tree, 'head-root', 'sec-1', 0);
+
+    // `sec-2` non è coinvolto nello spostamento: stesso riferimento, figli compresi.
+    expect(next.find((n) => n.id === 'sec-2')).toBe(tree.find((n) => n.id === 'sec-2'));
   });
 });

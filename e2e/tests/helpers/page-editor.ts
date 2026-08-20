@@ -120,6 +120,32 @@ export async function deleteBlock(page: Page, blockLabel: string): Promise<void>
   await expect(dialog).toBeHidden();
 }
 
+/** Annulla l'ultima modifica dell'editor (pulsante "Annulla", toolbar undo/redo). */
+export async function undoLastChange(page: Page): Promise<void> {
+  await page.getByRole('button', { name: "Annulla l'ultima modifica" }).click();
+}
+
+/** Ripristina l'ultima modifica annullata (pulsante "Ripristina", toolbar undo/redo). */
+export async function redoLastChange(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Ripristina la modifica annullata' }).click();
+}
+
+/**
+ * Sposta un blocco dentro il contenitore immediatamente precedente ("indent"): è lo
+ * spostamento posizionale fra contenitori (`moveNodeToAction`) esposto dall'interfaccia —
+ * non c'è drag & drop nel primo rilascio (F04), solo questa coppia di pulsanti.
+ */
+export async function indentBlock(page: Page, blockLabel: string): Promise<void> {
+  await page
+    .getByRole('button', { name: `Sposta il blocco ${blockLabel} dentro il contenitore precedente` })
+    .click();
+}
+
+/** Porta un blocco fuori dal proprio contenitore, di un livello ("outdent"). */
+export async function outdentBlock(page: Page, blockLabel: string): Promise<void> {
+  await page.getByRole('button', { name: `Porta il blocco ${blockLabel} fuori dal contenitore` }).click();
+}
+
 /** Salva la bozza e attende la conferma; fallisce se compare un 400 o un 409. */
 export async function saveDraft(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Salva bozza' }).click();
