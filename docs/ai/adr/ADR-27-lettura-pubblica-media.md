@@ -1,10 +1,10 @@
 # ADR-27 — Lettura pubblica dei media (risoluzione di `mediaRef`)
 
 ## Status
-[x] **In discussione** · [ ] Approvata · [ ] Rifiutata · [ ] Superseded da ADR-XXX
+[ ] In discussione · [x] **Approvata** · [ ] Rifiutata · [ ] Superseded da ADR-XXX
 
 ## Data approvazione
-_(in attesa di firma)_
+2026-08-20
 
 ---
 
