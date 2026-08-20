@@ -9,9 +9,48 @@ import { BlockDefinition } from '../block-definition.types';
 export const sectionBlock: BlockDefinition = {
   type: 'section',
   v: 1,
-  props: {},
+  props: {
+    styleSpaceBefore: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
+      default: { default: 'none' },
+    },
+    styleSpaceAfter: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
+      default: { default: 'none' },
+    },
+    stylePadding: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['none', 'sm', 'md', 'lg'],
+      default: { default: 'none' },
+    },
+    styleBackground: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['none', 'subtle', 'accent', 'inverse'],
+      default: { default: 'none' },
+    },
+  },
   children: { allow: ['heading', 'richText', 'image', 'button'] },
   migrations: [],
   enabled: true,
-  meta: { label: 'Sezione', category: 'layout' },
+  meta: {
+    label: 'Sezione',
+    category: 'layout',
+    icon: 'layout-board',
+    props: {
+      styleSpaceBefore: { label: 'Spazio prima', tab: 'style', order: 1 },
+      styleSpaceAfter: { label: 'Spazio dopo', tab: 'style', order: 2 },
+      stylePadding: { label: 'Spaziatura interna', tab: 'style', order: 3 },
+      styleBackground: { label: 'Sfondo', tab: 'style', order: 4 },
+    },
+  },
 };

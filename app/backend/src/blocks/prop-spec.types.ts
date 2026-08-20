@@ -66,10 +66,28 @@ export interface BooleanPropSpec extends BasePropSpec {
   kind: 'boolean';
 }
 
-/** Valore da un elenco chiuso di stringhe ammesse. */
+/**
+ * Nomi di breakpoint ammessi per una prop `responsive` (ADR-29 § 2): elenco
+ * **chiuso**, dichiarato una volta nel backend. `default` è l'unica chiave
+ * obbligatoria dentro l'oggetto — è il valore che vale ovunque non sia
+ * sovrascritto, non "il valore desktop".
+ */
+export const RESPONSIVE_BREAKPOINTS = ['default', 'tablet', 'mobile'] as const;
+
+/** Uno dei tre nomi di `RESPONSIVE_BREAKPOINTS`. */
+export type ResponsiveBreakpointName = (typeof RESPONSIVE_BREAKPOINTS)[number];
+
+/**
+ * Valore da un elenco chiuso di stringhe ammesse. `responsive: true` (ADR-29
+ * § 3) cambia solo la **forma** del valore atteso — da scalare a
+ * `{ default, tablet?, mobile? }` — mai il `kind`: resta `enum`, quindi il
+ * contratto di sanitizzazione di ADR-21 § 4 non cambia.
+ */
 export interface EnumPropSpec extends BasePropSpec {
   kind: 'enum';
   values: readonly string[];
+  /** `true` = il valore è un oggetto per breakpoint, non uno scalare (ADR-29 § 2/§ 3). */
+  responsive?: boolean;
 }
 
 /**

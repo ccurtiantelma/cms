@@ -230,7 +230,7 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
   // ─── BLOCK_PROP_NOT_DECLARED ────────────────────────────────────────────
 
   describe('BLOCK_PROP_NOT_DECLARED', () => {
-    it('section con qualunque prop produce BLOCK_PROP_NOT_DECLARED (§ 3.2: props vuoto)', () => {
+    it('section con una prop non dichiarata produce BLOCK_PROP_NOT_DECLARED (§ 3.2, T3: section ha solo props di stile opzionali)', () => {
       const result = validator.validateTree([node({ type: 'section', props: { anchor: 'x' } })]);
 
       expect(result.errors).toEqual([
@@ -240,7 +240,7 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
             path: 'blocks[0].props.anchor',
             type: 'section',
             prop: 'anchor',
-            declared: [],
+            declared: ['styleSpaceBefore', 'styleSpaceAfter', 'stylePadding', 'styleBackground'],
           },
         },
       ]);
@@ -257,7 +257,15 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
           path: 'blocks[0].props.extra',
           type: 'heading',
           prop: 'extra',
-          declared: ['level', 'text'],
+          declared: [
+            'level',
+            'text',
+            'styleSpaceBefore',
+            'styleSpaceAfter',
+            'styleTextColor',
+            'styleFontSize',
+            'styleFontWeight',
+          ],
         },
       });
     });
@@ -574,6 +582,155 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
           (e) => e.code === 'BLOCK_TYPE_UNKNOWN' && e.details.path === 'blocks[1]',
         ),
       ).toBe(true);
+    });
+  });
+
+  // ─── Props responsive (ADR-29) ──────────────────────────────────────────
+
+  describe('props di stile responsive (ADR-29 § 2/§ 4) — kind "enum" con responsive: true', () => {
+    it('un blocco già salvato senza alcuna prop di stile resta valido (retro-compatibilità, ADR-29 § 5)', () => {
+      const result = validator.validateTree([
+        node({ type: 'heading', props: { level: 'h2', text: 'Titolo' } }),
+      ]);
+      expect(result.valid).toBe(true);
+    });
+
+    it('un valore responsive completo ({ default, tablet, mobile }) tutti token validi è accettato', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'section',
+          props: {
+            styleSpaceBefore: { default: 'md', tablet: 'sm', mobile: 'xs' },
+          },
+        }),
+      ]);
+      expect(result.valid).toBe(true);
+    });
+
+    it('un valore responsive con solo "default" è accettato (tablet/mobile opzionali)', () => {
+      const result = validator.validateTree([
+        node({ type: 'section', props: { styleSpaceBefore: { default: 'lg' } } }),
+      ]);
+      expect(result.valid).toBe(true);
+    });
+
+    it('uno scalare passato a una prop responsive è respinto con reason "type" (ADR-29: la forma dichiarata è oggetto)', () => {
+      const result = validator.validateTree([
+        node({ type: 'section', props: { styleSpaceBefore: 'md' } }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleSpaceBefore',
+          type: 'section',
+          prop: 'styleSpaceBefore',
+          kind: 'enum',
+          reason: 'type',
+        },
+      });
+    });
+
+    it('"default" mancante nell\'oggetto responsive produce reason "type" sul path della prop', () => {
+      const result = validator.validateTree([
+        node({ type: 'section', props: { styleSpaceBefore: { tablet: 'sm' } } }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleSpaceBefore',
+          type: 'section',
+          prop: 'styleSpaceBefore',
+          kind: 'enum',
+          reason: 'type',
+        },
+      });
+    });
+
+    it('una chiave fuori dall\'elenco chiuso dei tre breakpoint produce reason "type" sul path della prop', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'section',
+          props: { styleSpaceBefore: { default: 'md', wide: 'lg' } },
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleSpaceBefore',
+          type: 'section',
+          prop: 'styleSpaceBefore',
+          kind: 'enum',
+          reason: 'type',
+        },
+      });
+    });
+
+    it('un token fuori lista su "tablet" produce reason "enum" sul path della singola voce', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'section',
+          props: { styleSpaceBefore: { default: 'md', tablet: 'enorme' } },
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleSpaceBefore.tablet',
+          type: 'section',
+          prop: 'styleSpaceBefore',
+          kind: 'enum',
+          reason: 'enum',
+          constraint: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
+        },
+      });
+    });
+
+    it('un valore null è respinto con reason "type"', () => {
+      const result = validator.validateTree([
+        node({ type: 'section', props: { styleSpaceBefore: null } }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleSpaceBefore',
+          type: 'section',
+          prop: 'styleSpaceBefore',
+          kind: 'enum',
+          reason: 'type',
+        },
+      });
+    });
+
+    it('stylePadding/styleBackground su section, styleTextColor/styleFontSize/styleFontWeight su heading/richText/button sono accettati responsive', () => {
+      const sectionResult = validator.validateTree([
+        node({
+          type: 'section',
+          props: {
+            stylePadding: { default: 'sm' },
+            styleBackground: { default: 'accent', mobile: 'none' },
+          },
+        }),
+      ]);
+      expect(sectionResult.valid).toBe(true);
+
+      const headingResult = validator.validateTree([
+        node({
+          type: 'heading',
+          props: {
+            level: 'h2',
+            text: 'Titolo',
+            styleTextColor: { default: 'muted' },
+            styleFontSize: { default: 'lg', tablet: 'md' },
+            styleFontWeight: { default: 'bold' },
+          },
+        }),
+      ]);
+      expect(headingResult.valid).toBe(true);
     });
   });
 

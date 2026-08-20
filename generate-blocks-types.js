@@ -62,13 +62,25 @@ export interface BlockPropDescriptor {
   values?: readonly string[];
   profile?: 'inline' | 'basic';
   nonEmpty?: boolean;
+  /** \`true\` = il valore è \`{ default, tablet?, mobile? }\`, non uno scalare (ADR-29 § 2/§ 3). */
+  responsive?: boolean;
 }
 
-/** Metadati d'editor, opachi alla validazione (consumati solo dalla palette di F04). */
+/** Metadati d'editor di una singola prop (ADR-30 § 1), opachi alla validazione. */
+export interface BlockEditorPropMeta {
+  label: string;
+  tab?: 'content' | 'style';
+  order?: number;
+  help?: string;
+}
+
+/** Metadati d'editor, opachi alla validazione (consumati solo dalla palette e dall'ispettore di F04). */
 export interface BlockEditorMeta {
   label: string;
   icon?: string;
   category?: string;
+  /** Metadati per prop, indicizzati per nome (ADR-30 § 1). */
+  props?: Record<string, BlockEditorPropMeta>;
 }
 
 /** Un tipo di blocco (SPEC-F02-blocchi.md § 5.1). Nessun campo di rendering. */

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { BlockDefinition } from '../block-definition.types';
 import { BlockRegistry, DEFAULT_BLOCK_REGISTRY } from '../block-registry';
-import { PropSpec } from '../prop-spec.types';
+import { EnumPropSpec, PropSpec, RESPONSIVE_BREAKPOINTS, ResponsiveBreakpointName } from '../prop-spec.types';
 import { ValidatableBlockNode } from './validatable-node.types';
 import {
   BlockPropInvalidReason,
@@ -225,8 +225,12 @@ export class BlockTreeValidatorService {
         return;
       }
       case 'enum': {
+        if (spec.responsive) {
+          this.validateResponsiveEnumValue(value, propName, path, type, spec, errors);
+          return;
+        }
         if (typeof value !== 'string') return invalid('type');
-        if (!spec.values.includes(value)) return invalid('enum', { constraint: [...spec.values] });
+        if (!isEnumTokenAllowed(value, spec.values)) return invalid('enum', { constraint: [...spec.values] });
         return;
       }
       case 'url': {
@@ -256,6 +260,67 @@ export class BlockTreeValidatorService {
       }
     }
   }
+
+  /**
+   * Valida il ramo per-breakpoint di un `EnumPropSpec` con `responsive: true`
+   * (ADR-29 § 2/§ 4). Nessun `reason` nuovo: l'envelope malformato (valore non
+   * oggetto, `default` mancante, chiave fuori dall'elenco chiuso) produce
+   * `reason: 'type'` sul path della prop; un token fuori da `spec.values` su
+   * una singola voce produce `reason: 'enum'` sul path **della voce**
+   * (`…props.styleSpaceBefore.tablet`). La verifica del token è condivisa con
+   * il ramo scalare tramite `isEnumTokenAllowed`.
+   */
+  private validateResponsiveEnumValue(
+    value: unknown,
+    propName: string,
+    path: string,
+    type: string,
+    spec: EnumPropSpec,
+    errors: BlockValidationError[],
+  ): void {
+    const isEnvelopeShapeValid =
+      typeof value === 'object' &&
+      value !== null &&
+      !Array.isArray(value) &&
+      Object.prototype.hasOwnProperty.call(value, 'default') &&
+      Object.keys(value).every((key) => RESPONSIVE_BREAKPOINTS.includes(key as ResponsiveBreakpointName));
+
+    if (!isEnvelopeShapeValid) {
+      errors.push({
+        code: 'BLOCK_PROP_INVALID',
+        details: { path, type, prop: propName, kind: spec.kind, reason: 'type' },
+      });
+      return;
+    }
+
+    const envelope = value as Record<ResponsiveBreakpointName, unknown>;
+    for (const breakpoint of RESPONSIVE_BREAKPOINTS) {
+      if (!Object.prototype.hasOwnProperty.call(envelope, breakpoint)) continue;
+      if (!isEnumTokenAllowed(envelope[breakpoint], spec.values)) {
+        errors.push({
+          code: 'BLOCK_PROP_INVALID',
+          details: {
+            path: `${path}.${breakpoint}`,
+            type,
+            prop: propName,
+            kind: spec.kind,
+            reason: 'enum',
+            constraint: [...spec.values],
+          },
+        });
+      }
+    }
+  }
+}
+
+/**
+ * Verifica se `value` è un token ammesso della lista `values` di un
+ * `EnumPropSpec` — condivisa fra il ramo scalare e il ramo per breakpoint di
+ * `case 'enum'` (ADR-29 § 4: "la verifica del token in una funzione sola
+ * usata da entrambi i percorsi").
+ */
+function isEnumTokenAllowed(value: unknown, values: readonly string[]): value is string {
+  return typeof value === 'string' && values.includes(value);
 }
 
 /** Lunghezza in code point Unicode (non byte, non unità UTF-16) — SPEC-F02-blocchi.md § 1.4. */

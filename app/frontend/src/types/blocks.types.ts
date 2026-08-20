@@ -22,13 +22,25 @@ export interface BlockPropDescriptor {
   values?: readonly string[];
   profile?: 'inline' | 'basic';
   nonEmpty?: boolean;
+  /** `true` = il valore è `{ default, tablet?, mobile? }`, non uno scalare (ADR-29 § 2/§ 3). */
+  responsive?: boolean;
 }
 
-/** Metadati d'editor, opachi alla validazione (consumati solo dalla palette di F04). */
+/** Metadati d'editor di una singola prop (ADR-30 § 1), opachi alla validazione. */
+export interface BlockEditorPropMeta {
+  label: string;
+  tab?: 'content' | 'style';
+  order?: number;
+  help?: string;
+}
+
+/** Metadati d'editor, opachi alla validazione (consumati solo dalla palette e dall'ispettore di F04). */
 export interface BlockEditorMeta {
   label: string;
   icon?: string;
   category?: string;
+  /** Metadati per prop, indicizzati per nome (ADR-30 § 1). */
+  props?: Record<string, BlockEditorPropMeta>;
 }
 
 /** Un tipo di blocco (SPEC-F02-blocchi.md § 5.1). Nessun campo di rendering. */
@@ -74,10 +86,98 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
       "image",
       "button"
     ],
-    "props": [],
+    "props": [
+      {
+        "name": "styleSpaceBefore",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "none"
+        },
+        "values": [
+          "none",
+          "xs",
+          "sm",
+          "md",
+          "lg",
+          "xl"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleSpaceAfter",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "none"
+        },
+        "values": [
+          "none",
+          "xs",
+          "sm",
+          "md",
+          "lg",
+          "xl"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "stylePadding",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "none"
+        },
+        "values": [
+          "none",
+          "sm",
+          "md",
+          "lg"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleBackground",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "none"
+        },
+        "values": [
+          "none",
+          "subtle",
+          "accent",
+          "inverse"
+        ],
+        "responsive": true
+      }
+    ],
     "meta": {
       "label": "Sezione",
-      "category": "layout"
+      "category": "layout",
+      "icon": "layout-board",
+      "props": {
+        "styleSpaceBefore": {
+          "label": "Spazio prima",
+          "tab": "style",
+          "order": 1
+        },
+        "styleSpaceAfter": {
+          "label": "Spazio dopo",
+          "tab": "style",
+          "order": 2
+        },
+        "stylePadding": {
+          "label": "Spaziatura interna",
+          "tab": "style",
+          "order": 3
+        },
+        "styleBackground": {
+          "label": "Sfondo",
+          "tab": "style",
+          "order": 4
+        }
+      }
     }
   },
   {
@@ -103,11 +203,125 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "kind": "plainText",
         "required": true,
         "maxLength": 200
+      },
+      {
+        "name": "styleSpaceBefore",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "none"
+        },
+        "values": [
+          "none",
+          "xs",
+          "sm",
+          "md",
+          "lg",
+          "xl"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleSpaceAfter",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "none"
+        },
+        "values": [
+          "none",
+          "xs",
+          "sm",
+          "md",
+          "lg",
+          "xl"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleTextColor",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "default"
+        },
+        "values": [
+          "default",
+          "muted",
+          "accent",
+          "inverse"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleFontSize",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "md"
+        },
+        "values": [
+          "sm",
+          "md",
+          "lg",
+          "xl"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleFontWeight",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "regular"
+        },
+        "values": [
+          "regular",
+          "medium",
+          "bold"
+        ],
+        "responsive": true
       }
     ],
     "meta": {
       "label": "Titolo",
-      "category": "testo"
+      "category": "testo",
+      "icon": "heading",
+      "props": {
+        "level": {
+          "label": "Livello",
+          "order": 1
+        },
+        "text": {
+          "label": "Testo",
+          "order": 2
+        },
+        "styleSpaceBefore": {
+          "label": "Spazio prima",
+          "tab": "style",
+          "order": 3
+        },
+        "styleSpaceAfter": {
+          "label": "Spazio dopo",
+          "tab": "style",
+          "order": 4
+        },
+        "styleTextColor": {
+          "label": "Colore testo",
+          "tab": "style",
+          "order": 5
+        },
+        "styleFontSize": {
+          "label": "Dimensione testo",
+          "tab": "style",
+          "order": 6
+        },
+        "styleFontWeight": {
+          "label": "Spessore testo",
+          "tab": "style",
+          "order": 7
+        }
+      }
     }
   },
   {
@@ -122,11 +336,121 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "required": true,
         "maxLength": 20000,
         "profile": "basic"
+      },
+      {
+        "name": "styleSpaceBefore",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "none"
+        },
+        "values": [
+          "none",
+          "xs",
+          "sm",
+          "md",
+          "lg",
+          "xl"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleSpaceAfter",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "none"
+        },
+        "values": [
+          "none",
+          "xs",
+          "sm",
+          "md",
+          "lg",
+          "xl"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleTextColor",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "default"
+        },
+        "values": [
+          "default",
+          "muted",
+          "accent",
+          "inverse"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleFontSize",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "md"
+        },
+        "values": [
+          "sm",
+          "md",
+          "lg",
+          "xl"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleFontWeight",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "regular"
+        },
+        "values": [
+          "regular",
+          "medium",
+          "bold"
+        ],
+        "responsive": true
       }
     ],
     "meta": {
       "label": "Testo",
-      "category": "testo"
+      "category": "testo",
+      "icon": "align-left",
+      "props": {
+        "html": {
+          "label": "Contenuto",
+          "order": 1
+        },
+        "styleSpaceBefore": {
+          "label": "Spazio prima",
+          "tab": "style",
+          "order": 2
+        },
+        "styleSpaceAfter": {
+          "label": "Spazio dopo",
+          "tab": "style",
+          "order": 3
+        },
+        "styleTextColor": {
+          "label": "Colore testo",
+          "tab": "style",
+          "order": 4
+        },
+        "styleFontSize": {
+          "label": "Dimensione testo",
+          "tab": "style",
+          "order": 5
+        },
+        "styleFontWeight": {
+          "label": "Spessore testo",
+          "tab": "style",
+          "order": 6
+        }
+      }
     }
   },
   {
@@ -146,11 +470,66 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "required": true,
         "maxLength": 300,
         "nonEmpty": true
+      },
+      {
+        "name": "styleSpaceBefore",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "none"
+        },
+        "values": [
+          "none",
+          "xs",
+          "sm",
+          "md",
+          "lg",
+          "xl"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleSpaceAfter",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "none"
+        },
+        "values": [
+          "none",
+          "xs",
+          "sm",
+          "md",
+          "lg",
+          "xl"
+        ],
+        "responsive": true
       }
     ],
     "meta": {
       "label": "Immagine",
-      "category": "media"
+      "category": "media",
+      "icon": "photo",
+      "props": {
+        "mediaRef": {
+          "label": "File",
+          "order": 1
+        },
+        "alt": {
+          "label": "Testo alternativo",
+          "order": 2
+        },
+        "styleSpaceBefore": {
+          "label": "Spazio prima",
+          "tab": "style",
+          "order": 3
+        },
+        "styleSpaceAfter": {
+          "label": "Spazio dopo",
+          "tab": "style",
+          "order": 4
+        }
+      }
     }
   },
   {
@@ -170,11 +549,125 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "kind": "url",
         "required": true,
         "maxLength": 2048
+      },
+      {
+        "name": "styleSpaceBefore",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "none"
+        },
+        "values": [
+          "none",
+          "xs",
+          "sm",
+          "md",
+          "lg",
+          "xl"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleSpaceAfter",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "none"
+        },
+        "values": [
+          "none",
+          "xs",
+          "sm",
+          "md",
+          "lg",
+          "xl"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleTextColor",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "default"
+        },
+        "values": [
+          "default",
+          "muted",
+          "accent",
+          "inverse"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleFontSize",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "md"
+        },
+        "values": [
+          "sm",
+          "md",
+          "lg",
+          "xl"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleFontWeight",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "regular"
+        },
+        "values": [
+          "regular",
+          "medium",
+          "bold"
+        ],
+        "responsive": true
       }
     ],
     "meta": {
       "label": "Pulsante",
-      "category": "azione"
+      "category": "azione",
+      "icon": "hand-click",
+      "props": {
+        "label": {
+          "label": "Etichetta",
+          "order": 1
+        },
+        "href": {
+          "label": "Link",
+          "order": 2
+        },
+        "styleSpaceBefore": {
+          "label": "Spazio prima",
+          "tab": "style",
+          "order": 3
+        },
+        "styleSpaceAfter": {
+          "label": "Spazio dopo",
+          "tab": "style",
+          "order": 4
+        },
+        "styleTextColor": {
+          "label": "Colore testo",
+          "tab": "style",
+          "order": 5
+        },
+        "styleFontSize": {
+          "label": "Dimensione testo",
+          "tab": "style",
+          "order": 6
+        },
+        "styleFontWeight": {
+          "label": "Spessore testo",
+          "tab": "style",
+          "order": 7
+        }
+      }
     }
   }
 ] as const;

@@ -12,14 +12,36 @@ export interface BlockChildrenSpec {
 }
 
 /**
+ * Metadati d'editor di una singola prop (ADR-30 § 1), indicizzati per nome
+ * dentro `BlockEditorMeta.props`. Opachi alla validazione quanto il resto di
+ * `meta`: il validatore non li legge mai. Una prop dichiarata senza voce qui
+ * è un difetto, non un default silenzioso (ADR-30 § 4) — presidiato da un
+ * test di invariante sul registro.
+ */
+export interface BlockEditorPropMeta {
+  /** Etichetta leggibile mostrata nell'ispettore — chiude la voce 3.10 di `docs/TODO.md`. */
+  label: string;
+  /** Scheda dell'ispettore che ospita il controllo. Assente = `'content'` (ADR-30 § 3). */
+  tab?: 'content' | 'style';
+  /** Ordine dentro la scheda. Assente = ordine di dichiarazione in `props`. */
+  order?: number;
+  /** Riga di aiuto sotto il campo, facoltativa. */
+  help?: string;
+}
+
+/**
  * Metadati opachi alla validazione, consumati solo dall'editor (palette di
  * F04) e dall'artefatto generato per il frontend (SPEC-F02 § 5.1). Il
- * registro non dichiara alcun contratto di rendering (ADR-21 § 2).
+ * registro non dichiara alcun contratto di rendering (ADR-21 § 2) — `props`
+ * è uno scostamento consapevole verso un contratto di **presentazione**,
+ * dichiarato in ADR-30 § 7, non di rendering.
  */
 export interface BlockEditorMeta {
   label: string;
   icon?: string;
   category?: string;
+  /** Metadati per prop, indicizzati per nome (ADR-30 § 1). */
+  props?: Record<string, BlockEditorPropMeta>;
 }
 
 /**

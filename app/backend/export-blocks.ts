@@ -29,6 +29,14 @@ interface ExportedPropDescriptor {
   values?: readonly string[];
   profile?: string;
   nonEmpty?: boolean;
+  responsive?: boolean;
+}
+
+interface ExportedBlockEditorPropMeta {
+  label: string;
+  tab?: 'content' | 'style';
+  order?: number;
+  help?: string;
 }
 
 interface ExportedBlockType {
@@ -39,7 +47,12 @@ interface ExportedBlockType {
   minRole?: number;
   childrenAllow: readonly string[];
   props: ExportedPropDescriptor[];
-  meta?: { label: string; icon?: string; category?: string };
+  meta?: {
+    label: string;
+    icon?: string;
+    category?: string;
+    props?: Record<string, ExportedBlockEditorPropMeta>;
+  };
 }
 
 interface BlocksExportArtifact {
@@ -67,6 +80,7 @@ function exportBlocksArtifact(): void {
         ...('values' in spec ? { values: spec.values } : {}),
         ...('profile' in spec ? { profile: spec.profile } : {}),
         ...('nonEmpty' in spec && spec.nonEmpty !== undefined ? { nonEmpty: spec.nonEmpty } : {}),
+        ...('responsive' in spec && spec.responsive !== undefined ? { responsive: spec.responsive } : {}),
       })),
       ...(definition.meta ? { meta: definition.meta } : {}),
     }),
