@@ -111,6 +111,15 @@ export class AppConstants {
   static readonly publicSiteUrl = str('PUBLIC_SITE_URL', 'http://localhost:4000');
 
   /**
+   * Base URL **rivolta al browser** della rotta pubblica dei media (ADR-27
+   * § 6): `<img src>` non porta header di autorizzazione, quindi non può
+   * usare `PUBLIC_API_BASE_URL` (rivolta al server, in produzione un host di
+   * rete interna). Il suo gemello lato frontend è `VITE_PUBLIC_MEDIA_BASE_URL`
+   * (stesso valore, letto da `import.meta.env` nei workspace Vite).
+   */
+  static readonly publicMediaBaseUrl = str('PUBLIC_MEDIA_BASE_URL', 'http://localhost:3000');
+
+  /**
    * Lingua di default del sito (ADR-24 § 5/§ 7): usata dalla risoluzione pubblica
    * degli slug finché F05 non introduce `app_settings`/Locale come impostazione
    * runtime. Assunzione dichiarata, non una regola approvata: il valore fisso

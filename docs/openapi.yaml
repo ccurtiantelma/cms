@@ -749,6 +749,27 @@ paths:
         ADR-8)
       tags:
         - Files
+  /api/v1/public/media/{guid}:
+    get:
+      operationId: PublicMediaController_getMedia
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          description: Identificatore pubblico del file (16 esadecimali)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Blob dell'immagine, Content-Type dai byte reali
+        '404':
+          description: >-
+            Media inesistente, non editoriale (entity <> "page-media"),
+            soft-eliminato, o formato non riconosciuto come raster (SVG
+            compreso)
+      summary: Serve il blob di un media editoriale pubblicato (immagine)
+      tags:
+        - Public Media
   /api/v1/app/notifications:
     get:
       operationId: NotificationsController_findAll

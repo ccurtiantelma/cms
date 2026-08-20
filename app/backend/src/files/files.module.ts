@@ -3,6 +3,8 @@ import { DbModule } from '../db/db.module';
 import { AppConstants } from '../common/app-constants';
 import { FilesController } from './files.controller';
 import { FilesService } from './files.service';
+import { PublicMediaController } from './public-media/public-media.controller';
+import { PublicMediaService } from './public-media/public-media.service';
 import { STORAGE_DRIVER } from './storage/storage-driver.interface';
 import { LocalDiskDriver } from './storage/local-disk.driver';
 import { S3CompatibleDriver } from './storage/s3-compatible.driver';
@@ -11,13 +13,16 @@ import { S3CompatibleDriver } from './storage/s3-compatible.driver';
  * Modulo core di storage documenti (ADR-8). Sceglie il driver concreto
  * (`LocalDiskDriver` o `S3CompatibleDriver`) in base a
  * `AppConstants.storageDriver`, iniettato dietro il token `STORAGE_DRIVER` —
- * `FilesService` non conosce mai quale dei due è attivo.
+ * `FilesService` non conosce mai quale dei due è attivo. Ospita anche la
+ * superficie pubblica dei media (`PublicMediaController`/`Service`, ADR-27):
+ * stesso driver, nessun secondo meccanismo di lettura.
  */
 @Module({
   imports: [DbModule],
-  controllers: [FilesController],
+  controllers: [FilesController, PublicMediaController],
   providers: [
     FilesService,
+    PublicMediaService,
     {
       provide: STORAGE_DRIVER,
       useFactory: () =>

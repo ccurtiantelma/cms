@@ -21,6 +21,8 @@ WORKDIR /app
 COPY app/frontend ./app/frontend
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ARG VITE_PUBLIC_MEDIA_BASE_URL
+ENV VITE_PUBLIC_MEDIA_BASE_URL=${VITE_PUBLIC_MEDIA_BASE_URL}
 RUN npm run build --workspace=app/frontend
 
 # ─── runtime ────────────────────────────────────────────────────────────────

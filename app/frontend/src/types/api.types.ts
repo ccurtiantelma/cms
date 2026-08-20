@@ -485,6 +485,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/media/{guid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Serve il blob di un media editoriale pubblicato (immagine) */
+        get: operations["PublicMediaController_getMedia"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/app/notifications": {
         parameters: {
             query?: never;
@@ -3001,6 +3018,34 @@ export interface operations {
                 content?: never;
             };
             /** @description File non trovato o già eliminato */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicMediaController_getMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificatore pubblico del file (16 esadecimali) */
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Blob dell'immagine, Content-Type dai byte reali */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Media inesistente, non editoriale (entity <> "page-media"), soft-eliminato, o formato non riconosciuto come raster (SVG compreso) */
             404: {
                 headers: {
                     [name: string]: unknown;

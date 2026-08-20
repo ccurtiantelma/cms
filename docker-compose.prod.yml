@@ -6,7 +6,10 @@
 # Setup:
 #   1. cp .env.example .env   (root, accanto a questo file) e compila i valori
 #      reali (POSTGRES_PASSWORD, SECURITY_KEY, COOKIE_SECRET, SMTP_*, FRONTEND_URL
-#      con l'URL pubblico reale, VITE_API_BASE_URL con l'URL pubblico dell'API).
+#      con l'URL pubblico reale, VITE_API_BASE_URL con l'URL pubblico dell'API,
+#      PUBLIC_MEDIA_BASE_URL/VITE_PUBLIC_MEDIA_BASE_URL con l'URL pubblico reale
+#      del backend — MAI un host Docker interno, un <img> nel browser non lo
+#      raggiungerebbe).
 #   2. docker compose -f docker-compose.prod.yml up -d --build
 #
 # Note:
@@ -76,6 +79,7 @@ services:
       dockerfile: app/frontend/Dockerfile
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:?Imposta VITE_API_BASE_URL in .env}
+        VITE_PUBLIC_MEDIA_BASE_URL: ${VITE_PUBLIC_MEDIA_BASE_URL:?Imposta VITE_PUBLIC_MEDIA_BASE_URL in .env}
     restart: unless-stopped
     depends_on:
       - backend
