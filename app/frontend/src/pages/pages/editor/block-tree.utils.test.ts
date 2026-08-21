@@ -21,6 +21,8 @@ import { describe, it, expect } from 'vitest';
 import {
   addBlock,
   cloneTree,
+  countNodes,
+  duplicateSubtree,
   findLocation,
   findNode,
   generateBlockId,
@@ -30,6 +32,16 @@ import {
   updateBlockProps,
   type BlockNode,
 } from './block-tree.utils';
+
+/** Ogni id presente nell'albero (o sottoalbero), radice inclusa, a qualunque profondità. */
+function collectIds(nodes: readonly BlockNode[]): string[] {
+  const ids: string[] = [];
+  for (const n of nodes) {
+    ids.push(n.id);
+    ids.push(...collectIds(n.children));
+  }
+  return ids;
+}
 
 /** Congela ricorsivamente un albero: qualunque mutazione in strict mode lancia `TypeError`. */
 function deepFreeze(tree: readonly BlockNode[]): readonly BlockNode[] {
@@ -459,5 +471,107 @@ describe('block-tree.utils — moveNodeTo', () => {
 
     // `sec-2` non è coinvolto nello spostamento: stesso riferimento, figli compresi.
     expect(next.find((n) => n.id === 'sec-2')).toBe(tree.find((n) => n.id === 'sec-2'));
+  });
+});
+
+/**
+ * `duplicateSubtree` (PLAN-F04c-editor-maturo.md T7, § Falle evitate 4): il rischio
+ * dichiarato è la rigenerazione dell'id solo in radice, che produrrebbe un duplicato con
+ * id ripetuti **in profondità** — un guasto che si manifesta lontano dalla sua causa (un
+ * `findNode` che restituisce il gemello sbagliato). Il test copre perciò un sottoalbero a
+ * **tre livelli**, non solo la radice della copia, e verifica sia l'assenza di collisioni
+ * con l'originale sia l'unicità reciproca fra i nuovi id.
+ */
+describe('block-tree.utils — duplicateSubtree: unicità degli id in profondità', () => {
+  /** Sottoalbero a tre livelli (radice → due contenitori → foglie), sei nodi in tutto. */
+  function makeDeepSubtree(): BlockNode {
+    return {
+      id: 'root-x',
+      type: 'section',
+      props: {},
+      children: [
+        {
+          id: 'mid-a',
+          type: 'section',
+          props: {},
+          children: [
+            { id: 'leaf-a1', type: 'heading', props: { level: 'h2', text: 'A1' }, children: [] },
+            { id: 'leaf-a2', type: 'heading', props: { level: 'h2', text: 'A2' }, children: [] },
+          ],
+        },
+        {
+          id: 'mid-b',
+          type: 'section',
+          props: {},
+          children: [
+            { id: 'leaf-b1', type: 'heading', props: { level: 'h2', text: 'B1' }, children: [] },
+          ],
+        },
+      ],
+    };
+  }
+
+  it('rigenera l’id di ogni nodo del sottoalbero, non solo della radice della copia', () => {
+    const original = makeDeepSubtree();
+    const originalIds = collectIds([original]);
+    expect(originalIds).toHaveLength(6);
+
+    const copy = duplicateSubtree(original);
+    const copyIds = collectIds([copy]);
+
+    // Stesso numero di nodi, stessa forma, ma nessun id in comune con l'originale —
+    // a qualunque profondità, non solo alla radice.
+    expect(copyIds).toHaveLength(6);
+    for (const id of copyIds) {
+      expect(originalIds).not.toContain(id);
+    }
+    // E ogni id del duplicato è distinto anche dagli altri id del duplicato stesso: due
+    // rigenerazioni sfortunate potrebbero in linea di principio collidere fra loro.
+    expect(new Set(copyIds).size).toBe(copyIds.length);
+  });
+
+  it('non muta il nodo originale e conserva forma/contenuto (type, props, struttura)', () => {
+    const original = makeDeepSubtree();
+    const snapshot = JSON.stringify(original);
+
+    const copy = duplicateSubtree(original);
+
+    expect(JSON.stringify(original)).toBe(snapshot);
+    expect(copy.type).toBe(original.type);
+    expect(copy.children).toHaveLength(original.children.length);
+    expect(copy.children[0].children.map((n) => n.type)).toEqual(
+      original.children[0].children.map((n) => n.type),
+    );
+    expect(copy.children[0].children[0].props).toEqual(original.children[0].children[0].props);
+    // Le props sono copiate, non condivise per riferimento con l'originale.
+    expect(copy.children[0].children[0].props).not.toBe(original.children[0].children[0].props);
+  });
+
+  it('l’inverso (removeBlock sulla radice del duplicato) rimuove il duplicato per intero, mai l’originale', () => {
+    const original = makeDeepSubtree();
+    const copy = duplicateSubtree(original);
+    const tree = [original, copy];
+
+    const next = removeBlock(tree, copy.id);
+
+    // L'originale è ancora integro, con tutti i suoi discendenti.
+    expect(findNode(next, original.id)).toBeDefined();
+    expect(collectIds(next)).toEqual(collectIds([original]));
+    // Nessun discendente del duplicato è sopravvissuto.
+    for (const id of collectIds([copy])) {
+      expect(findNode(next, id)).toBeUndefined();
+    }
+  });
+});
+
+describe('block-tree.utils — countNodes', () => {
+  it('conta radice e discendenti a ogni profondità', () => {
+    const tree = makeTree();
+    // sec-1 (+3 figli) + head-root + sec-2 (+1 figlio) = 4 + 1 + 2 = 7.
+    expect(countNodes(tree)).toBe(7);
+  });
+
+  it('albero vuoto: zero', () => {
+    expect(countNodes([])).toBe(0);
   });
 });

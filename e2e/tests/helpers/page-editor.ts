@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
+import { BLOCK_TYPES } from '../../../app/frontend/src/types/blocks.types';
 
 /**
  * Gesti dell'editor visivo (F04) espressi una volta sola, così i test dicono
@@ -6,6 +7,27 @@ import { expect, type Locator, type Page } from '@playwright/test';
  * esclusivamente dall'interfaccia: nessuna scorciatoia via API, nessuna
  * scrittura diretta nello store.
  */
+
+/**
+ * Etichetta leggibile di una prop, come la mostra `PropertyInspector` da T6 in poi
+ * (ADR-30 § 1, `meta.props[nome].label`). `fillProp`/`selectProp` continuano ad accettare
+ * il **nome tecnico** della prop (`text`, `level`, `html`, …) — è il vocabolario con cui
+ * ogni test esistente la individua — ma cercano il campo per l'etichetta leggibile che
+ * l'ispettore espone davvero, letta dal registro generato invece che duplicata a mano qui.
+ *
+ * Nessun `data-testid` esiste oggi sui campi dell'ispettore: finché non c'è (task minimo
+ * consigliato, non eseguito da questo ruolo — vedi report), questa è la ricerca più
+ * robusta disponibile. Un nome tecnico non presente in alcun tipo del registro ricade sul
+ * nome stesso (comportamento pre-T6, utile solo a rendere l'errore leggibile a chi scrive
+ * un test nuovo).
+ */
+function readableLabel(propName: string): string {
+  for (const descriptor of BLOCK_TYPES) {
+    const meta = descriptor.meta?.props?.[propName];
+    if (meta?.label) return meta.label;
+  }
+  return propName;
+}
 
 /** Slug irripetibile fra un run e l'altro: lo slug è unico per locale+genitore (409 altrimenti). */
 export function uniqueSlug(prefix: string): string {
@@ -101,14 +123,16 @@ export async function selectBlock(block: Locator, label: string): Promise<void> 
  * non produrrebbe alcuna modifica.
  */
 export async function fillProp(page: Page, propName: string, value: string): Promise<void> {
-  const field = page.getByRole('textbox', { name: new RegExp(`^${propName}`) });
+  const field = page.getByRole('textbox', { name: new RegExp(`^${readableLabel(propName)}`) });
   await field.fill(value);
   await field.blur();
 }
 
 /** Sceglie il valore di una prop `enum` dall'ispettore. */
 export async function selectProp(page: Page, propName: string, value: string): Promise<void> {
-  await page.getByRole('textbox', { name: new RegExp(`^${propName}`) }).click();
+  await page
+    .getByRole('textbox', { name: new RegExp(`^${readableLabel(propName)}`) })
+    .click();
   await page.getByRole('option', { name: value, exact: true }).click();
 }
 
@@ -144,6 +168,72 @@ export async function indentBlock(page: Page, blockLabel: string): Promise<void>
 /** Porta un blocco fuori dal proprio contenitore, di un livello ("outdent"). */
 export async function outdentBlock(page: Page, blockLabel: string): Promise<void> {
   await page.getByRole('button', { name: `Porta il blocco ${blockLabel} fuori dal contenitore` }).click();
+}
+
+/** Duplica un blocco dalla sua toolbar (T7 § Parte 1). */
+export async function duplicateBlock(page: Page, blockLabel: string): Promise<void> {
+  await page.getByRole('button', { name: `Duplica il blocco ${blockLabel}` }).click();
+}
+
+/**
+ * Trascina un blocco fino alla zona di rilascio `targetZone`, usando **solo** il sensore
+ * da tastiera di dnd-kit (Space per afferrare/rilasciare, frecce per muovere il "fantasma"
+ * di uno scatto fisso alla volta): la via a puntatore richiederebbe passi intermedi
+ * sintetici ed è la via fragile, non quella scelta per i test (PLAN-F04c-editor-maturo.md
+ * T7/T8). Ogni zona di rilascio porta `data-over="true"` mentre il puntatore/fantasma ci
+ * sta sopra (`EditorBlockWrapper.tsx`, `dropZoneAttrs`) — lo stesso segnale che guida
+ * l'indicatore visivo di rilascio: qui si preme una freccia alla volta finché la zona
+ * attesa non è quella "over", poi si rilascia con Space.
+ *
+ * Prova prima `primaryDirection`, poi (se non trovata entro metà del budget di passi)
+ * l'opposta: il verso giusto dipende dalla posizione relativa nel DOM fra origine e
+ * destinazione, che il chiamante non sempre conosce con certezza pixel per pixel.
+ */
+export async function dragBlockToZone(
+  page: Page,
+  handleLabel: string,
+  targetZone: Locator,
+  primaryDirection: 'ArrowDown' | 'ArrowUp' = 'ArrowDown',
+  maxSteps = 60,
+): Promise<void> {
+  const targetHandle = await targetZone.elementHandle();
+  if (!targetHandle) {
+    throw new Error('dragBlockToZone: la zona di destinazione non è presente nel DOM');
+  }
+
+  const secondaryDirection = primaryDirection === 'ArrowDown' ? 'ArrowUp' : 'ArrowDown';
+
+  async function attempt(direction: 'ArrowDown' | 'ArrowUp', steps: number): Promise<boolean> {
+    const handle = page.getByRole('button', { name: handleLabel });
+    await handle.focus();
+    await page.keyboard.press('Space'); // afferra
+
+    for (let step = 0; step < steps; step += 1) {
+      const overCount = await page.locator('[data-over="true"]').count();
+      if (overCount > 0) {
+        const isTarget = await page
+          .locator('[data-over="true"]')
+          .first()
+          .evaluate((el, expected) => el === expected, targetHandle);
+        if (isTarget) {
+          await page.keyboard.press('Space'); // rilascia sulla zona attesa
+          return true;
+        }
+      }
+      await page.keyboard.press(direction);
+    }
+
+    await page.keyboard.press('Escape'); // annulla: nessuna zona attesa raggiunta in questo verso
+    return false;
+  }
+
+  const half = Math.ceil(maxSteps / 2);
+  if (await attempt(primaryDirection, half)) return;
+  if (await attempt(secondaryDirection, maxSteps - half)) return;
+
+  throw new Error(
+    `dragBlockToZone: la zona di rilascio attesa non è mai risultata "over" entro ${maxSteps} passi da tastiera (nessuno dei due versi)`,
+  );
 }
 
 /** Salva la bozza e attende la conferma; fallisce se compare un 400 o un 409. */

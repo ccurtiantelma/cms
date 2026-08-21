@@ -1,0 +1,41 @@
+info:
+  name: Get Media
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/public/media/{{mediaGuid}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: false
+  maxRedirects: 0
+
+tests: |-
+  test("status is 200 (media editoriale trovato) o 404 (ADR-27: guid inesistente, entity diversa da 'page-media', soft-eliminato, o formato non raster) — mai 403", function() {
+    expect(res.getStatus()).to.be.oneOf([200, 404]);
+    expect(res.getStatus()).to.not.equal(403);
+  });
+
+  test("su 200: Content-Type raster ammesso, dedotto dai byte reali (ADR-27 § 3)", function() {
+    if (res.getStatus() === 200) {
+      const contentType = res.getHeader("content-type");
+      expect(["image/jpeg", "image/png", "image/gif", "image/webp", "image/avif"]).to.include(
+        contentType,
+      );
+    }
+  });
+
+  test("su 200: header di sicurezza e cache immutabile presenti (ADR-27 § 1)", function() {
+    if (res.getStatus() === 200) {
+      expect(res.getHeader("x-content-type-options")).to.equal("nosniff");
+      expect(res.getHeader("content-disposition")).to.equal("inline");
+      expect(res.getHeader("cache-control")).to.equal("public, max-age=31536000, immutable");
+    }
+  });
+
+  test("nessun JWT richiesto: la rotta è anonima, esclusa dal middleware auth (nessuna Authorization inviata qui)", function() {
+    expect(res.getStatus()).to.not.equal(401);
+  });

@@ -11,3 +11,7 @@ variables:
     value: ""
   - name: fileGuid
     value: ""
+  # guid di un file con entity="page-media" (ADR-27): da valorizzare a mano dopo
+  # aver associato un'immagine a un blocco `image` — bruno/media/*.yml non ne crea uno da sé.
+  - name: mediaGuid
+    value: ""

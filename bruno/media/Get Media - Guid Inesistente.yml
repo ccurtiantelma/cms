@@ -1,0 +1,24 @@
+info:
+  name: Get Media - Guid Inesistente
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/public/media/0000000000000000"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: false
+  maxRedirects: 0
+
+tests: |-
+  test("guid inesistente: 404 uniforme, mai 403 (ADR-27 § 1)", function() {
+    expect(res.getStatus()).to.equal(404);
+  });
+
+  test("il corpo dell'errore non distingue la causa (guid inesistente da entity non ammessa/formato non raster)", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("statusCode", 404);
+  });

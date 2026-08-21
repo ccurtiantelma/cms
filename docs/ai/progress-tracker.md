@@ -4,7 +4,12 @@
 > Le AI non lo modificano autonomamente: lo stato viene aggiornato a fine feature, su
 > richiesta esplicita.
 >
-> Ultima revisione: 2026-08-19 — F04 chiusa; stato di F02 riconciliato (era rimasto
+> Ultima revisione: 2026-08-20 — **round F04c (editor maturo) chiuso**: T1–T8 di
+> `PLAN-F04c-editor-maturo.md` completati, quattro ADR firmate (ADR-27/28/29/30), copertura
+> di test chiusa da `test-engineer`. Chiude anche le voci 1.12 e 3.10 di `docs/TODO.md`.
+> ADR-26 (WYSIWYG) resta aperta, rinviata a **F04d**. Vedi § "F04c — editor maturo,
+> chiusura" più sotto.
+> Precedente: 2026-08-19 — F04 chiusa; stato di F02 riconciliato (era rimasto
 > "⏳ Pending" per un mancato aggiornamento, non per lavoro non fatto — vedi F04 § Due
 > incoerenze osservate durante T6) e tabella ADR mancanti allineata alle firme intercorse.
 > Aggiornamento successivo, stesso giorno: **anteprima bozza (voce 1.10) chiusa**, T1–T6 di
@@ -63,7 +68,7 @@
 | F01 | Gestione Pagine (modello, stati, slug, revisioni) | fondativa | features/F01-gestione-pagine.md · specs/SPEC-F01-gestione-pagine.md · plans/PLAN-F01-innesto.md | ✅ Done (2026-08-17) |
 | F02 | Registro e validazione dei Blocchi | 1 | plans/PLAN-F02-blocchi.md | ✅ Done (2026-08-19, riconciliata) |
 | F03 | Superficie pubblica di lettura + cache | 2, 7 | specs/SPEC-F03-superficie-pubblica.md · plans/PLAN-F03-superficie-pubblica.md | ✅ Done (2026-08-19) |
-| F04 | Editor visivo (page builder) | 1 | plans/PLAN-F04-editor-visivo.md | ✅ Done (2026-08-19). Anteprima bozza (voce 1.10 di `docs/TODO.md`) chiusa lo stesso giorno — `plans/PLAN-anteprima-bozza.md`, ADR-25. Round successivo **F04b (upgrade editor)** 🔄 in progress: undo/redo + guardia + inserimento posizionale + `moveNodeTo` ora coperti da test (152 test, 8 file, tutti verdi — voce 3.11 chiusa il 2026-08-20); WYSIWYG (ADR-26) e media pubblici (ADR-27) in attesa di firma, zero codice |
+| F04 | Editor visivo (page builder) | 1 | plans/PLAN-F04-editor-visivo.md · plans/PLAN-F04c-editor-maturo.md | ✅ Done (2026-08-19). Anteprima bozza (voce 1.10 di `docs/TODO.md`) chiusa lo stesso giorno — `plans/PLAN-anteprima-bozza.md`, ADR-25. Round **F04b (upgrade editor)** ✅ Done (2026-08-20): undo/redo + guardia + inserimento posizionale + `moveNodeTo` coperti da test (voce 3.11). Round **F04c (editor maturo)** ✅ Done (2026-08-20), T1–T8 di `plans/PLAN-F04c-editor-maturo.md`: props di stile responsive (ADR-29), metadati d'editor nel registro + ispettore a schede/etichette (ADR-30, chiude la voce 3.10), lettura pubblica dei media (ADR-27, chiude la voce 1.12), duplicazione blocco + drag & drop via `dnd-kit` (ADR-28). Quattro ADR di questo round tutte firmate. Copertura di test chiusa da `test-engineer` (voce 3.12). WYSIWYG (ADR-26) resta l'unica decisione ancora in attesa di firma, confermata fuori scope, rinviata a **F04d** |
 | F05 | Multilingua | 4 | — | ⏳ Pending |
 | F06 | Template e Sezioni globali | 1 | — | ⏳ Pending |
 | F07 | SEO per pagina | 2 | — | ⏳ Pending |
@@ -93,12 +98,21 @@ sotto.
 | Generazione di sitemap e structured data | F07 |
 
 **Redatte, in attesa di firma** (non bloccano il roadmap-livello, bloccano solo la loro parte
-di codice nel round F04b):
+di codice — rinviata a **F04d**):
 
 | ADR redatta | Blocca |
 |---|---|
-| `ADR-26-wysiwyg-rich-text.md` — editor WYSIWYG del rich text (Tiptap via `@mantine/tiptap`) | F04b (parte rich text) |
-| `ADR-27-lettura-pubblica-media.md` — `GET public/media/:guid` | F04b (blocco `image` usabile), F09 |
+| `ADR-26-wysiwyg-rich-text.md` — editor WYSIWYG del rich text (Tiptap via `@mantine/tiptap`) | F04d (parte rich text) |
+
+**Approvate nel round F04c (2026-08-20)**, in aggiunta alle già firmate elencate altrove in
+questo documento:
+
+| ADR firmata | Decisione |
+|---|---|
+| `ADR-27-lettura-pubblica-media.md` | `GET api/v1/public/media/:guid`, anonima, `entity = 'page-media'`, MIME dai byte reali |
+| `ADR-28-libreria-drag-and-drop.md` | `dnd-kit` come strato di input sopra `moveNodeToAction` (peer dependency React 19 verificata prima dell'installazione) |
+| `ADR-29-proprieta-di-stile-per-breakpoint.md` | Sette props di stile `enum` con modificatore `responsive`, valore `{ default, tablet?, mobile? }`, nessun `kind`/`reason` nuovo, `v` invariato |
+| `ADR-30-metadati-editor-registro.md` | Metadati d'editor (etichetta, icona, categoria, scheda, ordine) unificati in `meta`, opachi alla validazione |
 
 ---
 
@@ -358,7 +372,13 @@ semplicemente rimaste indietro di un aggiornamento, non descrivevano un lavoro m
 
 ---
 
-## F04b — upgrade editor, a metà (2026-08-19)
+## F04b — upgrade editor (2026-08-19, chiuso il 2026-08-20)
+
+> Copertura di test chiusa il 2026-08-20 (voce 3.11 di `docs/TODO.md`, 152 test/8 file
+> verdi) — sezione lasciata come log storico del giorno in cui è stato scritto, invariata.
+> ADR-26/ADR-27 (§ "Non iniziato" sotto) sono uscite da questo round: ADR-27 è stata
+> approvata e implementata nel round successivo **F04c** (§ sotto), ADR-26 resta aperta e
+> rinviata a **F04d**.
 
 Round emerso dall'uso reale di F04, non ancora coperto da un plan scritto in
 `docs/ai/plans/` — a differenza degli altri round, qui il lavoro è partito prima che
@@ -386,3 +406,60 @@ Tiptap in `app/frontend/package.json`, nessuna rotta `public/media` in
 `app/backend/src`. Corretto per costruzione — sono dipendenza npm pesante (ADR-26) e nuova
 superficie pubblica (ADR-27), entrambe `CLAUDE.md` § Ask first: nessuna riga finché non sono
 firmate.
+
+---
+
+## F04c — editor maturo, chiusura (2026-08-20)
+
+`docs/ai/plans/PLAN-F04c-editor-maturo.md`, T1–T8 completati; RFC v2 approvata (cinque
+decisioni), quattro ADR firmate prima di scrivere codice (ADR-27, ADR-28, ADR-29, ADR-30,
+tutte "una pagina ciascuna" come impone `CLAUDE.md` § Architecture dalla ADR-19 in poi).
+
+**T1 — gate `dnd-kit`/React 19**: peer dependency verificate (`npm info` sulle tre librerie),
+installazione senza `--legacy-peer-deps` né `--force`, nessuna voce aggiunta a `overrides` di
+root, `app/public-site/package.json` non toccato. Esito positivo: la Parte 2 di T7 (drag &
+drop) e la sua copertura in T8 procedono.
+
+**T3 — registro**: modificatore `responsive` su `EnumPropSpec`, elenco chiuso dei tre
+breakpoint (`default` obbligatorio, `tablet`/`mobile` opzionali) dichiarato una volta nel
+backend, sette props di stile a token chiusi compilate sui cinque tipi. `meta.props` con
+etichetta/scheda/ordine per **ogni** prop di **ogni** tipo (invariante testato: una prop
+senza voce fa fallire il test del registro). Nessun `v` incrementato, nessun `kind`/`reason`
+nuovo, token del registro invariato — verificato dal Done di T3.
+
+**T4 — ADR-27**: `GET api/v1/public/media/:guid`, anonima, `entity = 'page-media'` come
+unico filtro di visibilità, `Content-Type` da una tabella chiusa di firme raster scritta in
+casa (nessuna dipendenza nuova), SVG sempre rifiutato, 404 uniforme (mai 403), nessuna
+lettura/scrittura Redis. `PUBLIC_MEDIA_BASE_URL`/`VITE_PUBLIC_MEDIA_BASE_URL` in
+`.env.example`/`docker-compose.yml`, lette solo via `AppConstants`.
+
+**T5/T6 — frontend**: strato di token CSS responsive con le tre soglie di breakpoint (prima
+volta che esistono nel progetto), classi emesse per **ogni** breakpoint presente nel valore
+salvato (mai solo `default`), composizione dell'URL media in un solo modulo condiviso fra i
+due workspace. Ispettore a schede Contenuto/Stile costruite da `meta.props[nome].tab`/
+`order`, etichette da `meta.props[nome].label` (chiude la voce 3.10), controllo desktop delle
+props responsive che scrive `{ ...valore, default: nuovo }` (mai lo scalare nudo).
+
+**T7 — duplica blocco + drag & drop**: `duplicateSubtree` rigenera l'id di **ogni** nodo del
+sottoalbero (non solo la radice), `duplicateNodeAction` come comando invertibile sulle
+primitive esistenti, avviso (non `400` a salvataggio) oltre `MAX_NODES`. Drag & drop con
+`DndContext`/`DragOverlay` di `dnd-kit`, maniglia dedicata nella toolbar, tre segni di
+rilascio distinti, `canDropInto` come predicato puro unico (compone `isDescendantOf` e
+`canContainType` già esistenti — mai una regola scritta due volte), stato del trascinamento
+mai nello store Zustand (verificato con un `grep`), sensore da tastiera attivo.
+
+**T8 — copertura di test** (`test-engineer`): round-trip responsive su tutti e tre i
+breakpoint (backend e2e nuovo, non eseguito in questo sandbox per assenza di
+un'istanza Postgres/Redis del progetto raggiungibile — verificato a `tsc`/revisione),
+unicità degli id dopo duplicazione in profondità, `canDropInto` come funzione pura, rotta
+media (integration test eseguiti, 7/7 verdi — nessun test esisteva prima per questa rotta) +
+`bruno/media/*.yml`, E2E drag & drop da tastiera + duplicazione (nuovi, non eseguiti in
+questo sandbox — richiedono backend/frontend avviati). Correzione dell'helper e2e
+`page-editor.ts` (cercava le prop per nome tecnico, invalidato da T6: ora risolve
+l'etichetta leggibile dal registro generato). Segnalato, non corretto: nessun `data-testid`
+sui campi dell'ispettore — task minimo consigliato per un round successivo.
+
+**Fuori scope, dichiarato**: colonne, annidamento di `section`, navigator, schermo intero,
+WYSIWYG (ADR-26) — tutti rinviati a **F04d**. Anteprima responsive assente (nessuno vede i
+breakpoint `tablet`/`mobile` salvati senza un controllo UI dedicato, che questo round non
+costruisce) — primo candidato del giro successivo.

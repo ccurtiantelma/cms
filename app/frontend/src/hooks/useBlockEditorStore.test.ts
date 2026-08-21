@@ -18,10 +18,16 @@
  * `block-tree.utils.test.ts`: qui si copre solo il punto in cui `moveNodeToAction`
  * interroga `canContainType` prima di invocarla, e l'undo/redo del comando risultante.
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useBlockEditorStore, useCanRedo, useCanUndo, useHasUnsavedChanges } from './useBlockEditorStore';
 import { renderHook, act } from '@testing-library/react';
 import type { BlockNode } from '../pages/pages/editor/block-tree.utils';
+
+// `duplicateNodeAction` avvisa via `notifications.show` quando la duplicazione
+// supererebbe `CONTENT_TREE_LIMITS.maxNodes` (PLAN-F04c-editor-maturo.md T7): mockato per
+// non dipendere da un `<Notifications />` montato e per poter asserire sulla chiamata.
+vi.mock('@mantine/notifications', () => ({ notifications: { show: vi.fn() } }));
+const { notifications } = await import('@mantine/notifications');
 
 /** Nodo di comodo con `children` sempre presente. */
 function node(
@@ -47,6 +53,16 @@ function initialTree(): BlockNode[] {
 /** Stato corrente dello store, per brevità nelle asserzioni. */
 function state() {
   return useBlockEditorStore.getState();
+}
+
+/** Ogni id presente nell'albero, radice inclusa, a qualunque profondità. */
+function collectIds(nodes: readonly BlockNode[]): string[] {
+  const ids: string[] = [];
+  for (const n of nodes) {
+    ids.push(n.id);
+    ids.push(...collectIds(n.children));
+  }
+  return ids;
 }
 
 /** L'albero corrente serializzato: confronto di valore indipendente dai riferimenti. */
@@ -470,5 +486,87 @@ describe('useBlockEditorStore — moveNodeToAction: rispetta il registro (canCon
     expect(state().undoStack).toHaveLength(1);
     state().undo();
     expect(state().redoStack).toHaveLength(1);
+  });
+});
+
+/**
+ * `duplicateNodeAction` (PLAN-F04c-editor-maturo.md T7 § Parte 1). Il rischio dichiarato
+ * (§ Falle evitate 4) è la rigenerazione dell'id limitata alla radice della copia:
+ * `duplicateSubtree` è già coperta in isolamento da `block-tree.utils.test.ts`, qui si
+ * verifica il comando invertibile che la usa — selezione del duplicato, storia undo/redo,
+ * e il rifiuto quando la copia supererebbe `MAX_NODES` (500, `CONTENT_TREE_LIMITS`).
+ */
+describe('useBlockEditorStore — duplicateNodeAction', () => {
+  beforeEach(() => {
+    useBlockEditorStore.getState().initTree(initialTree());
+    vi.mocked(notifications.show).mockClear();
+  });
+
+  it('duplica un sottoalbero a più livelli con id tutti nuovi, seleziona il duplicato, e l’undo lo rimuove per intero', () => {
+    const deepTree: BlockNode[] = [
+      node('root-x', 'section', {}, [
+        node('mid-a', 'section', {}, [
+          node('leaf-a1', 'heading', { level: 'h2', text: 'A1' }),
+          node('leaf-a2', 'heading', { level: 'h2', text: 'A2' }),
+        ]),
+        node('mid-b', 'section', {}, [
+          node('leaf-b1', 'heading', { level: 'h2', text: 'B1' }),
+        ]),
+      ]),
+      node('head-root', 'heading', { level: 'h3', text: 'Radice' }),
+    ];
+    useBlockEditorStore.getState().initTree(deepTree);
+    const originalIds = collectIds(state().tree);
+    expect(originalIds).toHaveLength(7); // root-x, mid-a, leaf-a1, leaf-a2, mid-b, leaf-b1, head-root
+
+    state().duplicateNodeAction('root-x');
+
+    const idsAfter = collectIds(state().tree);
+    const newIds = idsAfter.filter((id) => !originalIds.includes(id));
+    // Sei nodi duplicati (root-x + i suoi cinque discendenti), tutti nuovi e distinti fra loro.
+    expect(newIds).toHaveLength(6);
+    expect(new Set(newIds).size).toBe(6);
+
+    // Il duplicato è inserito subito dopo l'originale ed è il nodo selezionato.
+    const duplicateRootId = state().tree[1].id;
+    expect(duplicateRootId).not.toBe('root-x');
+    expect(newIds).toContain(duplicateRootId);
+    expect(state().selectedId).toBe(duplicateRootId);
+    expect(state().tree.map((n) => n.id)).toEqual(['root-x', duplicateRootId, 'head-root']);
+
+    // L'undo rimuove il duplicato per intero: l'albero torna bit-per-bit quello di partenza.
+    state().undo();
+    expect(collectIds(state().tree)).toEqual(originalIds);
+    expect(JSON.stringify(state().tree)).toBe(JSON.stringify(deepTree));
+  });
+
+  it('id inesistente: no-op, nessuna eccezione, nessuna voce in history', () => {
+    const treeBefore = state().tree;
+
+    state().duplicateNodeAction('mai-esistito');
+
+    expect(state().tree).toBe(treeBefore);
+    expect(state().undoStack).toHaveLength(0);
+  });
+
+  it('rifiuta la duplicazione che supererebbe MAX_NODES: avviso, albero invariato, nessuna voce in history', () => {
+    // 500 nodi di radice (= CONTENT_TREE_LIMITS.maxNodes): un duplicato in più li porterebbe a 501.
+    const cinquecentoNodi = Array.from({ length: 499 }, (_, i) =>
+      node(`n-${i}`, 'heading', { level: 'h2', text: 'x' }),
+    );
+    const daDuplicare = node('dup-me', 'heading', { level: 'h2', text: 'y' });
+    useBlockEditorStore.getState().initTree([...cinquecentoNodi, daDuplicare]);
+    const treeBefore = state().tree;
+    expect(treeBefore).toHaveLength(500);
+
+    state().duplicateNodeAction('dup-me');
+
+    expect(state().tree).toBe(treeBefore);
+    expect(state().undoStack).toHaveLength(0);
+    expect(state().selectedId).toBeNull();
+    expect(notifications.show).toHaveBeenCalledTimes(1);
+    expect(notifications.show).toHaveBeenCalledWith(
+      expect.objectContaining({ color: 'red', title: 'Duplicazione non eseguita' }),
+    );
   });
 });
