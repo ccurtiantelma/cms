@@ -88,6 +88,7 @@ function propsInStore(id: string): Record<string, unknown> {
 
 beforeEach(() => {
   useBlockEditorStore.getState().initTree([]);
+  useBlockEditorStore.getState().setActiveViewport('desktop');
 });
 
 describe('PropertyInspector — nessuna selezione e tipi fuori registro', () => {
@@ -180,6 +181,37 @@ describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
 
     expect(propsInStore('sec-1').styleSpaceBefore).toEqual({ default: 'lg' });
   });
+
+  it('con lo Switcher su Tablet il controllo scrive solo la chiave tablet, lasciando default e mobile intatti', async () => {
+    const user = userEvent.setup();
+    useBlockEditorStore.getState().setActiveViewport('tablet');
+    renderInspectorWith(
+      node('sec-1', 'section', {
+        styleSpaceBefore: { default: 'none', mobile: 'lg' },
+      }),
+    );
+
+    const select = screen.getByRole('textbox', { name: 'Spazio prima (Tablet)' });
+    await user.click(select);
+    await user.click(screen.getByRole('option', { name: 'sm' }));
+
+    expect(propsInStore('sec-1').styleSpaceBefore).toEqual({
+      default: 'none',
+      tablet: 'sm',
+      mobile: 'lg',
+    });
+  });
+
+  it('con lo Switcher su Mobile il controllo mostra il valore in cascata (tablet, poi default) quando mobile non è ancora scritto', async () => {
+    useBlockEditorStore.getState().setActiveViewport('mobile');
+    renderInspectorWith(
+      node('sec-1', 'section', {
+        styleSpaceBefore: { default: 'none', tablet: 'sm' },
+      }),
+    );
+
+    expect(screen.getByRole('textbox', { name: 'Spazio prima (Mobile)' })).toHaveValue('sm');
+  });
 });
 
 describe('PropertyInspector — i sette kind del registro', () => {
@@ -222,14 +254,19 @@ describe('PropertyInspector — i sette kind del registro', () => {
     expect(screen.getByLabelText('descrizione').tagName).toBe('TEXTAREA');
   });
 
-  it('richText → Textarea grezza (nessun WYSIWYG) che avverte della sanitizzazione server-side', async () => {
+  it('richText → editor dual-mode Visuale/Codice che avverte della sanitizzazione server-side', async () => {
     const user = userEvent.setup();
     renderInspectorWith(node('r-1', 'richText', { html: '' }));
 
+    // Di default la scheda "Visuale" è attiva (editor WYSIWYG Tiptap).
+    expect(screen.getByRole('tab', { name: 'Visuale' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText(/ripulito dal server al salvataggio/i)).toBeInTheDocument();
+
+    // La scheda "Codice" espone l'HTML grezzo, stessa textarea di prima (maxLength dal registro).
+    await user.click(screen.getByRole('tab', { name: 'Codice' }));
     const textarea = screen.getByRole('textbox', { name: 'Contenuto' });
     expect(textarea.tagName).toBe('TEXTAREA');
     expect(textarea).toHaveAttribute('maxlength', '20000');
-    expect(screen.getByText(/ripulito dal server al salvataggio/i)).toBeInTheDocument();
 
     await user.type(textarea, '<p>Testo <strong>ricco</strong></p>');
     await user.tab();
@@ -340,6 +377,7 @@ describe('PropertyInspector — obbligatorietà e cambio di selezione', () => {
     const nodo = node('r-1', 'richText', { html: '<p>originale</p>' });
     const { rerender } = renderInspectorWith(nodo, [nodo]);
 
+    await user.click(screen.getByRole('tab', { name: 'Codice' }));
     const textarea = screen.getByRole('textbox', { name: 'Contenuto' });
     await user.clear(textarea);
     await user.type(textarea, '<p>digitato ma non salvato</p>');
@@ -349,6 +387,7 @@ describe('PropertyInspector — obbligatorietà e cambio di selezione', () => {
     useBlockEditorStore.getState().selectNode('r-1');
     rerender(<PropertyInspector />);
 
+    await user.click(screen.getByRole('tab', { name: 'Codice' }));
     expect(screen.getByRole('textbox', { name: 'Contenuto' })).toHaveValue('<p>ripulito</p>');
   });
 });
@@ -366,6 +405,7 @@ describe('PropertyInspector — copertura del registro reale', () => {
 
     // I kind assenti dai tipi approvati (boolean, number) sono coperti dal tipo sintetico.
     expect([...kindsNelRegistro].sort()).toEqual([
+      'color',
       'enum',
       'mediaRef',
       'plainText',
@@ -381,6 +421,7 @@ describe('PropertyInspector — copertura del registro reale', () => {
 
     expect([...coperti].sort()).toEqual([
       'boolean',
+      'color',
       'enum',
       'mediaRef',
       'number',

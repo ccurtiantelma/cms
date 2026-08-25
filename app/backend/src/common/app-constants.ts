@@ -78,7 +78,7 @@ export class AppConstants {
   static readonly timezone = 'Europe/Rome';
   static readonly nodeEnv = str('NODE_ENV', 'development');
   static readonly isProduction = AppConstants.nodeEnv === 'production';
-  static readonly port = parsePort(3000, process.env.PORT);
+  static readonly port = parsePort(53000, process.env.PORT);
 
   static readonly databaseUrl = str('DATABASE_URL');
   static readonly redisUrl = str('REDIS_URL');
@@ -102,13 +102,13 @@ export class AppConstants {
    */
   static readonly pagePreviewTokenSecret = str('PAGE_PREVIEW_TOKEN_SECRET');
 
-  static readonly frontendUrl = str('FRONTEND_URL', 'http://localhost:5173');
+  static readonly frontendUrl = str('FRONTEND_URL', 'http://localhost:55173');
   /**
    * Origine del sito pubblico SSR (`app/public-site`, ADR-22/F03/T5), workspace
    * separato non ancora presente in T2: aggiunta qui perché CORS deve ammetterla
    * fin da subito, senza wildcard (`main.ts`).
    */
-  static readonly publicSiteUrl = str('PUBLIC_SITE_URL', 'http://localhost:4000');
+  static readonly publicSiteUrl = str('PUBLIC_SITE_URL', 'http://localhost:54000');
 
   /**
    * Base URL **rivolta al browser** della rotta pubblica dei media (ADR-27
@@ -117,7 +117,7 @@ export class AppConstants {
    * rete interna). Il suo gemello lato frontend è `VITE_PUBLIC_MEDIA_BASE_URL`
    * (stesso valore, letto da `import.meta.env` nei workspace Vite).
    */
-  static readonly publicMediaBaseUrl = str('PUBLIC_MEDIA_BASE_URL', 'http://localhost:3000');
+  static readonly publicMediaBaseUrl = str('PUBLIC_MEDIA_BASE_URL', 'http://localhost:53000');
 
   /**
    * Lingua di default del sito (ADR-24 § 5/§ 7): usata dalla risoluzione pubblica
@@ -128,7 +128,7 @@ export class AppConstants {
   static readonly defaultLocale = str('DEFAULT_LOCALE', 'it-IT');
 
   static readonly smtpHost = str('SMTP_HOST', 'localhost');
-  static readonly smtpPort = parsePort(1025, process.env.SMTP_PORT);
+  static readonly smtpPort = parsePort(51025, process.env.SMTP_PORT);
   static readonly smtpUser = str('SMTP_USER');
   static readonly smtpPass = str('SMTP_PASS');
   static readonly smtpFrom = str('SMTP_FROM', 'no-reply@cms.local');

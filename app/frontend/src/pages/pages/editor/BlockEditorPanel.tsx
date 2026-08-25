@@ -2,12 +2,13 @@
  * Editor visivo dei blocchi (PLAN-F04-editor-visivo.md T2/T4/T5), montato nella scheda
  * "Contenuto" del dettaglio Pagina.
  *
- * **Non è una pagina a sé.** L'editor è il modo in cui si guarda il contenuto, non una
- * destinazione separata raggiunta da un pulsante: vive dentro il dettaglio, che resta
- * l'unico posto in cui una Pagina si apre. Da qui discendono i confini di questo file —
- * niente intestazione, niente breadcrumb, niente caricamento della Pagina (arriva come
- * prop dal dettaglio) e nessun pulsante di pubblicazione: la transizione di stato è una
- * sola, nella tendina di stato dell'intestazione, non duplicata per scheda.
+ * **Non è una rotta a sé.** L'editor resta montato dentro il dettaglio Pagina (nessuna
+ * voce di `App.tsx`, nessun caricamento proprio della Pagina: arriva come prop dal
+ * dettaglio) e nessun pulsante di pubblicazione: la transizione di stato è una sola, nella
+ * tendina di stato dell'intestazione del dettaglio, non duplicata qui. Ciò che è cambiato è
+ * la *presentazione*: mentre la scheda "Contenuto" è attiva, `FullScreenEditorLayout` copre
+ * la chrome admin standard con una chrome full-screen propria (topbar, viewport switcher,
+ * pannello struttura) — un overlay `position: fixed`, non una nuova destinazione.
  *
  * Resta qui la sola azione che appartiene al contenuto: il salvataggio della bozza, con
  * il lock ottimistico e la traduzione del `400` di validazione nel blocco colpevole.
@@ -17,27 +18,21 @@
  * editor).
  */
 import { useEffect, useMemo, useState } from 'react';
-import { ActionIcon, Badge, Button, Grid, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { useHotkeys } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { IconArrowBackUp, IconArrowForwardUp, IconDeviceFloppy } from '@tabler/icons-react';
 import type { AxiosError } from 'axios';
 import { getErrorMessage } from '../../../utils/api.utils';
 import { updatePage } from '../../../services/pages.service';
 import type { PageRecord, PagesErrorData } from '../../../types/pages.types';
 import { BLOCK_TYPES, ENVELOPE_VERSION } from '../../../types/blocks.types';
-import {
-  useBlockEditorStore,
-  useCanRedo,
-  useCanUndo,
-  useHasUnsavedChanges,
-} from '../../../hooks/useBlockEditorStore';
+import { useBlockEditorStore, useHasUnsavedChanges } from '../../../hooks/useBlockEditorStore';
 import { useUnsavedChangesGuard } from '../../../hooks/useUnsavedChangesGuard';
 import ConfirmModal from '../../../components/ConfirmModal';
 import type { BlockNode } from './block-tree.utils';
 import EditorCanvas from './EditorCanvas';
-import PropertyInspector from './PropertyInspector';
 import { InvalidBlockProvider } from './EditorBlockWrapper';
+import FullScreenEditorLayout from './FullScreenEditorLayout';
+import EditorStructureNavigator from './EditorStructureNavigator';
 
 /** Etichetta leggibile di un tipo di blocco, presa dal registro (mai scritta a mano). */
 function blockLabel(type: string): string {
@@ -127,13 +122,37 @@ interface BlockEditorPanelProps {
   onPageUpdated: (page: PageRecord) => void;
   /** Notifica di conflitto di editing del dettaglio: mai sovrascrittura silenziosa. */
   onVersionConflict: () => void;
+  /**
+   * Genera e apre l'anteprima in una nuova scheda (delegato al dettaglio, che possiede il
+   * token effimero, ADR-25). `undefined` quando la Pagina non è in bozza — il pulsante
+   * "Anteprima" della topbar full-screen resta nascosto in quel caso.
+   */
+  onPreview?: () => void;
+  /** Stato di caricamento della generazione del token di anteprima. */
+  previewLoading?: boolean;
+  /**
+   * `true` quando la scheda "Contenuto" è quella nominalmente selezionata in
+   * `PagePageDetail.tsx` — inoltrato a `FullScreenEditorLayout`, che lo usa per rendersi
+   * `display:none` sul proprio nodo quando `false`, invece di affidarsi soltanto al
+   * `display:none` che Mantine applica al `Tabs.Panel` antenato (bug corretto, vedi
+   * `FullScreenEditorLayout.tsx`).
+   */
+  active: boolean;
+  /**
+   * Distanza in pixel dal bordo superiore del viewport da cui l'overlay a piena finestra
+   * inizia a coprire, misurata dal dettaglio sul bordo inferiore di `Tabs.List` — non
+   * inoltrato oltre `FullScreenEditorLayout`.
+   */
 }
 
-/** Superficie di editing dell'albero di blocchi della bozza corrente. */
+/** Superficie di editing dell'albero di blocchi della bozza corrente, in chrome full-screen. */
 export default function BlockEditorPanel({
   page,
   onPageUpdated,
   onVersionConflict,
+  onPreview,
+  previewLoading,
+  active,
 }: BlockEditorPanelProps): JSX.Element {
   const [saving, setSaving] = useState(false);
   /** Nodo respinto dall'ultima validazione server-side, evidenziato nel canvas. */
@@ -142,8 +161,6 @@ export default function BlockEditorPanel({
   const initTree = useBlockEditorStore((state) => state.initTree);
   const undo = useBlockEditorStore((state) => state.undo);
   const redo = useBlockEditorStore((state) => state.redo);
-  const canUndo = useCanUndo();
-  const canRedo = useCanRedo();
   const hasUnsavedChanges = useHasUnsavedChanges();
 
   /**
@@ -248,61 +265,29 @@ export default function BlockEditorPanel({
   }
 
   return (
-    <Stack gap="md">
-      <Group justify="space-between">
-        <Group gap="xs">
-          <Tooltip label="Annulla (Ctrl+Z)" withArrow>
-            <ActionIcon
-              variant="default"
-              size="lg"
-              aria-label="Annulla l'ultima modifica"
-              disabled={!canUndo}
-              onClick={() => undo()}
-            >
-              <IconArrowBackUp size={18} />
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip label="Ripristina (Ctrl+Shift+Z)" withArrow>
-            <ActionIcon
-              variant="default"
-              size="lg"
-              aria-label="Ripristina la modifica annullata"
-              disabled={!canRedo}
-              onClick={() => redo()}
-            >
-              <IconArrowForwardUp size={18} />
-            </ActionIcon>
-          </Tooltip>
-          <Text size="sm" c="dimmed">
-            Le modifiche ai blocchi restano locali finché non salvi la bozza.
-          </Text>
-        </Group>
-        <Group gap="sm">
-          {hasUnsavedChanges && (
-            <Badge color="orange" variant="light">
-              Modifiche non salvate
-            </Badge>
-          )}
-          <Button
-            leftSection={<IconDeviceFloppy size={16} />}
-            onClick={() => void handleSaveDraft()}
-            loading={saving}
-          >
-            Salva bozza
-          </Button>
-        </Group>
-      </Group>
-
-      <InvalidBlockProvider invalidBlockId={invalidBlockId}>
-        <Grid gutter="md">
-          <Grid.Col span={{ base: 12, md: 8 }}>
-            <EditorCanvas />
-          </Grid.Col>
-          <Grid.Col span={{ base: 12, md: 4 }}>
-            <PropertyInspector />
-          </Grid.Col>
-        </Grid>
-      </InvalidBlockProvider>
+    <>
+      {/*
+        Chrome full-screen (`position: fixed`, z-index sopra `LayoutProtected`): finché la
+        scheda "Contenuto" è montata, l'editor copre per intero sidebar/topbar admin — non è
+        una destinazione separata nel routing, solo la sua presentazione mentre è attiva.
+      */}
+      <FullScreenEditorLayout
+        pageTitle={page.title}
+        // Torna al dettaglio della Pagina in modifica, non alla lista generica: la lista
+        // perde il contesto (quale Pagina si stava editando) senza alcun vantaggio (bug T5).
+        backHref={`/pages/${page.guid}`}
+        hasUnsavedChanges={hasUnsavedChanges}
+        saving={saving}
+        onSaveDraft={() => void handleSaveDraft()}
+        onPreview={onPreview}
+        previewLoading={previewLoading}
+        structurePanel={<EditorStructureNavigator />}
+        active={active}
+      >
+        <InvalidBlockProvider invalidBlockId={invalidBlockId}>
+          <EditorCanvas />
+        </InvalidBlockProvider>
+      </FullScreenEditorLayout>
 
       {guard.pendingPath !== null && (
         <ConfirmModal
@@ -312,10 +297,13 @@ export default function BlockEditorPanel({
           title="Modifiche non salvate"
           confirmLabel="Esci senza salvare"
           confirmColor="red"
+          // Sopra la chrome full-screen dell'editor (z-index 1000, FullScreenEditorLayout.module.css):
+          // di default il Modal monterebbe sotto, restando invisibile dietro l'overlay.
+          zIndex={1100}
         >
           Le modifiche ai blocchi non sono ancora state salvate come bozza: uscendo ora vanno perse.
         </ConfirmModal>
       )}
-    </Stack>
+    </>
   );
 }

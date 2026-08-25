@@ -1,0 +1,30 @@
+/*
+  Schermo intero via CSS, non `Modal` (T-wysiwyg-richtext): un `Modal` Mantine monta il suo
+  contenuto in un Portal verso `document.body` — spostare lì l'albero che contiene
+  `RichTextEditor.Content` (`@tiptap/react`, `EditorContent`) forza React a smontare e
+  rimontare quel sottoalbero, ma la `EditorView` di ProseMirror dentro `editor` (lo stesso
+  `editor` di `useEditor`, mai ricreato al toggle) resta legata al nodo DOM smontato: il
+  Portal risultava vuoto, zero figli, nessun errore in console. Qui il pannello resta
+  **nella stessa posizione dell'albero React** in entrambi gli stati: cambia solo la classe
+  CSS (`position: fixed` invece del flusso normale), mai il tipo di elemento — React
+  aggiorna le props del div esistente, non lo rimonta.
+*/
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1199;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.fullscreenPanel {
+  position: fixed;
+  inset: 5dvh 5vw;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  padding: var(--mantine-spacing-md);
+  background: var(--mantine-color-body);
+  border-radius: var(--mantine-radius-md);
+  box-shadow: var(--mantine-shadow-xl);
+  overflow: auto;
+}

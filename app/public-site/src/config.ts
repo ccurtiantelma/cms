@@ -16,7 +16,7 @@ function port(name: string, fallback: number): number {
 
 export const PublicSiteConfig = {
   /** Porta del server HTTP di questo workspace. Combacia col default di `AppConstants.publicSiteUrl` nel backend. */
-  port: port('PORT', 4000),
+  port: port('PORT', 54000),
   /** Origine dell'API backend (`api/v1/public/pages`), senza path finale. */
-  apiBaseUrl: str('PUBLIC_API_BASE_URL', 'http://localhost:3000'),
+  apiBaseUrl: str('PUBLIC_API_BASE_URL', 'http://localhost:53000'),
 };

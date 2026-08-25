@@ -65,7 +65,7 @@ test('percorso completo: creo, compongo, salvo, pubblico e ritrovo il contenuto 
 
   // ─── 2. Apro l'editor: è la scheda "Contenuto", non una rotta a parte ─────
   await openContentTab(page);
-  await expect(page.getByText('La bozza non contiene ancora blocchi')).toBeVisible();
+  await expect(page.getByText('Trascina il widget qui')).toBeVisible();
 
   // ─── 3. Aggiungo una section in radice, con tre figli ─────────────────────
   await addRootBlock(page, 'Sezione');
@@ -73,8 +73,15 @@ test('percorso completo: creo, compongo, salvo, pubblico e ritrovo il contenuto 
   await expect(section).toHaveCount(1);
   await expect(section.getByText('Contenitore vuoto')).toBeVisible();
 
+  // Il pulsante "Aggiungi dentro" vive nella toolbar integrata, `visibility: hidden` a
+  // riposo (EditorBlockWrapper.module.css) e resa visibile solo da `.hovered`/
+  // `.selected`: senza selezionare prima il contenitore non è mai azionabile per
+  // Playwright, anche se presente nel DOM.
+  await selectBlock(section, 'Sezione');
   await addChildBlock(section, 'Titolo');
+  await selectBlock(section, 'Sezione');
   await addChildBlock(section, 'Testo');
+  await selectBlock(section, 'Sezione');
   await addChildBlock(section, 'Pulsante');
 
   await expect(blockOfType(section, 'heading')).toHaveCount(1);
@@ -82,8 +89,9 @@ test('percorso completo: creo, compongo, salvo, pubblico e ritrovo il contenuto 
   await expect(blockOfType(section, 'button')).toHaveCount(1);
 
   // La palette è generata dal registro: dentro una section non si offrono section.
+  await selectBlock(section, 'Sezione');
   const vociAmmesse = await paletteEntries(
-    section.getByRole('button', { name: 'Aggiungi qui' }).first(),
+    section.getByRole('button', { name: 'Aggiungi dentro' }).first(),
   );
   expect(vociAmmesse).toEqual(['Titolo', 'Testo', 'Immagine', 'Pulsante']);
 
@@ -109,6 +117,7 @@ test('percorso completo: creo, compongo, salvo, pubblico e ritrovo il contenuto 
   expect(tipiDopoIlRiordino).toEqual(['richText', 'heading', 'button']);
 
   // ─── 6. Elimino un blocco ─────────────────────────────────────────────────
+  await selectBlock(blockOfType(section, 'button'), 'Pulsante');
   await deleteBlock(page, 'Pulsante');
   await expect(blockOfType(section, 'button')).toHaveCount(0);
   await expect(blockOfType(section, 'heading')).toHaveCount(1);

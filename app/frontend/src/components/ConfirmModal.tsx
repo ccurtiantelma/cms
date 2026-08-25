@@ -18,6 +18,13 @@ interface ConfirmModalProps {
   confirmLabel: string;
   /** Colore Mantine del pulsante di conferma; default tema (blu). */
   confirmColor?: string;
+  /**
+   * `z-index` del Modal — di norma il default Mantine basta. Va alzato esplicitamente solo
+   * quando il chiamante vive sotto un overlay con `z-index` più alto (es. l'editor
+   * full-screen, `FullScreenEditorLayout`), il cui `position: fixed` altrimenti coprirebbe
+   * il Modal montato in portale.
+   */
+  zIndex?: number;
   /** Testo/markup esplicativo mostrato nel corpo del modal. */
   children: ReactNode;
 }
@@ -31,10 +38,11 @@ export default function ConfirmModal({
   title,
   confirmLabel,
   confirmColor,
+  zIndex,
   children,
 }: ConfirmModalProps): JSX.Element {
   return (
-    <Modal opened={opened} onClose={onClose} title={title} centered>
+    <Modal opened={opened} onClose={onClose} title={title} centered zIndex={zIndex}>
       <Text>{children}</Text>
       <Group justify="flex-end" mt="md">
         <Button variant="default" onClick={onClose} disabled={loading}>

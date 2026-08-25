@@ -94,7 +94,7 @@ export const PAGE_STATUS_TRANSITIONS: Readonly<Record<PageStatus, readonly PageS
     draft: Object.freeze<PageStatus[]>(['review', 'scheduled', 'published']),
     review: Object.freeze<PageStatus[]>(['draft', 'scheduled', 'published']),
     scheduled: Object.freeze<PageStatus[]>(['draft', 'published', 'archived']),
-    published: Object.freeze<PageStatus[]>(['draft', 'archived']),
+    published: Object.freeze<PageStatus[]>(['draft', 'published', 'archived']),
     archived: Object.freeze<PageStatus[]>(['draft', 'published']),
   });
 

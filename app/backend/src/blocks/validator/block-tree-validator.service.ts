@@ -24,6 +24,13 @@ const ROOT_RELATIVE_URL_PATTERN = /^\/(?!\/).*/;
 const GUID_PATTERN = /^[0-9a-f]{16}$/;
 
 /**
+ * Pattern **fisso e stretto** per `kind: 'color'` (ADR-33 § 3): solo
+ * esadecimale a 3 o 6 cifre, niente `rgb()`/`hsl()`/`url()`/parole chiave
+ * CSS — non un campo `pattern` generico riusabile da altre prop.
+ */
+const HEX_COLOR_PATTERN = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+/**
  * L'unico interprete che valida qualunque albero di blocchi contro il
  * registro (ADR-21 § 2, PLAN-F02 T2): nessuna classe `class-validator` per
  * tipo. Guidato interamente dai descrittori (`BlockDefinition`/`PropSpec`).
@@ -249,6 +256,11 @@ export class BlockTreeValidatorService {
       case 'mediaRef': {
         if (typeof value !== 'string') return invalid('type');
         if (!GUID_PATTERN.test(value)) return invalid('guidFormat');
+        return;
+      }
+      case 'color': {
+        if (typeof value !== 'string') return invalid('type');
+        if (!HEX_COLOR_PATTERN.test(value)) return invalid('format');
         return;
       }
       /* istanbul ignore next -- `PropKind` è un'unione chiusa: nessun altro caso possibile a compile time. */

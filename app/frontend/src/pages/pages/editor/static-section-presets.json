@@ -1,0 +1,101 @@
+[
+  {
+    "id": "hero-section",
+    "label": "Hero Section",
+    "subtree": {
+      "id": "preset-root",
+      "type": "section",
+      "props": { "columns": "1" },
+      "children": [
+        {
+          "id": "preset-heading",
+          "type": "heading",
+          "props": { "level": "h2", "text": "Benvenuto nella tua nuova pagina" },
+          "children": []
+        },
+        {
+          "id": "preset-richtext",
+          "type": "richText",
+          "props": { "html": "<p>Racconta qui il tuo messaggio principale in poche righe efficaci.</p>" },
+          "children": []
+        },
+        {
+          "id": "preset-button",
+          "type": "button",
+          "props": { "label": "Scopri di più", "href": "/" },
+          "children": []
+        }
+      ]
+    }
+  },
+  {
+    "id": "features-grid-3col",
+    "label": "Features Grid 3 colonne",
+    "subtree": {
+      "id": "preset-root",
+      "type": "section",
+      "props": { "columns": "3", "gap": "md" },
+      "children": [
+        {
+          "id": "preset-heading-1",
+          "type": "heading",
+          "props": { "level": "h3", "text": "Funzionalità 1" },
+          "children": []
+        },
+        {
+          "id": "preset-richtext-1",
+          "type": "richText",
+          "props": { "html": "<p>Descrizione breve della prima funzionalità offerta.</p>" },
+          "children": []
+        },
+        {
+          "id": "preset-heading-2",
+          "type": "heading",
+          "props": { "level": "h3", "text": "Funzionalità 2" },
+          "children": []
+        },
+        {
+          "id": "preset-richtext-2",
+          "type": "richText",
+          "props": { "html": "<p>Descrizione breve della seconda funzionalità offerta.</p>" },
+          "children": []
+        },
+        {
+          "id": "preset-heading-3",
+          "type": "heading",
+          "props": { "level": "h3", "text": "Funzionalità 3" },
+          "children": []
+        },
+        {
+          "id": "preset-richtext-3",
+          "type": "richText",
+          "props": { "html": "<p>Descrizione breve della terza funzionalità offerta.</p>" },
+          "children": []
+        }
+      ]
+    }
+  },
+  {
+    "id": "cta",
+    "label": "Call to Action",
+    "subtree": {
+      "id": "preset-root",
+      "type": "section",
+      "props": { "styleBackground": "accent" },
+      "children": [
+        {
+          "id": "preset-heading",
+          "type": "heading",
+          "props": { "level": "h2", "text": "Pronto per iniziare?" },
+          "children": []
+        },
+        {
+          "id": "preset-button",
+          "type": "button",
+          "props": { "label": "Contattaci", "href": "/contatti" },
+          "children": []
+        }
+      ]
+    }
+  }
+]

@@ -11,7 +11,7 @@
  * browser.
  */
 const PUBLIC_MEDIA_BASE_URL: string =
-  (import.meta.env.VITE_PUBLIC_MEDIA_BASE_URL as string | undefined) || 'http://localhost:3000';
+  (import.meta.env.VITE_PUBLIC_MEDIA_BASE_URL as string | undefined) || 'http://localhost:53000';
 
 /** Compone l'URL pubblico e leggibile dal browser del media identificato da `mediaRef`. */
 export function resolveMediaSrc(mediaRef: string): string {

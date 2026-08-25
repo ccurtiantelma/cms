@@ -14,7 +14,7 @@ export const PAGE_STATUSES = ['draft', 'review', 'scheduled', 'published', 'arch
 export type PageStatus = (typeof PAGE_STATUSES)[number];
 
 /**
- * Transizioni ammesse per stato di partenza — trascritte letteralmente da
+ * Transizioni ammesse per stato di partenza — trascritte da
  * `business-rules.md`:
  * ```
  * draft     → review | scheduled | published
@@ -23,13 +23,26 @@ export type PageStatus = (typeof PAGE_STATUSES)[number];
  * published → draft (nuova bozza, il pubblicato resta online) | archived
  * archived  → draft | published
  * ```
+ * Il diagramma ASCII sopra (righe 79-84 del documento) non elenca
+ * `published → published` come voce a sé, ma la prosa della Regola 1 della
+ * stessa sezione la richiede esplicitamente: "Il pubblico continua a vedere
+ * l'ultima revisione pubblicata finché non si ripubblica esplicitamente" — e
+ * non esiste altra transizione della mappa che porti da `published` a
+ * `published` restando sempre in quello stato (passare da `draft` e poi di
+ * nuovo a `published` violerebbe la prima parte della stessa regola, "non
+ * cambia stato"). `published` è quindi aggiunto anche come target da
+ * `published`: è un'auto-transizione che invoca comunque
+ * `publishTransactionally` (nuova Revisione, stesso `status`), non un no-op.
+ * Scarto rispetto al diagramma letterale, non alla regola di business —
+ * `docs/business-rules.md` non viene toccato (fuori perimetro di questo task,
+ * richiede approvazione umana separata).
  */
 export const PAGE_STATUS_TRANSITIONS: Readonly<Record<PageStatus, readonly PageStatus[]>> =
   Object.freeze({
     draft: Object.freeze<PageStatus[]>(['review', 'scheduled', 'published']),
     review: Object.freeze<PageStatus[]>(['draft', 'scheduled', 'published']),
     scheduled: Object.freeze<PageStatus[]>(['draft', 'published', 'archived']),
-    published: Object.freeze<PageStatus[]>(['draft', 'archived']),
+    published: Object.freeze<PageStatus[]>(['draft', 'published', 'archived']),
     archived: Object.freeze<PageStatus[]>(['draft', 'published']),
   });
 

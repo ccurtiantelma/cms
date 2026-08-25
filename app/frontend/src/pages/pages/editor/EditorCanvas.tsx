@@ -6,117 +6,142 @@
  * o l'aggiunta di un figlio dentro una sezione non fa ri-renderizzare il canvas, ma il
  * solo wrapper interessato (NFR § Performance — editor).
  *
- * Ospita il `DndContext` di dnd-kit (PLAN-F04c-editor-maturo.md T7): il drag & drop è uno
- * strato di input sopra `moveNodeToAction`, già validata e già invertibile — nessuna azione
- * nuova nasce qui. Lo stato del trascinamento in corso (`draggedLabel`, per il
- * `DragOverlay`) è un `useState` locale a questo componente, **mai** nello store Zustand:
- * un `set()` per movimento del puntatore ricalcolerebbe i selettori di tutto l'albero
- * (NFR § Performance — editor).
+ * Il `DndContext` di dnd-kit (PLAN-F04c-editor-maturo.md T7) non vive più qui: da quando la
+ * sidebar Widgets (`EditorSidebar`) è una sorgente di drag, il primo antenato comune fra
+ * sidebar e canvas è `FullScreenEditorLayout`, che ora lo ospita — vedi il commento di testa
+ * di quel file.
+ *
+ * Lo stato vuoto ("nessun blocco") è anche una drop-zone (`useDroppable`, id
+ * `root-empty-dropzone`, stesso schema dati `{ parentId, index }` letto da
+ * `FullScreenEditorLayout.handleDragEnd`): senza un nodo già in radice non c'è nessuna
+ * striscia `before`/`after` di `EditorBlockWrapper` su cui rilasciare il primo blocco.
  */
 import { useState } from 'react';
-import { Paper, Stack, Text } from '@mantine/core';
 import { useShallow } from 'zustand/react/shallow';
-import {
-  DndContext,
-  DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
-} from '@dnd-kit/core';
+import { ActionIcon, Group, Stack, Text, Tooltip } from '@mantine/core';
+import { useDroppable } from '@dnd-kit/core';
+import { notifications } from '@mantine/notifications';
+import { IconFolder, IconPlus, IconSparkles } from '@tabler/icons-react';
 import { useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
-import { BLOCK_TYPES } from '../../../types/blocks.types';
 import BlockPalette from './BlockPalette';
 import EditorBlockWrapper from './EditorBlockWrapper';
-
-/** Payload di una zona di rilascio (`EditorBlockWrapper.tsx`): dove inserire il nodo trascinato. */
-interface DropTarget {
-  parentId: string | null;
-  index: number;
-}
-
-/** Etichetta leggibile del tipo trascinato, per il `DragOverlay`; il nome tecnico è un fallback. */
-function draggedTypeLabel(event: DragStartEvent): string {
-  const type = (event.active.data.current as { type?: string } | undefined)?.type;
-  if (!type) return 'Blocco';
-  return BLOCK_TYPES.find((entry) => entry.type === type)?.meta?.label ?? type;
-}
+import SectionStructureModal from './SectionStructureModal';
+import TemplateLibraryModal from './TemplateLibraryModal';
+import styles from './EditorCanvas.module.css';
 
 /** Superficie di editing dell'albero di blocchi della bozza corrente. */
 export default function EditorCanvas(): JSX.Element {
   const rootIds = useBlockEditorStore(useShallow((state) => state.tree.map((node) => node.id)));
   const selectNode = useBlockEditorStore((state) => state.selectNode);
-  const moveNodeToAction = useBlockEditorStore((state) => state.moveNodeToAction);
+  const { setNodeRef: setEmptyDropRef, isOver: isOverEmpty } = useDroppable({
+    id: 'root-empty-dropzone',
+    data: { parentId: null, index: 0 },
+  });
+  // ADR-33 § 7: il pulsante "+" apre il selettore di struttura invece di creare
+  // direttamente una Section con i default puri del registro.
+  const [structureModalOpened, setStructureModalOpened] = useState(false);
+  // ADR-34 § 5: alternativa a "Section vuota" — libreria di preset statici già composti,
+  // stesso punto di apertura (`parentId`/`index` della radice, in coda).
+  const [templateLibraryOpened, setTemplateLibraryOpened] = useState(false);
 
-  const [draggedLabel, setDraggedLabel] = useState<string | null>(null);
-
-  // Puntatore + tastiera (dnd-kit T7): la tastiera è anche la via deterministica per i test
-  // E2E futuri. `distance` evita che un click sulla maniglia (selezione, tooltip) venga
-  // scambiato per un trascinamento di un pixel.
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor),
-  );
-
-  function handleDragStart(event: DragStartEvent): void {
-    setDraggedLabel(draggedTypeLabel(event));
-  }
-
-  function handleDragEnd(event: DragEndEvent): void {
-    setDraggedLabel(null);
-    const { active, over } = event;
-    if (!over) return;
-    const target = over.data.current as DropTarget | undefined;
-    if (!target) return;
-    // Nessuna azione nuova: lo stesso comando invertibile e validato che muovono i
-    // pulsanti indent/outdent/su/giù. `moveNodeToAction` no-opera da sola se il registro
-    // non ammette il tipo lì, o se la destinazione è il nodo stesso o un suo discendente.
-    moveNodeToAction(String(active.id), target.parentId, target.index);
+  /** Placeholder: nessuna funzione AI ancora disponibile (mai un bottone silenzioso). */
+  function handleAiFeaturesClick(): void {
+    notifications.show({
+      color: 'blue',
+      message: 'Funzioni AI non ancora disponibili',
+    });
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onDragCancel={() => setDraggedLabel(null)}
+    <div
+      className={styles.canvasRoot}
+      // Un click sullo sfondo deseleziona: senza, non ci sarebbe modo di tornare
+      // a "nessun blocco selezionato" una volta scelto un nodo.
+      onClick={() => selectNode(null)}
     >
-      <Paper
-        withBorder
-        p="md"
-        radius="md"
-        // Un click sullo sfondo deseleziona: senza, non ci sarebbe modo di tornare
-        // a "nessun blocco selezionato" una volta scelto un nodo.
-        onClick={() => selectNode(null)}
-      >
-        <Stack gap="sm">
-          {rootIds.length === 0 ? (
-            <Text size="sm" c="dimmed">
-              La bozza non contiene ancora blocchi. Aggiungi il primo blocco per iniziare.
+      <Stack gap="sm">
+        {rootIds.length === 0 ? (
+          <div
+            ref={setEmptyDropRef}
+            className={styles.emptyDropzone}
+            data-over={isOverEmpty}
+            // Un click sui pulsanti sotto non deve deselezionare via il click-through
+            // dello sfondo del contenitore (`onClick={() => selectNode(null)}` qui
+            // sopra): già gestito pulsante per pulsante con `stopPropagation`, coerente
+            // con lo stesso idioma di `BlockPalette`/`EditorBlockWrapper` in questo modulo.
+          >
+            <Group justify="center" gap="md" mb="sm">
+              <Tooltip label="Aggiungi una Section vuota" withArrow>
+                <ActionIcon
+                  variant="light"
+                  color="gray"
+                  radius="xl"
+                  size="xl"
+                  aria-label="Aggiungi una Section vuota"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setStructureModalOpened(true);
+                  }}
+                >
+                  <IconPlus size={22} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Libreria template" withArrow>
+                <ActionIcon
+                  variant="light"
+                  color="gray"
+                  radius="xl"
+                  size="xl"
+                  aria-label="Libreria template"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setTemplateLibraryOpened(true);
+                  }}
+                >
+                  <IconFolder size={22} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Funzioni AI" withArrow>
+                <ActionIcon
+                  variant="filled"
+                  color="grape"
+                  radius="xl"
+                  size="xl"
+                  aria-label="Funzioni AI"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleAiFeaturesClick();
+                  }}
+                >
+                  <IconSparkles size={22} />
+                </ActionIcon>
+              </Tooltip>
+            </Group>
+            <Text size="sm" fs="italic" c="dimmed" ta="center">
+              Trascina il widget qui
             </Text>
-          ) : (
-            rootIds.map((id) => <EditorBlockWrapper key={id} id={id} />)
-          )}
-
-          <div onClick={(event) => event.stopPropagation()}>
-            <BlockPalette parentId={null} label="Aggiungi blocco in fondo" />
           </div>
-        </Stack>
-      </Paper>
+        ) : (
+          rootIds.map((id) => <EditorBlockWrapper key={id} id={id} />)
+        )}
 
-      <DragOverlay>
-        {draggedLabel ? (
-          <Paper withBorder p="xs" radius="sm" shadow="md">
-            <Text size="sm" fw={600}>
-              {draggedLabel}
-            </Text>
-          </Paper>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+        <div onClick={(event) => event.stopPropagation()}>
+          <BlockPalette parentId={null} label="Aggiungi blocco in fondo" />
+        </div>
+      </Stack>
+
+      <SectionStructureModal
+        opened={structureModalOpened}
+        onClose={() => setStructureModalOpened(false)}
+        parentId={null}
+        index={rootIds.length}
+      />
+      <TemplateLibraryModal
+        opened={templateLibraryOpened}
+        onClose={() => setTemplateLibraryOpened(false)}
+        parentId={null}
+        index={rootIds.length}
+      />
+    </div>
   );
 }

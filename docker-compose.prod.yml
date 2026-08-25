@@ -70,8 +70,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # Solo il lato host è spostato (progetto sempre in parallelo con altri
+    # stack sulla stessa macchina, vedi docker-compose.yml): il container
+    # continua ad ascoltare su 3000 (PORT sopra, invariata), coerente con
+    # EXPOSE/HEALTHCHECK del Dockerfile.
     ports:
-      - '3000:3000'
+      - '53000:3000'
 
   frontend:
     build:
@@ -98,8 +102,10 @@ services:
       PUBLIC_API_BASE_URL: http://backend:3000
     depends_on:
       - backend
+    # Solo il lato host (stesso motivo del backend sopra): il container resta
+    # su 4000 (PORT sopra, invariata).
     ports:
-      - '4000:4000'
+      - '54000:4000'
 
 volumes:
   pgdata_prod:

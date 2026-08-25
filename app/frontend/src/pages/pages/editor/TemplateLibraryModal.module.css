@@ -1,0 +1,31 @@
+/*
+ * TemplateLibraryModal.tsx — tessere della libreria di preset di Sezione (ADR-34 § 5).
+ * Chrome dell'editor: CSS Modules + props native Mantine, nessuno stile inline.
+ */
+
+.presetButton {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 72px;
+  padding: 16px;
+  border: 1px dashed var(--mantine-color-gray-4);
+  border-radius: 6px;
+  background-color: transparent;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.presetButton:hover,
+.presetButton:focus-visible {
+  border-style: solid;
+  border-color: var(--mantine-color-blue-6);
+  background-color: var(--mantine-color-blue-light);
+}
+
+[data-mantine-color-scheme='dark'] .presetButton {
+  border-color: var(--mantine-color-dark-4);
+}

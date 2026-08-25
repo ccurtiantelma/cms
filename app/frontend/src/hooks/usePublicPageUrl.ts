@@ -24,7 +24,7 @@ import type { PageRecord } from '../types/pages.types';
  * Esportata perché è la stessa origine usata dal link di anteprima (ADR-25,
  * `{PUBLIC_SITE_URL}/__preview/:token` in `PagePageDetail.tsx`), non una costante duplicata.
  */
-export const PUBLIC_SITE_URL = import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:4000';
+export const PUBLIC_SITE_URL = import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:54000';
 
 /**
  * Tetto alle risalite verso gli antenati, allineato a `MAX_PUBLIC_PATH_SEGMENTS` del

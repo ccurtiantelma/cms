@@ -54,6 +54,13 @@ export const headingBlock: BlockDefinition = {
       values: ['regular', 'medium', 'bold'],
       default: { default: 'regular' },
     },
+    styleFontFamily: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['default', 'inter', 'roboto', 'playfair', 'montserrat', 'monospace'],
+      default: { default: 'default' },
+    },
   },
   children: { allow: [] },
   migrations: [],
@@ -70,6 +77,7 @@ export const headingBlock: BlockDefinition = {
       styleTextColor: { label: 'Colore testo', tab: 'style', order: 5 },
       styleFontSize: { label: 'Dimensione testo', tab: 'style', order: 6 },
       styleFontWeight: { label: 'Spessore testo', tab: 'style', order: 7 },
+      styleFontFamily: { label: 'Famiglia Font', tab: 'style', order: 8 },
     },
   },
 };

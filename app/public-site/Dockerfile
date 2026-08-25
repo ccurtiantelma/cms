@@ -28,7 +28,7 @@ RUN npm ci
 # empiricamente (stesso meccanismo, nessuna doppia risoluzione fra i due
 # workspace — è il punto che ADR-27 § 6 impone). Senza questo ARG il
 # componente `Image` condiviso ricadrebbe sempre sul default di sviluppo
-# (`http://localhost:3000`), diverso da quello reale usato dal frontend admin
+# (`http://localhost:53000`), diverso da quello reale usato dal frontend admin
 # in produzione: la stessa classe di divergenza che l'ADR vieta.
 FROM deps AS build
 COPY app/frontend/src ./app/frontend/src

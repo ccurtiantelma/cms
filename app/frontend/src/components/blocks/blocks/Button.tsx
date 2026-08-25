@@ -1,8 +1,17 @@
 /**
  * Blocco `button`: `label` (plainText) e `href` (url, già validato
  * server-side contro lo schema ammesso, SPEC-F02-blocchi.md § 3.6), più le
- * cinque props di stile responsive di ADR-29. `label` è interpolato come
- * contenuto JSX, mai `dangerouslySetInnerHTML`.
+ * sei props di stile responsive di ADR-29 (incluso `styleFontFamily`). `label`
+ * è interpolato come contenuto JSX, mai `dangerouslySetInnerHTML`.
+ *
+ * `editable`/`onLabelChange`/`onLabelInput` (PLAN-F04c-editor-maturo.md T9): stesso
+ * principio di `Heading.tsx` — opzionali, valorizzate solo dall'editor
+ * (`EditorBlockWrapper.tsx`) sul nodo selezionato, mai dal sito pubblico, dove restano
+ * `undefined` e il componente rende esattamente come prima. In editing il click non deve
+ * navigare (`event.preventDefault()` solo quando `editable` è vero): il sito pubblico,
+ * dove `editable` è sempre `undefined`, non è toccato da questo comportamento. Questo file
+ * non importa Mantine né lo store dell'editor (CLAUDE.md § confine Mantine/blocchi):
+ * l'unica concessione è `contentEditable` nativo, nessuna dipendenza nuova.
  */
 import styles from './Button.module.css';
 import tokenStyles from '../style-tokens.module.css';
@@ -16,6 +25,13 @@ interface ButtonProps {
   styleTextColor?: unknown;
   styleFontSize?: unknown;
   styleFontWeight?: unknown;
+  styleFontFamily?: unknown;
+  /** Editing in-place attivo (solo editor, solo nodo selezionato — mai sul sito pubblico). */
+  editable?: boolean;
+  /** Commit dell'etichetta modificata — chiamato su `blur`, mai ad ogni tasto. */
+  onLabelChange?: (nextLabel: string) => void;
+  /** Notifica ad ogni tasto (debounce lato chiamante) — non è un commit definitivo. */
+  onLabelInput?: (nextLabel: string) => void;
 }
 
 export default function Button({
@@ -26,6 +42,10 @@ export default function Button({
   styleTextColor,
   styleFontSize,
   styleFontWeight,
+  styleFontFamily,
+  editable = false,
+  onLabelChange,
+  onLabelInput,
 }: ButtonProps) {
   const className = [
     styles.button,
@@ -34,12 +54,35 @@ export default function Button({
     resolveResponsiveClassNames(tokenStyles, 'textColor', styleTextColor),
     resolveResponsiveClassNames(tokenStyles, 'fontSize', styleFontSize),
     resolveResponsiveClassNames(tokenStyles, 'fontWeight', styleFontWeight),
+    resolveResponsiveClassNames(tokenStyles, 'fontFamily', styleFontFamily),
   ]
     .filter(Boolean)
     .join(' ');
 
+  if (!editable) {
+    return (
+      <a className={className} href={href}>
+        {label}
+      </a>
+    );
+  }
+
+  // Come in `Heading.tsx`: il DOM resta l'unica fonte di verità del testo in corso di
+  // modifica, nessun `value` controllato che sposterebbe il cursore ad ogni digitazione.
+  // `onClick` con `preventDefault` impedisce la navigazione mentre si sta modificando
+  // l'etichetta nel canvas dell'editor.
   return (
-    <a className={className} href={href}>
+    <a
+      className={className}
+      href={href}
+      contentEditable
+      suppressContentEditableWarning
+      onClick={(event) => {
+        if (editable) event.preventDefault();
+      }}
+      onInput={(event) => onLabelInput?.(event.currentTarget.textContent ?? '')}
+      onBlur={(event) => onLabelChange?.(event.currentTarget.textContent ?? '')}
+    >
       {label}
     </a>
   );

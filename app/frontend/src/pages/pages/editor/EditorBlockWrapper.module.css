@@ -12,10 +12,43 @@
   border-color: var(--mantine-color-gray-4);
 }
 
+/* Selezione da tastiera (T-canvas-cleanup): il wrapper è il bersaglio `tabIndex`, vedi
+   EditorBlockWrapper.tsx. Solo `:focus-visible`, mai su focus da mouse/click. */
+.wrapper:focus-visible {
+  outline: 2px solid var(--mantine-color-blue-5);
+  outline-offset: 1px;
+}
+
+/*
+  Hover promosso a stato esplicito (`isHovered`, EditorBlockWrapper.tsx): a differenza del
+  `:hover` qui sopra, questa classe è applicata via JS solo al nodo effettivamente sotto il
+  puntatore (mai contemporaneamente ai suoi antenati/discendenti) — bordo azzurro sottile,
+  distinto dal blu pieno di `.selected`.
+*/
+.hovered {
+  border-style: solid;
+  border-color: var(--mantine-color-blue-4);
+}
+
 .selected,
 .selected:hover {
   border-style: solid;
   border-color: var(--mantine-color-blue-5);
+}
+
+/*
+  Variante Elementor, solo su `section` (hover o selezione, EditorBlockWrapper.tsx):
+  bordo d'accento magenta/viola al posto del blu generico di `.hovered`/`.selected`.
+  Dichiarata dopo entrambe nel foglio: stessa specificità (una classe), vince per
+  ordine — le due classi restano applicate insieme a questa per non perdere l'opacità
+  della toolbar integrata, che dipende da `.selected > .toolbar` qui sotto. Dichiarata
+  **prima** di `.invalid`: un nodo respinto dalla validazione server-side deve restare
+  rosso anche se è una Section selezionata, l'errore vince sempre sull'estetica.
+*/
+.sectionAccent,
+.sectionAccent:hover {
+  border-style: solid;
+  border-color: #a333c8;
 }
 
 /* Nodo respinto dall'ultima validazione server-side (400 con path del colpevole). */
@@ -26,36 +59,40 @@
   background: var(--mantine-color-red-light);
 }
 
+/*
+  Invisibile a riposo (T-canvas-cleanup): un'opacità intermedia lasciava comunque una
+  fila di icone sempre leggibile su ogni blocco, lo stesso "inquinamento visivo" delle
+  etichette testuali rimosse — solo più discreto. `visibility:hidden` (non solo
+  `opacity:0`) toglie anche i pulsanti dal focus da tab quando il blocco è a riposo:
+  `.wrapper:focus-within` qui sotto li restituisce non appena uno di loro riceve il
+  focus da tastiera, così restano raggiungibili in sequenza da chi c'è già entrato.
+*/
 .toolbar {
   display: flex;
   align-items: center;
   gap: 4px;
   margin-bottom: 4px;
-  opacity: 0.35;
+  opacity: 0;
+  visibility: hidden;
   transition: opacity 120ms ease;
 }
 
-.wrapper:hover > .toolbar,
+/*
+  Mai `.wrapper:hover` qui (a differenza del bordo grigio sopra, che può cascare sugli
+  antenati come discreto pass-through): `:hover` nativo è vero per ogni antenato del nodo
+  puntato, e mostrerebbe anche la toolbar della Section che contiene il blocco realmente
+  sotto il cursore — esattamente il "contemporaneamente ai suoi antenati" che `.hovered`
+  (stato JS, commento sopra) esiste apposta per evitare. `.wrapper:focus-within` ha lo
+  stesso problema (`:focus-within` sale per tutti gli antenati) — sostituito da
+  `.selected` sul nodo che la tastiera ha davvero raggiunto (`onKeyDown`/click impostano
+  entrambi `selectedId`, quindi tab+Invio su un blocco lo seleziona e la sua toolbar
+  compare da `.selected > .toolbar` qui sotto, senza toccare quella dei suoi antenati).
+*/
+.hovered > .toolbar,
 .selected > .toolbar,
 .invalid > .toolbar {
   opacity: 1;
-}
-
-/* Etichetta cliccabile: seleziona il blocco anche da tastiera. */
-.label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--mantine-color-dimmed);
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.label:hover,
-.label:focus-visible {
-  background: var(--mantine-color-gray-1);
-  color: var(--mantine-color-text);
+  visibility: visible;
 }
 
 /* Contenitore senza figli: senza questo segnaposto non sarebbe visibile né cliccabile. */
@@ -75,10 +112,19 @@
   color: var(--mantine-color-dimmed);
 }
 
+/*
+  `display: contents` (T-layout-colonne-section): questo `div` non genera più un box
+  proprio, quindi i suoi figli (i wrapper dei blocchi figli) diventano grid item diretti
+  del contenitore genitore (`.section` in Section.module.css, ADR-31 § 7) invece di
+  finire tutti dentro l'unica cella di questo `div` — è la correzione del bug per cui una
+  Section a più colonne appariva sempre a colonna singola in editor: la griglia CSS del
+  genitore vedeva un solo grid item (questo wrapper) anziché uno per figlio, come sul sito
+  pubblico (`BlockRenderer.tsx`). Lo spazio fra i blocchi non è più un `gap` fisso di
+  chrome: segue lo stesso token `gap` del nodo section (Section.tsx), fedele a quanto si
+  pubblicherà — prima la spaziatura editor-only divergeva da quella pubblica.
+*/
 .childrenArea {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: contents;
 }
 
 /* Blocco attualmente trascinato (dnd-kit T7): resta al suo posto, solo attenuato — il
@@ -94,14 +140,99 @@
 }
 
 /*
-  Zona di rilascio fra fratelli (prima/dopo un nodo). È una striscia di chrome, non un
-  blocco di contenuto: l'indicatore visivo (la linea di inserimento) è un vero
-  pseudo-elemento, mai un nodo separato che sposterebbe il layout durante l'hover.
+  Badge del tipo di blocco (hover/selezione, T8; solo icona da T-canvas-cleanup — niente
+  più testo fisso "SEZIONE"/"TITOLO"/…, vedi EditorBlockWrapper.tsx): fuori dal box del
+  wrapper (top negativo), mai dentro il flusso della toolbar — così non compete per spazio
+  con le sue azioni. Un badge di un nodo innestato è sempre dipinto sopra quello del suo
+  contenitore: entrambi sono discendenti dello stesso stacking context implicito (nessuno
+  dei due wrapper dichiara un proprio `z-index`), e l'ordine del DOM mette il badge del
+  figlio dopo quello del padre.
+*/
+.hoverBadge {
+  position: absolute;
+  top: -20px;
+  left: 0;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px 4px 0 0;
+  background: var(--mantine-color-blue-5);
+  color: var(--mantine-color-white);
+  pointer-events: none;
+}
+
+/*
+  Action bar floating (T8): solo sul nodo selezionato, ancorata in alto a destra — sulla
+  stessa riga del badge (in alto a sinistra), mai sovrapposta. Regola di posizionamento
+  fissa ("sempre sopra"): più semplice del calcolo dinamico dello spazio disponibile, e il
+  requisito non lo impone.
+*/
+.floatingActionBar {
+  position: absolute;
+  top: -28px;
+  right: 0;
+  z-index: 3;
+  padding: 2px;
+  border-radius: 6px;
+  background: var(--mantine-color-white);
+  border: 1px solid var(--mantine-color-blue-5);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+[data-mantine-color-scheme='dark'] .floatingActionBar {
+  background: var(--mantine-color-dark-6);
+}
+
+/*
+  Linguetta d'azione stile Elementor, solo su `section` selezionata: sostituisce
+  interamente `.floatingActionBar` per questo tipo (mai le due insieme, vedi
+  EditorBlockWrapper.tsx). A cavallo del bordo superiore, centrata — non in alto a
+  destra come la barra generica, perché qui non convive con `.hoverBadge` (badge e
+  linguetta userebbero lo stesso spazio: la linguetta lo sostituisce anche visivamente).
+  `top` negativo pari a metà della sua stessa altezza approssimativa, così il bordo
+  della Section attraversa esattamente il centro della linguetta.
+*/
+.sectionActionTab {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #a333c8;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+/*
+  Zona di rilascio fra fratelli (prima/dopo un nodo, T-layout-colonne-section). Non più
+  fratelli in flusso del wrapper (`.wrapper`, che ha `position: relative`): un fratello in
+  flusso, dentro una `section` a più colonne (ADR-31), sarebbe un grid item vero e proprio
+  e romperebbe l'allineamento delle colonne esattamente come il bug che questo file
+  corregge. Sono invece annidati **dentro** `.wrapper` e assolutamente posizionati sul suo
+  bordo superiore/inferiore: un item `position: absolute` non partecipa mai al
+  posizionamento automatico della griglia del genitore (CSS Grid), quindi non consuma una
+  colonna, indipendentemente da quante ce ne siano. L'indicatore resta un vero
+  pseudo-elemento (`.dropZone::before`, ADR-28 § 6), mai un nodo che sposta il layout —
+  invariato rispetto a prima.
 */
 .dropZone {
-  position: relative;
-  height: 6px;
-  margin: -3px 0;
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 10px;
+  z-index: 1;
+}
+
+.dropZoneBefore {
+  top: -6px;
+}
+
+.dropZoneAfter {
+  bottom: -6px;
 }
 
 .dropZone::before {
@@ -125,11 +256,26 @@
   background: var(--mantine-color-red-6);
 }
 
-/* Evidenziazione del contenitore quando il drop corrente sarebbe "dentro" di lui. */
+/*
+  Evidenziazione del contenitore quando il drop corrente sarebbe "dentro" di lui
+  (T-layout-colonne-section). Non più un box che avvolge `.childrenArea` — un contenitore
+  a griglia deve mostrare i propri figli come veri grid item del genitore (vedi
+  `.childrenArea` sopra), non annidati dentro un unico wrapper che collasserebbe la
+  griglia a una sola colonna. `position: absolute; inset: 0` lo esclude dal posizionamento
+  automatico della griglia (stesso principio di `.dropZone` sopra) mentre resta un box
+  vero con bordo/sfondo propri — l'opposto di `display: contents`, che qui toglierebbe
+  anche quelli, e servono per restare visibili. `pointer-events: none`: è solo un segnale
+  visivo, mai un ostacolo al click sui blocchi figli sottostanti.
+*/
 .containerDropZone {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
   border-radius: 4px;
   border: 1px dashed transparent;
-  transition: border-color 100ms ease, background-color 100ms ease;
+  transition:
+    border-color 100ms ease,
+    background-color 100ms ease;
 }
 
 .containerDropZone[data-over='true'] {
@@ -140,4 +286,19 @@
 .containerDropZone[data-over='true'][data-rejected='true'] {
   border-color: var(--mantine-color-red-6);
   background: var(--mantine-color-red-light);
+}
+
+/*
+  Su `section` (T-layout-colonne-section), l'evidenziazione "dentro" riusa il magenta
+  d'accento della Section stessa (`.sectionAccent`/`.sectionActionTab` sopra) invece del
+  blu generico: dentro una griglia a più colonne il blu del riordino fra fratelli
+  (`.dropZone::before`) e il blu generico di "dentro un contenitore" si confonderebbero
+  visivamente — il magenta li distingue subito. Dichiarata dopo le regole generiche
+  `[data-over]` sopra, stessa specificità (due attributi), vince per ordine; `:not` sul
+  rifiuto lascia intatto il rosso quando il drop non sarebbe ammesso — quella regola non
+  cambia mai, coerente con lo schema esistente (ADR-28 § 6).
+*/
+.containerDropZoneSection[data-over='true']:not([data-rejected='true']) {
+  border-color: #a333c8;
+  background: rgba(163, 51, 200, 0.08);
 }

@@ -1,0 +1,31 @@
+/* Canvas dell'editor (EditorCanvas.tsx). */
+
+/*
+  Contenitore radice del canvas: nessun bordo/padding/radius (Full-Screen nativo, stile
+  Elementor) — occupa l'intera area lasciata da `.canvasArea` di
+  `FullScreenEditorLayout.module.css`. `min-height: 100%` mantiene un'area cliccabile per
+  la deselezione (`onClick` sullo sfondo) anche quando l'albero ha pochi blocchi.
+*/
+.canvasRoot {
+  width: 100%;
+  min-height: 100%;
+}
+
+/*
+  Stato vuoto dell'albero, anche drop-zone (`root-empty-dropzone`): stesso linguaggio visivo
+  delle altre zone di rilascio di `EditorBlockWrapper.module.css` (bordo tratteggiato che
+  diventa blu pieno sotto il puntatore durante un trascinamento).
+*/
+.emptyDropzone {
+  border: 2px dashed #cccccc;
+  border-radius: 4px;
+  padding: 48px 24px;
+  text-align: center;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.emptyDropzone[data-over='true'] {
+  border-style: solid;
+  border-color: var(--mantine-color-blue-6);
+  background: var(--mantine-color-blue-light);
+}

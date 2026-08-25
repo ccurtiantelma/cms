@@ -1,0 +1,141 @@
+/*
+ * Chrome dell'editor visivo full-screen (FullScreenEditorLayout.tsx). `position: fixed`
+ * con z-index sopra l'AppShell di LayoutProtected: è così che si sgancia dal layout
+ * standard senza toccare il routing (vedi commento del componente).
+ *
+ * `top`/`left`/`right`/`bottom` in forma estesa rendono esplicita la copertura dell'intera
+ * viewport quando la scheda "Contenuto" è attiva.
+ */
+
+.root {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--mantine-color-body);
+}
+
+/* --- Topbar --- */
+.topbar {
+  flex: 0 0 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+  background-color: var(--mantine-color-body);
+}
+
+[data-mantine-color-scheme='dark'] .topbar {
+  border-bottom-color: var(--mantine-color-dark-4);
+}
+
+.topbarSection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pageTitle {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewportSwitcher {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* --- Area di lavoro --- */
+.workArea {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+/* --- Sidebar sinistra (Widgets/Proprietà) --- */
+/* Larghezza/bg/border/scroll interno sono di proprietà di `EditorSidebar.module.css`: questo
+   è solo il contenitore flex a larghezza fissa dentro `.workArea`. */
+.sidebar {
+  flex: 0 0 320px;
+  overflow: hidden;
+}
+
+/*
+ * Canvas centrale: nessun padding/margin esterno, il canvas occupa l'intera area
+ * disponibile a piena finestra (Full-Screen nativo, stile Elementor) — la simulazione
+ * del viewport (`.viewportContainer`/`.viewportDesktop/Tablet/Mobile` sotto) resta
+ * l'unico meccanismo che limita la larghezza del contenuto, mai un padding fisso qui.
+ */
+.canvasArea {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  background-color: #f3f4f6;
+}
+
+[data-mantine-color-scheme='dark'] .canvasArea {
+  background-color: var(--mantine-color-dark-8);
+}
+
+/*
+ * Larghezza reattiva al viewport simulato (Viewport Switcher), con transizione fluida.
+ * `container-type: inline-size` stabilisce qui il containment che i blocchi dentro il
+ * canvas interrogano con `@container` (style-tokens.module.css): senza, `@media
+ * max-width` risponderebbe alla finestra del browser, non alla larghezza simulata, e
+ * l'anteprima responsive dell'editor non mostrerebbe mai le classi tablet/mobile finché
+ * la finestra reale non fosse altrettanto stretta.
+ */
+.viewportContainer {
+  width: 100%;
+  max-width: 100%;
+  container-type: inline-size;
+  transition: width 200ms ease, max-width 200ms ease;
+}
+
+.viewportDesktop {
+  width: 100%;
+}
+
+.viewportTablet {
+  width: 768px;
+  max-width: 100%;
+}
+
+.viewportMobile {
+  width: 375px;
+  max-width: 100%;
+}
+
+/* --- Pannello destro "Struttura/Navigator" --- */
+.structurePanel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 280px;
+  border-left: 1px solid var(--mantine-color-gray-3);
+  background-color: var(--mantine-color-white);
+  overflow-y: auto;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
+}
+
+[data-mantine-color-scheme='dark'] .structurePanel {
+  border-left-color: var(--mantine-color-dark-4);
+  background-color: var(--mantine-color-dark-6);
+}

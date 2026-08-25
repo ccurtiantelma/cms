@@ -21,7 +21,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useBlockEditorStore, useCanRedo, useCanUndo, useHasUnsavedChanges } from './useBlockEditorStore';
 import { renderHook, act } from '@testing-library/react';
-import type { BlockNode } from '../pages/pages/editor/block-tree.utils';
+import { findNode, type BlockNode } from '../pages/pages/editor/block-tree.utils';
 
 // `duplicateNodeAction` avvisa via `notifications.show` quando la duplicazione
 // supererebbe `CONTENT_TREE_LIMITS.maxNodes` (PLAN-F04c-editor-maturo.md T7): mockato per
@@ -568,5 +568,123 @@ describe('useBlockEditorStore — duplicateNodeAction', () => {
     expect(notifications.show).toHaveBeenCalledWith(
       expect.objectContaining({ color: 'red', title: 'Duplicazione non eseguita' }),
     );
+  });
+});
+
+/**
+ * `insertSubtreeAction` (ADR-34 § 2/§ 3, "Subtree Insertion Engine"): generalizza
+ * `duplicateSubtree` a un sottoalbero **esterno** all'albero in editing (un preset della
+ * libreria, mai un nodo già presente), con lo stesso doppio controllo anticipato di
+ * `duplicateNodeAction` — `canContainType` sul contenitore di destinazione e
+ * `CONTENT_TREE_LIMITS.maxNodes` — prima di costruire il comando invertibile.
+ */
+describe('useBlockEditorStore — insertSubtreeAction', () => {
+  beforeEach(() => {
+    useBlockEditorStore.getState().initTree(initialTree());
+    vi.mocked(notifications.show).mockClear();
+  });
+
+  /** Un sottoalbero esterno "preset" con id placeholder, mai già presenti nell'albero. */
+  function presetSubtree(): BlockNode {
+    return node('preset-section', 'section', { columns: '1' }, [
+      node('preset-heading', 'heading', { level: 'h2', text: 'Titolo preset' }),
+      node('preset-rich', 'richText', { html: '<p>Corpo preset</p>' }),
+    ]);
+  }
+
+  it('inserisce il preset alla radice, con id tutti nuovi rispetto alla fonte, e lo seleziona', () => {
+    const preset = presetSubtree();
+    const presetIds = collectIds([preset]);
+    expect(presetIds).toEqual(['preset-section', 'preset-heading', 'preset-rich']);
+
+    state().insertSubtreeAction(null, 2, preset);
+
+    expect(state().tree.map((n) => n.id)).toEqual(['sec-1', 'head-root', state().tree[2].id]);
+    const insertedRoot = state().tree[2];
+    expect(insertedRoot.type).toBe('section');
+    expect(insertedRoot.children.map((child) => child.type)).toEqual(['heading', 'richText']);
+
+    // Nessun id del sottoalbero inserito coincide con uno della fonte del preset (rigenerati
+    // ricorsivamente, radice inclusa — ADR-34 § 2).
+    const insertedIds = collectIds([insertedRoot]);
+    expect(insertedIds).toHaveLength(3);
+    expect(insertedIds.some((id) => presetIds.includes(id))).toBe(false);
+    expect(new Set(insertedIds).size).toBe(3);
+
+    expect(state().selectedId).toBe(insertedRoot.id);
+    expect(notifications.show).not.toHaveBeenCalled();
+  });
+
+  it('inserisce il preset dentro una section esistente, alla posizione richiesta', () => {
+    const preset = node('preset-button', 'button', { label: 'Vai', href: '/' });
+
+    state().insertSubtreeAction('sec-1', 0, preset);
+
+    const sec1 = findNode(state().tree, 'sec-1');
+    expect(sec1?.children.map((child) => child.type)).toEqual(['button', 'heading', 'richText']);
+    expect(sec1?.children[0].id).not.toBe('preset-button');
+    expect(state().selectedId).toBe(sec1?.children[0].id);
+  });
+
+  it('rifiuta un tipo non ammesso dal contenitore di destinazione: avviso, albero invariato, nessuna voce in history', () => {
+    // `head-1` è un heading; il registro dichiara `heading.childrenAllow: []` — non può
+    // ospitare una section (né nulla).
+    const treeBefore = state().tree;
+    const preset = presetSubtree();
+
+    state().insertSubtreeAction('head-1', 0, preset);
+
+    expect(state().tree).toBe(treeBefore);
+    expect(state().undoStack).toHaveLength(0);
+    expect(state().selectedId).toBeNull();
+    expect(notifications.show).toHaveBeenCalledTimes(1);
+    expect(notifications.show).toHaveBeenCalledWith(
+      expect.objectContaining({ color: 'red', title: 'Inserimento non eseguito' }),
+    );
+  });
+
+  it('rifiuta un contenitore di destinazione inesistente: no-op, nessuna eccezione', () => {
+    const treeBefore = state().tree;
+
+    state().insertSubtreeAction('mai-esistito', 0, presetSubtree());
+
+    expect(state().tree).toBe(treeBefore);
+    expect(state().undoStack).toHaveLength(0);
+  });
+
+  it('rifiuta l’inserimento che supererebbe MAX_NODES: avviso, albero invariato, nessuna voce in history', () => {
+    // 499 nodi di radice + il preset di 3 nodi (section + 2 figli) = 502, oltre il limite di 500.
+    const cinquecentoNodi = Array.from({ length: 499 }, (_, i) =>
+      node(`n-${i}`, 'heading', { level: 'h2', text: 'x' }),
+    );
+    useBlockEditorStore.getState().initTree(cinquecentoNodi);
+    const treeBefore = state().tree;
+    expect(treeBefore).toHaveLength(499);
+
+    state().insertSubtreeAction(null, treeBefore.length, presetSubtree());
+
+    expect(state().tree).toBe(treeBefore);
+    expect(state().undoStack).toHaveLength(0);
+    expect(state().selectedId).toBeNull();
+    expect(notifications.show).toHaveBeenCalledTimes(1);
+    expect(notifications.show).toHaveBeenCalledWith(
+      expect.objectContaining({ color: 'red', title: 'Inserimento non eseguito' }),
+    );
+  });
+
+  it('l’inserimento è invertibile: un undo lo rimuove per intero, un redo lo ripristina identico', () => {
+    const iniziale = snapshot();
+
+    state().insertSubtreeAction(null, 2, presetSubtree());
+    const dopoInserimento = snapshot();
+    expect(dopoInserimento).not.toBe(iniziale);
+    expect(state().undoStack).toHaveLength(1);
+
+    state().undo();
+    expect(snapshot()).toBe(iniziale);
+    expect(state().redoStack).toHaveLength(1);
+
+    state().redo();
+    expect(snapshot()).toBe(dopoInserimento);
   });
 });

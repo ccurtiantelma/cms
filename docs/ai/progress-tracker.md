@@ -463,3 +463,29 @@ sui campi dell'ispettore — task minimo consigliato per un round successivo.
 WYSIWYG (ADR-26) — tutti rinviati a **F04d**. Anteprima responsive assente (nessuno vede i
 breakpoint `tablet`/`mobile` salvati senza un controllo UI dedicato, che questo round non
 costruisce) — primo candidato del giro successivo.
+
+---
+
+## F04d — colonne, fullscreen, styling, preset statici (2026-08-25)
+
+Consolidamento di ADR-31, ADR-32, ADR-33, ADR-34 (tutte approvate, una pagina ciascuna). Suite
+completa verde: backend 27/27 suite (231 test), frontend 11/11 suite (191 test).
+
+**ADR-31 — layout a colonne su `section`**: `columns`/`gap`/`alignItems`, `kind: 'enum'`,
+forma per breakpoint `{ default, tablet?, mobile? }` come ADR-29 § 2; l'editor di questo round
+scrive solo il controllo `default`.
+
+**ADR-32 — schermo intero, Navigator, sidebar widget**: `FullScreenEditorLayout` sostituisce
+la chrome solo sulla scheda Contenuto (nessuna rotta nuova), viewport switcher come stato di
+sola chrome (non tocca i breakpoint effettivi del rendering pubblico), `EditorStructureNavigator`
+legge lo store senza stato duplicato, `WidgetPalette` passa dalla `addBlockAction` già
+esistente — nessuna azione nuova nello store.
+
+**ADR-33 — `section`: contentWidth/maxWidth/colore/spaziatura per lato, `columnRatio`**:
+`maxWidth` a token CSS (mai un numero nel contenuto, coerente con ADR-29 § 1), `columnRatio`
+come prop separata da `columns` — non ridefinisce l'insieme chiuso di ADR-31.
+
+**ADR-34 — Subtree Insertion Engine + preset statici**: registro JSON bundlato nel frontend
+(`static-section-presets.json`), nessuna chiamata di rete, nessuna tabella nuova; ogni preset
+composto solo da tipi/prop già nel registro (ADR-21) — zero nuovi tipi di blocco, zero nuovi
+`kind`.

@@ -80,6 +80,7 @@ import {
 } from '../../types/pages.types';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { PUBLIC_SITE_URL, usePublicPageUrl } from '../../hooks/usePublicPageUrl';
+import { usePublicSiteHealth } from '../../hooks/usePublicSiteHealth';
 import BlockEditorPanel from './editor/BlockEditorPanel';
 import PageHeader from '../../components/PageHeader';
 import PageNotFound from '../../components/PageNotFound';
@@ -103,6 +104,17 @@ const STATUS_ACTION_LABELS: Record<PageStatus, string> = {
   published: 'Pubblica',
   archived: 'Archivia',
 };
+
+/**
+ * Etichetta dell'azione di transizione verso `target`, dato lo stato corrente. Caso
+ * speciale: `published → published` non è una prima pubblicazione ma una
+ * ripubblicazione (la Pagina è già online, si sostituisce con una nuova Revisione) —
+ * riusare "Pubblica" lascerebbe intendere che non lo fosse ancora.
+ */
+function statusActionLabel(target: PageStatus, currentStatus: PageStatus): string {
+  if (target === 'published' && currentStatus === 'published') return 'Ripubblica';
+  return STATUS_ACTION_LABELS[target];
+}
 
 /** Valori del form Metadati + SEO/GEO (locale e contenuto non sono editabili qui). */
 interface MetadataFormValues {
@@ -207,6 +219,9 @@ export default function PagePageDetail(): JSX.Element {
   const [viewRevision, setViewRevision] = useState<PageRevisionDetail | null>(null);
   const [viewRevisionLoading, setViewRevisionLoading] = useState(false);
 
+  /** `Tabs` controllato per comunicare al layout persistente se l'editor è attivo. */
+  const [activeTab, setActiveTab] = useState<string | null>('metadata');
+
   const form = useForm<MetadataFormValues>({
     mode: 'controlled',
     initialValues: pageToFormValues({
@@ -283,6 +298,13 @@ export default function PagePageDetail(): JSX.Element {
 
   /** URL pubblico della Pagina — `null` finché non è pubblicata (ADR-24). */
   const publicUrl = usePublicPageUrl(page);
+
+  /**
+   * Sonda passiva su `{PUBLIC_SITE_URL}/healthz`, avviata solo quando esiste un URL
+   * pubblico da mostrare (quindi solo insieme al pulsante "Vedi pagina"). Non blocca né
+   * ritarda il link, che resta un vero `href` funzionante indipendentemente dall'esito.
+   */
+  const publicSiteHealth = usePublicSiteHealth(publicUrl ? PUBLIC_SITE_URL : null);
 
   /**
    * Notifica dedicata di conflitto di editing (`409 PAGE_VERSION_CONFLICT`),
@@ -427,11 +449,21 @@ export default function PagePageDetail(): JSX.Element {
    */
   async function handlePreview(): Promise<void> {
     if (!page) return;
+    const previewWindow = window.open('about:blank', '_blank');
+    if (!previewWindow) {
+      notifications.show({
+        color: 'red',
+        message: "Impossibile aprire l'anteprima: consenti i popup per questo sito.",
+      });
+      return;
+    }
+    previewWindow.opener = null;
     setPreviewLoading(true);
     try {
       const { token } = await issuePagePreviewToken(page.guid);
-      window.open(`${PUBLIC_SITE_URL}/__preview/${token}`, '_blank', 'noopener,noreferrer');
+      previewWindow.location.href = `${PUBLIC_SITE_URL}/__preview/${token}`;
     } catch (err) {
+      previewWindow.close();
       notifications.show({
         color: 'red',
         message: getErrorMessage(err, "Errore nella generazione dell'anteprima"),
@@ -510,11 +542,28 @@ export default function PagePageDetail(): JSX.Element {
           <Group gap="sm">
             {/*
               Tendina di stato: le voci sono le sole transizioni ammesse dallo stato
-              corrente, non l'elenco degli stati. Un menu con lo stato corrente fra le
-              opzioni sarebbe fuorviante (sceglierlo non è una transizione) e uno con tutti
-              gli stati produrrebbe `400` prevedibili.
+              corrente, non l'elenco completo degli stati — un menu con tutti gli stati
+              produrrebbe `400` prevedibili. Unica eccezione legittima allo stato corrente
+              escluso dalle opzioni: `published` può comparire come transizione anche
+              quando lo stato corrente È già `published` (ripubblicazione dopo una modifica
+              alla bozza, Regola 1 di `docs/business-rules.md` § Stati di una Pagina). Non è
+              un no-op travestito da transizione — crea comunque una nuova Revisione e
+              sostituisce il contenuto online — quindi `statusActionLabel` gli dà
+              un'etichetta distinta ("Ripubblica") invece di riusare "Pubblica" così com'è.
+
+              `zIndex={1100}`: sopra la chrome full-screen dell'editor (z-index 1000,
+              `FullScreenEditorLayout.module.css`) — stesso motivo/stesso valore del
+              `ConfirmModal` di `BlockEditorPanel.tsx`. Il `Menu.Dropdown` è montato in
+              portale (`withinPortal`) fuori dall'intestazione locale che lo ospita: senza
+              questo z-index esplicito resterebbe dietro l'overlay quando la tendina si apre.
             */}
-            <Menu shadow="md" position="bottom-start" withinPortal disabled={submitting}>
+            <Menu
+              shadow="md"
+              position="bottom-start"
+              withinPortal
+              zIndex={1100}
+              disabled={submitting}
+            >
               <Menu.Target>
                 <Button
                   variant="light"
@@ -540,7 +589,7 @@ export default function PagePageDetail(): JSX.Element {
                       }
                     }}
                   >
-                    {STATUS_ACTION_LABELS[target]}
+                    {statusActionLabel(target, status)}
                   </Menu.Item>
                 ))}
               </Menu.Dropdown>
@@ -574,24 +623,50 @@ export default function PagePageDetail(): JSX.Element {
               disponibili apri-in-nuova-scheda, copia indirizzo e tasto centrale.
             */}
             {publicUrl && (
-              <Button
-                component="a"
-                href={publicUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                variant="default"
-                leftSection={<IconExternalLink size={16} />}
-              >
-                Vedi pagina
-              </Button>
+              <Group gap={4} wrap="nowrap">
+                <Button
+                  component="a"
+                  href={publicUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="default"
+                  leftSection={<IconExternalLink size={16} />}
+                >
+                  Vedi pagina
+                </Button>
+                {/*
+                  Avviso non bloccante, non un'interdizione: il link resta un vero `href`
+                  cliccabile a prescindere da questo esito. La sonda (`usePublicSiteHealth`)
+                  non ritarda né condiziona il rendering del pulsante sopra.
+                */}
+                {publicSiteHealth === 'unhealthy' && (
+                  <Tooltip
+                    withArrow
+                    multiline
+                    w={280}
+                    label="Il sito pubblico (porta 4000) non risponde: la pagina potrebbe non essere raggiungibile."
+                  >
+                    <Center aria-label="Sito pubblico non raggiungibile">
+                      <IconAlertTriangle size={18} color="var(--mantine-color-yellow-6)" />
+                    </Center>
+                  </Tooltip>
+                )}
+              </Group>
             )}
             {/*
               Solo su bozza (`draft`): il backend nega il token su ogni altro stato
               (`403`, ADR-25) — coerente con "Vedi pagina" sopra, che è l'inverso e compare
               solo su `published`. `onClick`, non `href`: il token va generato al momento,
               mai anticipato in un URL statico.
+
+              `activeTab !== 'content'`: sulla scheda "Contenuto" lo stesso pulsante esiste
+              già nel topbar di `FullScreenEditorLayout` (`onPreview` sotto, stessa
+              `handlePreview`) — il doppio non è solo ridondante, è un secondo bottone con
+              lo stesso nome accessibile "Anteprima" nel DOM (`getByRole('button', { name:
+              'Anteprima' })` in E2E lo trova due volte, `page-preview.spec.ts`), la stessa
+              classe di collisione risolta in `EditorBlockWrapper.tsx`.
             */}
-            {status === 'draft' && (
+            {status === 'draft' && activeTab !== 'content' && (
               <Button
                 variant="default"
                 leftSection={<IconEye size={16} />}
@@ -616,8 +691,25 @@ export default function PagePageDetail(): JSX.Element {
           "Contenuto" vive in uno store di sessione, ma smontare il pannello lo
           reinizializzerebbe dalla bozza persistita — passare a "SEO" e tornare indietro
           butterebbe via le modifiche ai blocchi non ancora salvate.
+
+          `value`/`onChange` (controllato) invece di `defaultValue`: `activeTab` deve essere
+          leggibile qui per governare `FullScreenEditorLayout` (vedi commento su
+          `activeTab` sopra).
         */}
-        <Tabs defaultValue="metadata">
+        <Tabs value={activeTab} onChange={setActiveTab}>
+          {/*
+            A differenza della riga di stato più sopra, `Tabs.List` NON è sollevata sopra
+            `FullScreenEditorLayout`: a differenza del `Menu` di stato (una sola voce,
+            reso in portale una volta aperto), qui i cinque tab occupano una fascia intera
+            di larghezza che nel layout della pagina cade nella stessa banda verticale del
+            canvas dell'editor sottostante — sollevarla lascerebbe passare i click sui tab,
+            ma intercetterebbe anche quelli sui blocchi del canvas alla stessa altezza
+            (verificato in E2E, `page-editor.spec.ts`/`page-editor-undo-redo.spec.ts`: click
+            su "Aggiungi blocco in fondo"/"Aggiungi dentro" respinti dal tab "SEO"). Non
+            serve comunque: nessun test clicca un'altra scheda mentre "Contenuto" è già
+            quella attiva — si esce dall'editor da "Torna alla Dashboard"
+            (`FullScreenEditorLayout`) o ricaricando la pagina, mai da qui.
+          */}
           <Tabs.List>
             <Tabs.Tab value="metadata">Metadati</Tabs.Tab>
             <Tabs.Tab value="content">Contenuto</Tabs.Tab>
@@ -671,6 +763,9 @@ export default function PagePageDetail(): JSX.Element {
               page={page}
               onPageUpdated={setPage}
               onVersionConflict={notifyVersionConflict}
+              onPreview={status === 'draft' ? () => void handlePreview() : undefined}
+              previewLoading={previewLoading}
+              active={activeTab === 'content'}
             />
           </Tabs.Panel>
 
@@ -853,23 +948,36 @@ export default function PagePageDetail(): JSX.Element {
         </Tabs>
       </ContentCard>
 
-      {/* Modal conferma transizione di stato (tutte tranne "scheduled"). */}
+      {/*
+        Modal conferma transizione di stato (tutte tranne "scheduled"). `zIndex={1100}`:
+        raggiungibile dalla tendina di stato (sopra) anche mentre la scheda "Contenuto" è
+        quella nominalmente attiva — stesso motivo del `zIndex` sulla tendina stessa.
+      */}
       <ConfirmModal
         opened={!!transitionTarget}
         onClose={() => setTransitionTarget(null)}
         onConfirm={() => transitionTarget && void doChangeStatus(transitionTarget)}
         loading={submitting}
         title="Conferma cambio di stato"
-        confirmLabel={transitionTarget ? STATUS_ACTION_LABELS[transitionTarget] : 'Conferma'}
+        confirmLabel={transitionTarget ? statusActionLabel(transitionTarget, status) : 'Conferma'}
+        zIndex={1100}
       >
-        {transitionTarget === 'published' && (
-          <>
-            Pubblicare questa Pagina creerà una nuova Revisione immutabile e sostituirà
-            immediatamente il contenuto pubblicato online. Viene pubblicata la bozza{' '}
-            <strong>salvata</strong>: le modifiche ai blocchi non ancora salvate dalla scheda
-            &laquo;Contenuto&raquo; restano fuori dalla Revisione.
-          </>
-        )}
+        {transitionTarget === 'published' &&
+          (status === 'published' ? (
+            <>
+              Questa Pagina è già pubblicata. Ripubblicarla creerà una nuova Revisione immutabile
+              con la bozza <strong>salvata</strong> e sostituirà immediatamente il contenuto
+              attualmente online: le modifiche ai blocchi non ancora salvate dalla scheda
+              &laquo;Contenuto&raquo; restano fuori dalla Revisione.
+            </>
+          ) : (
+            <>
+              Pubblicare questa Pagina creerà una nuova Revisione immutabile e sostituirà
+              immediatamente il contenuto pubblicato online. Viene pubblicata la bozza{' '}
+              <strong>salvata</strong>: le modifiche ai blocchi non ancora salvate dalla scheda
+              &laquo;Contenuto&raquo; restano fuori dalla Revisione.
+            </>
+          ))}
         {transitionTarget === 'archived' && (
           <>La Pagina non sarà più raggiungibile pubblicamente.</>
         )}
@@ -882,12 +990,16 @@ export default function PagePageDetail(): JSX.Element {
         {transitionTarget === 'review' && <>La bozza verrà inviata in revisione.</>}
       </ConfirmModal>
 
-      {/* Modal programmazione pubblicazione: richiede data/ora futura. */}
+      {/*
+        Modal programmazione pubblicazione: richiede data/ora futura. `zIndex={1100}`, stesso
+        motivo del `ConfirmModal` di conferma transizione sopra.
+      */}
       <Modal
         opened={scheduleOpened}
         onClose={() => setScheduleOpened(false)}
         title="Programma pubblicazione"
         centered
+        zIndex={1100}
       >
         <Stack gap="md">
           <DateTimePicker

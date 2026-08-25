@@ -5,6 +5,14 @@
  * Non rivalida le props (resta autorità del server, SPEC-F02-blocchi.md
  * § 5.3): consulta `BLOCK_TYPES` solo per sapere se un tipo è noto/abilitato
  * prima di scegliere il componente.
+ *
+ * `editing` (PLAN-F04c-editor-maturo.md T9): pass-through opzionale verso `Heading`/
+ * `RichText`/`Button`, valorizzato solo da `EditorBlockWrapper.tsx` per il nodo selezionato
+ * in editing — mai dal sito pubblico, che chiama `BlockRenderer` senza questa prop (resta
+ * `undefined`, i tre componenti rendono esattamente come prima). Non si propaga in
+ * ricorsione dentro `Section`: `BlockRenderer` per un contenitore è montato solo dal sito
+ * pubblico (l'editor usa `CONTAINER_COMPONENTS` direttamente, vedi `EditorBlockWrapper.tsx`),
+ * dove l'editing non esiste.
  */
 import { BLOCK_TYPES } from '../../types/blocks.types';
 import type { RenderableBlockNode } from './types';
@@ -22,22 +30,42 @@ function isHeadingLevel(value: unknown): value is 'h2' | 'h3' | 'h4' | 'h5' | 'h
   return typeof value === 'string' && ['h2', 'h3', 'h4', 'h5', 'h6'].includes(value);
 }
 
+/**
+ * Editing in-place per `heading`/`richText`/`button` (solo questi tre tipi hanno testo
+ * modificabile direttamente nel canvas): `onTextChange`/`onTextInput` per `heading` (prop
+ * `text`), `onHtmlChange`/`onHtmlInput` per `richText` (prop `html`),
+ * `onLabelChange`/`onLabelInput` per `button` (prop `label`) — mai più coppie insieme, un
+ * nodo è di uno solo di questi tre tipi. `*Change` è il commit su `blur`, `*Input` la
+ * notifica ad ogni tasto per il dispatch debounced (`EditorBlockWrapper.tsx`).
+ */
+interface BlockEditingProps {
+  editable?: boolean;
+  onTextChange?: (nextText: string) => void;
+  onTextInput?: (nextText: string) => void;
+  onHtmlChange?: (nextHtml: string) => void;
+  onHtmlInput?: (nextHtml: string) => void;
+  onLabelChange?: (nextLabel: string) => void;
+  onLabelInput?: (nextLabel: string) => void;
+}
+
 interface BlockRendererProps {
   node: RenderableBlockNode;
+  /** Vedi {@link BlockEditingProps} e il commento di testa del file. */
+  editing?: BlockEditingProps;
 }
 
 /** Renderizza un nodo dell'albero e, ricorsivamente, i suoi figli ammessi. */
-export default function BlockRenderer({ node }: BlockRendererProps) {
+export default function BlockRenderer({ node, editing }: BlockRendererProps) {
   const descriptor = KNOWN_TYPES.get(node.type);
 
   if (!descriptor || !descriptor.enabled) {
     return null;
   }
 
-  return <BlockErrorBoundary>{renderNode(node)}</BlockErrorBoundary>;
+  return <BlockErrorBoundary>{renderNode(node, editing)}</BlockErrorBoundary>;
 }
 
-function renderNode(node: RenderableBlockNode) {
+function renderNode(node: RenderableBlockNode, editing: BlockEditingProps | undefined) {
   switch (node.type) {
     case 'section':
       return (
@@ -46,6 +74,21 @@ function renderNode(node: RenderableBlockNode) {
           styleSpaceAfter={node.props.styleSpaceAfter}
           stylePadding={node.props.stylePadding}
           styleBackground={node.props.styleBackground}
+          columns={node.props.columns}
+          gap={node.props.gap}
+          alignItems={node.props.alignItems}
+          contentWidth={node.props.contentWidth}
+          maxWidth={node.props.maxWidth}
+          columnRatio={node.props.columnRatio}
+          styleBackgroundColor={node.props.styleBackgroundColor}
+          stylePaddingTop={node.props.stylePaddingTop}
+          stylePaddingRight={node.props.stylePaddingRight}
+          stylePaddingBottom={node.props.stylePaddingBottom}
+          stylePaddingLeft={node.props.stylePaddingLeft}
+          styleMarginTop={node.props.styleMarginTop}
+          styleMarginRight={node.props.styleMarginRight}
+          styleMarginBottom={node.props.styleMarginBottom}
+          styleMarginLeft={node.props.styleMarginLeft}
         >
           {node.children.map((child) => (
             <BlockRenderer key={child.id} node={child} />
@@ -64,6 +107,10 @@ function renderNode(node: RenderableBlockNode) {
           styleTextColor={node.props.styleTextColor}
           styleFontSize={node.props.styleFontSize}
           styleFontWeight={node.props.styleFontWeight}
+          styleFontFamily={node.props.styleFontFamily}
+          editable={editing?.editable}
+          onTextChange={editing?.onTextChange}
+          onTextInput={editing?.onTextInput}
         />
       );
     }
@@ -77,6 +124,10 @@ function renderNode(node: RenderableBlockNode) {
           styleTextColor={node.props.styleTextColor}
           styleFontSize={node.props.styleFontSize}
           styleFontWeight={node.props.styleFontWeight}
+          styleFontFamily={node.props.styleFontFamily}
+          editable={editing?.editable}
+          onHtmlChange={editing?.onHtmlChange}
+          onHtmlInput={editing?.onHtmlInput}
         />
       );
     }
@@ -104,6 +155,10 @@ function renderNode(node: RenderableBlockNode) {
           styleTextColor={node.props.styleTextColor}
           styleFontSize={node.props.styleFontSize}
           styleFontWeight={node.props.styleFontWeight}
+          styleFontFamily={node.props.styleFontFamily}
+          editable={editing?.editable}
+          onLabelChange={editing?.onLabelChange}
+          onLabelInput={editing?.onLabelInput}
         />
       );
     }

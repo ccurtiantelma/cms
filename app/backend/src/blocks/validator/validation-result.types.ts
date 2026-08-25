@@ -9,7 +9,7 @@ export type BlockValidationErrorCode =
 
 /** Insieme chiuso dei `reason` di `BLOCK_PROP_INVALID` (SPEC-F02-blocchi.md § 4.1). */
 export type BlockPropInvalidReason =
-  'required' | 'empty' | 'type' | 'maxLength' | 'enum' | 'urlScheme' | 'guidFormat';
+  'required' | 'empty' | 'type' | 'maxLength' | 'enum' | 'urlScheme' | 'guidFormat' | 'format';
 
 /** `type` sconosciuto, `enabled: false`, o `minRole` non soddisfatto. */
 export interface BlockTypeUnknownDetails {

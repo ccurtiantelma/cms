@@ -19,7 +19,7 @@ import { readBackendEnv } from './helpers/backend-env';
 // singole richieste (es. 'auth/login') come URL WHATWG standard — senza `/`
 // finale sul base, l'ultimo segmento ('v1') verrebbe sostituito invece che
 // preceduto, risultando in `/api/auth/login` invece di `/api/v1/auth/login`.
-const BACKEND_URL = process.env.E2E_BACKEND_URL ?? 'http://localhost:3000/api/v1/';
+const BACKEND_URL = process.env.E2E_BACKEND_URL ?? 'http://localhost:53000/api/v1/';
 
 let api: APIRequestContext;
 let superadminEmail: string;

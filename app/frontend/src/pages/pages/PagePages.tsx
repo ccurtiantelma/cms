@@ -11,12 +11,19 @@ import { useState } from 'react';
 import { Badge, Group, ScrollArea, Select, Stack, Text, TextInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-import { IconFileText, IconPencil, IconTrash } from '@tabler/icons-react';
+import { IconEye, IconFileText, IconPencil, IconTrash } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { useColumnVisibility } from '../../hooks/useColumnVisibility';
+import { PUBLIC_SITE_URL } from '../../hooks/usePublicPageUrl';
 import { getErrorMessage } from '../../utils/api.utils';
-import { createPage, deletePage, fetchPages } from '../../services/pages.service';
+import {
+  createPage,
+  deletePage,
+  fetchPage,
+  fetchPages,
+  issuePagePreviewToken,
+} from '../../services/pages.service';
 import type {
   CreatePagePayload,
   PageRecord,
@@ -68,6 +75,33 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('it-IT');
 }
 
+/**
+ * Tetto alle risalite verso gli antenati per risolvere il percorso pubblico dallo slug
+ * (ADR-24 § 1), stesso limite di `usePublicPageUrl.ts` — qui riproposta come funzione
+ * invocabile da un click di riga della lista, non da un effetto: l'azione "Mostra Pagina"
+ * vive dentro `ResponsiveTable` (una riga fra molte), dove non si può montare un hook.
+ */
+const MAX_ANCESTOR_LOOKUPS = 20;
+
+/**
+ * Percorso pubblico assoluto di una Pagina **pubblicata**, risalendo la catena degli slug
+ * degli antenati un livello alla volta (stessa logica di `usePublicPageUrl.ts`). `null` se la
+ * catena non è risolvibile (antenato non leggibile, o oltre il tetto): un link plausibile ma
+ * sbagliato sarebbe peggio della sua assenza.
+ */
+async function resolvePublicPagePath(row: PageRecord): Promise<string | null> {
+  const segments = [row.slug];
+  let ancestorGuid = row.parentGuid;
+  let lookups = 0;
+  while (ancestorGuid && lookups < MAX_ANCESTOR_LOOKUPS) {
+    const ancestor = await fetchPage(ancestorGuid);
+    segments.unshift(ancestor.slug);
+    ancestorGuid = ancestor.parentGuid;
+    lookups += 1;
+  }
+  return ancestorGuid ? null : `${PUBLIC_SITE_URL}/${segments.join('/')}`;
+}
+
 /** Pagina elenco Pagine (chrome amministrativa, F01/T7). */
 export default function PagePages(): JSX.Element {
   const navigate = useNavigate();
@@ -77,6 +111,8 @@ export default function PagePages(): JSX.Element {
   const [createOpened, setCreateOpened] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<PageRecord | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  /** Guid della riga per cui "Mostra Pagina" è in corso: evita doppio click concorrente. */
+  const [showPageLoadingGuid, setShowPageLoadingGuid] = useState<string | null>(null);
 
   const extraParams: Partial<PagesQueryParams> = {
     status: statusFilter ? (statusFilter as PageStatus) : undefined,
@@ -140,6 +176,51 @@ export default function PagePages(): JSX.Element {
       });
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  /**
+   * "Mostra Pagina" (bug T4): pubblicata → apre subito l'URL pubblico risolto dalla catena
+   * degli antenati; bozza (o ogni altro stato non pubblicato) → genera un token di
+   * anteprima effimero (ADR-25) e apre `{PUBLIC_SITE_URL}/__preview/:token`. Mai lo slug
+   * pubblico diretto su una Pagina non pubblicata: risponderebbe `404` (ADR-24 § 3).
+   */
+  async function handleShowPage(row: PageRecord): Promise<void> {
+    if (showPageLoadingGuid) return;
+    const pageWindow = window.open('about:blank', '_blank');
+    if (!pageWindow) {
+      notifications.show({
+        color: 'red',
+        message: 'Impossibile aprire la Pagina: consenti i popup per questo sito.',
+      });
+      return;
+    }
+    pageWindow.opener = null;
+    setShowPageLoadingGuid(row.guid);
+    try {
+      if (row.status === 'published') {
+        const path = await resolvePublicPagePath(row);
+        if (!path) {
+          pageWindow.close();
+          notifications.show({
+            color: 'red',
+            message: "Impossibile risolvere l'URL pubblico di questa Pagina",
+          });
+          return;
+        }
+        pageWindow.location.href = path;
+      } else {
+        const { token } = await issuePagePreviewToken(row.guid);
+        pageWindow.location.href = `${PUBLIC_SITE_URL}/__preview/${token}`;
+      }
+    } catch (err) {
+      pageWindow.close();
+      notifications.show({
+        color: 'red',
+        message: getErrorMessage(err, "Errore nell'apertura della Pagina"),
+      });
+    } finally {
+      setShowPageLoadingGuid(null);
     }
   }
 
@@ -251,6 +332,11 @@ export default function PagePages(): JSX.Element {
                 label: 'Apri',
                 icon: <IconPencil size={16} />,
                 onClick: (row) => navigate(`/pages/${row.guid}`),
+              },
+              {
+                label: 'Mostra Pagina',
+                icon: <IconEye size={16} />,
+                onClick: (row) => void handleShowPage(row),
               },
               {
                 label: 'Elimina',

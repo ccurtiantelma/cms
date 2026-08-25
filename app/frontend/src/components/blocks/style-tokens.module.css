@@ -1,7 +1,9 @@
 /**
- * Vocabolario di token delle props di stile responsive (ADR-29). Unico
- * foglio, importato da ogni componente di `components/blocks/blocks/` che
- * dichiara props `styleXxx` — mai duplicato, mai `style` inline.
+ * Vocabolario di token delle props di stile responsive (ADR-29), esteso da ADR-31 alle tre
+ * props di layout a colonne di `section` (`columns`/`gap`/`alignItems`, stesso schema
+ * `{ default, tablet?, mobile? }`, stesso schema a tre parti). Unico foglio, importato da ogni
+ * componente di `components/blocks/blocks/` che dichiara props `styleXxx`/`columns`/`gap`/
+ * `alignItems` — mai duplicato, mai `style` inline.
  *
  * Struttura in tre parti, in quest'ordine (l'ordine è la cascata: ADR-29 § 2
  * "mobile assente ricade su tablet, tablet assente ricade su default", una
@@ -52,6 +54,17 @@
   --cms-font-weight-regular: 400;
   --cms-font-weight-medium: 500;
   --cms-font-weight-bold: 700;
+
+  --cms-font-family-default: inherit;
+  --cms-font-family-inter: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  --cms-font-family-roboto: Roboto, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica,
+    Arial, sans-serif;
+  --cms-font-family-playfair: "Playfair Display", Georgia, Cambria, "Times New Roman", Times, serif;
+  --cms-font-family-montserrat: Montserrat, ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Helvetica, Arial, sans-serif;
+  --cms-font-family-monospace: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
 }
 
 /* ─── styleSpaceBefore / styleSpaceAfter — tutti e cinque i tipi ────────── */
@@ -82,7 +95,7 @@
 .background_default_accent { background-color: var(--cms-bg-accent); }
 .background_default_inverse { background-color: var(--cms-bg-inverse); }
 
-/* ─── styleTextColor / styleFontSize / styleFontWeight — heading/richText/button ─── */
+/* ─── styleTextColor / styleFontSize / styleFontWeight / styleFontFamily — heading/richText/button ─── */
 
 .textColor_default_default { color: var(--cms-text-color-default); }
 .textColor_default_muted { color: var(--cms-text-color-muted); }
@@ -97,6 +110,150 @@
 .fontWeight_default_regular { font-weight: var(--cms-font-weight-regular); }
 .fontWeight_default_medium { font-weight: var(--cms-font-weight-medium); }
 .fontWeight_default_bold { font-weight: var(--cms-font-weight-bold); }
+
+.fontFamily_default_default { font-family: var(--cms-font-family-default); }
+.fontFamily_default_inter { font-family: var(--cms-font-family-inter); }
+.fontFamily_default_roboto { font-family: var(--cms-font-family-roboto); }
+.fontFamily_default_playfair { font-family: var(--cms-font-family-playfair); }
+.fontFamily_default_montserrat { font-family: var(--cms-font-family-montserrat); }
+.fontFamily_default_monospace { font-family: var(--cms-font-family-monospace); }
+
+/* ─── columns / gap / alignItems (ADR-31) — solo section ────────────────── */
+
+.columns_default_1 { grid-template-columns: repeat(1, 1fr); }
+.columns_default_2 { grid-template-columns: repeat(2, 1fr); }
+.columns_default_3 { grid-template-columns: repeat(3, 1fr); }
+.columns_default_4 { grid-template-columns: repeat(4, 1fr); }
+
+.gap_default_none { gap: 0; }
+.gap_default_sm { gap: var(--cms-space-xs); }
+.gap_default_md { gap: var(--cms-space-sm); }
+.gap_default_lg { gap: var(--cms-space-md); }
+
+.alignItems_default_stretch { align-items: stretch; }
+.alignItems_default_flex-start { align-items: flex-start; }
+.alignItems_default_center { align-items: center; }
+.alignItems_default_flex-end { align-items: flex-end; }
+
+/* ─── contentWidth / maxWidth (ADR-33 § 1) — solo section, non responsive ── */
+
+/* Nessuna larghezza massima propria: la gestisce `maxWidth`, applicato solo
+   quando `contentWidth !== 'full-width'` (logica di rendering in Section.tsx). */
+.contentWidth_boxed {
+}
+.contentWidth_full-width { max-width: none; width: 100%; }
+
+.maxWidth_sm { max-width: 960px; margin-inline: auto; }
+.maxWidth_md { max-width: 1140px; margin-inline: auto; }
+.maxWidth_lg { max-width: 1320px; margin-inline: auto; }
+.maxWidth_xl { max-width: 1600px; margin-inline: auto; }
+
+/* ─── columnRatio (ADR-33 § 2) — solo section, non responsive ────────────
+   Dichiarate DOPO `columns_default_*`: stessa specificità, l'ordine nel
+   foglio decide — `columnRatio_*` vince quando entrambe le classi sono
+   applicate allo stesso nodo (`columns === '2'`). */
+
+.columnRatio_equal { grid-template-columns: repeat(2, 1fr); }
+.columnRatio_33-66 { grid-template-columns: 1fr 2fr; }
+.columnRatio_66-33 { grid-template-columns: 2fr 1fr; }
+
+/* ─── stylePaddingTop/Right/Bottom/Left, styleMarginTop/Right/Bottom/Left
+   (ADR-33 § 4) — solo section, responsive, scala chiusa 0-96px ─────────── */
+
+.paddingTop_default_0 { padding-top: 0px; }
+.paddingTop_default_4 { padding-top: 4px; }
+.paddingTop_default_8 { padding-top: 8px; }
+.paddingTop_default_12 { padding-top: 12px; }
+.paddingTop_default_16 { padding-top: 16px; }
+.paddingTop_default_24 { padding-top: 24px; }
+.paddingTop_default_32 { padding-top: 32px; }
+.paddingTop_default_48 { padding-top: 48px; }
+.paddingTop_default_64 { padding-top: 64px; }
+.paddingTop_default_96 { padding-top: 96px; }
+
+.paddingRight_default_0 { padding-right: 0px; }
+.paddingRight_default_4 { padding-right: 4px; }
+.paddingRight_default_8 { padding-right: 8px; }
+.paddingRight_default_12 { padding-right: 12px; }
+.paddingRight_default_16 { padding-right: 16px; }
+.paddingRight_default_24 { padding-right: 24px; }
+.paddingRight_default_32 { padding-right: 32px; }
+.paddingRight_default_48 { padding-right: 48px; }
+.paddingRight_default_64 { padding-right: 64px; }
+.paddingRight_default_96 { padding-right: 96px; }
+
+.paddingBottom_default_0 { padding-bottom: 0px; }
+.paddingBottom_default_4 { padding-bottom: 4px; }
+.paddingBottom_default_8 { padding-bottom: 8px; }
+.paddingBottom_default_12 { padding-bottom: 12px; }
+.paddingBottom_default_16 { padding-bottom: 16px; }
+.paddingBottom_default_24 { padding-bottom: 24px; }
+.paddingBottom_default_32 { padding-bottom: 32px; }
+.paddingBottom_default_48 { padding-bottom: 48px; }
+.paddingBottom_default_64 { padding-bottom: 64px; }
+.paddingBottom_default_96 { padding-bottom: 96px; }
+
+.paddingLeft_default_0 { padding-left: 0px; }
+.paddingLeft_default_4 { padding-left: 4px; }
+.paddingLeft_default_8 { padding-left: 8px; }
+.paddingLeft_default_12 { padding-left: 12px; }
+.paddingLeft_default_16 { padding-left: 16px; }
+.paddingLeft_default_24 { padding-left: 24px; }
+.paddingLeft_default_32 { padding-left: 32px; }
+.paddingLeft_default_48 { padding-left: 48px; }
+.paddingLeft_default_64 { padding-left: 64px; }
+.paddingLeft_default_96 { padding-left: 96px; }
+
+.marginTop_default_0 { margin-top: 0px; }
+.marginTop_default_4 { margin-top: 4px; }
+.marginTop_default_8 { margin-top: 8px; }
+.marginTop_default_12 { margin-top: 12px; }
+.marginTop_default_16 { margin-top: 16px; }
+.marginTop_default_24 { margin-top: 24px; }
+.marginTop_default_32 { margin-top: 32px; }
+.marginTop_default_48 { margin-top: 48px; }
+.marginTop_default_64 { margin-top: 64px; }
+.marginTop_default_96 { margin-top: 96px; }
+
+.marginRight_default_0 { margin-right: 0px; }
+.marginRight_default_4 { margin-right: 4px; }
+.marginRight_default_8 { margin-right: 8px; }
+.marginRight_default_12 { margin-right: 12px; }
+.marginRight_default_16 { margin-right: 16px; }
+.marginRight_default_24 { margin-right: 24px; }
+.marginRight_default_32 { margin-right: 32px; }
+.marginRight_default_48 { margin-right: 48px; }
+.marginRight_default_64 { margin-right: 64px; }
+.marginRight_default_96 { margin-right: 96px; }
+
+.marginBottom_default_0 { margin-bottom: 0px; }
+.marginBottom_default_4 { margin-bottom: 4px; }
+.marginBottom_default_8 { margin-bottom: 8px; }
+.marginBottom_default_12 { margin-bottom: 12px; }
+.marginBottom_default_16 { margin-bottom: 16px; }
+.marginBottom_default_24 { margin-bottom: 24px; }
+.marginBottom_default_32 { margin-bottom: 32px; }
+.marginBottom_default_48 { margin-bottom: 48px; }
+.marginBottom_default_64 { margin-bottom: 64px; }
+.marginBottom_default_96 { margin-bottom: 96px; }
+
+.marginLeft_default_0 { margin-left: 0px; }
+.marginLeft_default_4 { margin-left: 4px; }
+.marginLeft_default_8 { margin-left: 8px; }
+.marginLeft_default_12 { margin-left: 12px; }
+.marginLeft_default_16 { margin-left: 16px; }
+.marginLeft_default_24 { margin-left: 24px; }
+.marginLeft_default_32 { margin-left: 32px; }
+.marginLeft_default_48 { margin-left: 48px; }
+.marginLeft_default_64 { margin-left: 64px; }
+.marginLeft_default_96 { margin-left: 96px; }
+
+/* ─── styleBackgroundColor (ADR-33 § 3/§ 6) — solo section, non responsive
+   Unica eccezione a "sempre classi da token" (ADR-29 § 6, ADR-31 § 7): un
+   colore libero validato da pattern esadecimale, non un insieme chiuso di
+   valori enumerabili. Questa regola statica consuma l'unica custom property
+   CSS inline ammessa (`Section.tsx`, `style={{ '--section-bg': value }}`). */
+.backgroundColor_custom { background-color: var(--section-bg); }
 
 /* ─── Tablet (≤ 768px) — unica soglia dichiarata qui, in tutto il repo ──── */
 
@@ -138,6 +295,116 @@
   .fontWeight_tablet_regular { font-weight: var(--cms-font-weight-regular); }
   .fontWeight_tablet_medium { font-weight: var(--cms-font-weight-medium); }
   .fontWeight_tablet_bold { font-weight: var(--cms-font-weight-bold); }
+
+  .fontFamily_tablet_default { font-family: var(--cms-font-family-default); }
+  .fontFamily_tablet_inter { font-family: var(--cms-font-family-inter); }
+  .fontFamily_tablet_roboto { font-family: var(--cms-font-family-roboto); }
+  .fontFamily_tablet_playfair { font-family: var(--cms-font-family-playfair); }
+  .fontFamily_tablet_montserrat { font-family: var(--cms-font-family-montserrat); }
+  .fontFamily_tablet_monospace { font-family: var(--cms-font-family-monospace); }
+
+  .columns_tablet_1 { grid-template-columns: repeat(1, 1fr); }
+  .columns_tablet_2 { grid-template-columns: repeat(2, 1fr); }
+  .columns_tablet_3 { grid-template-columns: repeat(3, 1fr); }
+  .columns_tablet_4 { grid-template-columns: repeat(4, 1fr); }
+
+  .gap_tablet_none { gap: 0; }
+  .gap_tablet_sm { gap: var(--cms-space-xs); }
+  .gap_tablet_md { gap: var(--cms-space-sm); }
+  .gap_tablet_lg { gap: var(--cms-space-md); }
+
+  .alignItems_tablet_stretch { align-items: stretch; }
+  .alignItems_tablet_flex-start { align-items: flex-start; }
+  .alignItems_tablet_center { align-items: center; }
+  .alignItems_tablet_flex-end { align-items: flex-end; }
+
+  .paddingTop_tablet_0 { padding-top: 0px; }
+  .paddingTop_tablet_4 { padding-top: 4px; }
+  .paddingTop_tablet_8 { padding-top: 8px; }
+  .paddingTop_tablet_12 { padding-top: 12px; }
+  .paddingTop_tablet_16 { padding-top: 16px; }
+  .paddingTop_tablet_24 { padding-top: 24px; }
+  .paddingTop_tablet_32 { padding-top: 32px; }
+  .paddingTop_tablet_48 { padding-top: 48px; }
+  .paddingTop_tablet_64 { padding-top: 64px; }
+  .paddingTop_tablet_96 { padding-top: 96px; }
+
+  .paddingRight_tablet_0 { padding-right: 0px; }
+  .paddingRight_tablet_4 { padding-right: 4px; }
+  .paddingRight_tablet_8 { padding-right: 8px; }
+  .paddingRight_tablet_12 { padding-right: 12px; }
+  .paddingRight_tablet_16 { padding-right: 16px; }
+  .paddingRight_tablet_24 { padding-right: 24px; }
+  .paddingRight_tablet_32 { padding-right: 32px; }
+  .paddingRight_tablet_48 { padding-right: 48px; }
+  .paddingRight_tablet_64 { padding-right: 64px; }
+  .paddingRight_tablet_96 { padding-right: 96px; }
+
+  .paddingBottom_tablet_0 { padding-bottom: 0px; }
+  .paddingBottom_tablet_4 { padding-bottom: 4px; }
+  .paddingBottom_tablet_8 { padding-bottom: 8px; }
+  .paddingBottom_tablet_12 { padding-bottom: 12px; }
+  .paddingBottom_tablet_16 { padding-bottom: 16px; }
+  .paddingBottom_tablet_24 { padding-bottom: 24px; }
+  .paddingBottom_tablet_32 { padding-bottom: 32px; }
+  .paddingBottom_tablet_48 { padding-bottom: 48px; }
+  .paddingBottom_tablet_64 { padding-bottom: 64px; }
+  .paddingBottom_tablet_96 { padding-bottom: 96px; }
+
+  .paddingLeft_tablet_0 { padding-left: 0px; }
+  .paddingLeft_tablet_4 { padding-left: 4px; }
+  .paddingLeft_tablet_8 { padding-left: 8px; }
+  .paddingLeft_tablet_12 { padding-left: 12px; }
+  .paddingLeft_tablet_16 { padding-left: 16px; }
+  .paddingLeft_tablet_24 { padding-left: 24px; }
+  .paddingLeft_tablet_32 { padding-left: 32px; }
+  .paddingLeft_tablet_48 { padding-left: 48px; }
+  .paddingLeft_tablet_64 { padding-left: 64px; }
+  .paddingLeft_tablet_96 { padding-left: 96px; }
+
+  .marginTop_tablet_0 { margin-top: 0px; }
+  .marginTop_tablet_4 { margin-top: 4px; }
+  .marginTop_tablet_8 { margin-top: 8px; }
+  .marginTop_tablet_12 { margin-top: 12px; }
+  .marginTop_tablet_16 { margin-top: 16px; }
+  .marginTop_tablet_24 { margin-top: 24px; }
+  .marginTop_tablet_32 { margin-top: 32px; }
+  .marginTop_tablet_48 { margin-top: 48px; }
+  .marginTop_tablet_64 { margin-top: 64px; }
+  .marginTop_tablet_96 { margin-top: 96px; }
+
+  .marginRight_tablet_0 { margin-right: 0px; }
+  .marginRight_tablet_4 { margin-right: 4px; }
+  .marginRight_tablet_8 { margin-right: 8px; }
+  .marginRight_tablet_12 { margin-right: 12px; }
+  .marginRight_tablet_16 { margin-right: 16px; }
+  .marginRight_tablet_24 { margin-right: 24px; }
+  .marginRight_tablet_32 { margin-right: 32px; }
+  .marginRight_tablet_48 { margin-right: 48px; }
+  .marginRight_tablet_64 { margin-right: 64px; }
+  .marginRight_tablet_96 { margin-right: 96px; }
+
+  .marginBottom_tablet_0 { margin-bottom: 0px; }
+  .marginBottom_tablet_4 { margin-bottom: 4px; }
+  .marginBottom_tablet_8 { margin-bottom: 8px; }
+  .marginBottom_tablet_12 { margin-bottom: 12px; }
+  .marginBottom_tablet_16 { margin-bottom: 16px; }
+  .marginBottom_tablet_24 { margin-bottom: 24px; }
+  .marginBottom_tablet_32 { margin-bottom: 32px; }
+  .marginBottom_tablet_48 { margin-bottom: 48px; }
+  .marginBottom_tablet_64 { margin-bottom: 64px; }
+  .marginBottom_tablet_96 { margin-bottom: 96px; }
+
+  .marginLeft_tablet_0 { margin-left: 0px; }
+  .marginLeft_tablet_4 { margin-left: 4px; }
+  .marginLeft_tablet_8 { margin-left: 8px; }
+  .marginLeft_tablet_12 { margin-left: 12px; }
+  .marginLeft_tablet_16 { margin-left: 16px; }
+  .marginLeft_tablet_24 { margin-left: 24px; }
+  .marginLeft_tablet_32 { margin-left: 32px; }
+  .marginLeft_tablet_48 { margin-left: 48px; }
+  .marginLeft_tablet_64 { margin-left: 64px; }
+  .marginLeft_tablet_96 { margin-left: 96px; }
 }
 
 /* ─── Mobile (≤ 480px) — unica soglia dichiarata qui, in tutto il repo ──── */
@@ -180,4 +447,425 @@
   .fontWeight_mobile_regular { font-weight: var(--cms-font-weight-regular); }
   .fontWeight_mobile_medium { font-weight: var(--cms-font-weight-medium); }
   .fontWeight_mobile_bold { font-weight: var(--cms-font-weight-bold); }
+
+  .fontFamily_mobile_default { font-family: var(--cms-font-family-default); }
+  .fontFamily_mobile_inter { font-family: var(--cms-font-family-inter); }
+  .fontFamily_mobile_roboto { font-family: var(--cms-font-family-roboto); }
+  .fontFamily_mobile_playfair { font-family: var(--cms-font-family-playfair); }
+  .fontFamily_mobile_montserrat { font-family: var(--cms-font-family-montserrat); }
+  .fontFamily_mobile_monospace { font-family: var(--cms-font-family-monospace); }
+
+  .columns_mobile_1 { grid-template-columns: repeat(1, 1fr); }
+  .columns_mobile_2 { grid-template-columns: repeat(2, 1fr); }
+  .columns_mobile_3 { grid-template-columns: repeat(3, 1fr); }
+  .columns_mobile_4 { grid-template-columns: repeat(4, 1fr); }
+
+  .gap_mobile_none { gap: 0; }
+  .gap_mobile_sm { gap: var(--cms-space-xs); }
+  .gap_mobile_md { gap: var(--cms-space-sm); }
+  .gap_mobile_lg { gap: var(--cms-space-md); }
+
+  .alignItems_mobile_stretch { align-items: stretch; }
+  .alignItems_mobile_flex-start { align-items: flex-start; }
+  .alignItems_mobile_center { align-items: center; }
+  .alignItems_mobile_flex-end { align-items: flex-end; }
+
+  .paddingTop_mobile_0 { padding-top: 0px; }
+  .paddingTop_mobile_4 { padding-top: 4px; }
+  .paddingTop_mobile_8 { padding-top: 8px; }
+  .paddingTop_mobile_12 { padding-top: 12px; }
+  .paddingTop_mobile_16 { padding-top: 16px; }
+  .paddingTop_mobile_24 { padding-top: 24px; }
+  .paddingTop_mobile_32 { padding-top: 32px; }
+  .paddingTop_mobile_48 { padding-top: 48px; }
+  .paddingTop_mobile_64 { padding-top: 64px; }
+  .paddingTop_mobile_96 { padding-top: 96px; }
+
+  .paddingRight_mobile_0 { padding-right: 0px; }
+  .paddingRight_mobile_4 { padding-right: 4px; }
+  .paddingRight_mobile_8 { padding-right: 8px; }
+  .paddingRight_mobile_12 { padding-right: 12px; }
+  .paddingRight_mobile_16 { padding-right: 16px; }
+  .paddingRight_mobile_24 { padding-right: 24px; }
+  .paddingRight_mobile_32 { padding-right: 32px; }
+  .paddingRight_mobile_48 { padding-right: 48px; }
+  .paddingRight_mobile_64 { padding-right: 64px; }
+  .paddingRight_mobile_96 { padding-right: 96px; }
+
+  .paddingBottom_mobile_0 { padding-bottom: 0px; }
+  .paddingBottom_mobile_4 { padding-bottom: 4px; }
+  .paddingBottom_mobile_8 { padding-bottom: 8px; }
+  .paddingBottom_mobile_12 { padding-bottom: 12px; }
+  .paddingBottom_mobile_16 { padding-bottom: 16px; }
+  .paddingBottom_mobile_24 { padding-bottom: 24px; }
+  .paddingBottom_mobile_32 { padding-bottom: 32px; }
+  .paddingBottom_mobile_48 { padding-bottom: 48px; }
+  .paddingBottom_mobile_64 { padding-bottom: 64px; }
+  .paddingBottom_mobile_96 { padding-bottom: 96px; }
+
+  .paddingLeft_mobile_0 { padding-left: 0px; }
+  .paddingLeft_mobile_4 { padding-left: 4px; }
+  .paddingLeft_mobile_8 { padding-left: 8px; }
+  .paddingLeft_mobile_12 { padding-left: 12px; }
+  .paddingLeft_mobile_16 { padding-left: 16px; }
+  .paddingLeft_mobile_24 { padding-left: 24px; }
+  .paddingLeft_mobile_32 { padding-left: 32px; }
+  .paddingLeft_mobile_48 { padding-left: 48px; }
+  .paddingLeft_mobile_64 { padding-left: 64px; }
+  .paddingLeft_mobile_96 { padding-left: 96px; }
+
+  .marginTop_mobile_0 { margin-top: 0px; }
+  .marginTop_mobile_4 { margin-top: 4px; }
+  .marginTop_mobile_8 { margin-top: 8px; }
+  .marginTop_mobile_12 { margin-top: 12px; }
+  .marginTop_mobile_16 { margin-top: 16px; }
+  .marginTop_mobile_24 { margin-top: 24px; }
+  .marginTop_mobile_32 { margin-top: 32px; }
+  .marginTop_mobile_48 { margin-top: 48px; }
+  .marginTop_mobile_64 { margin-top: 64px; }
+  .marginTop_mobile_96 { margin-top: 96px; }
+
+  .marginRight_mobile_0 { margin-right: 0px; }
+  .marginRight_mobile_4 { margin-right: 4px; }
+  .marginRight_mobile_8 { margin-right: 8px; }
+  .marginRight_mobile_12 { margin-right: 12px; }
+  .marginRight_mobile_16 { margin-right: 16px; }
+  .marginRight_mobile_24 { margin-right: 24px; }
+  .marginRight_mobile_32 { margin-right: 32px; }
+  .marginRight_mobile_48 { margin-right: 48px; }
+  .marginRight_mobile_64 { margin-right: 64px; }
+  .marginRight_mobile_96 { margin-right: 96px; }
+
+  .marginBottom_mobile_0 { margin-bottom: 0px; }
+  .marginBottom_mobile_4 { margin-bottom: 4px; }
+  .marginBottom_mobile_8 { margin-bottom: 8px; }
+  .marginBottom_mobile_12 { margin-bottom: 12px; }
+  .marginBottom_mobile_16 { margin-bottom: 16px; }
+  .marginBottom_mobile_24 { margin-bottom: 24px; }
+  .marginBottom_mobile_32 { margin-bottom: 32px; }
+  .marginBottom_mobile_48 { margin-bottom: 48px; }
+  .marginBottom_mobile_64 { margin-bottom: 64px; }
+  .marginBottom_mobile_96 { margin-bottom: 96px; }
+
+  .marginLeft_mobile_0 { margin-left: 0px; }
+  .marginLeft_mobile_4 { margin-left: 4px; }
+  .marginLeft_mobile_8 { margin-left: 8px; }
+  .marginLeft_mobile_12 { margin-left: 12px; }
+  .marginLeft_mobile_16 { margin-left: 16px; }
+  .marginLeft_mobile_24 { margin-left: 24px; }
+  .marginLeft_mobile_32 { margin-left: 32px; }
+  .marginLeft_mobile_48 { margin-left: 48px; }
+  .marginLeft_mobile_64 { margin-left: 64px; }
+  .marginLeft_mobile_96 { margin-left: 96px; }
+}
+
+/**
+ * Duplicati a @container delle due soglie sopra, stesse classi e stesse soglie in
+ * pixel (768px/480px) — mai una soglia nuova (ADR-29 § 2: le soglie vivono in un
+ * punto solo). Servono solo alla superficie editor: senza containment, @container
+ * non produce mai un match (nessun fallback al viewport), quindi sul sito pubblico —
+ * dove nessun antenato dichiara mai "container-type" — questi blocchi sono un
+ * no-op puro e il rendering pubblico resta quello di ADR-29/ADR-31, invariato.
+ * Chiudono il gap che ADR-29 Conseguenza segnalava esplicitamente come accettato e
+ * da tracciare: "anteprima responsive non esiste". FullScreenEditorLayout dichiara
+ * "container-type" su .viewportContainer, la sola ancestor coinvolta.
+ */
+@container (max-width: 768px) {
+  .spaceBefore_tablet_none { margin-top: var(--cms-space-none); }
+  .spaceBefore_tablet_xs { margin-top: var(--cms-space-xs); }
+  .spaceBefore_tablet_sm { margin-top: var(--cms-space-sm); }
+  .spaceBefore_tablet_md { margin-top: var(--cms-space-md); }
+  .spaceBefore_tablet_lg { margin-top: var(--cms-space-lg); }
+  .spaceBefore_tablet_xl { margin-top: var(--cms-space-xl); }
+
+  .spaceAfter_tablet_none { margin-bottom: var(--cms-space-none); }
+  .spaceAfter_tablet_xs { margin-bottom: var(--cms-space-xs); }
+  .spaceAfter_tablet_sm { margin-bottom: var(--cms-space-sm); }
+  .spaceAfter_tablet_md { margin-bottom: var(--cms-space-md); }
+  .spaceAfter_tablet_lg { margin-bottom: var(--cms-space-lg); }
+  .spaceAfter_tablet_xl { margin-bottom: var(--cms-space-xl); }
+
+  .padding_tablet_none { padding: var(--cms-padding-none); }
+  .padding_tablet_sm { padding: var(--cms-padding-sm); }
+  .padding_tablet_md { padding: var(--cms-padding-md); }
+  .padding_tablet_lg { padding: var(--cms-padding-lg); }
+
+  .background_tablet_none { background-color: var(--cms-bg-none); }
+  .background_tablet_subtle { background-color: var(--cms-bg-subtle); }
+  .background_tablet_accent { background-color: var(--cms-bg-accent); }
+  .background_tablet_inverse { background-color: var(--cms-bg-inverse); }
+
+  .textColor_tablet_default { color: var(--cms-text-color-default); }
+  .textColor_tablet_muted { color: var(--cms-text-color-muted); }
+  .textColor_tablet_accent { color: var(--cms-text-color-accent); }
+  .textColor_tablet_inverse { color: var(--cms-text-color-inverse); }
+
+  .fontSize_tablet_sm { font-size: var(--cms-font-size-sm); }
+  .fontSize_tablet_md { font-size: var(--cms-font-size-md); }
+  .fontSize_tablet_lg { font-size: var(--cms-font-size-lg); }
+  .fontSize_tablet_xl { font-size: var(--cms-font-size-xl); }
+
+  .fontWeight_tablet_regular { font-weight: var(--cms-font-weight-regular); }
+  .fontWeight_tablet_medium { font-weight: var(--cms-font-weight-medium); }
+  .fontWeight_tablet_bold { font-weight: var(--cms-font-weight-bold); }
+
+  .fontFamily_tablet_default { font-family: var(--cms-font-family-default); }
+  .fontFamily_tablet_inter { font-family: var(--cms-font-family-inter); }
+  .fontFamily_tablet_roboto { font-family: var(--cms-font-family-roboto); }
+  .fontFamily_tablet_playfair { font-family: var(--cms-font-family-playfair); }
+  .fontFamily_tablet_montserrat { font-family: var(--cms-font-family-montserrat); }
+  .fontFamily_tablet_monospace { font-family: var(--cms-font-family-monospace); }
+
+  .columns_tablet_1 { grid-template-columns: repeat(1, 1fr); }
+  .columns_tablet_2 { grid-template-columns: repeat(2, 1fr); }
+  .columns_tablet_3 { grid-template-columns: repeat(3, 1fr); }
+  .columns_tablet_4 { grid-template-columns: repeat(4, 1fr); }
+
+  .gap_tablet_none { gap: 0; }
+  .gap_tablet_sm { gap: var(--cms-space-xs); }
+  .gap_tablet_md { gap: var(--cms-space-sm); }
+  .gap_tablet_lg { gap: var(--cms-space-md); }
+
+  .alignItems_tablet_stretch { align-items: stretch; }
+  .alignItems_tablet_flex-start { align-items: flex-start; }
+  .alignItems_tablet_center { align-items: center; }
+  .alignItems_tablet_flex-end { align-items: flex-end; }
+
+  .paddingTop_tablet_0 { padding-top: 0px; }
+  .paddingTop_tablet_4 { padding-top: 4px; }
+  .paddingTop_tablet_8 { padding-top: 8px; }
+  .paddingTop_tablet_12 { padding-top: 12px; }
+  .paddingTop_tablet_16 { padding-top: 16px; }
+  .paddingTop_tablet_24 { padding-top: 24px; }
+  .paddingTop_tablet_32 { padding-top: 32px; }
+  .paddingTop_tablet_48 { padding-top: 48px; }
+  .paddingTop_tablet_64 { padding-top: 64px; }
+  .paddingTop_tablet_96 { padding-top: 96px; }
+
+  .paddingRight_tablet_0 { padding-right: 0px; }
+  .paddingRight_tablet_4 { padding-right: 4px; }
+  .paddingRight_tablet_8 { padding-right: 8px; }
+  .paddingRight_tablet_12 { padding-right: 12px; }
+  .paddingRight_tablet_16 { padding-right: 16px; }
+  .paddingRight_tablet_24 { padding-right: 24px; }
+  .paddingRight_tablet_32 { padding-right: 32px; }
+  .paddingRight_tablet_48 { padding-right: 48px; }
+  .paddingRight_tablet_64 { padding-right: 64px; }
+  .paddingRight_tablet_96 { padding-right: 96px; }
+
+  .paddingBottom_tablet_0 { padding-bottom: 0px; }
+  .paddingBottom_tablet_4 { padding-bottom: 4px; }
+  .paddingBottom_tablet_8 { padding-bottom: 8px; }
+  .paddingBottom_tablet_12 { padding-bottom: 12px; }
+  .paddingBottom_tablet_16 { padding-bottom: 16px; }
+  .paddingBottom_tablet_24 { padding-bottom: 24px; }
+  .paddingBottom_tablet_32 { padding-bottom: 32px; }
+  .paddingBottom_tablet_48 { padding-bottom: 48px; }
+  .paddingBottom_tablet_64 { padding-bottom: 64px; }
+  .paddingBottom_tablet_96 { padding-bottom: 96px; }
+
+  .paddingLeft_tablet_0 { padding-left: 0px; }
+  .paddingLeft_tablet_4 { padding-left: 4px; }
+  .paddingLeft_tablet_8 { padding-left: 8px; }
+  .paddingLeft_tablet_12 { padding-left: 12px; }
+  .paddingLeft_tablet_16 { padding-left: 16px; }
+  .paddingLeft_tablet_24 { padding-left: 24px; }
+  .paddingLeft_tablet_32 { padding-left: 32px; }
+  .paddingLeft_tablet_48 { padding-left: 48px; }
+  .paddingLeft_tablet_64 { padding-left: 64px; }
+  .paddingLeft_tablet_96 { padding-left: 96px; }
+
+  .marginTop_tablet_0 { margin-top: 0px; }
+  .marginTop_tablet_4 { margin-top: 4px; }
+  .marginTop_tablet_8 { margin-top: 8px; }
+  .marginTop_tablet_12 { margin-top: 12px; }
+  .marginTop_tablet_16 { margin-top: 16px; }
+  .marginTop_tablet_24 { margin-top: 24px; }
+  .marginTop_tablet_32 { margin-top: 32px; }
+  .marginTop_tablet_48 { margin-top: 48px; }
+  .marginTop_tablet_64 { margin-top: 64px; }
+  .marginTop_tablet_96 { margin-top: 96px; }
+
+  .marginRight_tablet_0 { margin-right: 0px; }
+  .marginRight_tablet_4 { margin-right: 4px; }
+  .marginRight_tablet_8 { margin-right: 8px; }
+  .marginRight_tablet_12 { margin-right: 12px; }
+  .marginRight_tablet_16 { margin-right: 16px; }
+  .marginRight_tablet_24 { margin-right: 24px; }
+  .marginRight_tablet_32 { margin-right: 32px; }
+  .marginRight_tablet_48 { margin-right: 48px; }
+  .marginRight_tablet_64 { margin-right: 64px; }
+  .marginRight_tablet_96 { margin-right: 96px; }
+
+  .marginBottom_tablet_0 { margin-bottom: 0px; }
+  .marginBottom_tablet_4 { margin-bottom: 4px; }
+  .marginBottom_tablet_8 { margin-bottom: 8px; }
+  .marginBottom_tablet_12 { margin-bottom: 12px; }
+  .marginBottom_tablet_16 { margin-bottom: 16px; }
+  .marginBottom_tablet_24 { margin-bottom: 24px; }
+  .marginBottom_tablet_32 { margin-bottom: 32px; }
+  .marginBottom_tablet_48 { margin-bottom: 48px; }
+  .marginBottom_tablet_64 { margin-bottom: 64px; }
+  .marginBottom_tablet_96 { margin-bottom: 96px; }
+
+  .marginLeft_tablet_0 { margin-left: 0px; }
+  .marginLeft_tablet_4 { margin-left: 4px; }
+  .marginLeft_tablet_8 { margin-left: 8px; }
+  .marginLeft_tablet_12 { margin-left: 12px; }
+  .marginLeft_tablet_16 { margin-left: 16px; }
+  .marginLeft_tablet_24 { margin-left: 24px; }
+  .marginLeft_tablet_32 { margin-left: 32px; }
+  .marginLeft_tablet_48 { margin-left: 48px; }
+  .marginLeft_tablet_64 { margin-left: 64px; }
+  .marginLeft_tablet_96 { margin-left: 96px; }
+}
+
+@container (max-width: 480px) {
+  .spaceBefore_mobile_none { margin-top: var(--cms-space-none); }
+  .spaceBefore_mobile_xs { margin-top: var(--cms-space-xs); }
+  .spaceBefore_mobile_sm { margin-top: var(--cms-space-sm); }
+  .spaceBefore_mobile_md { margin-top: var(--cms-space-md); }
+  .spaceBefore_mobile_lg { margin-top: var(--cms-space-lg); }
+  .spaceBefore_mobile_xl { margin-top: var(--cms-space-xl); }
+
+  .spaceAfter_mobile_none { margin-bottom: var(--cms-space-none); }
+  .spaceAfter_mobile_xs { margin-bottom: var(--cms-space-xs); }
+  .spaceAfter_mobile_sm { margin-bottom: var(--cms-space-sm); }
+  .spaceAfter_mobile_md { margin-bottom: var(--cms-space-md); }
+  .spaceAfter_mobile_lg { margin-bottom: var(--cms-space-lg); }
+  .spaceAfter_mobile_xl { margin-bottom: var(--cms-space-xl); }
+
+  .padding_mobile_none { padding: var(--cms-padding-none); }
+  .padding_mobile_sm { padding: var(--cms-padding-sm); }
+  .padding_mobile_md { padding: var(--cms-padding-md); }
+  .padding_mobile_lg { padding: var(--cms-padding-lg); }
+
+  .background_mobile_none { background-color: var(--cms-bg-none); }
+  .background_mobile_subtle { background-color: var(--cms-bg-subtle); }
+  .background_mobile_accent { background-color: var(--cms-bg-accent); }
+  .background_mobile_inverse { background-color: var(--cms-bg-inverse); }
+
+  .textColor_mobile_default { color: var(--cms-text-color-default); }
+  .textColor_mobile_muted { color: var(--cms-text-color-muted); }
+  .textColor_mobile_accent { color: var(--cms-text-color-accent); }
+  .textColor_mobile_inverse { color: var(--cms-text-color-inverse); }
+
+  .fontSize_mobile_sm { font-size: var(--cms-font-size-sm); }
+  .fontSize_mobile_md { font-size: var(--cms-font-size-md); }
+  .fontSize_mobile_lg { font-size: var(--cms-font-size-lg); }
+  .fontSize_mobile_xl { font-size: var(--cms-font-size-xl); }
+
+  .fontWeight_mobile_regular { font-weight: var(--cms-font-weight-regular); }
+  .fontWeight_mobile_medium { font-weight: var(--cms-font-weight-medium); }
+  .fontWeight_mobile_bold { font-weight: var(--cms-font-weight-bold); }
+
+  .fontFamily_mobile_default { font-family: var(--cms-font-family-default); }
+  .fontFamily_mobile_inter { font-family: var(--cms-font-family-inter); }
+  .fontFamily_mobile_roboto { font-family: var(--cms-font-family-roboto); }
+  .fontFamily_mobile_playfair { font-family: var(--cms-font-family-playfair); }
+  .fontFamily_mobile_montserrat { font-family: var(--cms-font-family-montserrat); }
+  .fontFamily_mobile_monospace { font-family: var(--cms-font-family-monospace); }
+
+  .columns_mobile_1 { grid-template-columns: repeat(1, 1fr); }
+  .columns_mobile_2 { grid-template-columns: repeat(2, 1fr); }
+  .columns_mobile_3 { grid-template-columns: repeat(3, 1fr); }
+  .columns_mobile_4 { grid-template-columns: repeat(4, 1fr); }
+
+  .gap_mobile_none { gap: 0; }
+  .gap_mobile_sm { gap: var(--cms-space-xs); }
+  .gap_mobile_md { gap: var(--cms-space-sm); }
+  .gap_mobile_lg { gap: var(--cms-space-md); }
+
+  .alignItems_mobile_stretch { align-items: stretch; }
+  .alignItems_mobile_flex-start { align-items: flex-start; }
+  .alignItems_mobile_center { align-items: center; }
+  .alignItems_mobile_flex-end { align-items: flex-end; }
+
+  .paddingTop_mobile_0 { padding-top: 0px; }
+  .paddingTop_mobile_4 { padding-top: 4px; }
+  .paddingTop_mobile_8 { padding-top: 8px; }
+  .paddingTop_mobile_12 { padding-top: 12px; }
+  .paddingTop_mobile_16 { padding-top: 16px; }
+  .paddingTop_mobile_24 { padding-top: 24px; }
+  .paddingTop_mobile_32 { padding-top: 32px; }
+  .paddingTop_mobile_48 { padding-top: 48px; }
+  .paddingTop_mobile_64 { padding-top: 64px; }
+  .paddingTop_mobile_96 { padding-top: 96px; }
+
+  .paddingRight_mobile_0 { padding-right: 0px; }
+  .paddingRight_mobile_4 { padding-right: 4px; }
+  .paddingRight_mobile_8 { padding-right: 8px; }
+  .paddingRight_mobile_12 { padding-right: 12px; }
+  .paddingRight_mobile_16 { padding-right: 16px; }
+  .paddingRight_mobile_24 { padding-right: 24px; }
+  .paddingRight_mobile_32 { padding-right: 32px; }
+  .paddingRight_mobile_48 { padding-right: 48px; }
+  .paddingRight_mobile_64 { padding-right: 64px; }
+  .paddingRight_mobile_96 { padding-right: 96px; }
+
+  .paddingBottom_mobile_0 { padding-bottom: 0px; }
+  .paddingBottom_mobile_4 { padding-bottom: 4px; }
+  .paddingBottom_mobile_8 { padding-bottom: 8px; }
+  .paddingBottom_mobile_12 { padding-bottom: 12px; }
+  .paddingBottom_mobile_16 { padding-bottom: 16px; }
+  .paddingBottom_mobile_24 { padding-bottom: 24px; }
+  .paddingBottom_mobile_32 { padding-bottom: 32px; }
+  .paddingBottom_mobile_48 { padding-bottom: 48px; }
+  .paddingBottom_mobile_64 { padding-bottom: 64px; }
+  .paddingBottom_mobile_96 { padding-bottom: 96px; }
+
+  .paddingLeft_mobile_0 { padding-left: 0px; }
+  .paddingLeft_mobile_4 { padding-left: 4px; }
+  .paddingLeft_mobile_8 { padding-left: 8px; }
+  .paddingLeft_mobile_12 { padding-left: 12px; }
+  .paddingLeft_mobile_16 { padding-left: 16px; }
+  .paddingLeft_mobile_24 { padding-left: 24px; }
+  .paddingLeft_mobile_32 { padding-left: 32px; }
+  .paddingLeft_mobile_48 { padding-left: 48px; }
+  .paddingLeft_mobile_64 { padding-left: 64px; }
+  .paddingLeft_mobile_96 { padding-left: 96px; }
+
+  .marginTop_mobile_0 { margin-top: 0px; }
+  .marginTop_mobile_4 { margin-top: 4px; }
+  .marginTop_mobile_8 { margin-top: 8px; }
+  .marginTop_mobile_12 { margin-top: 12px; }
+  .marginTop_mobile_16 { margin-top: 16px; }
+  .marginTop_mobile_24 { margin-top: 24px; }
+  .marginTop_mobile_32 { margin-top: 32px; }
+  .marginTop_mobile_48 { margin-top: 48px; }
+  .marginTop_mobile_64 { margin-top: 64px; }
+  .marginTop_mobile_96 { margin-top: 96px; }
+
+  .marginRight_mobile_0 { margin-right: 0px; }
+  .marginRight_mobile_4 { margin-right: 4px; }
+  .marginRight_mobile_8 { margin-right: 8px; }
+  .marginRight_mobile_12 { margin-right: 12px; }
+  .marginRight_mobile_16 { margin-right: 16px; }
+  .marginRight_mobile_24 { margin-right: 24px; }
+  .marginRight_mobile_32 { margin-right: 32px; }
+  .marginRight_mobile_48 { margin-right: 48px; }
+  .marginRight_mobile_64 { margin-right: 64px; }
+  .marginRight_mobile_96 { margin-right: 96px; }
+
+  .marginBottom_mobile_0 { margin-bottom: 0px; }
+  .marginBottom_mobile_4 { margin-bottom: 4px; }
+  .marginBottom_mobile_8 { margin-bottom: 8px; }
+  .marginBottom_mobile_12 { margin-bottom: 12px; }
+  .marginBottom_mobile_16 { margin-bottom: 16px; }
+  .marginBottom_mobile_24 { margin-bottom: 24px; }
+  .marginBottom_mobile_32 { margin-bottom: 32px; }
+  .marginBottom_mobile_48 { margin-bottom: 48px; }
+  .marginBottom_mobile_64 { margin-bottom: 64px; }
+  .marginBottom_mobile_96 { margin-bottom: 96px; }
+
+  .marginLeft_mobile_0 { margin-left: 0px; }
+  .marginLeft_mobile_4 { margin-left: 4px; }
+  .marginLeft_mobile_8 { margin-left: 8px; }
+  .marginLeft_mobile_12 { margin-left: 12px; }
+  .marginLeft_mobile_16 { margin-left: 16px; }
+  .marginLeft_mobile_24 { margin-left: 24px; }
+  .marginLeft_mobile_32 { margin-left: 32px; }
+  .marginLeft_mobile_48 { margin-left: 48px; }
+  .marginLeft_mobile_64 { margin-left: 64px; }
+  .marginLeft_mobile_96 { margin-left: 96px; }
 }

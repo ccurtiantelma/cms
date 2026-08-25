@@ -47,3 +47,30 @@ describe('canDropInto — drag & drop reale (T7): solo i casi nuovi sul predicat
     expect(canDropInto(makeTree(), 'head-1', null)).toBe(true);
   });
 });
+
+/**
+ * Guardia anti-corruzione contro l'annidamento di `section` dentro `section`: il registro
+ * non dichiara `'section'` fra i `childrenAllow` di `section` (unico contenitore del
+ * primo rilascio, ADR-21 § 5; l'annidamento resta debito di governance non richiuso da
+ * ADR-31 § Decisione 8), quindi `canContainType`/`canDropInto` lo rifiutano già per
+ * costruzione — questo blocco lo rende un invariante esplicito e testato, non solo
+ * un effetto collaterale del registro corrente.
+ */
+describe('canDropInto — anti-corruzione: nessun annidamento di section dentro section', () => {
+  /** Due section indipendenti, nessuna già annidata nell'altra. */
+  function makeTwoSections(): BlockNode[] {
+    return [node('sec-outer', 'section', [node('head-1', 'heading')]), node('sec-inner', 'section')];
+  }
+
+  it('una section esistente non può entrare in un\'altra section (spostamento di un nodo reale)', () => {
+    expect(canDropInto(makeTwoSections(), 'sec-inner', 'sec-outer')).toBe(false);
+  });
+
+  it('una section nuova trascinata dalla palette (dragType, nodo non ancora nell\'albero) non può entrare in una section', () => {
+    expect(canDropInto(makeTwoSections(), 'new-block:section', 'sec-outer', 'section')).toBe(false);
+  });
+
+  it('una section resta invece ammessa alla radice (unico livello legale per questo tipo)', () => {
+    expect(canDropInto(makeTwoSections(), 'sec-inner', null)).toBe(true);
+  });
+});

@@ -1,10 +1,10 @@
 # ADR-26 — Editor WYSIWYG per il rich text
 
 ## Status
-[x] **In discussione** · [ ] Approvata · [ ] Rifiutata · [ ] Superseded da ADR-XXX
+[ ] In discussione · [x] **Approvata** · [ ] Rifiutata · [ ] Superseded da ADR-XXX
 
 ## Data approvazione
-_(in attesa di firma)_
+2026-08-24 — approvato da: marketing@antelmagroup.net
 
 ---
 
@@ -13,11 +13,19 @@ _(in attesa di firma)_
 1. **Tiptap, adottato attraverso `@mantine/tiptap`.** Il wrapper Mantine è la ragione della
    scelta, non un dettaglio d'integrazione: la chrome dell'editor è obbligatoriamente Mantine
    (`CLAUDE.md` § Frontend Developer), e ogni altro editor imporrebbe una seconda libreria di
-   UI dentro l'admin — cioè un divieto assoluto. Cinque pacchetti nuovi, tutti richiesti dal
-   `RichTextEditor` di Mantine:
+   UI dentro l'admin — cioè un divieto assoluto. Sette pacchetti nuovi, tutti richiesti dal
+   `RichTextEditor` di Mantine e dalla toolbar di § 3:
    `@mantine/tiptap`, `@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`,
-   `@tiptap/extension-link`. Nessun altro pacchetto entra con questa firma: un'estensione
-   Tiptap ulteriore è una dipendenza nuova ai fini di `CLAUDE.md` § Ask first.
+   `@tiptap/extension-link`, `@tiptap/extension-underline`, `@tiptap/extension-text-align`.
+   La prima delle ultime due copre il pulsante sottolineato — `u` è già nell'allowlist `basic`
+   (`p br strong b em i u s a ul ol li`), nessuna modifica al sanitizzatore. La seconda
+   (`extension-text-align`) **tocca l'allowlist**: scrive l'allineamento come attributo
+   `style="text-align: …"` sul paragrafo, e il sanitizzatore aveva `allowedStyles: {}` — nessuno
+   stile ammesso su nessun tag. Questa firma autorizza l'unica eccezione:
+   `allowedStyles: { p: { 'text-align': [/^(left|right|center|justify)$/] } }` in
+   `block-sanitize-profiles.config.ts`, quattro token chiusi, mai un valore libero, mai un altro
+   tag. Nessun altro pacchetto entra con questa firma: un'estensione Tiptap ulteriore è una
+   dipendenza nuova ai fini di `CLAUDE.md` § Ask first.
 
 2. **L'editor sta solo nell'ispettore, solo sulle prop `kind: 'richText'`, e la toolbar la
    sceglie il `profile` dichiarato dal registro** (ADR-21 § 4). Oggi una sola prop lo usa
@@ -40,7 +48,9 @@ _(in attesa di firma)_
    usa per sanitizzare. Se un aggiornamento di `StarterKit` aggiunge un nodo, il test cade.
 
 4. **Il server resta l'unica autorità sulla sicurezza.** Il WYSIWYG è comodità di redazione:
-   la sanitizzazione server-side pre-persistenza non cambia di una riga (ADR-20), e ciò che
+   la sanitizzazione server-side pre-persistenza non cambia se non per l'eccezione puntuale del
+   § 1 (ADR-20 resta l'autorità: allowlist di stili ancora chiusa, ora a un solo attributo su un
+   solo tag invece che vuota), e ciò che
    l'editor rimonta dopo un salvataggio è il valore sanitizzato restituito dal server — il
    meccanismo esiste già (`generation` nello store). Se la toolbar e il profilo divergessero,
    l'effetto è che l'utente vede sparire una formattazione dopo il salvataggio: sgradevole,
@@ -67,7 +77,7 @@ _(in attesa di firma)_
 
 ## Conseguenza
 
-Cinque pacchetti npm in più nel solo `app/frontend`, con ProseMirror come peer: `app/public-site`
+Sette pacchetti npm in più nel solo `app/frontend`, con ProseMirror come peer: `app/public-site`
 non li importa mai — non ha JavaScript client e i componenti dei blocchi restano senza Mantine,
 quindi il peso è tutto e solo nella chrome amministrativa. Il vincolo che questa ADR lascia in
 eredità è il § 3 al contrario: **allargare la toolbar non è una preferenza di stile, è una nuova

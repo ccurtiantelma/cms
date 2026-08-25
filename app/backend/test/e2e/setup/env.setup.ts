@@ -13,13 +13,16 @@
  * `DATABASE_URL` punta a `cms_db_test` e `REDIS_URL` al DB Redis logico #1,
  * come richiesto dalle guardie `assertTestDatabase` / `assertTestRedisDb`.
  *
- * Host/porte allineate a docker-compose.yml di questo progetto (5432/6379).
+ * Host/porte allineate a docker-compose.yml di questo progetto (55432/56379 —
+ * porte host non standard di proposito, il progetto gira sempre in parallelo
+ * con altri stack sulla stessa macchina, vedi il commento di testa di
+ * docker-compose.yml).
  */
 
 process.env.NODE_ENV = 'test';
 process.env.DATABASE_URL =
-  process.env.DATABASE_URL || 'postgresql://cms:cms@localhost:5432/cms_db_test';
-process.env.REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379/1';
+  process.env.DATABASE_URL || 'postgresql://cms:cms@localhost:55432/cms_db_test';
+process.env.REDIS_URL = process.env.REDIS_URL || 'redis://localhost:56379/1';
 process.env.SECURITY_KEY =
   process.env.SECURITY_KEY || 'e2e_test_security_key_min_32_characters_long';
 process.env.PAGE_PREVIEW_TOKEN_SECRET =
@@ -28,13 +31,13 @@ process.env.COOKIE_SECRET = process.env.COOKIE_SECRET || 'e2e_test_cookie_secret
 process.env.COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || 'localhost';
 process.env.JWT_EXPIRATION = process.env.JWT_EXPIRATION || '15m';
 process.env.RTK_EXPIRATION = process.env.RTK_EXPIRATION || '604800';
-// Diversa dalla PORT di sviluppo (3000): la suite e2e usa supertest in-process e
-// non fa bind, ma tenerle distinte evita ambiguità nei log e un EADDRINUSE se in
-// futuro un test avviasse davvero il server.
-process.env.PORT = process.env.PORT || '3099';
-process.env.FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+// Diversa dalla PORT di sviluppo (53000): la suite e2e usa supertest in-process
+// e non fa bind, ma tenerle distinte evita ambiguità nei log e un EADDRINUSE se
+// in futuro un test avviasse davvero il server.
+process.env.PORT = process.env.PORT || '53099';
+process.env.FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:55173';
 process.env.SMTP_HOST = process.env.SMTP_HOST || 'localhost';
-process.env.SMTP_PORT = process.env.SMTP_PORT || '1025';
+process.env.SMTP_PORT = process.env.SMTP_PORT || '51025';
 process.env.SMTP_FROM = process.env.SMTP_FROM || 'e2e@cms.test';
 process.env.SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'superadmin.e2e@cms.test';
 process.env.SUPERADMIN_PASSWORD = process.env.SUPERADMIN_PASSWORD || 'E2eSuperAdmin#2026';

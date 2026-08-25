@@ -1,4 +1,20 @@
+/*
+ * CSS Grid (ADR-31 § 7): `grid-template-columns`/`gap`/`align-items` derivano dalle classi
+ * generate in `../style-tokens.module.css` (mai `style` inline), scelte da `Section.tsx` in
+ * base a `columns`/`gap`/`alignItems` del nodo. Nessuna dichiarazione qui: un nodo senza
+ * queste tre props (contenuto salvato prima di ADR-31) non riceve nessuna classe token, e
+ * `display: grid` senza `grid-template-columns` esplicito produce una singola colonna
+ * implicita — un figlio per riga, a piena larghezza — visivamente identico al precedente
+ * `display: flex; flex-direction: column` (zero regressione, ADR-31 § 3 "Alternative
+ * scartate" via RFC-31 § 3).
+ *
+ * `position: relative`: nessun effetto sul layout (nessun `top`/`left`/`right`/`bottom`
+ * dichiarato), serve solo da contesto di posizionamento per l'overlay di evidenziazione
+ * "dentro questo contenitore" che l'editor sovrappone in `EditorBlockWrapper.module.css`
+ * (`.containerDropZone`, `position: absolute; inset: 0`) — il sito pubblico non monta mai
+ * quell'overlay, quindi questa riga non produce alcuna differenza visiva lì.
+ */
 .section {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  position: relative;
 }

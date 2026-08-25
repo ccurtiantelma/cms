@@ -37,3 +37,28 @@ export function resolveResponsiveClassNames(
   }
   return classNames.join(' ');
 }
+
+/**
+ * Risolve la classe CSS Module per una prop di stile **non responsive** (ADR-33 § 1/§ 2:
+ * `contentWidth`/`maxWidth`/`columnRatio` di `section`) — controparte scalare di
+ * {@link resolveResponsiveClassNames}, senza breakpoint: il valore salvato è già lo
+ * scalare atteso (nessun envelope `{ default, tablet?, mobile? }`).
+ *
+ * Stessa tolleranza di {@link resolveResponsiveClassNames}: un valore assente, non
+ * stringa o con un token sconosciuto produce nessuna classe, mai un errore (l'Error
+ * Boundary del blocco è l'ultima difesa, non la prima).
+ *
+ * @param styles Oggetto esportato da un import `*.module.css` (nomi già hashati da Vite).
+ * @param slot Prefisso della prop nel foglio dei token (es. `'contentWidth'`).
+ * @param value Valore grezzo della prop così come arriva da `node.props`.
+ */
+export function resolveScalarClassName(
+  styles: Record<string, string>,
+  slot: string,
+  value: unknown,
+): string {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  return styles[`${slot}_${value}`] ?? '';
+}

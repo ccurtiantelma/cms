@@ -10,7 +10,7 @@
  * di `CLAUDE.md` § Ask first — richiede firma, non si aggiunge qui.
  */
 export type PropKind =
-  'richText' | 'plainText' | 'number' | 'boolean' | 'enum' | 'url' | 'mediaRef';
+  'richText' | 'plainText' | 'number' | 'boolean' | 'enum' | 'url' | 'mediaRef' | 'color';
 
 /**
  * Campi comuni a ogni descrittore di prop. `default` non compare mai su una
@@ -108,6 +108,19 @@ export interface MediaRefPropSpec extends BasePropSpec {
   kind: 'mediaRef';
 }
 
+/**
+ * Colore libero (ADR-33 § 3), primo uso reale di questo `kind`. Validato da
+ * un pattern **fisso e stretto**, non un campo `pattern` generico riusabile
+ * altrove: solo esadecimale a 3 o 6 cifre, niente `rgb()`/`hsl()`/`url()`/
+ * parole chiave CSS — la superficie di validazione resta un letterale di
+ * colore, mai una forma che assomigli a CSS eseguibile. Non responsive in
+ * questo round.
+ */
+export interface ColorPropSpec extends BasePropSpec {
+  kind: 'color';
+  default?: string;
+}
+
 /** Unione discriminata su `kind` di tutti i descrittori di prop ammessi. */
 export type PropSpec =
   | RichTextPropSpec
@@ -116,4 +129,5 @@ export type PropSpec =
   | BooleanPropSpec
   | EnumPropSpec
   | UrlPropSpec
-  | MediaRefPropSpec;
+  | MediaRefPropSpec
+  | ColorPropSpec;

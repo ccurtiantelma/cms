@@ -1,3 +1,25 @@
 .heading {
   margin: 0;
+  /*
+   * Preserva gli a capo del testo salvato (`text` è `plainText`, persistito verbatim —
+   * business-rules.md § Security): senza questa regola un `\n` letterale viene collassato in
+   * uno spazio dal comportamento HTML di default, bug noto "a capo non preservati". `pre-wrap`
+   * mantiene comunque il wrap automatico del testo lungo (a differenza di `pre`).
+   */
+  white-space: pre-wrap;
+}
+
+/*
+  Editing in-place (editor, blocco selezionato — mai sul sito pubblico): colore fisso, non
+  una variabile CSS di Mantine — questo file non dipende da Mantine essere caricato
+  (CLAUDE.md § confine Mantine/blocchi, il sito pubblico non la importa).
+*/
+.editable {
+  cursor: text;
+  outline: none;
+}
+
+.editable:focus {
+  outline: 1px dashed #339af0;
+  outline-offset: 2px;
 }

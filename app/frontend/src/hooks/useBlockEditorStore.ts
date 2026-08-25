@@ -73,9 +73,30 @@ function isDirty(state: BlockEditorState): boolean {
   return state.undoStack[state.savePoint.depth - 1] !== state.savePoint.top;
 }
 
+/** Viewport simulato dal Viewport Switcher dell'editor full-screen (`FullScreenEditorLayout`). */
+export type EditorViewport = 'desktop' | 'tablet' | 'mobile';
+
+/** Scheda attiva della sidebar sinistra dell'editor full-screen (`EditorSidebar`). */
+export type EditorSidebarTab = 'widgets' | 'properties';
+
 interface BlockEditorState {
   tree: BlockNode[];
   selectedId: string | null;
+  /**
+   * Viewport correntemente simulato nel canvas dell'editor full-screen — governa solo la
+   * larghezza del contenitore di anteprima (`FullScreenEditorLayout`), non altera l'albero
+   * né i breakpoint effettivi del rendering pubblico.
+   */
+  activeViewport: EditorViewport;
+  /** Il pannello "Struttura/Navigator" dell'editor full-screen è aperto. */
+  isStructurePanelOpen: boolean;
+  /**
+   * Scheda attiva della sidebar sinistra (`EditorSidebar`, stile Elementor). Vive qui e non
+   * come stato locale del componente perché deve poter essere cambiata da fuori — quando si
+   * seleziona un blocco nel canvas la sidebar deve saltare su "Proprietà" da sola (vedi
+   * `selectNode`), cosa che uno `useState` interno alla sidebar non potrebbe fare.
+   */
+  activeSidebarTab: EditorSidebarTab;
   /**
    * Contatore delle inizializzazioni dell'albero. Serve a distinguere "stesso nodo, stesso
    * id" da "stesso nodo ricaricato dal server": gli id dei nodi sopravvivono a un
@@ -96,6 +117,14 @@ interface BlockEditorState {
   initTree: (blocks: BlockNode[]) => void;
   /** Seleziona un nodo per id, o deseleziona con `null`. */
   selectNode: (id: string | null) => void;
+  /** Cambia il viewport simulato nel canvas dell'editor full-screen. */
+  setActiveViewport: (viewport: EditorViewport) => void;
+  /** Apre/chiude il pannello "Struttura/Navigator" dell'editor full-screen. */
+  setStructurePanelOpen: (opened: boolean) => void;
+  /** Alterna l'apertura del pannello "Struttura/Navigator". */
+  toggleStructurePanel: () => void;
+  /** Cambia la scheda attiva della sidebar sinistra ("Widgets"/"Proprietà"). */
+  setActiveSidebarTab: (tab: EditorSidebarTab) => void;
   /** Aggiunge un blocco `type` a `index` fra i figli di `parentId` (radice se `null`). */
   addBlockAction: (
     parentId: string | null,
@@ -103,6 +132,16 @@ interface BlockEditorState {
     index: number,
     defaultProps: Record<string, unknown>,
   ) => void;
+  /**
+   * Inserisce `subtree` — un sottoalbero esterno all'albero in editing, tipicamente un
+   * preset della libreria (`TemplateLibraryModal`, ADR-34) — fra i figli di `parentId`
+   * (radice se `null`) all'indice `index`. Rigenera l'id di radice e di ogni discendente
+   * (mai un id duplicato con la fonte del preset, riusato più volte). No-op con avviso
+   * (`notifications.show`, mai un salvataggio fallito con `400`) se il registro non ammette
+   * `subtree.type` nel contenitore di destinazione, o se l'inserimento porterebbe l'albero
+   * oltre `CONTENT_TREE_LIMITS.maxNodes`. Il sottoalbero inserito diventa il nodo selezionato.
+   */
+  insertSubtreeAction: (parentId: string | null, index: number, subtree: BlockNode) => void;
   /** Sposta il nodo `id` di una posizione fra i suoi fratelli diretti. No-op ai bordi. */
   moveBlockAction: (id: string, direction: 'up' | 'down') => void;
   /**
@@ -159,6 +198,9 @@ const CLEAN_SAVE_POINT: SavePoint = { depth: 0, top: null };
 export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   tree: [],
   selectedId: null,
+  activeViewport: 'desktop',
+  isStructurePanelOpen: false,
+  activeSidebarTab: 'widgets',
   generation: 0,
   undoStack: [],
   redoStack: [],
@@ -175,7 +217,17 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
     }));
   },
 
-  selectNode: (id) => set({ selectedId: id }),
+  selectNode: (id) =>
+    set(id !== null ? { selectedId: id, activeSidebarTab: 'properties' } : { selectedId: id }),
+
+  setActiveViewport: (viewport) => set({ activeViewport: viewport }),
+
+  setStructurePanelOpen: (opened) => set({ isStructurePanelOpen: opened }),
+
+  toggleStructurePanel: () =>
+    set((state) => ({ isStructurePanelOpen: !state.isStructurePanelOpen })),
+
+  setActiveSidebarTab: (tab) => set({ activeSidebarTab: tab }),
 
   addBlockAction: (parentId, type, index, defaultProps) => {
     set((state) => {
@@ -282,6 +334,49 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
     });
   },
 
+  insertSubtreeAction: (parentId, index, subtree) => {
+    set((state) => {
+      // Il tipo del contenitore di destinazione decide l'ammissibilità (stesso principio di
+      // `moveNodeToAction`): `undefined` alla radice, dove vale `ROOT_ALLOWED`. Un `parentId`
+      // che non esiste più non è un errore da segnalare, è un'azione senza bersaglio.
+      const parentNode = parentId === null ? undefined : findNode(state.tree, parentId);
+      if (parentId !== null && !parentNode) return {};
+      if (!canContainType(parentNode?.type, subtree.type)) {
+        notifications.show({
+          color: 'red',
+          title: 'Inserimento non eseguito',
+          message: `Il blocco "${subtree.type}" non è ammesso in questo contenitore.`,
+        });
+        return {};
+      }
+
+      // Rigenerazione ricorsiva degli id: stessa funzione pura usata da
+      // `duplicateNodeAction` per un nodo già nell'albero, qui applicata a un sottoalbero
+      // esterno (ADR-34 § 2) — un solo punto di rigenerazione UUID nel codebase.
+      const copy = duplicateSubtree(subtree);
+      // Verificato PRIMA di inserire: MAX_NODES è quello di
+      // `app/backend/src/pages/content-tree.ts` (fonte di verità), riesposto qui via
+      // `CONTENT_TREE_LIMITS` generato dal registro — nessuna copia manuale del numero.
+      const projectedTotal = countNodes(state.tree) + countNodes([copy]);
+      if (projectedTotal > CONTENT_TREE_LIMITS.maxNodes) {
+        notifications.show({
+          color: 'red',
+          title: 'Inserimento non eseguito',
+          message: `La sezione inserita porterebbe la pagina a ${projectedTotal} blocchi, oltre il limite di ${CONTENT_TREE_LIMITS.maxNodes}.`,
+        });
+        return {};
+      }
+
+      const command: EditorCommand = {
+        apply: (tree) => addBlockAtExact(tree, parentId, index, copy),
+        invert: (tree) => removeBlock(tree, copy.id),
+      };
+      const patch = pushCommand(state, command);
+      if (!patch.tree) return patch;
+      return { ...patch, selectedId: copy.id };
+    });
+  },
+
   updateBlockPropsAction: (id, props) => {
     set((state) => {
       const node = findNode(state.tree, id);
@@ -379,6 +474,21 @@ export function useNodeById(id: string | null | undefined): BlockNode | undefine
 /** Selettore granulare: solo l'id selezionato, senza sottoscrivere l'intero nodo. */
 export function useSelectedId(): string | null {
   return useBlockEditorStore((state) => state.selectedId);
+}
+
+/** Selettore granulare: solo il viewport simulato nel canvas full-screen. */
+export function useActiveViewport(): EditorViewport {
+  return useBlockEditorStore((state) => state.activeViewport);
+}
+
+/** Selettore granulare: solo lo stato di apertura del pannello "Struttura/Navigator". */
+export function useIsStructurePanelOpen(): boolean {
+  return useBlockEditorStore((state) => state.isStructurePanelOpen);
+}
+
+/** Selettore granulare: solo la scheda attiva della sidebar sinistra ("Widgets"/"Proprietà"). */
+export function useActiveSidebarTab(): EditorSidebarTab {
+  return useBlockEditorStore((state) => state.activeSidebarTab);
 }
 
 /** Selettore granulare: il contatore delle inizializzazioni dell'albero (vedi `generation`). */

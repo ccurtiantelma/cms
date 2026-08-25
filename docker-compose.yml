@@ -1,5 +1,12 @@
 # Configurazione docker-compose per lo sviluppo locale.
 # Isola container, rete e volumi da altri stack Docker sulla stessa macchina.
+#
+# Porte host non standard di proposito: questo progetto gira sempre in
+# parallelo con altri stack sulla stessa macchina, quindi ogni porta
+# pubblicata sull'host è spostata dal default noto del suo servizio
+# (5432/6379/1025/8025) a un equivalente "5" + porta originale — il lato
+# container resta il default di immagine, invariato: solo il mapping
+# host:container cambia, mai cosa ascolta dentro il container.
 version: '3.8'
 
 services:
@@ -10,20 +17,20 @@ services:
       POSTGRES_USER: cms
       POSTGRES_PASSWORD: cms
     ports:
-      - '5432:5432'
+      - '55432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
     ports:
-      - '6379:6379'
+      - '56379:6379'
 
   mailhog:
     image: mailhog/mailhog
     ports:
-      - '1025:1025'   # SMTP
-      - '8025:8025'   # Web UI → http://localhost:8025
+      - '51025:1025'   # SMTP
+      - '58025:8025'   # Web UI → http://localhost:58025
 
 volumes:
   pgdata:

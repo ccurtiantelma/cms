@@ -105,12 +105,18 @@ test('inserimento posizionale: porto un blocco dentro il contenitore precedente 
   await expect(blockOfType(section, 'heading')).toHaveCount(0);
 
   // "Porta dentro": il titolo di radice entra nella section che lo precede.
+  // Il pulsante indent/outdent vive nella toolbar integrata, `visibility: hidden` a
+  // riposo (EditorBlockWrapper.module.css) e resa visibile solo da `.hovered`/
+  // `.selected`: senza selezionare prima il blocco non è mai azionabile per Playwright,
+  // anche se presente nel DOM.
+  await selectBlock(blockOfType(page, 'heading'), 'Titolo');
   await indentBlock(page, 'Titolo');
 
   await expect.poll(tipiDiRadice).toEqual(['section']);
   await expect(blockOfType(section, 'heading')).toHaveCount(1);
 
   // "Porta fuori": lo riporto al livello di radice, subito dopo la section.
+  await selectBlock(blockOfType(section, 'heading'), 'Titolo');
   await outdentBlock(page, 'Titolo');
 
   await expect.poll(tipiDiRadice).toEqual(['section', 'heading']);

@@ -394,6 +394,50 @@ STOP su T1 la prima si consegna comunque.
   si segnalano.
 - **Agente**: test-engineer.
 
+### T9 — Frontend: editing in-place del testo, dispatch debounced verso l'albero, floating menu
+
+> **Nota di governance**: questo task non è nell'RFC né nei T1–T8 originali e non ha un'ADR
+> dedicata — è stato implementato direttamente nel codice (`Heading.tsx`, `Button.tsx`,
+> `RichText.tsx`, `BlockRenderer.tsx`, `EditorBlockWrapper.tsx`, tutti già lo citano come
+> `PLAN-F04c-editor-maturo.md T9`). Questa sezione lo documenta **a consuntivo**, su richiesta
+> esplicita dell'umano (`CLAUDE.md` § Documentation Policy — implementazione che devia dal
+> piano scritto). Non tocca schema blocchi, `PropSpec`, `kind` o sanitizzazione server-side:
+> resta interazione di chrome sul valore già esistente delle prop `text`/`html`/`label`, quindi
+> sotto la soglia che `CLAUDE.md` riserva all'ADR obbligatoria — ma è comunque un'estensione di
+> scope rispetto all'RFC originale, **segnalata qui invece che corretta d'iniziativa** (stesso
+> principio della sezione "Scarti documentali" più sopra).
+
+- **Output realizzato**:
+  - `Heading`/`Button`/`RichText` (componenti di blocco, senza Mantine — confine `CLAUDE.md`)
+    accettano ciascuno una tripla opzionale `editable`/`on<Prop>Change`/`on<Prop>Input`,
+    valorizzata solo dall'editor sul nodo selezionato — mai dal sito pubblico, dove restano
+    `undefined` e il rendering non cambia. `contentEditable` nativo, nessuna dipendenza nuova
+    (niente TipTap, che resta il territorio separato di ADR-26).
+  - `BlockRenderer.tsx` fa da pass-through con una prop `editing` opzionale verso i tre
+    componenti; non si propaga in ricorsione dentro `Section` (l'editor monta i contenitori
+    con `CONTAINER_COMPONENTS`, non `BlockRenderer`, quindi l'editing lì non esiste).
+  - `EditorBlockWrapper.tsx`: il commit (`onTextChange`/`onHtmlChange`/`onLabelChange`, su
+    `blur`) passa sempre da `updateBlockPropsAction` — resta un comando invertibile
+    sull'undo stack, mai una mutazione diretta. La notifica ad ogni tasto
+    (`onTextInput`/`onHtmlInput`/`onLabelInput`) dispatcha con debounce
+    (`scheduleDebouncedUpdate`, `useRef`+`setTimeout`, non `useDebouncedCallback` di
+    `@mantine/hooks` — vedi commento in linea sul motivo); il `blur` cancella sempre il
+    debounce pendente prima del proprio dispatch immediato, così i due non corrono mai in
+    coppia contro lo stesso valore stantio.
+  - Nessuna sanitizzazione lato client: resta autorità esclusiva del server pre-persistenza
+    (ADR-20/ADR-21), invariata.
+  - Floating menu: la action bar generica (`floatingActionBar` — drag/seleziona
+    padre/duplica/elimina) e la linguetta azione di `section` (`sectionActionTab`) restano
+    mutuamente esclusive sullo stesso nodo selezionato — nessuna sovrapposizione, nessuna
+    funzionalità rimossa rispetto alla toolbar integrata esistente di T7.
+- **Dipendenze**: T5/T6 (renderer e ispettore già in campo), T7 (stessa toolbar del nodo
+  selezionato).
+- **Criterio di Done**: digitare nel canvas su un nodo selezionato non dispatcha ad ogni tasto
+  un aggiornamento non-debounced; il sito pubblico (`BlockRenderer` montato senza `editing`)
+  rende identico a prima; nessun `any` senza commento, nessuna dipendenza nuova, nessuna
+  sanitizzazione lato client introdotta.
+- **Agente**: frontend-developer.
+
 ---
 
 ## Matrice dei rischi

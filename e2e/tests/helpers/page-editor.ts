@@ -37,10 +37,14 @@ export function uniqueSlug(prefix: string): string {
 /**
  * Crea una Pagina dal drawer "Nuova Pagina" dell'elenco e resta sul suo
  * dettaglio. Ritorna il `guid`, letto dall'URL su cui l'app naviga da sola.
+ *
+ * `parentGuid` è opzionale (`PagePages.tsx`, campo libero "Pagina genitore (guid)", nessuna
+ * validazione client sulla forma): compila lo slug annidato di una Pagina figlia senza
+ * passare da un secondo modo di crearla — stesso drawer, un campo in più (ADR-24 § 1).
  */
 export async function createPageFromUi(
   page: Page,
-  { title, slug }: { title: string; slug: string },
+  { title, slug, parentGuid }: { title: string; slug: string; parentGuid?: string },
 ): Promise<string> {
   await page.goto('/pages');
   await page.getByRole('button', { name: 'Nuova Pagina' }).click();
@@ -49,6 +53,9 @@ export async function createPageFromUi(
   await drawer.getByLabel('Titolo').fill(title);
   await drawer.getByLabel('Slug').fill(slug);
   // "Locale" arriva già compilato a it-IT dal form di creazione: non si tocca.
+  if (parentGuid) {
+    await drawer.getByLabel('Pagina genitore (guid)').fill(parentGuid);
+  }
   await drawer.getByRole('button', { name: 'Salva' }).click();
 
   await expect(page).toHaveURL(/\/pages\/[0-9a-f]{16}$/);
@@ -60,9 +67,21 @@ export async function createPageFromUi(
 /**
  * Apre la scheda "Contenuto" del dettaglio, dove vive l'editor. Non è una rotta
  * separata: l'editor è il modo in cui si guarda il contenuto della Pagina.
+ *
+ * Salta il click se la scheda è già quella attiva: da quando è attiva monta
+ * `FullScreenEditorLayout` (`position: fixed; inset: 0`, ADR-32), che copre l'intera
+ * viewport — `Tabs.List` incluso, perché la sua fascia orizzontale coincide con quella
+ * del canvas sottostante e non può essere sollevata sopra l'overlay senza intercettare a
+ * sua volta i click sui blocchi (verificato in E2E: la stessa `Tabs.List` sollevata
+ * bloccava "Aggiungi blocco in fondo"/"Aggiungi dentro"). Un secondo `click()` su una
+ * scheda già selezionata non cambierebbe comunque stato — è ridondante, e qui l'unico
+ * segno visibile del problema: evitarlo elimina la sola chiamata che lo richiederebbe.
  */
 export async function openContentTab(page: Page): Promise<void> {
-  await page.getByRole('tab', { name: 'Contenuto' }).click();
+  const tab = page.getByRole('tab', { name: 'Contenuto' });
+  if ((await tab.getAttribute('aria-selected')) !== 'true') {
+    await tab.click();
+  }
   await expect(page.getByRole('button', { name: 'Salva bozza' })).toBeVisible();
 }
 
@@ -72,18 +91,21 @@ export function blockOfType(scope: Page | Locator, type: string): Locator {
 }
 
 /**
- * Apre una palette e restituisce **il suo** dropdown. Lo scoping non è pedanteria:
- * Mantine lascia montato il dropdown di un menu già chiuso (resta nel DOM a
- * `opacity: 0`), quindi con più palette in pagina una ricerca globale di
- * `menuitem` trova le voci di tutte. Il legame fra pulsante e dropdown è
- * l'`aria-controls` del target, cioè lo stesso che usa un lettore di schermo.
+ * Apre una palette e restituisce **il suo** dropdown.
+ *
+ * Non più via `aria-controls` del `trigger` (comportamento pre-T-canvas-cleanup): per le
+ * palette icon-only (`BlockPalette.tsx`, `iconOnly`), `Menu.Target` clona `aria-controls`
+ * sul suo figlio diretto (`<Tooltip>`), e quell'attributo finisce su un nodo che — verificato
+ * sul DOM reale — non è né il bottone con `role="button"` né un suo antenato: irraggiungibile
+ * da questo locator senza una ricerca globale fragile. Il click funziona comunque (l'evento
+ * nativo apre il menu), quindi si aspetta l'unico `role="menu"` visibile sulla pagina dopo il
+ * click, invece di risalire a un id: più semplice, e resta corretto perché Mantine qui monta
+ * il dropdown solo mentre è aperto (mai più di uno alla volta, verificato sul DOM reale — a
+ * differenza di quanto assumeva questo helper prima di T-canvas-cleanup).
  */
 async function openPalette(trigger: Locator): Promise<Locator> {
   await trigger.click();
-  const dropdownId = await trigger.getAttribute('aria-controls');
-  if (!dropdownId)
-    throw new Error('openPalette: il pulsante della palette non espone aria-controls');
-  const dropdown = trigger.page().locator(`#${dropdownId}`);
+  const dropdown = trigger.page().getByRole('menu');
   await expect(dropdown).toBeVisible();
   return dropdown;
 }
@@ -104,25 +126,54 @@ export async function addRootBlock(page: Page, label: string): Promise<void> {
   await dropdown.getByRole('menuitem', { name: label, exact: true }).click();
 }
 
-/** Aggiunge un blocco dentro un contenitore, dalla sua palette "Aggiungi qui". */
+/**
+ * Aggiunge un blocco dentro un contenitore, dalla sua palette icon-only "Aggiungi dentro"
+ * (rinominata da "Aggiungi qui" nel round T-canvas-cleanup, uncommitted al momento in cui
+ * questo helper è stato adeguato — vedi nota su {@link selectBlock} per lo stesso round).
+ */
 export async function addChildBlock(container: Locator, label: string): Promise<void> {
   const dropdown = await openPalette(
-    container.getByRole('button', { name: 'Aggiungi qui' }).first(),
+    container.getByRole('button', { name: 'Aggiungi dentro' }).first(),
   );
   await dropdown.getByRole('menuitem', { name: label, exact: true }).click();
 }
 
-/** Seleziona un blocco cliccandone l'etichetta nella toolbar, come farebbe una persona. */
-export async function selectBlock(block: Locator, label: string): Promise<void> {
-  await block.getByRole('button', { name: label, exact: true }).first().click();
+/**
+ * Seleziona un blocco cliccando il suo wrapper nel canvas, come farebbe una persona.
+ *
+ * Fino al round T-canvas-cleanup il bersaglio di selezione era un `UnstyledButton` testuale
+ * (`getByRole('button', { name: label })`); quel bottone è stato rimosso a favore del click
+ * diretto sul wrapper del blocco (`div[data-block-type]`, `tabIndex=0` + `aria-label`, **senza**
+ * `role="button"` esplicito) — un `<div>` con solo `tabIndex` non riceve il ruolo ARIA
+ * "button" per costruzione, quindi `getByRole('button', …)` su quel bersaglio non trova più
+ * nulla. Questo helper clicca perciò `block` stesso (il locator del wrapper, tipicamente
+ * `blockOfType(...)`), non un discendente cercato per ruolo — `label` resta nella firma solo
+ * per la leggibilità dei call site, non è più usato per la ricerca. Segnalato nel report del
+ * test engineer: un `<div>` interattivo senza `role="button"` è anche una regressione di
+ * accessibilità reale, non solo un problema di questo helper.
+ */
+export async function selectBlock(block: Locator, _label: string): Promise<void> {
+  await block.first().click();
 }
 
 /**
  * Compila una prop testuale dell'ispettore e conferma con il blur: l'editor
  * scrive in store `onBlur`, non a ogni tasto — un `fill` senza uscita dal campo
  * non produrrebbe alcuna modifica.
+ *
+ * Caso speciale `richText`/`html` (`RichTextFieldEditor.tsx`): la scheda "Visuale",
+ * attiva di default, monta l'editor Tiptap come `contenteditable` — nessun
+ * `role="textbox"` con nome accessibile "Contenuto" da trovare lì. Solo la scheda
+ * "Codice" espone un `Textarea` con `aria-label` reale. Se quella scheda esiste
+ * (silenziosamente ignorata per ogni altro tipo di prop, che non la monta affatto),
+ * la si seleziona prima di cercare il campo — un `fill` diretto sulla vista Visuale
+ * non avrebbe comunque scritto nulla di verificabile da qui.
  */
 export async function fillProp(page: Page, propName: string, value: string): Promise<void> {
+  const codeTab = page.getByRole('tab', { name: 'Codice' });
+  if (await codeTab.isVisible().catch(() => false)) {
+    await codeTab.click();
+  }
   const field = page.getByRole('textbox', { name: new RegExp(`^${readableLabel(propName)}`) });
   await field.fill(value);
   await field.blur();
@@ -236,10 +287,19 @@ export async function dragBlockToZone(
   );
 }
 
-/** Salva la bozza e attende la conferma; fallisce se compare un 400 o un 409. */
+/**
+ * Salva la bozza e attende la conferma; fallisce se compare un 400 o un 409.
+ *
+ * La conferma si legge dalla notifica (`role="alert"`, Mantine `@mantine/notifications`),
+ * non da un `getByText('Bozza salvata')` generico: la chrome full-screen (T-canvas-cleanup)
+ * ha aggiunto nel topbar un'etichetta permanente con lo stesso testo esatto quando non ci
+ * sono modifiche non salvate (`FullScreenEditorLayout.tsx`), quindi una ricerca per solo
+ * testo trova due elementi — violazione di strict mode — non appena la notifica compare
+ * sopra un salvataggio già "a riposo".
+ */
 export async function saveDraft(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Salva bozza' }).click();
-  await expect(page.getByText('Bozza salvata')).toBeVisible();
+  await expect(page.getByRole('alert').getByText('Bozza salvata')).toBeVisible();
   await expect(page.getByText('Blocco non valido')).toHaveCount(0);
   await expect(page.getByText('Conflitto di editing')).toHaveCount(0);
 }
@@ -273,11 +333,21 @@ export async function publishFromStatusMenu(page: Page): Promise<void> {
  * È best-effort per costruzione: se il test è già fallito prima di creare la
  * Pagina non c'è nulla da togliere, e un fallimento della pulizia non deve
  * mascherare l'errore vero.
+ *
+ * L'attesa esplicita sulla riga (`waitFor`, non un `count()` letto subito dopo `goto`) non è
+ * pedanteria: l'elenco si popola da una fetch client-side dopo la navigazione, e un `count()`
+ * immediato può leggere zero righe semplicemente perché la risposta non è ancora arrivata —
+ * verificato empiricamente scrivendo questo helper: una pulizia "silenziosamente" no-op che
+ * lascia Pagine di bozza orfane a ogni run, non un'assenza vera della riga.
  */
 export async function deletePageFromUi(page: Page, title: string): Promise<void> {
   await page.goto('/pages');
   const riga = page.getByRole('row').filter({ hasText: title }).first();
-  if ((await riga.count()) === 0) return;
+  try {
+    await riga.waitFor({ state: 'visible', timeout: 5_000 });
+  } catch {
+    return;
+  }
 
   await riga.getByRole('button', { name: 'Elimina' }).click();
   const dialog = page.getByRole('dialog').filter({ hasText: 'Conferma Eliminazione' });

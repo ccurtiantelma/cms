@@ -3,10 +3,13 @@ import * as sanitizeHtml from 'sanitize-html';
 /**
  * Profili nominati di sanitizzazione per `kind: 'richText'` (ADR-21 § 4,
  * SPEC-F02-blocchi.md § 2). Insieme **chiuso** — un terzo profilo è "nuovo
- * schema di blocco" ai fini di `CLAUDE.md` § Ask first. In **nessuno dei
- * due** `style` allowlistato in alcuna forma: `allowedStyles: {}` e mai in
- * `allowedAttributes`, cosa che tiene morto per costruzione il code path di
- * `postcss` (ADR-20, correzione T3) — non una precauzione ridondante.
+ * schema di blocco" ai fini di `CLAUDE.md` § Ask first. Nessun `style`
+ * libero: `style` compare in `allowedAttributes` solo per `p`, e solo perché
+ * sanitize-html lo richiede per applicare affatto `allowedStyles` — il
+ * valore resta comunque vincolato al solo `text-align`, con un pattern
+ * chiuso ai quattro token validi (ADR-26 § 1, WYSIWYG). Non tocca `postcss`
+ * (ADR-20, correzione T3), che resta morto per costruzione fuori da questo
+ * singolo attributo.
  */
 
 const ALLOWED_ATTRIBUTES_A = ['href', 'title', 'target', 'rel'];
@@ -35,12 +38,20 @@ function transformAnchor(tagName: string, attribs: sanitizeHtml.Attributes): san
   return { tagName, attribs: next };
 }
 
+/** Unico attributo di stile ammesso in tutto il registro (ADR-26 § 3): quattro token chiusi, mai un valore libero. */
+const ALLOWED_TEXT_ALIGN = /^(left|right|center|justify)$/;
+
 const COMMON_OPTIONS = {
-  allowedAttributes: { a: ALLOWED_ATTRIBUTES_A },
+  // `style` in allowedAttributes.p è necessario perché sanitize-html processi affatto
+  // l'attributo su quel tag: senza, `allowedStyles` sotto non ha effetto e l'attributo si
+  // scarta per intero, indipendentemente dal suo contenuto (verificato con un repro diretto
+  // su sanitize-html). Resta comunque vincolato al solo `text-align` dal pattern chiuso di
+  // `allowedStyles` — non è un `style` libero.
+  allowedAttributes: { a: ALLOWED_ATTRIBUTES_A, p: ['style'] },
   allowedSchemes: ALLOWED_SCHEMES,
   allowProtocolRelative: false,
   disallowedTagsMode: 'discard' as const,
-  allowedStyles: {},
+  allowedStyles: { p: { 'text-align': [ALLOWED_TEXT_ALIGN] } },
   transformTags: { a: transformAnchor },
 };
 

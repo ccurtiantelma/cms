@@ -25,10 +25,12 @@ import { useState } from 'react';
 import {
   Alert,
   Badge,
+  ColorInput,
   Group,
   NumberInput,
   Paper,
   Select,
+  Slider,
   Stack,
   Switch,
   Tabs,
@@ -44,11 +46,15 @@ import {
   type BlockTypeDescriptor,
 } from '../../../types/blocks.types';
 import {
+  useActiveViewport,
   useBlockEditorStore,
   useSelectedNode,
   useTreeGeneration,
+  type EditorViewport,
 } from '../../../hooks/useBlockEditorStore';
 import type { BlockNode } from './block-tree.utils';
+import RichTextFieldEditor from './RichTextFieldEditor';
+import VisualBoxModelInspector from './VisualBoxModelInspector';
 
 /**
  * Schemi ammessi per `kind: 'url'`, ricalcati da `block-tree-validator.service.ts`
@@ -58,21 +64,53 @@ import type { BlockNode } from './block-tree.utils';
 const URL_PATTERNS = [/^https?:\/\/.+/i, /^mailto:.+/i, /^\/(?!\/).*/];
 
 /**
+ * Pattern esadecimale per `kind: 'color'` (ADR-33 § 3), ricalcato da
+ * `block-prop-sanitizer.service.ts`/`block-tree-validator.service.ts`. Duplicato qui solo
+ * per anticipare l'errore a chi scrive: il rifiuto autorevole resta quello del server.
+ */
+const HEX_COLOR_PATTERN = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+/**
  * Oltre questa lunghezza massima una prop `plainText` si edita su più righe invece che su
  * una sola. Sotto la soglia stanno le prop che nella pratica sono una riga (titolo,
  * etichetta, testo alternativo); sopra, i testi lunghi.
  */
 const MULTILINE_THRESHOLD = 300;
 
-/** Mappa dei metadati di prop del tipo corrente, indicizzata per nome (ADR-30 § 1). */
-type PropsMeta = Record<string, BlockEditorPropMeta> | undefined;
+/**
+ * Le otto prop di spaziatura per lato di ADR-33 § 4: stesso `kind: 'enum'`/`responsive`
+ * delle altre enum responsive del registro, ma l'ADR chiede un controllo Slider a step
+ * invece del `Select` generico — "controlli numerici nel senso della UI, non dello
+ * schema" (il valore resta comunque un token dell'insieme chiuso `prop.values`, mai un
+ * numero libero). Riconosciute per nome, non per `kind` (condiviso con le altre enum
+ * responsive che restano un `Select`).
+ */
+const SPACING_SLIDER_PROPS = new Set([
+  'stylePaddingTop',
+  'stylePaddingRight',
+  'stylePaddingBottom',
+  'stylePaddingLeft',
+  'styleMarginTop',
+  'styleMarginRight',
+  'styleMarginBottom',
+  'styleMarginLeft',
+]);
+
+/**
+ * Mappa dei metadati di prop del tipo corrente, indicizzata per nome (ADR-30 § 1).
+ * Esportata per `VisualBoxModelInspector.tsx`, che riceve le stesse etichette di
+ * registro invece di duplicarne il testo.
+ */
+export type PropsMeta = Record<string, BlockEditorPropMeta> | undefined;
 
 /**
  * Etichetta leggibile di una prop (ADR-30 § 1). Legge `meta.props[nome].label` dal
  * registro: il nome tecnico è solo un fallback per un difetto del registro (non deve
- * succedere sui tipi reali — T3 compila una voce per ogni prop di ogni tipo).
+ * succedere sui tipi reali — T3 compila una voce per ogni prop di ogni tipo). Esportata:
+ * `VisualBoxModelInspector.tsx` la riusa per i quattro lati di Margin/Padding, mai una
+ * propria copia del fallback.
  */
-function propLabel(prop: BlockPropDescriptor, propsMeta: PropsMeta): string {
+export function propLabel(prop: BlockPropDescriptor, propsMeta: PropsMeta): string {
   return propsMeta?.[prop.name]?.label ?? prop.name;
 }
 
@@ -110,8 +148,12 @@ function groupPropsByTab(
   return { content, style };
 }
 
-/** Il valore corrente di una prop come stringa, qualunque cosa contenga il `jsonb`. */
-function asString(value: unknown): string {
+/**
+ * Il valore corrente di una prop come stringa, qualunque cosa contenga il `jsonb`.
+ * Esportata: `VisualBoxModelInspector.tsx` la riusa per leggere il token corrente di
+ * ciascun lato invece di una propria coercizione.
+ */
+export function asString(value: unknown): string {
   return typeof value === 'string'
     ? value
     : value === undefined || value === null
@@ -138,11 +180,50 @@ function registryDefaultScalar(prop: BlockPropDescriptor): string {
  * riceve `{ default: <default del registro> }` — non uno scalare, per non far scrivere un
  * controllo desktop successivo sopra un valore di forma sbagliata.
  */
-function responsiveEnvelope(prop: BlockPropDescriptor, value: unknown): Record<string, unknown> {
+export function responsiveEnvelope(
+  prop: BlockPropDescriptor,
+  value: unknown,
+): Record<string, unknown> {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     return value as Record<string, unknown>;
   }
   return { default: registryDefaultScalar(prop) };
+}
+
+/**
+ * Chiave dell'envelope `{ default, tablet?, mobile? }` scritta/letta per un viewport
+ * dell'ispettore. Esportata: `VisualBoxModelInspector.tsx` la riusa per decidere su quale
+ * chiave scrivere — mai una propria mappa duplicata (invariante protetto, vedi il suo
+ * commento di testa).
+ */
+export function breakpointKey(viewport: EditorViewport): 'default' | 'tablet' | 'mobile' {
+  return viewport === 'desktop' ? 'default' : viewport;
+}
+
+/**
+ * Etichetta in coda al label del controllo quando il viewport attivo non è Desktop.
+ * Esportata: `VisualBoxModelInspector.tsx` la riusa per lo stesso badge testuale sugli
+ * `aria-label` dei quattro lati di Margin/Padding.
+ */
+export const VIEWPORT_LABELS: Record<EditorViewport, string> = {
+  desktop: 'Desktop',
+  tablet: 'Tablet',
+  mobile: 'Mobile',
+};
+
+/**
+ * Valore effettivo di una prop responsive al viewport attivo, seguendo la cascata di
+ * ADR-29 § 2 (`mobile` assente ricade su `tablet`, `tablet` assente ricade su `default`) —
+ * solo per mostrare nel controllo un valore mai vuoto, mai per decidere cosa scrivere: la
+ * scrittura resta sempre e solo sulla chiave del viewport attivo (vedi chiamante).
+ */
+export function effectiveScalarForViewport(
+  envelope: Record<string, unknown>,
+  viewport: EditorViewport,
+): unknown {
+  if (viewport === 'mobile' && envelope.mobile !== undefined) return envelope.mobile;
+  if (viewport !== 'desktop' && envelope.tablet !== undefined) return envelope.tablet;
+  return envelope.default;
 }
 
 /** Messaggio di errore UX per una prop, o `undefined` se il valore è accettabile. */
@@ -150,6 +231,9 @@ function uxError(prop: BlockPropDescriptor, value: unknown): string | undefined 
   const text = asString(value);
   if (prop.kind === 'url' && text.trim() !== '' && !URL_PATTERNS.some((re) => re.test(text))) {
     return 'Ammessi: http(s)://…, mailto:… o un percorso che inizia con una sola /';
+  }
+  if (prop.kind === 'color' && text.trim() !== '' && !HEX_COLOR_PATTERN.test(text)) {
+    return 'Ammesso solo esadecimale: #RGB o #RRGGBB';
   }
   if ((prop.required || prop.nonEmpty) && text.trim() === '') {
     return 'Obbligatoria: il salvataggio verrà rifiutato finché è vuota';
@@ -178,6 +262,8 @@ interface PropertyFormProps {
  */
 function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
   const updateBlockPropsAction = useBlockEditorStore((state) => state.updateBlockPropsAction);
+  const activeViewport = useActiveViewport();
+  const activeBreakpoint = breakpointKey(activeViewport);
   const [draft, setDraft] = useState<Record<string, unknown>>(() => ({ ...node.props }));
 
   /** Aggiorna la sola bozza locale (nessun dispatch): usato mentre si digita. */
@@ -216,31 +302,86 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
     const value = draft[prop.name];
     const label = propLabel(prop, propsMeta);
     const required = prop.required || prop.nonEmpty === true;
-    // Il controllo UX legge sempre uno scalare: per una prop responsive è il breakpoint
-    // `default` dell'envelope, mai l'oggetto intero (che finirebbe stringificato).
+    // Il controllo UX legge sempre uno scalare: per una prop responsive è il valore
+    // effettivo al viewport attivo (cascata ADR-29 § 2), mai l'oggetto intero (che
+    // finirebbe stringificato).
     const scalarForUx =
       prop.responsive && value && typeof value === 'object' && !Array.isArray(value)
-        ? (value as Record<string, unknown>).default
+        ? effectiveScalarForViewport(value as Record<string, unknown>, activeViewport)
         : value;
     const error = uxError(prop, scalarForUx);
 
     switch (prop.kind) {
       case 'enum': {
         if (prop.responsive) {
-          // Valore a oggetto `{ default, tablet?, mobile? }`: il controllo desktop legge e
-          // scrive solo `default`, preservando `tablet`/`mobile` già salvati (ADR-29 § 2/§ 3
-          // — sovrascrivere con lo scalare nudo li cancellerebbe in silenzio).
+          // Valore a oggetto `{ default, tablet?, mobile? }`: il controllo scrive sempre e
+          // solo la chiave del viewport attivo dello Switcher (`default` su Desktop,
+          // `tablet`/`mobile` altrove), preservando le altre chiavi già salvate (ADR-29 §
+          // 2/§ 3 — sovrascrivere l'intero envelope con lo scalare nudo le cancellerebbe in
+          // silenzio). Il controllo mostra il valore effettivo in cascata così da non
+          // apparire mai vuoto, ma un cambiamento scrive solo l'override esplicito del
+          // breakpoint corrente, mai un valore derivato negli altri.
           const envelope = responsiveEnvelope(prop, value);
+          const displayValue = effectiveScalarForViewport(envelope, activeViewport);
+          const fieldLabel =
+            activeViewport === 'desktop' ? label : `${label} (${VIEWPORT_LABELS[activeViewport]})`;
+
+          if (SPACING_SLIDER_PROPS.has(prop.name)) {
+            // Scala chiusa dichiarata dal registro (ADR-33 § 4): lo Slider lavora per
+            // indice di posizione, mai sul valore in px direttamente, così il token
+            // scritto in store resta sempre uno dei `prop.values`, mai un numero libero.
+            const scale = prop.values ?? [];
+            const currentToken = asString(displayValue) || scale[0] || '0';
+            const currentIndex = Math.max(0, scale.indexOf(currentToken));
+            const writeAt = (index: number) =>
+              setAndCommit(prop.name, {
+                ...envelope,
+                [activeBreakpoint]: scale[index] ?? scale[0],
+              });
+            return (
+              <div key={prop.name}>
+                <Text size="sm" fw={500} mb={4}>
+                  {fieldLabel}
+                  {required && (
+                    <Text component="span" c="red" inherit>
+                      {' '}
+                      *
+                    </Text>
+                  )}
+                </Text>
+                <Slider
+                  min={0}
+                  max={Math.max(scale.length - 1, 0)}
+                  step={1}
+                  value={currentIndex}
+                  marks={scale.map((token, index) => ({ value: index, label: `${token}px` }))}
+                  label={(index) => `${scale[index] ?? currentToken}px`}
+                  thumbLabel={fieldLabel}
+                  onChange={writeAt}
+                  mb="lg"
+                />
+                {error && (
+                  <Text size="xs" c="red">
+                    {error}
+                  </Text>
+                )}
+              </div>
+            );
+          }
+
           return (
             <Select
               key={prop.name}
-              label={label}
+              label={fieldLabel}
               withAsterisk={required}
               allowDeselect={false}
+              comboboxProps={{ zIndex: 1100 }}
               data={[...(prop.values ?? [])]}
-              value={asString(envelope.default) || null}
+              value={asString(displayValue) || null}
               error={error}
-              onChange={(next) => setAndCommit(prop.name, { ...envelope, default: next ?? '' })}
+              onChange={(next) =>
+                setAndCommit(prop.name, { ...envelope, [activeBreakpoint]: next ?? '' })
+              }
             />
           );
         }
@@ -250,6 +391,7 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
             label={label}
             withAsterisk={required}
             allowDeselect={false}
+            comboboxProps={{ zIndex: 1100 }}
             data={[...(prop.values ?? [])]}
             value={asString(value) || null}
             error={error}
@@ -310,20 +452,35 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
           />
         );
 
-      case 'richText':
+      case 'color':
+        // ADR-33 § 3: non responsive, scalare puro (nessun envelope `{ default, ... }`).
+        // `ColorInput` porta già un'anteprima live (swatch nel `leftSection`, controllato
+        // dallo stesso `value`) — la validazione qui è solo UX (`uxError` sopra), il
+        // vincolo autorevole resta il pattern esadecimale validato server-side.
         return (
-          <Textarea
+          <ColorInput
             key={prop.name}
             label={label}
             withAsterisk={required}
-            autosize
-            minRows={4}
+            format="hex"
+            placeholder="#RRGGBB"
+            value={asString(value)}
+            error={error}
+            onChange={(next) => setAndCommit(prop.name, next)}
+          />
+        );
+
+      case 'richText':
+        return (
+          <RichTextFieldEditor
+            key={prop.name}
+            label={label}
+            required={required}
             maxLength={prop.maxLength}
             value={asString(value)}
             error={error}
-            description="HTML grezzo: viene ripulito dal server al salvataggio contro l'allowlist del profilo, quindi il contenuto salvato può differire da quello digitato."
-            onChange={(event) => setLocal(prop.name, event.currentTarget.value)}
-            onBlur={() => commit(prop.name, asString(value))}
+            onLocalChange={(next) => setLocal(prop.name, next)}
+            onCommit={(next) => commit(prop.name, next)}
           />
         );
 
@@ -349,6 +506,58 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
     }
   }
 
+  /**
+   * Le prop della scheda "Stile", con le otto di spaziatura raggruppate in un unico
+   * `VisualBoxModelInspector` invece degli otto `Slider` individuali — solo quando il tipo
+   * in editing le dichiara **tutte e otto** (ADR-33 § 4): un tipo futuro con solo alcune
+   * di quelle otto (oggi non reale) ricade sul rendering individuale invariato, mai
+   * un'assunzione che siano sempre tutte presenti. L'ordine delle altre prop di stile
+   * resta quello dichiarato dal registro; il box model prende il posto della prima prop
+   * di spaziatura incontrata, le successive vengono saltate (già rese lì dentro).
+   */
+  function renderStyleFields(fields: BlockPropDescriptor[]): JSX.Element[] {
+    const spacingByName = new Map(
+      fields
+        .filter((field) => SPACING_SLIDER_PROPS.has(field.name))
+        .map((field) => [field.name, field]),
+    );
+    if (spacingByName.size !== SPACING_SLIDER_PROPS.size) {
+      return fields.map(renderField);
+    }
+
+    const rendered: JSX.Element[] = [];
+    let boxModelInserted = false;
+    for (const field of fields) {
+      if (SPACING_SLIDER_PROPS.has(field.name)) {
+        if (!boxModelInserted) {
+          rendered.push(
+            <VisualBoxModelInspector
+              key="visual-box-model"
+              spacingProps={{
+                stylePaddingTop: spacingByName.get('stylePaddingTop')!,
+                stylePaddingRight: spacingByName.get('stylePaddingRight')!,
+                stylePaddingBottom: spacingByName.get('stylePaddingBottom')!,
+                stylePaddingLeft: spacingByName.get('stylePaddingLeft')!,
+                styleMarginTop: spacingByName.get('styleMarginTop')!,
+                styleMarginRight: spacingByName.get('styleMarginRight')!,
+                styleMarginBottom: spacingByName.get('styleMarginBottom')!,
+                styleMarginLeft: spacingByName.get('styleMarginLeft')!,
+              }}
+              draft={draft}
+              propsMeta={propsMeta}
+              activeViewport={activeViewport}
+              setAndCommit={setAndCommit}
+            />,
+          );
+          boxModelInserted = true;
+        }
+        continue;
+      }
+      rendered.push(renderField(field));
+    }
+    return rendered;
+  }
+
   const { content, style } = groupPropsByTab(descriptor.props, propsMeta);
 
   // Un tipo senza alcuna prop `tab:'style'` mostra una sola scheda — mai una scheda vuota
@@ -358,7 +567,7 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
     return <Stack gap="md">{content.map(renderField)}</Stack>;
   }
   if (content.length === 0) {
-    return <Stack gap="md">{style.map(renderField)}</Stack>;
+    return <Stack gap="md">{renderStyleFields(style)}</Stack>;
   }
 
   return (
@@ -371,7 +580,7 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
         <Stack gap="md">{content.map(renderField)}</Stack>
       </Tabs.Panel>
       <Tabs.Panel value="style" pt="md">
-        <Stack gap="md">{style.map(renderField)}</Stack>
+        <Stack gap="md">{renderStyleFields(style)}</Stack>
       </Tabs.Panel>
     </Tabs>
   );

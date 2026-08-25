@@ -12,8 +12,47 @@
  * L'autorità resta comunque il validatore server-side: qui si anticipa il suo verdetto per
  * non offrire un'azione che verrà respinta, mai per sostituirlo.
  */
-import { BLOCK_TYPES, ROOT_ALLOWED } from '../../../types/blocks.types';
+import {
+  BLOCK_TYPES,
+  ROOT_ALLOWED,
+  type BlockPropDescriptor,
+  type BlockTypeDescriptor,
+} from '../../../types/blocks.types';
 import { findNode, isDescendantOf, type BlockNode } from './block-tree.utils';
+
+/**
+ * Valore iniziale di una prop appena creata. Rispetta il `default` dichiarato dal
+ * registro quando c'è; altrimenti il valore neutro del `kind`. Una prop obbligatoria
+ * **non** riceve un valore plausibile inventato dal client (SPEC-F02 § 3): nasce vuota
+ * e sarà il server, non l'editor, a rifiutare il salvataggio finché non è compilata.
+ *
+ * Vive qui (non in `BlockPalette.tsx`, che pure la esporta per compatibilità con gli
+ * import già esistenti) per restare un modulo neutro: sia `BlockPalette` sia
+ * `SectionStructureModal.tsx` (ADR-33 § 7) ne hanno bisogno, e se vivesse nell'uno
+ * l'altro dovrebbe importarlo da lì — un ciclo fra i due moduli.
+ */
+function defaultPropValue(prop: BlockPropDescriptor): unknown {
+  if (prop.default !== undefined) return prop.default;
+  switch (prop.kind) {
+    case 'enum':
+      return prop.values?.[0] ?? '';
+    case 'boolean':
+      return false;
+    case 'number':
+      return 0;
+    default:
+      return '';
+  }
+}
+
+/** Props iniziali di un blocco nuovo, calcolate interamente dal descrittore del registro. */
+export function defaultPropsFor(descriptor: BlockTypeDescriptor): Record<string, unknown> {
+  const props: Record<string, unknown> = {};
+  for (const prop of descriptor.props) {
+    props[prop.name] = defaultPropValue(prop);
+  }
+  return props;
+}
 
 /**
  * Tipi ammessi come figli del contenitore indicato: `ROOT_ALLOWED` alla radice
@@ -46,21 +85,80 @@ export function canContainType(parentType: string | undefined, type: string): bo
  * con `canContainType` di questo file. Nessun controllo di `MAX_DEPTH`: fuori scope in
  * questo round (l'unico contenitore, `section`, è a profondità 2 — irraggiungibile).
  *
- * `false` se: il nodo trascinato non esiste più nell'albero, la destinazione è il nodo
- * stesso o un suo discendente (staccherebbe quel ramo dall'albero), il contenitore di
- * destinazione non esiste, o il registro non ammette quel tipo lì.
+ * `false` se: il nodo trascinato non esiste più nell'albero e non è stato dichiarato un
+ * `dragType` di riserva, la destinazione è il nodo stesso o un suo discendente (staccherebbe
+ * quel ramo dall'albero), il contenitore di destinazione non esiste, o il registro non
+ * ammette quel tipo lì.
+ *
+ * `dragType`: fallback opzionale usato dalla palette widget (`WidgetPalette`, id sintetico
+ * `new-block:<type>` mai presente nell'albero) per far valutare l'ammissibilità di un
+ * blocco che non esiste ancora — senza, ogni drop-zone apparirebbe "rifiutata" durante un
+ * drag valido dalla palette. Ignorato quando `dragId` è un nodo reale: in quel caso il tipo
+ * viene sempre dall'albero, mai dal chiamante.
  */
 export function canDropInto(
   tree: readonly BlockNode[],
   dragId: string,
   targetParentId: string | null,
+  dragType?: string,
 ): boolean {
   const node = findNode(tree, dragId);
-  if (!node) return false;
+  const type = node?.type ?? dragType;
+  if (!type) return false;
   if (targetParentId === dragId) return false;
-  if (targetParentId === null) return canContainType(undefined, node.type);
-  if (isDescendantOf(node, targetParentId)) return false;
+  if (targetParentId === null) return canContainType(undefined, type);
+  if (node && isDescendantOf(node, targetParentId)) return false;
   const targetParent = findNode(tree, targetParentId);
   if (!targetParent) return false;
-  return canContainType(targetParent.type, node.type);
+  return canContainType(targetParent.type, type);
+}
+
+/**
+ * Forma di un nodo dentro `static-section-presets.json` (ADR-34 § 1): stessa struttura
+ * ricorsiva di `BlockNode`, dichiarata a parte perché il file statico porta solo le prop
+ * *significative* del preset (mai tutte quelle del descrittore) e un id placeholder — non
+ * ancora un `BlockNode` completo finché `resolvePresetSubtree` non lo risolve contro il
+ * registro.
+ */
+export interface SectionPresetNode {
+  id: string;
+  type: string;
+  props: Record<string, unknown>;
+  children: SectionPresetNode[];
+}
+
+/** Una voce della libreria di preset: id/etichetta della tessera più il sottoalbero. */
+export interface SectionPreset {
+  id: string;
+  label: string;
+  subtree: SectionPresetNode;
+}
+
+/**
+ * Risolve ricorsivamente un nodo di `static-section-presets.json` in un `BlockNode`
+ * completo (ADR-34 § 1/§ 3): parte dai default del descrittore di registro
+ * (`defaultPropsFor`, lo stesso spread-e-override già usato da
+ * `SectionStructureModal.handleSelect`) e sovrascrive solo le prop dichiarate esplicitamente
+ * dal preset, ricorsivamente sui `children`. L'id assegnato qui è un placeholder qualunque:
+ * `insertSubtreeAction` (`useBlockEditorStore.ts`) lo rigenera insieme a tutto il
+ * sottoalbero prima di inserirlo, quindi non serve unicità in questa fase.
+ *
+ * Nessun fallback silenzioso per un tipo non presente nel registro: un preset disallineato
+ * dal registro (dopo una futura evoluzione dello schema blocchi, ADR-21) è un bug del file
+ * statico da far emergere subito, non da nascondere a runtime con props vuote (ADR-34 §
+ * Conseguenza) — il Test Engineer copre questo rischio con un test dedicato.
+ */
+export function resolvePresetSubtree(node: SectionPresetNode): BlockNode {
+  const descriptor = BLOCK_TYPES.find((entry) => entry.type === node.type);
+  if (!descriptor) {
+    throw new Error(
+      `static-section-presets.json: tipo "${node.type}" non presente nel registro dei blocchi.`,
+    );
+  }
+  return {
+    id: node.id,
+    type: node.type,
+    props: { ...defaultPropsFor(descriptor), ...node.props },
+    children: node.children.map(resolvePresetSubtree),
+  };
 }

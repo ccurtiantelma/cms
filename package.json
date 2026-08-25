@@ -9,7 +9,12 @@
     "react": "^19",
     "react-dom": "^19",
     "esbuild": "^0.25.12",
-    "js-yaml": "^4.3.0"
+    "js-yaml": "^4.3.0",
+    "@mantine/core": "7.17.0",
+    "@mantine/hooks": "7.17.0",
+    "@mantine/dates": "7.17.0",
+    "@mantine/form": "7.17.0",
+    "@mantine/notifications": "7.17.0"
   },
   "scripts": {
     "dev": "concurrently -n \"BACKEND,FRONTEND,PUBLIC\" -c \"cyan,magenta,green\" \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:public-site\"",

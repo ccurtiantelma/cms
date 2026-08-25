@@ -37,6 +37,11 @@ const TESTO_DI_B = 'Titolo scritto dalla sessione B';
 async function comporreTitolo(page: Page, testo: string): Promise<void> {
   await addRootBlock(page, 'Sezione');
   const section = blockOfType(page, 'section');
+  // Il pulsante "Aggiungi dentro" vive nella toolbar integrata, `visibility: hidden` a
+  // riposo (EditorBlockWrapper.module.css) e resa visibile solo da `.hovered`/
+  // `.selected`: senza selezionare prima il contenitore non è mai azionabile per
+  // Playwright, anche se presente nel DOM.
+  await selectBlock(section, 'Sezione');
   await addChildBlock(section, 'Titolo');
   await selectBlock(blockOfType(section, 'heading'), 'Titolo');
   await fillProp(page, 'text', testo);
@@ -71,12 +76,18 @@ test('due sessioni sulla stessa Pagina: la seconda riceve 409 e le modifiche del
     // È qui che B fotografa la `version` che diventerà obsoleta.
     await sessioneB.goto(`/pages/${guid}`);
     await openContentTab(sessioneB);
-    await expect(sessioneB.getByText('La bozza non contiene ancora blocchi')).toBeVisible();
+    await expect(sessioneB.getByText('Trascina il widget qui')).toBeVisible();
 
     // ─── 3. A compone e salva: la sua bozza è ora quella persistita ─────────
     await comporreTitolo(sessioneA, TESTO_DI_A);
     await sessioneA.getByRole('button', { name: 'Salva bozza' }).click();
-    await expect(sessioneA.getByText('Bozza salvata')).toBeVisible();
+    // `getByRole('alert')`, non un `getByText` nudo: la chrome full-screen
+    // (`FullScreenEditorLayout.tsx`) porta nel topbar un'etichetta permanente con lo
+    // stesso testo esatto quando non ci sono modifiche non salvate — una ricerca per
+    // solo testo trova due elementi non appena la notifica compare sopra un salvataggio
+    // già "a riposo" (stesso motivo già documentato su `saveDraft`, qui duplicato perché
+    // il test non passa dall'helper).
+    await expect(sessioneA.getByRole('alert').getByText('Bozza salvata')).toBeVisible();
 
     // ─── 4. B compone sulla version vecchia e salva: 409 ────────────────────
     await comporreTitolo(sessioneB, TESTO_DI_B);
@@ -102,6 +113,14 @@ test('due sessioni sulla stessa Pagina: la seconda riceve 409 e le modifiche del
 
     // ─── 6. B ricarica dalla notifica e riparte dal contenuto vero ──────────
     await sessioneB.getByRole('button', { name: 'Ricarica la Pagina' }).click();
+    // La notifica di conflitto è `autoClose: false` di proposito (`notifyVersionConflict`,
+    // `PagePageDetail.tsx`: resta finché non si agisce consapevolmente) — cliccare la sua
+    // azione non la chiude da sola. Da quando le notifiche portano `zIndex={1100}` per
+    // restare sopra la chrome full-screen dell'editor, restare a schermo la mette davanti
+    // al bottone "Salva bozza" del passo 7 più sotto: la si chiude esplicitamente
+    // (`.last()`: l'alert ha ancora il bottone d'azione appena cliccato, oltre alla X).
+    await sessioneB.getByRole('alert').getByRole('button').last().click();
+    await expect(sessioneB.getByRole('alert')).toHaveCount(0);
     await openContentTab(sessioneB);
     await expect(sessioneB.getByText(TESTO_DI_A)).toBeVisible();
     await expect(sessioneB.getByText(TESTO_DI_B)).toHaveCount(0);
@@ -111,7 +130,7 @@ test('due sessioni sulla stessa Pagina: la seconda riceve 409 e le modifiche del
     await selectBlock(blockOfType(sessioneB, 'heading'), 'Titolo');
     await fillProp(sessioneB, 'text', `${TESTO_DI_A} — poi rivisto da B`);
     await sessioneB.getByRole('button', { name: 'Salva bozza' }).click();
-    await expect(sessioneB.getByText('Bozza salvata')).toBeVisible();
+    await expect(sessioneB.getByRole('alert').getByText('Bozza salvata')).toBeVisible();
   } finally {
     // Pulizia dei dati di verifica dalla stessa interfaccia del test, prima di
     // chiudere le sessioni. Best-effort: un fallimento qui non deve coprire

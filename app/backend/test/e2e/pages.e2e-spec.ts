@@ -292,6 +292,83 @@ describe('PagesController (e2e, DB/Redis reali)', () => {
     });
   });
 
+  // ─── 1bis. Ripubblicazione esplicita (published -> published) ──────────
+
+  describe('Macchina a stati — ripubblicazione esplicita (published -> published, business-rules.md § Regola 1)', () => {
+    it('una pagina già "published" con bozza modificata torna "published" con status invariato durante tutta l\'operazione, nuova Revisione creata e publishedRevisionId aggiornato', async () => {
+      const manager = await seedAuth(AppUserRoles.Manager, 'republish1');
+      const page = await createDraftPage(manager, {
+        title: 'Pagina da ripubblicare',
+        draftContent: safeContentTree('Contenuto v1'),
+      });
+
+      const firstPublish = await changeStatus(manager, page.guid, 'published').expect(200);
+      expect(firstPublish.body.status).toBe('published');
+
+      const db = getTestDb();
+      const afterFirstPublish = await db.query.pageEntity.findFirst({
+        where: eq(pageEntity.guid, page.guid),
+      });
+      const firstRevisionId = afterFirstPublish!.publishedRevisionId;
+      expect(afterFirstPublish!.status).toBe('published');
+      expect(firstRevisionId).not.toBeNull();
+
+      // Modifica la bozza di una pagina già pubblicata: `update()` non tocca
+      // mai `status` (verificato leggendo `pages.service.ts`), quindi la riga
+      // resta "published" anche con `draftContent` divergente da quanto
+      // pubblicato — esattamente la prima parte della Regola 1.
+      const patchRes = await authedRequest('patch', `/api/v1/app/pages/${page.guid}`, manager)
+        .send({ version: firstPublish.body.version, draftContent: safeContentTree('Contenuto v2') })
+        .expect(200);
+      expect(patchRes.body.status).toBe('published');
+
+      const afterDraftEdit = await db.query.pageEntity.findFirst({
+        where: eq(pageEntity.guid, page.guid),
+      });
+      expect(afterDraftEdit!.status).toBe('published'); // mai regredito a "draft"
+
+      // Ripubblicazione esplicita: published -> published, ora ammessa dalla mappa.
+      const republish = await changeStatus(manager, page.guid, 'published');
+      expect(republish.status).toBe(200);
+      expect(republish.body.status).toBe('published');
+
+      const afterRepublish = await db.query.pageEntity.findFirst({
+        where: eq(pageEntity.guid, page.guid),
+      });
+      expect(afterRepublish!.status).toBe('published'); // mai uscito da "published"
+      expect(afterRepublish!.publishedRevisionId).not.toBe(firstRevisionId);
+
+      const revisions = await db.query.pageRevisionEntity.findMany({
+        where: eq(pageRevisionEntity.pageId, afterRepublish!.id),
+      });
+      expect(revisions).toHaveLength(2);
+      const revisionNumbers = revisions.map((r) => r.revisionNumber).sort();
+      expect(revisionNumbers).toEqual([1, 2]);
+
+      const newRevision = revisions.find((r) => r.id === afterRepublish!.publishedRevisionId);
+      expect(newRevision).toBeDefined();
+      expect(newRevision!.revisionNumber).toBe(2);
+      expect((newRevision!.content as { blocks: Array<{ props: { text: string } }> }).blocks[0].props.text).toBe(
+        'Contenuto v2',
+      );
+    });
+
+    it('un User non elevato riceve 403 anche su published -> published (nessuna eccezione alla soglia di elevazione)', async () => {
+      const manager = await seedAuth(AppUserRoles.Manager, 'republish2mgr');
+      const user = await seedAuth(AppUserRoles.User, 'republish2user');
+      const page = await createDraftPage(manager, { title: 'Pagina published, User prova a ripubblicare' });
+      await changeStatus(manager, page.guid, 'published').expect(200);
+
+      const res = await changeStatus(user, page.guid, 'published');
+
+      expect(res.status).toBe(403);
+
+      const db = getTestDb();
+      const dbPage = await db.query.pageEntity.findFirst({ where: eq(pageEntity.guid, page.guid) });
+      expect(dbPage!.status).toBe('published'); // invariato, nessun effetto collaterale del tentativo respinto
+    });
+  });
+
   // ─── 2. Concorrenza: due pubblicazioni parallele ───────────────────────
 
   describe('Concorrenza — due pubblicazioni parallele sulla stessa pagina', () => {

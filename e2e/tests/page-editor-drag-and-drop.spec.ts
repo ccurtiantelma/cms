@@ -92,13 +92,32 @@ test('drag & drop da tastiera: prima, dopo e dentro un contenitore', async ({ pa
   const zonaDentroSezione = page.locator(
     '[data-block-type="section"] > section > div[data-over]',
   );
+  // La maniglia di trascinamento vive nella toolbar integrata, `visibility: hidden` a
+  // riposo (EditorBlockWrapper.module.css: niente "inquinamento visivo" su ogni blocco)
+  // e resa visibile solo da `.hovered`/`.selected`. `hover()`, non `selectBlock`: la
+  // selezione aggiunge la sua propria chrome (`floatingActionBar`/`sectionActionTab`,
+  // stesso file) che sposta il layout del blocco e dei suoi fratelli quanto basta a far
+  // fallire il passo successivo del sensore da tastiera di dnd-kit (verificato: con
+  // `selectBlock` il primo trascinamento riesce, il secondo perde la zona di rilascio
+  // entro il budget di passi). L'hover rende la toolbar visibile senza quella chrome
+  // aggiuntiva, né alcuna ristrutturazione del DOM circostante.
+  await heading.hover();
   await dragBlockToZone(page, 'Trascina per spostare il blocco Titolo', zonaDentroSezione, 'ArrowUp');
 
   await expect.poll(tipiDiRadice).toEqual(['section', 'richText']);
   await expect(blockOfType(section, 'heading')).toHaveCount(1);
 
   // ─── Caso "prima": il Testo passa davanti alla Sezione ────────────────────
-  const zonaPrimaDellaSezione = section.locator('xpath=preceding-sibling::div[1]');
+  // Non più `xpath=preceding-sibling::div[1]`: da T-layout-colonne-section
+  // (`EditorBlockWrapper.tsx`, commento di testa di `.dropZone` nel CSS module) le zone
+  // di rilascio "prima"/"dopo" sono annidate DENTRO il wrapper del blocco, non più sue
+  // sorelle — un blocco alla radice (come `section` qui) non ha più sorelle preceding da
+  // trovare per xpath, la zona "prima" è invece il primo `div[data-over]` figlio diretto
+  // del wrapper stesso (l'ultimo è quella "dopo"; `containerDropZone`, l'unico altro
+  // `data-over` nell'albero, è annidato più in profondità dentro il contenitore — mai un
+  // figlio diretto, quindi `>` lo esclude).
+  const zonaPrimaDellaSezione = section.locator('> div[data-over]').first();
+  await richText.hover();
   await dragBlockToZone(
     page,
     'Trascina per spostare il blocco Testo',
@@ -109,7 +128,10 @@ test('drag & drop da tastiera: prima, dopo e dentro un contenitore', async ({ pa
   await expect.poll(tipiDiRadice).toEqual(['richText', 'section']);
 
   // ─── Caso "dopo": il Titolo (dentro la Sezione) esce e si mette dopo di lei ─
-  const zonaDopoLaSezione = section.locator('xpath=following-sibling::div[1]');
+  // Stesso motivo del caso "prima" sopra: la zona "dopo" è l'ultimo `div[data-over]`
+  // figlio diretto del wrapper, non più una sorella da xpath.
+  const zonaDopoLaSezione = section.locator('> div[data-over]').last();
+  await blockOfType(section, 'heading').hover();
   await dragBlockToZone(
     page,
     'Trascina per spostare il blocco Titolo',

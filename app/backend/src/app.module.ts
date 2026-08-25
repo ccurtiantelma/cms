@@ -44,19 +44,19 @@ import { PreviewPagesModule } from './preview-pages/preview-pages.module';
         // Allineato ad AppConstants.jwtExpiration (fix: entrambi i default devono coincidere).
         JWT_EXPIRATION: Joi.string().default('15m'),
         RTK_EXPIRATION: Joi.number().default(604800),
-        PORT: Joi.number().default(3000),
+        PORT: Joi.number().default(53000),
         NODE_ENV: Joi.string()
           .valid('development', 'production', 'staging', 'test')
           .default('development'),
-        FRONTEND_URL: Joi.string().default('http://localhost:5173'),
+        FRONTEND_URL: Joi.string().default('http://localhost:55173'),
         // Origine del sito pubblico SSR (ADR-22, app/public-site, F03/T5): CORS deve
         // ammetterla insieme a FRONTEND_URL, mai un wildcard (main.ts).
-        PUBLIC_SITE_URL: Joi.string().default('http://localhost:4000'),
+        PUBLIC_SITE_URL: Joi.string().default('http://localhost:54000'),
         // Lingua di default per la risoluzione pubblica degli slug (ADR-24 § 5/§ 7):
         // assunzione dichiarata in attesa di F05/app_settings, non una regola approvata.
         DEFAULT_LOCALE: Joi.string().default('it-IT'),
         SMTP_HOST: Joi.string().optional(),
-        SMTP_PORT: Joi.number().default(1025),
+        SMTP_PORT: Joi.number().default(51025),
         SMTP_USER: Joi.string().allow('').optional(),
         SMTP_PASS: Joi.string().allow('').optional(),
         SMTP_FROM: Joi.string().optional(),

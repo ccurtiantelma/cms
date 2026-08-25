@@ -55,7 +55,7 @@ function renderTypeScript(artifact) {
 /** Un descrittore di prop (SPEC-F02-blocchi.md § 5.1). */
 export interface BlockPropDescriptor {
   name: string;
-  kind: 'richText' | 'plainText' | 'number' | 'boolean' | 'enum' | 'url' | 'mediaRef';
+  kind: 'richText' | 'plainText' | 'number' | 'boolean' | 'enum' | 'url' | 'mediaRef' | 'color';
   required: boolean;
   default?: unknown;
   maxLength?: number;

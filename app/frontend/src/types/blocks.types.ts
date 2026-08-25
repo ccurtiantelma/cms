@@ -15,7 +15,7 @@
 /** Un descrittore di prop (SPEC-F02-blocchi.md § 5.1). */
 export interface BlockPropDescriptor {
   name: string;
-  kind: 'richText' | 'plainText' | 'number' | 'boolean' | 'enum' | 'url' | 'mediaRef';
+  kind: 'richText' | 'plainText' | 'number' | 'boolean' | 'enum' | 'url' | 'mediaRef' | 'color';
   required: boolean;
   default?: unknown;
   maxLength?: number;
@@ -150,6 +150,257 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "inverse"
         ],
         "responsive": true
+      },
+      {
+        "name": "columns",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "1"
+        },
+        "values": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "gap",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "none"
+        },
+        "values": [
+          "none",
+          "sm",
+          "md",
+          "lg"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "alignItems",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "stretch"
+        },
+        "values": [
+          "stretch",
+          "flex-start",
+          "center",
+          "flex-end"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "contentWidth",
+        "kind": "enum",
+        "required": false,
+        "default": "boxed",
+        "values": [
+          "boxed",
+          "full-width"
+        ]
+      },
+      {
+        "name": "maxWidth",
+        "kind": "enum",
+        "required": false,
+        "default": "md",
+        "values": [
+          "sm",
+          "md",
+          "lg",
+          "xl"
+        ]
+      },
+      {
+        "name": "columnRatio",
+        "kind": "enum",
+        "required": false,
+        "default": "equal",
+        "values": [
+          "equal",
+          "33-66",
+          "66-33"
+        ]
+      },
+      {
+        "name": "styleBackgroundColor",
+        "kind": "color",
+        "required": false
+      },
+      {
+        "name": "stylePaddingTop",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "0"
+        },
+        "values": [
+          "0",
+          "4",
+          "8",
+          "12",
+          "16",
+          "24",
+          "32",
+          "48",
+          "64",
+          "96"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "stylePaddingRight",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "0"
+        },
+        "values": [
+          "0",
+          "4",
+          "8",
+          "12",
+          "16",
+          "24",
+          "32",
+          "48",
+          "64",
+          "96"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "stylePaddingBottom",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "0"
+        },
+        "values": [
+          "0",
+          "4",
+          "8",
+          "12",
+          "16",
+          "24",
+          "32",
+          "48",
+          "64",
+          "96"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "stylePaddingLeft",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "0"
+        },
+        "values": [
+          "0",
+          "4",
+          "8",
+          "12",
+          "16",
+          "24",
+          "32",
+          "48",
+          "64",
+          "96"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleMarginTop",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "0"
+        },
+        "values": [
+          "0",
+          "4",
+          "8",
+          "12",
+          "16",
+          "24",
+          "32",
+          "48",
+          "64",
+          "96"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleMarginRight",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "0"
+        },
+        "values": [
+          "0",
+          "4",
+          "8",
+          "12",
+          "16",
+          "24",
+          "32",
+          "48",
+          "64",
+          "96"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleMarginBottom",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "0"
+        },
+        "values": [
+          "0",
+          "4",
+          "8",
+          "12",
+          "16",
+          "24",
+          "32",
+          "48",
+          "64",
+          "96"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleMarginLeft",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "0"
+        },
+        "values": [
+          "0",
+          "4",
+          "8",
+          "12",
+          "16",
+          "24",
+          "32",
+          "48",
+          "64",
+          "96"
+        ],
+        "responsive": true
       }
     ],
     "meta": {
@@ -176,6 +427,83 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Sfondo",
           "tab": "style",
           "order": 4
+        },
+        "columns": {
+          "label": "Colonne",
+          "tab": "style",
+          "order": 5,
+          "help": "Numero di colonne del contenitore"
+        },
+        "gap": {
+          "label": "Spaziatura tra colonne",
+          "tab": "style",
+          "order": 6
+        },
+        "alignItems": {
+          "label": "Allineamento verticale",
+          "tab": "style",
+          "order": 7
+        },
+        "contentWidth": {
+          "label": "Larghezza contenuto",
+          "tab": "style",
+          "order": 8
+        },
+        "maxWidth": {
+          "label": "Larghezza massima",
+          "tab": "style",
+          "order": 9
+        },
+        "columnRatio": {
+          "label": "Proporzione colonne",
+          "tab": "style",
+          "order": 10,
+          "help": "Significativa solo con 2 colonne"
+        },
+        "styleBackgroundColor": {
+          "label": "Colore di sfondo",
+          "tab": "style",
+          "order": 11
+        },
+        "stylePaddingTop": {
+          "label": "Padding superiore",
+          "tab": "style",
+          "order": 12
+        },
+        "stylePaddingRight": {
+          "label": "Padding destro",
+          "tab": "style",
+          "order": 13
+        },
+        "stylePaddingBottom": {
+          "label": "Padding inferiore",
+          "tab": "style",
+          "order": 14
+        },
+        "stylePaddingLeft": {
+          "label": "Padding sinistro",
+          "tab": "style",
+          "order": 15
+        },
+        "styleMarginTop": {
+          "label": "Margine superiore",
+          "tab": "style",
+          "order": 16
+        },
+        "styleMarginRight": {
+          "label": "Margine destro",
+          "tab": "style",
+          "order": 17
+        },
+        "styleMarginBottom": {
+          "label": "Margine inferiore",
+          "tab": "style",
+          "order": 18
+        },
+        "styleMarginLeft": {
+          "label": "Margine sinistro",
+          "tab": "style",
+          "order": 19
         }
       }
     }
@@ -281,6 +609,23 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "bold"
         ],
         "responsive": true
+      },
+      {
+        "name": "styleFontFamily",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "default"
+        },
+        "values": [
+          "default",
+          "inter",
+          "roboto",
+          "playfair",
+          "montserrat",
+          "monospace"
+        ],
+        "responsive": true
       }
     ],
     "meta": {
@@ -320,6 +665,11 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Spessore testo",
           "tab": "style",
           "order": 7
+        },
+        "styleFontFamily": {
+          "label": "Famiglia Font",
+          "tab": "style",
+          "order": 8
         }
       }
     }
@@ -414,6 +764,23 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "bold"
         ],
         "responsive": true
+      },
+      {
+        "name": "styleFontFamily",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "default"
+        },
+        "values": [
+          "default",
+          "inter",
+          "roboto",
+          "playfair",
+          "montserrat",
+          "monospace"
+        ],
+        "responsive": true
       }
     ],
     "meta": {
@@ -449,6 +816,11 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Spessore testo",
           "tab": "style",
           "order": 6
+        },
+        "styleFontFamily": {
+          "label": "Famiglia Font",
+          "tab": "style",
+          "order": 8
         }
       }
     }
@@ -627,6 +999,23 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "bold"
         ],
         "responsive": true
+      },
+      {
+        "name": "styleFontFamily",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "default"
+        },
+        "values": [
+          "default",
+          "inter",
+          "roboto",
+          "playfair",
+          "montserrat",
+          "monospace"
+        ],
+        "responsive": true
       }
     ],
     "meta": {
@@ -666,6 +1055,11 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Spessore testo",
           "tab": "style",
           "order": 7
+        },
+        "styleFontFamily": {
+          "label": "Famiglia Font",
+          "tab": "style",
+          "order": 8
         }
       }
     }

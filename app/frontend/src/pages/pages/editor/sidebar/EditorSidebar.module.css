@@ -1,0 +1,38 @@
+/*
+ * Sidebar sinistra dell'editor full-screen (EditorSidebar.tsx). Larghezza/bg/border sono di
+ * proprietà di questo file, non di `FullScreenEditorLayout.module.css` (`.sidebar` lì è solo
+ * un contenitore flex a larghezza fissa) — evita stili duplicati/in conflitto fra i due file.
+ */
+
+.root {
+  width: 320px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--mantine-color-white);
+  border-right: 1px solid var(--mantine-color-gray-3);
+}
+
+[data-mantine-color-scheme='dark'] .root {
+  background-color: var(--mantine-color-dark-6);
+  border-right-color: var(--mantine-color-dark-4);
+}
+
+.tabs {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+}
+
+[data-mantine-color-scheme='dark'] .tabs {
+  border-bottom-color: var(--mantine-color-dark-4);
+}
+
+/* Header schede fisso, contenuto della scheda scrollabile in modo indipendente. */
+.content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.emptyState {
+  padding: 24px 16px;
+}

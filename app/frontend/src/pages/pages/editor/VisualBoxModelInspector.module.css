@@ -1,0 +1,135 @@
+/*
+  Rettangoli concentrici del box model (Margin → Padding → Contenuto). Vedi il commento
+  di testa di VisualBoxModelInspector.tsx per il perché di questa rappresentazione.
+  Ogni rettangolo è una griglia 3x3 a `grid-template-areas`: i quattro lati occupano le
+  celle di bordo, il centro ospita il rettangolo successivo (o l'etichetta "Contenuto").
+*/
+
+.box {
+  display: grid;
+  grid-template-areas:
+    '.    top    .'
+    'left center right'
+    '.    bottom .';
+  grid-template-columns: minmax(38px, auto) 1fr minmax(38px, auto);
+  grid-template-rows: minmax(26px, auto) 1fr minmax(26px, auto);
+  gap: 6px;
+  align-items: center;
+  justify-items: center;
+}
+
+.marginBox {
+  padding: 14px;
+  border: 1px dashed var(--mantine-color-orange-6);
+  background: var(--mantine-color-orange-0);
+  border-radius: 8px;
+}
+
+.paddingBox {
+  width: 100%;
+  min-height: 96px;
+  padding: 12px;
+  border: 1px dashed var(--mantine-color-teal-6);
+  background: var(--mantine-color-teal-0);
+  border-radius: 6px;
+}
+
+.contentBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  min-height: 34px;
+  padding: 4px 8px;
+  background: var(--mantine-color-gray-2);
+  border: 1px solid var(--mantine-color-gray-4);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--mantine-color-dimmed);
+  text-align: center;
+}
+
+/* Il rettangolo interno (Padding, poi Contenuto) è insieme grid-item del genitore
+   (posizione "center") e grid-container per i propri figli: le due classi convivono
+   sullo stesso elemento (vedi VisualBoxModelInspector.tsx), niente conflitto perché
+   `.center` fissa solo `grid-area`, mai `display`. */
+.center {
+  grid-area: center;
+}
+
+.top {
+  grid-area: top;
+}
+
+.right {
+  grid-area: right;
+}
+
+.bottom {
+  grid-area: bottom;
+}
+
+.left {
+  grid-area: left;
+}
+
+.sideButton {
+  min-width: 34px;
+  padding: 3px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: var(--mantine-color-white);
+  color: var(--mantine-color-text);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+  cursor: pointer;
+}
+
+.sideButton:hover {
+  border-color: var(--mantine-color-gray-5);
+}
+
+.sideButton:focus-visible {
+  outline: 2px solid var(--mantine-color-blue-5);
+  outline-offset: 1px;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legendDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.legendDotMargin {
+  background: var(--mantine-color-orange-6);
+}
+
+.legendDotPadding {
+  background: var(--mantine-color-teal-6);
+}
+
+[data-mantine-color-scheme='dark'] .marginBox {
+  background: var(--mantine-color-dark-6);
+}
+
+[data-mantine-color-scheme='dark'] .paddingBox {
+  background: var(--mantine-color-dark-5);
+}
+
+[data-mantine-color-scheme='dark'] .contentBox {
+  background: var(--mantine-color-dark-4);
+  color: var(--mantine-color-dark-1);
+}
+
+[data-mantine-color-scheme='dark'] .sideButton {
+  background: var(--mantine-color-dark-6);
+  color: var(--mantine-color-dark-0);
+}

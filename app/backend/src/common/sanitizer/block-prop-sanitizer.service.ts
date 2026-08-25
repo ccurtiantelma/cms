@@ -129,7 +129,21 @@ export class BlockPropSanitizerService {
       return cleaned;
     }
 
-    // `url`: nessuna trasformazione, `maxLength` verificato dal validator (SPEC-F02 § 2.3.7).
+    if (spec.kind === 'url') {
+      // `url`: nessuna trasformazione, `maxLength` verificato dal validator (SPEC-F02 § 2.3.7).
+      return value;
+    }
+
+    if (spec.kind === 'color') {
+      // `color` (ADR-33 § 3/§ 6): il pattern esadecimale è già autorevole nel
+      // validator (`BlockTreeValidatorService`), stessa divisione di
+      // responsabilità di `url` — questo stadio non ripassa il valore da
+      // `sanitize-html` e non lo rivalida, lo restituisce invariato.
+      return value;
+    }
+
+    // Altri `kind` (`number`, `boolean`, `enum`, `mediaRef`): nessuna
+    // trasformazione, nessun passaggio da `sanitize-html` (SPEC-F02 § 2.3.4).
     return value;
   }
 

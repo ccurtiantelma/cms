@@ -1,0 +1,52 @@
+/* Scheda "Widgets" della sidebar dell'editor (WidgetPalette.tsx). */
+
+.root {
+  padding: 12px;
+}
+
+.search {
+  margin-bottom: 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 8px;
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: 8px;
+  background-color: var(--mantine-color-white);
+  cursor: grab;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.tile:hover,
+.tile:focus-visible {
+  border-color: var(--mantine-color-blue-5);
+  background-color: var(--mantine-color-blue-light);
+  outline: none;
+}
+
+[data-mantine-color-scheme='dark'] .tile {
+  border-color: var(--mantine-color-dark-4);
+  background-color: var(--mantine-color-dark-6);
+}
+
+.tileLabel {
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Tessera attualmente trascinata: resta al suo posto, solo attenuata — stesso pattern di
+   `.dragging` in EditorBlockWrapper.module.css. */
+.dragging {
+  opacity: 0.4;
+}

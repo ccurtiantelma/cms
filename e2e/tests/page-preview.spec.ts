@@ -86,10 +86,25 @@ test('anteprima dal dettaglio Pagina: header/meta noindex sempre presenti, il pu
   await saveDraft(page);
 
   // ─── 4. Genero l'anteprima dal pulsante reale del dettaglio ───────────
+  // Il toast "Bozza salvata" di `saveDraft` sopra resta a schermo finché non scade da
+  // solo (posizione "top-right", `main.tsx`): da quando le notifiche portano
+  // `zIndex={1100}` per restare sopra la chrome full-screen dell'editor (stesso motivo
+  // della tendina di stato), quel toast può sovrapporsi al bottone "Anteprima" del
+  // topbar, anch'esso in alto — un click immediato lo troverebbe ancora davanti. Lo si
+  // chiude esplicitamente invece di indovinare il timeout di auto-dismiss.
+  await page.getByRole('alert').getByRole('button').click();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+
   const anteprimaButton = page.getByRole('button', { name: 'Anteprima' });
   await expect(anteprimaButton).toBeVisible();
 
   const [popup] = await Promise.all([context.waitForEvent('page'), anteprimaButton.click()]);
+  // La popup nasce su `about:blank` (`handlePreview`, `PagePageDetail.tsx`): l'apertura è
+  // sincrona, ma l'URL reale arriva solo dopo l'attesa del token (`issuePagePreviewToken`,
+  // async) via `location.href`. `waitForLoadState('domcontentloaded')` da solo si
+  // fermerebbe al primo `domcontentloaded` di `about:blank`, prima del redirect —
+  // `waitForURL` aspetta la navigazione vera.
+  await popup.waitForURL(/\/__preview\//);
   await popup.waitForLoadState('domcontentloaded');
   const previewUrl = popup.url();
   expect(previewUrl).toContain('/__preview/');

@@ -4,10 +4,13 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5173,
+    // Porta host non standard di proposito: il progetto gira sempre in
+    // parallelo con altri stack sulla stessa macchina, vedi il commento di
+    // testa di docker-compose.yml (root).
+    port: 55173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:53000',
         changeOrigin: true,
       },
     },
