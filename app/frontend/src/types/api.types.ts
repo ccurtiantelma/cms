@@ -504,6 +504,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/app/files/{guid}/metadata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Metadati di un file, senza scaricarne il contenuto */
+        get: operations["FilesController_getMetadata"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/media/{guid}": {
         parameters: {
             query?: never;
@@ -1646,6 +1663,21 @@ export interface components {
              * @example a1b2c3d4e5f6a7b8
              */
             entityId?: Record<string, never> | null;
+            /**
+             * @description Larghezza in pixel, letta dagli header raster all'upload. `null` per i non-raster e per le righe caricate prima che questo campo esistesse (RFC-F09 § 3, colonna non ancora in schema — sempre `null` finché N2 non è firmata).
+             * @example null
+             */
+            width?: Record<string, never> | null;
+            /**
+             * @description Altezza in pixel, stessa provenienza e stesse condizioni di `width` (RFC-F09 § 3).
+             * @example null
+             */
+            height?: Record<string, never> | null;
+            /**
+             * @description URL pubblico derivato server-side (`api/v1/public/media/:guid`), valorizzato solo se `entity` è `page-media` (ADR-27 § 2/§ 6). `null` altrimenti — non implica che il blob sia effettivamente servibile: la verifica del formato raster reale avviene in lettura su quella rotta (ADR-27 § 3, § 4).
+             * @example api/v1/public/media/a1b2c3d4e5f6a7b8
+             */
+            url?: Record<string, never> | null;
             /**
              * Format: date-time
              * @description Data di caricamento
@@ -3189,6 +3221,35 @@ export interface operations {
                 content?: never;
             };
             /** @description File non trovato o già eliminato */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FilesController_getMetadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Metadati del file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FileMetadataDto"];
+                };
+            };
+            /** @description File non trovato o eliminato */
             404: {
                 headers: {
                     [name: string]: unknown;

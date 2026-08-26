@@ -119,6 +119,20 @@ export class FilesController {
     stream.pipe(res);
   }
 
+  /**
+   * Metadati di un file attivo, senza toccare lo storage (RFC-F09 § 1, T1).
+   * Nessun `GuardManager`: accessibile a ogni ruolo autenticato (solo JWT
+   * globale), come `list()` — il chiamante conosce già il `guid` esatto e non
+   * enumera la libreria.
+   */
+  @Get(':guid/metadata')
+  @ApiOperation({ summary: 'Metadati di un file, senza scaricarne il contenuto' })
+  @ApiResponse({ status: 200, description: 'Metadati del file', type: FileMetadataDto })
+  @ApiResponse({ status: 404, description: 'File non trovato o eliminato' })
+  async getMetadata(@Param('guid') guid: string): Promise<FileMetadataDto> {
+    return this.filesService.getMetadata(guid);
+  }
+
   /** Elimina (soft-delete) il file — solo l'autore o un ruolo Admin/superiore. */
   @Delete(':guid')
   @HttpCode(HttpStatus.NO_CONTENT)
