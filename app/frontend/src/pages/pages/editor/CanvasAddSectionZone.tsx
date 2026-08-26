@@ -1,20 +1,28 @@
 /**
  * Zona di inserimento sezione, sempre visibile in-canvas (sostituisce il vecchio popover
  * "Aggiungi blocco in fondo", `BlockPalette` montata da `EditorCanvas.tsx`): un box
- * tratteggiato con due trigger — "+" e libreria template — fedele a Elementor Pro.
+ * tratteggiato con tre trigger — "+" struttura, libreria template, "Aggiungi widget" —
+ * fedele a Elementor Pro (restyle colori/icone, richiesta esplicita del task).
  *
  * Trigger statico, nessuno stato di selezione locale: la scelta del tipo di layout e del
  * preset non vive più qui, è stata spostata in `SectionStructureModal.tsx` (un unico
  * componente condiviso da questa zona, da `BlockPalette.tsx` e da `EditorBlockWrapper.tsx`
  * — nessuna copia della UI di selezione). Questo componente si limita ad aprire/chiudere
  * quel modal e il `TemplateLibraryModal`, entrambi controllati da uno `useState` booleano
- * locale ciascuno: due istanze di questo componente (una in fondo al canvas, una per ogni
- * Section via "+" nella `sectionActionTab`) restano indipendenti per costruzione, ognuna col
- * proprio stato.
+ * locale ciascuno. Una sola istanza in tutto l'editor, montata da `EditorCanvas.tsx` in
+ * fondo al canvas: la seconda istanza che stava sopra ogni Section (aperta dal "+" della
+ * `sectionActionTab`) è stata rimossa da `EditorBlockWrapper.tsx`, che ora monta
+ * `SectionStructureModal` direttamente, senza passare da questo componente.
+ *
+ * Terzo trigger ("Aggiungi widget", icona `IconSparkles`): stesso menu di inserimento
+ * blocco già montato altrove nel canvas (`BlockPalette`, radice dell'albero) — riusato qui
+ * in modalità icona con trigger personalizzato (`triggerIcon`/`triggerClassName`), nessuna
+ * copia della logica di filtro/inserimento tipi.
  */
 import { useState } from 'react';
 import { ActionIcon, Group, Text, Tooltip } from '@mantine/core';
-import { IconFolder, IconPlus } from '@tabler/icons-react';
+import { IconFolder, IconPlus, IconSparkles } from '@tabler/icons-react';
+import BlockPalette from './BlockPalette';
 import SectionStructureModal from './SectionStructureModal';
 import TemplateLibraryModal from './TemplateLibraryModal';
 import styles from './CanvasAddSectionZone.module.css';
@@ -45,30 +53,35 @@ export default function CanvasAddSectionZone({
             <ActionIcon
               variant="filled"
               radius="xl"
-              size="xl"
               className={styles.addButton}
               aria-label="Scegli la struttura della sezione"
               onClick={() => setSectionModalOpened(true)}
             >
-              <IconPlus size={22} />
+              <IconPlus size={20} />
             </ActionIcon>
           </Tooltip>
           <Tooltip label="Libreria template" withArrow>
             <ActionIcon
-              variant="light"
-              color="gray"
+              variant="filled"
               radius="xl"
-              size="xl"
+              className={styles.templateButton}
               aria-label="Libreria template"
               onClick={() => setTemplateLibraryOpened(true)}
             >
-              <IconFolder size={22} />
+              <IconFolder size={20} />
             </ActionIcon>
           </Tooltip>
+          <BlockPalette
+            parentId={parentId}
+            index={index}
+            label="Aggiungi widget"
+            iconOnly
+            variant="filled"
+            triggerIcon={IconSparkles}
+            triggerClassName={styles.widgetButton}
+          />
         </Group>
-        <Text size="sm" fs="italic" c="dimmed" ta="center">
-          Trascina il widget qui
-        </Text>
+        <Text className={styles.helperText}>Trascina il widget qui</Text>
       </div>
 
       <SectionStructureModal

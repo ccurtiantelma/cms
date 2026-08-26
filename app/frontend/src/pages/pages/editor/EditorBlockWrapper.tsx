@@ -43,7 +43,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
-import { ActionIcon, Group, Menu, Text, Tooltip } from '@mantine/core';
+import { ActionIcon, Group, Menu, Tooltip } from '@mantine/core';
 import { useShallow } from 'zustand/react/shallow';
 import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core';
 import { notifications } from '@mantine/notifications';
@@ -62,7 +62,7 @@ import {
   IconTrash,
   IconX,
 } from '@tabler/icons-react';
-import { BLOCK_TYPES, type BlockTypeDescriptor } from '../../../types/blocks.types';
+import { BLOCK_TYPES } from '../../../types/blocks.types';
 import {
   useActiveViewport,
   useBlockEditorStore,
@@ -71,7 +71,7 @@ import {
   type EditorViewport,
 } from '../../../hooks/useBlockEditorStore';
 import { extractStyleProps, useStyleClipboardStore } from '../../../hooks/useStyleClipboardStore';
-import { findLocation, findNode, type BlockNode } from './block-tree.utils';
+import { findLocation, findNode } from './block-tree.utils';
 import { canContainType, canDropInto } from './block-registry.utils';
 import BlockRenderer from '../../../components/blocks/BlockRenderer';
 import BlockErrorBoundary from '../../../components/blocks/BlockErrorBoundary';
@@ -198,28 +198,6 @@ function resolveEffectiveResponsiveValue(
   if (viewport === 'mobile' && typeof envelope.mobile === 'string') return envelope.mobile;
   if (viewport !== 'desktop' && typeof envelope.tablet === 'string') return envelope.tablet;
   return typeof envelope.default === 'string' ? envelope.default : undefined;
-}
-
-/** Un valore di prop è "non compilato" se assente o stringa vuota. */
-function isBlankValue(value: unknown): boolean {
-  return (
-    value === undefined || value === null || (typeof value === 'string' && value.trim() === '')
-  );
-}
-
-/**
- * Prop obbligatorie ancora vuote, secondo il registro. Puramente informativo (UX): la
- * validazione autorevole resta il `400` del server, che questa nota non anticipa né
- * sostituisce — non blocca nulla.
- */
-function blankRequiredProps(
-  descriptor: BlockTypeDescriptor | undefined,
-  node: BlockNode,
-): string[] {
-  if (!descriptor) return [];
-  return descriptor.props
-    .filter((prop) => prop.required && isBlankValue(node.props[prop.name]))
-    .map((prop) => prop.name);
 }
 
 interface EditorBlockWrapperProps {
@@ -481,7 +459,6 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const label = descriptor?.meta?.label ?? node.type;
   const ContainerComponent = CONTAINER_COMPONENTS[node.type];
   const isContainer = (descriptor?.childrenAllow.length ?? 0) > 0;
-  const blankRequired = blankRequiredProps(descriptor, node);
 
   /** Apre il menu contestuale sulle coordinate del click, al posto di quello nativo del browser. */
   function handleContextMenu(event: ReactMouseEvent): void {
@@ -548,6 +525,21 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   )
     ? (currentNode.props.columnRatio as ColumnRatioValue)
     : 'equal';
+
+  /**
+   * Numero di colonne effettivo per il viewport attivo, per il segnaposto dello stato
+   * vuoto sotto (bug collasso colonne): una `section` a più colonne senza figli renderizzava
+   * un solo `.emptyContainer` come unico grid item di `.section` (ADR-31 § 7) — la griglia
+   * CSS lo piazza nella prima traccia e le tracce successive restano vuote e invisibili,
+   * indistinguibile da una sezione a colonna singola. Stesso fallback di `Section.tsx`/
+   * `style-tokens.module.css`: nessun valore risolto → 1 colonna implicita.
+   */
+  const effectiveColumnsCount = (() => {
+    const parsed = Number(
+      resolveEffectiveResponsiveValue(currentNode.props.columns, activeViewport),
+    );
+    return Number.isInteger(parsed) && parsed >= 1 && parsed <= 4 ? parsed : 1;
+  })();
 
   /** Enum più vicino fra i tre stop di `columnRatio` in base alla frazione [0,1] corrente. */
   function resolveColumnRatioFromFraction(fraction: number): ColumnRatioValue {
@@ -743,13 +735,16 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           di blocco vede la barra generica invariata, con le sue 4 azioni rapide (drag,
           seleziona padre, duplica, elimina). Aggiuntiva rispetto alla toolbar integrata
           qui sotto, che resta invariata con tutti i comandi esistenti (riordino,
-          indent/outdent, inserimento posizionale) — nessuna funzionalità rimossa.
+          indent/outdent, inserimento posizionale) — nessuna funzionalità rimossa. Il "+"
+          apre `SectionStructureModal` (modale centrata, `sectionModalOpened` più sotto),
+          non più un'espansione inline nel canvas.
         */}
         {(isSelected || isHovered) && isSection && (
           <Group
             className={styles.sectionActionTab}
             gap={2}
             wrap="nowrap"
+            justify="space-between"
             onClick={(event) => event.stopPropagation()}
           >
             <Tooltip label="Scegli la struttura della sezione da aggiungere sopra" withArrow>
@@ -760,7 +755,7 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
                 aria-label="Scegli la struttura della sezione da aggiungere sopra"
                 onClick={(event) => {
                   event.stopPropagation();
-                  setInsertZoneOpen((open) => !open);
+                  setSectionModalOpened(true);
                 }}
               >
                 <IconPlus size={14} />
@@ -1065,12 +1060,6 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           )}
         </Group>
 
-        {blankRequired.length > 0 && (
-          <Text className={styles.emptyLeaf} component="p" mb={4}>
-            Proprietà obbligatorie non compilate: {blankRequired.join(', ')}.
-          </Text>
-        )}
-
         {isContainer && ContainerComponent ? (
           <BlockErrorBoundary>
             <ContainerComponent
@@ -1119,9 +1108,23 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
               />
 
               {childIds.length === 0 ? (
-                <div className={styles.emptyContainer}>
-                  Contenitore vuoto — usa &laquo;Aggiungi dentro&raquo; per inserire un blocco.
-                </div>
+                effectiveColumnsCount > 1 ? (
+                  // Un segnaposto per traccia della griglia (`.childrenArea`, `display:
+                  // contents`, stessa tecnica del ramo "figli presenti" sotto): ogni box
+                  // diventa un vero grid item di `.section`, tutte le colonne configurate
+                  // restano visibili e affiancate anche a zero figli.
+                  <div className={styles.childrenArea}>
+                    {Array.from({ length: effectiveColumnsCount }).map((_, slotIndex) => (
+                      <div key={slotIndex} className={styles.emptyContainer}>
+                        Colonna vuota — usa &laquo;Aggiungi dentro&raquo; per inserire un blocco.
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={styles.emptyContainer}>
+                    Contenitore vuoto — usa &laquo;Aggiungi dentro&raquo; per inserire un blocco.
+                  </div>
+                )
               ) : (
                 // `display: contents` (EditorBlockWrapper.module.css): questo `div` non
                 // genera un box proprio, i wrapper dei blocchi figli diventano grid item
@@ -1206,6 +1209,20 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
         {isSelected && node.type === 'richText' && (
           <InlineFloatingToolbar getTarget={getRichTextTarget} onApplied={commitHtml} />
         )}
+
+        {/*
+          Selettore di struttura per la Section da inserire sopra questa (aperto dal "+"
+          della `sectionActionTab` più sopra): stessa destinazione di inserimento
+          (`location.parentId`/`location.index`, sopra questo nodo) che aveva la vecchia
+          zona intermedia inline, ora sostituita da questa modale centrata condivisa con
+          `BlockPalette.tsx` e `CanvasAddSectionZone.tsx` (nessuna copia della UI).
+        */}
+        <SectionStructureModal
+          opened={sectionModalOpened}
+          onClose={() => setSectionModalOpened(false)}
+          parentId={location.parentId}
+          index={location.index}
+        />
 
         {confirmOpened && (
           <ConfirmModal

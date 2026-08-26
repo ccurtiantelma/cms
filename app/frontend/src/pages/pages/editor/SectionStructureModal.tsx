@@ -4,9 +4,9 @@
  * Elementor Pro. Unico proprietario di questa UI: era divisa fra questo modal (cinque
  * preset piatti) e il box inline a due passi di `CanvasAddSectionZone.tsx`; ora è tutta
  * qui, montata da tre punti (`BlockPalette.tsx` per la voce "Sezione" del suo menu,
- * `CanvasAddSectionZone.tsx` per il "+" della zona sempre visibile in fondo al canvas e
- * per quella intermezzata sopra una Section, `EditorBlockWrapper.tsx` per il "+" della
- * `sectionActionTab`) che condividono lo stesso componente controllato — nessuna copia.
+ * `CanvasAddSectionZone.tsx` per il "+" della zona sempre visibile in fondo al canvas,
+ * `EditorBlockWrapper.tsx` per il "+" della `sectionActionTab` sopra ogni Section) che
+ * condividono lo stesso componente controllato — nessuna copia.
  *
  * Componente frontend puro nella palette, stesso principio di `WidgetPalette`/
  * `BlockPalette` (ADR-32 § 4): la selezione chiama `addBlockAction` già esistente con un
@@ -204,7 +204,7 @@ export default function SectionStructureModal({
   const addBlockAction = useBlockEditorStore((state) => state.addBlockAction);
   const [step, setStep] = useState<Step>('chooseType');
 
-  // Le tre chiamate di questo modal (`BlockPalette`, due istanze di `CanvasAddSectionZone`,
+  // Le tre chiamate di questo modal (`BlockPalette`, `CanvasAddSectionZone`,
   // `EditorBlockWrapper`) riusano tutte la stessa istanza di stato locale fra un'apertura e
   // l'altra: senza questo reset, una sessione lasciata al passo "flexbox"/"grid" riaprirebbe
   // lì invece che dalla scelta del tipo.

@@ -1,41 +1,80 @@
 /*
  * CanvasAddSectionZone.tsx — zona di inserimento sezione sempre visibile in-canvas.
- * Stesso accento magenta "struttura" del drag & drop (`#a333c8`, `EditorCanvas.module.css`/
- * `EditorBlockWrapper.module.css`) per il pulsante "+" — un solo colore per quel ruolo in
- * tutto l'editor. Il selettore di struttura vero e proprio (box tratteggiati dei preset)
- * vive in `SectionStructureModal.module.css`, non qui: questo file resta solo il trigger.
+ * Restyle Elementor Pro (richiesta esplicita del task): box tratteggiato `#c2c6dc` con
+ * sfondo `#f7f9fd`, tre pulsanti circolari da 40px con un colore dedicato ciascuno — non
+ * più l'accento magenta unico `#a333c8` condiviso col drag & drop di `EditorCanvas.module.css`/
+ * `EditorBlockWrapper.module.css`. Il selettore di struttura vero e proprio (box
+ * tratteggiati dei preset) vive in `SectionStructureModal.module.css`, non qui: questo
+ * file resta solo il trigger.
  */
 
 .zone {
   width: 100%;
 }
 
-/*
-  Box del trigger: stesso bordo tratteggiato dello stato vuoto storico del canvas
-  (`EditorCanvas.module.css` `.emptyDropzone`), qui riusato anche quando l'albero non è
-  vuoto — la zona è sempre visibile, non solo a canvas vuoto.
-*/
+/* Box del trigger: bordo tratteggiato e sfondo chiaro, sempre visibile in canvas. */
 .box {
-  border: 2px dashed var(--mantine-color-gray-4);
+  border: 2px dashed #c2c6dc;
   border-radius: 4px;
-  padding: 24px;
+  padding: 30px 0;
+  background-color: #f7f9fd;
   transition: border-color 120ms ease, background-color 120ms ease;
 }
 
 [data-mantine-color-scheme='dark'] .box {
   border-color: var(--mantine-color-dark-4);
+  background-color: var(--mantine-color-dark-6);
 }
 
 /*
-  Pulsante "+" circolare, unico accento primary/magenta dell'intero editor (vedi commento
-  di testa): `variant="filled"` di Mantine calcola il proprio sfondo da `color`/
-  `theme.primaryColor` via custom property interna, che una singola classe della stessa
-  specificità non batte in modo affidabile — da qui `!important`, l'unico in questo modulo,
-  mirato solo a questo bottone.
+  I tre pulsanti circolari condividono forma/dimensione (40px di diametro, icona bianca):
+  solo il colore di sfondo cambia. `variant="filled"` di Mantine calcola il proprio sfondo
+  da `color`/`theme.primaryColor` via custom property interna, che una singola classe della
+  stessa specificità non batte in modo affidabile — da qui `!important`, mirato solo a
+  questi tre pulsanti (stesso idioma già in uso in questo file prima del restyle).
 */
 .addButton,
 .addButton:hover,
-.addButton:focus {
-  background-color: #a333c8 !important;
+.addButton:focus,
+.templateButton,
+.templateButton:hover,
+.templateButton:focus,
+.widgetButton,
+.widgetButton:hover,
+.widgetButton:focus {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  border-radius: 50% !important;
   color: var(--mantine-color-white) !important;
+}
+
+/* Pulsante 1 — "+": scegli la struttura della sezione. Elementor Pink. */
+.addButton,
+.addButton:hover,
+.addButton:focus {
+  background-color: #93005a !important;
+}
+
+/* Pulsante 2 — cartella: libreria template. */
+.templateButton,
+.templateButton:hover,
+.templateButton:focus {
+  background-color: #55606e !important;
+}
+
+/* Pulsante 3 — scintille: aggiungi widget. */
+.widgetButton,
+.widgetButton:hover,
+.widgetButton:focus {
+  background-color: #a855f7 !important;
+}
+
+.helperText {
+  margin-top: 4px;
+  font-size: 13px;
+  font-style: italic;
+  color: #6d7882;
+  text-align: center;
 }

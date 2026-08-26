@@ -104,13 +104,6 @@
   color: var(--mantine-color-dimmed);
 }
 
-/* Blocco che non produce output visibile (es. titolo con testo ancora vuoto). */
-.emptyLeaf {
-  font-size: 13px;
-  font-style: italic;
-  color: var(--mantine-color-dimmed);
-}
-
 /*
   `display: contents` (T-layout-colonne-section): questo `div` non genera più un box
   proprio, quindi i suoi figli (i wrapper dei blocchi figli) diventano grid item diretti
@@ -252,17 +245,22 @@
   `top` negativo pari a metà della sua stessa altezza approssimativa, così il bordo
   della Section attraversa esattamente il centro della linguetta.
 */
+/*
+  Restyle Elementor Pro (richiesta esplicita del task): non più la pill centrata
+  magenta, ma una barra piena che ricopre il bordo superiore della Section — stesso blu
+  `#2271b1` di `.hovered`/`.selected` sopra (un solo accento "sezione sotto il puntatore"
+  in tutto l'editor, non due). `left/right: 0` invece del centraggio via `transform`:
+  la barra segue la larghezza reale della Section, come in Elementor.
+*/
 .sectionActionTab {
   position: absolute;
-  top: -14px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 3;
-  padding: 4px 10px;
-  /* Pill (richiesta esplicita del task): metà dell'altezza della barra basta e avanza a
-     produrre estremi semicircolari con qualunque padding verticale sopra. */
-  border-radius: 999px;
-  background: #a333c8;
+  padding: 3px 8px;
+  border-radius: 4px 4px 0 0;
+  background: #2271b1;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
 }
 

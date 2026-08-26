@@ -80,6 +80,19 @@ interface BlockPaletteProps {
    * non è chrome per-nodo ma un'azione di pagina, resta testuale — non passa questa prop.
    */
   iconOnly?: boolean;
+  /**
+   * Icona del pulsante trigger in modalità `iconOnly` (default `IconPlus`). Restyle
+   * Elementor Pro di `CanvasAddSectionZone.tsx`: quel box riusa questo stesso menu per il
+   * terzo pulsante ("Aggiungi widget", icona `IconSparkles`) invece di duplicare la UI di
+   * selezione tipo — nessuna copia, stesso principio già in uso per `SectionStructureModal`.
+   */
+  triggerIcon?: Icon;
+  /**
+   * Classe CSS Module opzionale applicata al pulsante trigger in modalità `iconOnly`, per
+   * personalizzarne l'aspetto (colore di sfondo) dal chiamante senza toccare lo stile di
+   * default usato dalla chrome per-nodo.
+   */
+  triggerClassName?: string;
 }
 
 /**
@@ -126,6 +139,8 @@ export default function BlockPalette({
   size = 'sm',
   variant = 'light',
   iconOnly = false,
+  triggerIcon: TriggerIcon = IconPlus,
+  triggerClassName,
 }: BlockPaletteProps): JSX.Element | null {
   const addBlockAction = useBlockEditorStore((state) => state.addBlockAction);
   const roleLevel = useAuthStore((state) => state.user?.role);
@@ -144,8 +159,13 @@ export default function BlockPalette({
         <Menu.Target>
           {iconOnly ? (
             <Tooltip label={label} withArrow>
-              <ActionIcon size={size} variant={variant} aria-label={label}>
-                <IconPlus size={14} />
+              <ActionIcon
+                size={size}
+                variant={variant}
+                className={triggerClassName}
+                aria-label={label}
+              >
+                <TriggerIcon size={14} />
               </ActionIcon>
             </Tooltip>
           ) : (
