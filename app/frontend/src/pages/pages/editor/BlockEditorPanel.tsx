@@ -273,6 +273,7 @@ export default function BlockEditorPanel({
       */}
       <FullScreenEditorLayout
         pageTitle={page.title}
+        page={page}
         // Torna al dettaglio della Pagina in modifica, non alla lista generica: la lista
         // perde il contesto (quale Pagina si stava editando) senza alcun vantaggio (bug T5).
         backHref={`/pages/${page.guid}`}

@@ -7,16 +7,27 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   Req,
   Res,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { AppConstants } from '../common/app-constants';
-import { AuthInfo } from '../common/types';
+import { AuthInfo, FilesQueryParams } from '../common/types';
+import { Pagination } from '../common/pagination';
+import { GuardManager } from '../auth/guard';
 import { FilesService } from './files.service';
 import { FileMetadataDto } from './dto/file-metadata.dto';
 import { UploadFileDto } from './dto/upload-file.dto';
@@ -53,6 +64,39 @@ export class FilesController {
   ): Promise<FileMetadataDto> {
     const authInfo = req['authInfo'] as AuthInfo;
     return this.filesService.upload(file, dto, authInfo, req.ip);
+  }
+
+  /**
+   * Lista paginata dei file attivi, più recenti prima — solo Admin/Editor
+   * (`GuardManager`, esclude il ruolo `User`, RFC-F09 § 1/T1).
+   */
+  @Get()
+  @UseGuards(GuardManager)
+  @ApiOperation({ summary: 'Lista paginata dei file attivi (Admin/Editor)' })
+  @ApiQuery({ name: 'p', required: false, description: 'Pagina (default 1)' })
+  @ApiQuery({ name: 'i', required: false, description: 'Elementi per pagina (default 20)' })
+  @ApiQuery({ name: 'q', required: false, description: 'Ricerca su nome file originale' })
+  @ApiQuery({
+    name: 'mimeType',
+    required: false,
+    description: 'Filtro per MIME type (match esatto, non prefix)',
+  })
+  @ApiResponse({ status: 200, description: 'Lista file paginata' })
+  async findAll(
+    @Query('p') p: string,
+    @Query('i') i: string,
+    @Query('q') q: string,
+    @Query('mimeType') mimeType: string,
+    @Req() req: Request,
+  ): Promise<Pagination<FileMetadataDto>> {
+    const authInfo = req['authInfo'] as AuthInfo;
+    const params: FilesQueryParams = {
+      p: p ? parseInt(p, 10) : 1,
+      i: i ? parseInt(i, 10) : 20,
+      q,
+      mimeType,
+    };
+    return this.filesService.list(params, authInfo);
   }
 
   /**

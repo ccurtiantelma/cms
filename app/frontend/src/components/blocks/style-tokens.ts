@@ -62,3 +62,46 @@ export function resolveScalarClassName(
   }
   return styles[`${slot}_${value}`] ?? '';
 }
+
+/** Mappa `styleLayer` (ADR-37 § 2) alla classe che porta il suo z-index reale. */
+const LAYER_CLASS_BY_VALUE: Record<string, string> = {
+  base: 'layerBase',
+  raised: 'layerRaised',
+  overlay: 'layerOverlay',
+  top: 'layerTop',
+};
+
+/**
+ * Risolve la classe CSS Module per `styleLayer` (ADR-37 § 2): `enum` chiuso, non
+ * responsive, mappato a un livello di z-index reale nel foglio dei token — mai un
+ * `NumberPropSpec` libero. Stessa tolleranza delle altre funzioni di questo file: un
+ * valore assente, non stringa o sconosciuto produce nessuna classe, mai un errore.
+ *
+ * @param styles Oggetto esportato da `style-tokens.module.css`.
+ * @param value Valore grezzo di `styleLayer` così come arriva da `node.props`.
+ */
+export function resolveLayerClassName(styles: Record<string, string>, value: unknown): string {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  const className = LAYER_CLASS_BY_VALUE[value];
+  return className ? (styles[className] ?? '') : '';
+}
+
+/**
+ * Risolve la classe CSS Module per una delle tre props scalari di visibilità per
+ * breakpoint di ADR-37 § 3 (`styleHideDesktop`/`styleHideTablet`/`styleHideMobile`):
+ * `boolean`, non responsive, indipendenti fra loro — impostarne una non tocca le altre
+ * due. `slot` è già il nome della classe nel foglio dei token.
+ *
+ * @param styles Oggetto esportato da `style-tokens.module.css`.
+ * @param slot Nome della classe di visibilità (`'hideDesktop'`/`'hideTablet'`/`'hideMobile'`).
+ * @param value Valore grezzo della prop così come arriva da `node.props`.
+ */
+export function resolveHideClassName(
+  styles: Record<string, string>,
+  slot: 'hideDesktop' | 'hideTablet' | 'hideMobile',
+  value: unknown,
+): string {
+  return value === true ? (styles[slot] ?? '') : '';
+}

@@ -40,7 +40,7 @@
  * funzionano solo condividendo la stessa istanza di `DndContext`, e questo componente è il
  * primo antenato comune fra i due.
  */
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActionIcon, Badge, Button, Paper, Text, Tooltip } from '@mantine/core';
 import {
   IconArrowBackUp,
@@ -51,6 +51,7 @@ import {
   IconDeviceTablet,
   IconEye,
   IconLayoutGrid,
+  IconLayoutSidebar,
   IconLayoutSidebarRight,
 } from '@tabler/icons-react';
 import {
@@ -69,12 +70,15 @@ import {
   useBlockEditorStore,
   useCanRedo,
   useCanUndo,
+  useIsSidebarOpen,
   useIsStructurePanelOpen,
   type EditorViewport,
 } from '../../../hooks/useBlockEditorStore';
 import { BLOCK_TYPES } from '../../../types/blocks.types';
-import { defaultPropsFor } from './BlockPalette';
+import type { PageRecord } from '../../../types/pages.types';
+import { blockIcon, defaultPropsFor } from './BlockPalette';
 import EditorSidebar from './sidebar/EditorSidebar';
+import LocaleSwitcher from './LocaleSwitcher';
 import TemplateLibraryModal from './TemplateLibraryModal';
 import styles from './FullScreenEditorLayout.module.css';
 
@@ -84,11 +88,32 @@ interface DropTarget {
   index: number;
 }
 
-/** Etichetta leggibile del tipo trascinato, per il `DragOverlay`; il nome tecnico è un fallback. */
-function draggedTypeLabel(event: DragStartEvent): string {
+/**
+ * Informazioni sul blocco trascinato correnti, per la "ghost card" del `DragOverlay`
+ * (punto 2 del task): etichetta + nome dell'icona del registro (`meta.icon`), risolta con
+ * la stessa `blockIcon` di `BlockPalette.tsx` — coerente con l'aspetto delle voci della
+ * palette, mai un secondo mapping icona duplicato qui.
+ */
+interface DraggedBlockInfo {
+  label: string;
+  iconName: string | undefined;
+}
+
+/**
+ * Legge dal payload di dnd-kit (`event.active.data.current`, valorizzato sia da
+ * `WidgetPalette` — drag di un tipo nuovo dalla sidebar — sia da `useDraggable` in
+ * `EditorBlockWrapper.tsx` — drag di riordino di un nodo esistente) etichetta e icona del
+ * tipo di blocco trascinato. Stesso `type` in entrambi i casi: la sola differenza è
+ * `isNew` (letto altrove, in `handleDragEnd`), qui irrilevante — l'aspetto della ghost
+ * card è identico per i due casi (minimo richiesto dal task).
+ */
+function draggedBlockInfo(event: DragStartEvent): DraggedBlockInfo {
   const type = (event.active.data.current as { type?: string } | undefined)?.type;
-  if (!type) return 'Blocco';
-  return BLOCK_TYPES.find((entry) => entry.type === type)?.meta?.label ?? type;
+  const descriptor = type ? BLOCK_TYPES.find((entry) => entry.type === type) : undefined;
+  return {
+    label: descriptor?.meta?.label ?? type ?? 'Blocco',
+    iconName: descriptor?.meta?.icon,
+  };
 }
 
 /** Un'opzione del Viewport Switcher: valore di stato, etichetta e icona `@tabler/icons-react`. */
@@ -107,6 +132,13 @@ const VIEWPORT_OPTIONS: ViewportOption[] = [
 export interface FullScreenEditorLayoutProps {
   /** Titolo della Pagina in editing, mostrato accanto al pulsante "Torna alla Dashboard". */
   pageTitle: string;
+  /**
+   * La Pagina in editing, per intero — usata dal Locale Switcher (F05/T6) per conoscere
+   * `guid`/`locale`/`translationGroupId` e proporre le traduzioni del gruppo. Non sostituisce
+   * `pageTitle` sopra (già usato altrove in questo componente) per non allargare un diff che
+   * non serve a quel punto d'uso.
+   */
+  page: PageRecord;
   /** Rotta admin della lista Pagine — destinazione di "Torna alla Dashboard". */
   backHref: string;
   /**
@@ -151,6 +183,7 @@ export interface FullScreenEditorLayoutProps {
  */
 export default function FullScreenEditorLayout({
   pageTitle,
+  page,
   backHref,
   hasUnsavedChanges,
   saving,
@@ -165,6 +198,8 @@ export default function FullScreenEditorLayout({
   const setActiveViewport = useBlockEditorStore((state) => state.setActiveViewport);
   const isStructurePanelOpen = useIsStructurePanelOpen();
   const toggleStructurePanel = useBlockEditorStore((state) => state.toggleStructurePanel);
+  const isSidebarOpen = useIsSidebarOpen();
+  const toggleSidebar = useBlockEditorStore((state) => state.toggleSidebar);
   const undo = useBlockEditorStore((state) => state.undo);
   const redo = useBlockEditorStore((state) => state.redo);
   const canUndo = useCanUndo();
@@ -176,11 +211,19 @@ export default function FullScreenEditorLayout({
   // `tree` solo per un numero.
   const rootBlocksCount = useBlockEditorStore((state) => state.tree.length);
 
-  const [draggedLabel, setDraggedLabel] = useState<string | null>(null);
+  const [draggedBlock, setDraggedBlock] = useState<DraggedBlockInfo | null>(null);
   // ADR-34 § 5: secondo punto di apertura della libreria sezioni, accanto agli altri
   // controlli della topbar (struttura, anteprima, undo/redo) — sempre `parentId: null`,
   // in coda alla radice.
   const [templateLibraryOpened, setTemplateLibraryOpened] = useState(false);
+
+  /** Contenitore che scrolla davvero durante il drag (punto 3 del task): `.canvasArea`, non
+   * `.canvasRoot` di `EditorCanvas.module.css` (che non ha `overflow` proprio). */
+  const canvasAreaRef = useRef<HTMLDivElement | null>(null);
+  /** `requestAnimationFrame` dell'auto-scroll in corso, per poterlo cancellare al cleanup. */
+  const autoScrollFrameRef = useRef<number | null>(null);
+  /** Ultima posizione verticale nota del puntatore durante il drag, letta dal loop `rAF`. */
+  const pointerYRef = useRef<number | null>(null);
 
   // Puntatore + tastiera (dnd-kit T7): la tastiera è anche la via deterministica per i test
   // E2E futuri. `distance` evita che un click sulla maniglia (selezione, tooltip), o un
@@ -192,11 +235,11 @@ export default function FullScreenEditorLayout({
   );
 
   function handleDragStart(event: DragStartEvent): void {
-    setDraggedLabel(draggedTypeLabel(event));
+    setDraggedBlock(draggedBlockInfo(event));
   }
 
   function handleDragEnd(event: DragEndEvent): void {
-    setDraggedLabel(null);
+    setDraggedBlock(null);
     const { active, over } = event;
     if (!over) return;
     const target = over.data.current as DropTarget | undefined;
@@ -222,6 +265,59 @@ export default function FullScreenEditorLayout({
     tablet: styles.viewportTablet,
     mobile: styles.viewportMobile,
   };
+
+  const isDragActive = draggedBlock !== null;
+
+  /**
+   * Auto-scroll del canvas durante il drag (punto 3 del task): dnd-kit non espone
+   * comodamente le coordinate assolute del puntatore via `onDragMove` (solo il delta dal
+   * punto di partenza), quindi un listener nativo `pointermove` su `window` è il modo più
+   * diretto — coerente con lo stile già in uso nel codebase per interazioni non coperte
+   * dagli hook di React (`EditorBlockWrapper.tsx`, resizer inter-colonna). Soglia di ~60px
+   * dai bordi superiore/inferiore di `.canvasArea`, velocità proporzionale alla vicinanza
+   * al bordo, `requestAnimationFrame` per uno scroll continuo e fluido finché il puntatore
+   * resta nella zona soglia. Cleanup (listener + `rAF` pendente) ad ogni fine drag —
+   * l'array di dipendenze `[isDragActive]` lo esegue anche su unmount, per costruzione di
+   * `useEffect`.
+   */
+  useEffect(() => {
+    if (!isDragActive) return undefined;
+
+    const EDGE_THRESHOLD_PX = 60;
+    const MAX_SCROLL_SPEED_PX = 18;
+
+    function handlePointerMove(event: PointerEvent): void {
+      pointerYRef.current = event.clientY;
+    }
+
+    function tick(): void {
+      const canvasEl = canvasAreaRef.current;
+      const pointerY = pointerYRef.current;
+      if (canvasEl && pointerY !== null) {
+        const rect = canvasEl.getBoundingClientRect();
+        const distanceFromTop = pointerY - rect.top;
+        const distanceFromBottom = rect.bottom - pointerY;
+        if (distanceFromTop >= 0 && distanceFromTop < EDGE_THRESHOLD_PX) {
+          canvasEl.scrollTop -= MAX_SCROLL_SPEED_PX * (1 - distanceFromTop / EDGE_THRESHOLD_PX);
+        } else if (distanceFromBottom >= 0 && distanceFromBottom < EDGE_THRESHOLD_PX) {
+          canvasEl.scrollTop += MAX_SCROLL_SPEED_PX * (1 - distanceFromBottom / EDGE_THRESHOLD_PX);
+        }
+      }
+      autoScrollFrameRef.current = requestAnimationFrame(tick);
+    }
+
+    window.addEventListener('pointermove', handlePointerMove);
+    autoScrollFrameRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      if (autoScrollFrameRef.current !== null) {
+        cancelAnimationFrame(autoScrollFrameRef.current);
+        autoScrollFrameRef.current = null;
+      }
+      pointerYRef.current = null;
+    };
+  }, [isDragActive]);
 
   return (
     <div
@@ -274,26 +370,56 @@ export default function FullScreenEditorLayout({
               <IconArrowForwardUp size={16} />
             </ActionIcon>
           </Tooltip>
+          {/*
+            Collassa la sidebar "Widgets"/"Proprietà" per liberare spazio canvas — a
+            differenza del pannello struttura (destra, sempre opzionale) questa colonna era
+            finora sempre montata: su un editing fine di un blocco largo, o su una finestra
+            stretta, non c'era modo di guadagnare quello spazio.
+          */}
+          <Tooltip
+            label={isSidebarOpen ? 'Nascondi pannello widget' : 'Mostra pannello widget'}
+            withArrow
+          >
+            <ActionIcon
+              variant={isSidebarOpen ? 'filled' : 'default'}
+              size="lg"
+              aria-label="Mostra/Nascondi pannello widget"
+              aria-pressed={isSidebarOpen}
+              onClick={() => toggleSidebar()}
+            >
+              <IconLayoutSidebar size={18} />
+            </ActionIcon>
+          </Tooltip>
         </div>
 
-        <div className={styles.viewportSwitcher} role="group" aria-label="Viewport di anteprima">
-          {VIEWPORT_OPTIONS.map((option) => {
-            const Icon = option.icon;
-            const isActive = activeViewport === option.value;
-            return (
-              <Tooltip key={option.value} label={option.label} withArrow>
-                <ActionIcon
-                  variant={isActive ? 'filled' : 'subtle'}
-                  size="lg"
-                  aria-label={`Viewport ${option.label}`}
-                  aria-pressed={isActive}
-                  onClick={() => setActiveViewport(option.value)}
-                >
-                  <Icon size={18} />
-                </ActionIcon>
-              </Tooltip>
-            );
-          })}
+        {/*
+          Locale Switcher (F05/T6) e Viewport Switcher condividono lo stesso gruppo centrale
+          della topbar — `styles.topbarSection` invece di un terzo `justify-content: space-between`
+          diretto, così i due restano visivamente accostati invece di essere sparpagliati dal
+          layout a tre colonne della `.topbar`.
+        */}
+        <div className={styles.topbarSection}>
+          <LocaleSwitcher page={page} />
+
+          <div className={styles.viewportSwitcher} role="group" aria-label="Viewport di anteprima">
+            {VIEWPORT_OPTIONS.map((option) => {
+              const Icon = option.icon;
+              const isActive = activeViewport === option.value;
+              return (
+                <Tooltip key={option.value} label={option.label} withArrow>
+                  <ActionIcon
+                    variant={isActive ? 'filled' : 'subtle'}
+                    size="lg"
+                    aria-label={`Viewport ${option.label}`}
+                    aria-pressed={isActive}
+                    onClick={() => setActiveViewport(option.value)}
+                  >
+                    <Icon size={18} />
+                  </ActionIcon>
+                </Tooltip>
+              );
+            })}
+          </div>
         </div>
 
         <div className={styles.topbarSection}>
@@ -357,15 +483,33 @@ export default function FullScreenEditorLayout({
         collisionDetection={pointerWithin}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
-        onDragCancel={() => setDraggedLabel(null)}
+        onDragCancel={() => setDraggedBlock(null)}
       >
         <div className={styles.workArea}>
-          <aside className={styles.sidebar}>
+          {/*
+            Sempre montata (mai `isSidebarOpen && (...)`): smontare `EditorSidebar` ne
+            perderebbe lo stato interno (`activeSidebarTab`, scroll) ogni volta che si
+            richiude — oltre a impedire la transizione di larghezza sotto, che richiede
+            l'elemento presente per animare `flex-basis` invece di comparire/sparire di
+            colpo. `styles.sidebarCollapsed` porta la larghezza a 0 mantenendo il nodo nel
+            DOM.
+          */}
+          <aside className={`${styles.sidebar} ${isSidebarOpen ? '' : styles.sidebarCollapsed}`}>
             <EditorSidebar />
           </aside>
 
-          <div className={styles.canvasArea}>
-            <div className={`${styles.viewportContainer} ${viewportClass[activeViewport]}`}>
+          <div className={styles.canvasArea} ref={canvasAreaRef}>
+            {/*
+              `data-viewport` non pilota nessuna media query nuova (il sync col rendering
+              responsive dei blocchi passa già da `container-type: inline-size` qui sotto,
+              letto dalle `@container` di `style-tokens.module.css`, ADR-29 § 2): resta solo
+              un aggancio dichiarativo per selettori CSS/E2E futuri sul breakpoint simulato,
+              senza introdurre un secondo sistema di breakpoint.
+            */}
+            <div
+              className={`${styles.viewportContainer} ${viewportClass[activeViewport]}`}
+              data-viewport={activeViewport}
+            >
               {children}
             </div>
           </div>
@@ -378,13 +522,25 @@ export default function FullScreenEditorLayout({
         </div>
 
         <DragOverlay>
-          {draggedLabel ? (
-            <Paper withBorder p="xs" radius="sm" shadow="md">
-              <Text size="sm" fw={600}>
-                {draggedLabel}
-              </Text>
-            </Paper>
-          ) : null}
+          {draggedBlock
+            ? (() => {
+                // "Ghost card" semitrasparente (punto 2 del task): la trasparenza va sul
+                // contenuto (`styles.dragGhostContent`), non sul `Paper` bordo — un bordo
+                // sbiadito sarebbe meno leggibile del contenuto sbiadito. `DragOverlay` di
+                // dnd-kit segue già il cursore da solo: nessun calcolo di posizione qui.
+                const DraggedIcon = blockIcon(draggedBlock.iconName);
+                return (
+                  <Paper withBorder p="xs" radius="sm" shadow="md">
+                    <div className={styles.dragGhostContent}>
+                      <DraggedIcon size={16} />
+                      <Text size="sm" fw={600}>
+                        {draggedBlock.label}
+                      </Text>
+                    </div>
+                  </Paper>
+                );
+              })()
+            : null}
         </DragOverlay>
       </DndContext>
 

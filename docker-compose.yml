@@ -24,7 +24,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - '56379:6379'
+      - '56380:6379'
 
   mailhog:
     image: mailhog/mailhog

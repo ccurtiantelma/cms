@@ -15,7 +15,12 @@
 import type { CSSProperties, ReactNode } from 'react';
 import styles from './Section.module.css';
 import tokenStyles from '../style-tokens.module.css';
-import { resolveResponsiveClassNames, resolveScalarClassName } from '../style-tokens';
+import {
+  resolveHideClassName,
+  resolveLayerClassName,
+  resolveResponsiveClassNames,
+  resolveScalarClassName,
+} from '../style-tokens';
 
 interface SectionProps {
   children: ReactNode;
@@ -38,6 +43,10 @@ interface SectionProps {
   styleMarginRight?: unknown;
   styleMarginBottom?: unknown;
   styleMarginLeft?: unknown;
+  styleLayer?: unknown;
+  styleHideDesktop?: unknown;
+  styleHideTablet?: unknown;
+  styleHideMobile?: unknown;
 }
 
 export default function Section({
@@ -61,6 +70,10 @@ export default function Section({
   styleMarginRight,
   styleMarginBottom,
   styleMarginLeft,
+  styleLayer,
+  styleHideDesktop,
+  styleHideTablet,
+  styleHideMobile,
 }: SectionProps) {
   // ADR-33 § 1 — logica di rendering, non di validazione: `maxWidth` resta dichiarato e
   // validato server-side anche quando `contentWidth === 'full-width'`, ma il renderer lo
@@ -100,6 +113,10 @@ export default function Section({
     typeof styleBackgroundColor === 'string' && styleBackgroundColor
       ? tokenStyles.backgroundColor_custom
       : '',
+    resolveLayerClassName(tokenStyles, styleLayer),
+    resolveHideClassName(tokenStyles, 'hideDesktop', styleHideDesktop),
+    resolveHideClassName(tokenStyles, 'hideTablet', styleHideTablet),
+    resolveHideClassName(tokenStyles, 'hideMobile', styleHideMobile),
   ]
     .filter(Boolean)
     .join(' ');

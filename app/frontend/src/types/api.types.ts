@@ -433,6 +433,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/app/settings/multilingual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Registro Locale attivi (default di fabbrica se mai salvato) */
+        get: operations["SettingsController_getMultilingual"];
+        /** Salva il registro Locale attivi (Admin+ only, registrato su audit log) */
+        put: operations["SettingsController_updateMultilingual"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -457,7 +475,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Lista paginata dei file attivi (Admin/Editor) */
+        get: operations["FilesController_findAll"];
         put?: never;
         /** Carica un documento (multipart/form-data, campo "file") */
         post: operations["FilesController_upload"];
@@ -582,6 +601,24 @@ export interface paths {
         put?: never;
         /** Crea una Pagina in stato draft */
         post: operations["PagesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/app/pages/{guid}/translations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Elenco delle traduzioni del gruppo (bozze incluse), sorgente inclusa */
+        get: operations["PagesController_listTranslations"];
+        put?: never;
+        /** Crea una traduzione da una Pagina sorgente */
+        post: operations["PagesController_createTranslation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1551,6 +1588,21 @@ export interface components {
             /** @description Token per lo scheme scuro */
             dark: components["schemas"]["ThemeSchemeTokensDto"];
         };
+        MultilingualConfigDto: {
+            /**
+             * @description Codici Locale attivi (BCP-47 libero, es. "it-IT")
+             * @example [
+             *       "it-IT",
+             *       "en-GB"
+             *     ]
+             */
+            active: string[];
+            /**
+             * @description Locale di default (senza prefisso nelle URL pubbliche, ADR-24 § 5)
+             * @example it-IT
+             */
+            default: string;
+        };
         UploadFileDto: {
             /**
              * @description Nome tabella/dominio a cui associare il file
@@ -1791,6 +1843,40 @@ export interface components {
                     [key: string]: unknown;
                 };
             }[];
+        };
+        CreateTranslationDto: {
+            /**
+             * @description Locale della nuova traduzione (deve essere fra i Locale attivi)
+             * @example en-GB
+             */
+            locale: string;
+            /**
+             * @description Titolo della traduzione; se assente, copiato dalla Pagina sorgente
+             * @example About us
+             */
+            title?: string;
+        };
+        PageTranslationDto: {
+            /**
+             * @description Identificatore pubblico della Pagina (URL admin)
+             * @example b1a2c3d4e5f6a7b8
+             */
+            guid: string;
+            /**
+             * @description Locale della riga
+             * @example en-GB
+             */
+            locale: string;
+            /**
+             * @description Titolo della riga
+             * @example About us
+             */
+            title: string;
+            /**
+             * @description Stato editoriale della riga (draft, review, scheduled, published)
+             * @example draft
+             */
+            status: string;
         };
         UpdatePageDto: {
             /**
@@ -2808,6 +2894,64 @@ export interface operations {
             };
         };
     };
+    SettingsController_getMultilingual: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Registro Locale corrente */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MultilingualConfigDto"];
+                };
+            };
+        };
+    };
+    SettingsController_updateMultilingual: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MultilingualConfigDto"];
+            };
+        };
+        responses: {
+            /** @description Registro Locale salvato */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MultilingualConfigDto"];
+                };
+            };
+            /** @description Il Locale di default non compare fra i Locale attivi */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ruolo inferiore ad Admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     HealthController_check: {
         parameters: {
             query?: never;
@@ -2931,6 +3075,33 @@ export interface operations {
                         };
                     };
                 };
+            };
+        };
+    };
+    FilesController_findAll: {
+        parameters: {
+            query?: {
+                /** @description Pagina (default 1) */
+                p?: string;
+                /** @description Elementi per pagina (default 20) */
+                i?: string;
+                /** @description Ricerca su nome file originale */
+                q?: string;
+                /** @description Filtro per MIME type (match esatto, non prefix) */
+                mimeType?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista file paginata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -3211,6 +3382,82 @@ export interface operations {
                 content?: never;
             };
             /** @description Slug già in uso per questo locale/genitore */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PagesController_listTranslations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Traduzioni del gruppo (bozze incluse) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageTranslationDto"][];
+                };
+            };
+            /** @description Pagina sorgente non trovata o eliminata */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PagesController_createTranslation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTranslationDto"];
+            };
+        };
+        responses: {
+            /** @description Traduzione creata */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageDto"];
+                };
+            };
+            /** @description Locale non fra i Locale attivi */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pagina sorgente non trovata o eliminata */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Esiste già una traduzione per questo locale */
             409: {
                 headers: {
                     [name: string]: unknown;

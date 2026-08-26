@@ -299,6 +299,15 @@ export const pageEntity = pgTable(
 
     index('pages_status_locale_idx').on(t.status, t.locale),
     index('pages_translation_group_idx').on(t.translationGroupId),
+    /**
+     * Al massimo una riga attiva per gruppo di traduzione e Locale (regola 3,
+     * `business-rules.md` § Multilingua; RFC-F05 § 2, M2). Indice parziale su
+     * `is_active`: il soft delete libera lo slot, coerente con lo stesso
+     * pattern già in uso per l'unicità dello slug qui sopra.
+     */
+    uniqueIndex('pages_translation_group_locale_uq')
+      .on(t.translationGroupId, t.locale)
+      .where(sql`${t.isActive}`),
     index('pages_parent_idx').on(t.parentId),
     /** Predicato di ownership degli elenchi paginati (ADR-18 § D6). */
     index('pages_created_by_idx').on(t.createdBy),

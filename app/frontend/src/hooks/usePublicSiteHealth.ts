@@ -1,5 +1,5 @@
 /**
- * Sonda passiva di raggiungibilità del sito pubblico SSR (`app/public-site`, porta 4000),
+ * Sonda passiva di raggiungibilità del sito pubblico SSR (`app/public-site`, porta 54000),
  * per avvisare nel dettaglio Pagina che il pulsante "Vedi pagina" potrebbe puntare a un
  * servizio fermo. Interroga `GET {baseUrl}/healthz` — endpoint sempre `200 "ok"`, senza
  * autenticazione, esposto da `app/public-site/src/server.ts`.

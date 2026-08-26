@@ -25,13 +25,15 @@
   border-radius: 8px;
   background-color: var(--mantine-color-white);
   cursor: grab;
-  transition: border-color 120ms ease, background-color 120ms ease;
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
 }
 
 .tile:hover,
 .tile:focus-visible {
   border-color: var(--mantine-color-blue-5);
   background-color: var(--mantine-color-blue-light);
+  /* Elevazione stile card (parità visiva Elementor): non solo un bordo che cambia colore. */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   outline: none;
 }
 
@@ -40,13 +42,27 @@
   background-color: var(--mantine-color-dark-6);
 }
 
+[data-mantine-color-scheme='dark'] .tile:hover,
+[data-mantine-color-scheme='dark'] .tile:focus-visible {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Icona d'accento: colore fisso indipendente dal tema (stesso valore in light e dark),
+   invece di ereditare `currentColor` dal testo della `Text` accanto. */
+.tileIcon {
+  display: inline-flex;
+  color: var(--mantine-color-blue-6);
+}
+
 .tileLabel {
   text-align: center;
   line-height: 1.2;
 }
 
 /* Tessera attualmente trascinata: resta al suo posto, solo attenuata — stesso pattern di
-   `.dragging` in EditorBlockWrapper.module.css. */
+   `.dragging` in EditorBlockWrapper.module.css. `cursor: grabbing` esplicito perché lo
+   stato attivo di trascinamento non è più un semplice `grab` in attesa. */
 .dragging {
   opacity: 0.4;
+  cursor: grabbing;
 }

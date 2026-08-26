@@ -12,20 +12,36 @@
 }
 
 /*
-  Stato vuoto dell'albero, anche drop-zone (`root-empty-dropzone`): stesso linguaggio visivo
-  delle altre zone di rilascio di `EditorBlockWrapper.module.css` (bordo tratteggiato che
-  diventa blu pieno sotto il puntatore durante un trascinamento).
+  Stato vuoto dell'albero, solo drop-zone (`root-empty-dropzone`): la resa visiva
+  "Aggiungi sezione" è ora di `CanvasAddSectionZone` (montata subito dopo in
+  `EditorCanvas.tsx`), quindi questo div non porta più contenuto proprio — a riposo è una
+  striscia quasi invisibile (bordo trasparente, altezza minima) che serve solo da bersaglio
+  `useDroppable` per il primo blocco trascinato. Un bordo/riquadro sempre visibile qui
+  sarebbe un secondo box tratteggiato ridondante subito sopra quello di
+  `CanvasAddSectionZone`.
 */
 .emptyDropzone {
-  border: 2px dashed #cccccc;
+  border: 2px dashed transparent;
   border-radius: 4px;
-  padding: 48px 24px;
-  text-align: center;
-  transition: border-color 120ms ease, background-color 120ms ease;
+  min-height: 12px;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease,
+    min-height 120ms ease;
 }
 
+/*
+  Stesso accento magenta del punto di inserimento sui blocchi esistenti
+  (`.dropZone[data-over='true']::before`, EditorBlockWrapper.module.css): un solo colore
+  "drag & drop" in tutto l'editor. Solo durante un trascinamento sopra la striscia si
+  allarga e si evidenzia, così il primo blocco trascinato su un albero ancora vuoto ha un
+  bersaglio visibile senza che quel bersaglio sia sempre in vista a riposo.
+*/
 .emptyDropzone[data-over='true'] {
   border-style: solid;
-  border-color: var(--mantine-color-blue-6);
-  background: var(--mantine-color-blue-light);
+  border-color: #a333c8;
+  background: rgba(163, 51, 200, 0.08);
+  box-shadow: 0 0 6px 1px rgba(163, 51, 200, 0.6);
+  min-height: 48px;
 }

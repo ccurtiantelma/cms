@@ -21,6 +21,10 @@ const PG_CONSTRAINT_CONFLICTS: Readonly<Record<string, { code: string; message: 
     code: 'REVISION_NUMBER_CONFLICT',
     message: 'Conflitto nella numerazione delle revisioni: ripetere la pubblicazione.',
   },
+  pages_translation_group_locale_uq: {
+    code: 'PAGE_TRANSLATION_LOCALE_DUPLICATE',
+    message: 'Esiste già una traduzione di questa pagina per questa lingua.',
+  },
 };
 
 /**

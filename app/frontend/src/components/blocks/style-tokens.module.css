@@ -559,6 +559,47 @@
   .marginLeft_mobile_96 { margin-left: 96px; }
 }
 
+/* ─── styleLayer (ADR-37 § 2) — tutti e cinque i tipi, enum chiuso, non responsive ──
+   `position: relative` è necessario perché `z-index` abbia effetto: nessuno dei
+   componenti di `blocks/blocks/*.tsx` dichiara già un proprio posizionamento. */
+
+.layerBase { position: relative; z-index: 1; }
+.layerRaised { position: relative; z-index: 10; }
+.layerOverlay { position: relative; z-index: 100; }
+.layerTop { position: relative; z-index: 999; }
+
+/* ─── styleHideDesktop/Tablet/Mobile (ADR-37 § 3) — tutti e cinque i tipi, boolean,
+   scalari e indipendenti fra loro. Soglie indipendenti da quelle di ADR-29 § 2 (qui
+   min-width, non solo max-width): "Desktop"/"Tablet"/"Mobile" del Device Switcher
+   dell'editor (`FullScreenEditorLayout.tsx`), non i due breakpoint di cascata
+   responsive sopra. */
+
+@media (min-width: 1024px) {
+  .hideDesktop { display: none !important; }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .hideTablet { display: none !important; }
+}
+
+@media (max-width: 767px) {
+  .hideMobile { display: none !important; }
+}
+
+/* ─── Override Canvas editor (EditorBlockWrapper.tsx) — `previewHidden` sul wrapper
+   sostituisce il `display: none` reale con la sola attenuazione visiva, quando il nodo
+   è nascosto sul dispositivo attualmente attivo nel Device Switcher: il blocco deve
+   restare selezionabile e modificabile, mai sparire dal canvas. Vince per specificità
+   (due classi contro una, stesso `!important`) sulle tre regole sopra, qualunque sia il
+   media query attivo — nessun impatto sul sito pubblico, dove `.previewHidden` non è mai
+   applicata (BlockRenderer/PageView non la conoscono). */
+.previewHidden .hideDesktop,
+.previewHidden .hideTablet,
+.previewHidden .hideMobile {
+  display: revert !important;
+  opacity: 0.4;
+}
+
 /**
  * Duplicati a @container delle due soglie sopra, stesse classi e stesse soglie in
  * pixel (768px/480px) — mai una soglia nuova (ADR-29 § 2: le soglie vivono in un

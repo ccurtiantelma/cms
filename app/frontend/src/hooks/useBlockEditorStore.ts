@@ -91,6 +91,13 @@ interface BlockEditorState {
   /** Il pannello "Struttura/Navigator" dell'editor full-screen è aperto. */
   isStructurePanelOpen: boolean;
   /**
+   * La sidebar sinistra ("Widgets"/"Proprietà", `EditorSidebar`) è montata e visibile.
+   * Default `true` (comportamento storico, sidebar sempre presente): il collasso è
+   * un'aggiunta pensata per liberare spazio canvas su schermi stretti o durante un editing
+   * fine dei blocchi, non un cambio del comportamento atteso di apertura.
+   */
+  isSidebarOpen: boolean;
+  /**
    * Scheda attiva della sidebar sinistra (`EditorSidebar`, stile Elementor). Vive qui e non
    * come stato locale del componente perché deve poter essere cambiata da fuori — quando si
    * seleziona un blocco nel canvas la sidebar deve saltare su "Proprietà" da sola (vedi
@@ -112,6 +119,16 @@ interface BlockEditorState {
   redoStack: EditorCommand[];
   /** Punto della history corrispondente all'ultimo contenuto salvato (vedi {@link SavePoint}). */
   savePoint: SavePoint;
+  /**
+   * Nodi nascosti nel canvas dell'editor full-screen ("occhio" del pannello
+   * Struttura/Navigator, `EditorStructureNavigator.tsx`): stato UI puramente effimero,
+   * mai persistito su `draftContent.blocks` e distinto dalla visibilità per-viewport
+   * (`styleHideDesktop`/`styleHideTablet`/`styleHideMobile`, ADR-37 § 3), che è una prop di
+   * stile del blocco e sopravvive al salvataggio. Un nodo qui dentro sparisce dal
+   * rendering del canvas (`display: none`) ma resta nell'albero e nella riga del
+   * navigator, sempre riselezionabile/ri-mostrabile.
+   */
+  hiddenInCanvasIds: ReadonlySet<string>;
 
   /** Inizializza l'albero da `draftContent.blocks` esistente (nessun riordino spurio: ordine e struttura conservati com'è). Azzera history e selezione. */
   initTree: (blocks: BlockNode[]) => void;
@@ -123,6 +140,10 @@ interface BlockEditorState {
   setStructurePanelOpen: (opened: boolean) => void;
   /** Alterna l'apertura del pannello "Struttura/Navigator". */
   toggleStructurePanel: () => void;
+  /** Apre/chiude (monta/smonta) la sidebar sinistra "Widgets"/"Proprietà". */
+  setSidebarOpen: (opened: boolean) => void;
+  /** Alterna l'apertura della sidebar sinistra "Widgets"/"Proprietà". */
+  toggleSidebar: () => void;
   /** Cambia la scheda attiva della sidebar sinistra ("Widgets"/"Proprietà"). */
   setActiveSidebarTab: (tab: EditorSidebarTab) => void;
   /** Aggiunge un blocco `type` a `index` fra i figli di `parentId` (radice se `null`). */
@@ -162,6 +183,13 @@ interface BlockEditorState {
   duplicateNodeAction: (id: string) => void;
   /** Merge delle `props` fornite sul nodo `id`. */
   updateBlockPropsAction: (id: string, props: Record<string, unknown>) => void;
+  /**
+   * Alterna la visibilità del nodo `id` nel canvas dell'editor (vedi {@link
+   * hiddenInCanvasIds}: mai persistito, mai una prop del blocco). Non passa da
+   * `pushCommand`/l'undo stack: è uno stato dell'interfaccia, non una modifica di
+   * contenuto — annullarla con "Ctrl+Z" sorprenderebbe più di quanto aiuterebbe.
+   */
+  toggleHiddenInCanvas: (id: string) => void;
   /** Disfa l'ultimo comando applicato, se presente. */
   undo: () => void;
   /** Rifà l'ultimo comando disfatto, se presente. */
@@ -200,11 +228,13 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   selectedId: null,
   activeViewport: 'desktop',
   isStructurePanelOpen: false,
+  isSidebarOpen: true,
   activeSidebarTab: 'widgets',
   generation: 0,
   undoStack: [],
   redoStack: [],
   savePoint: CLEAN_SAVE_POINT,
+  hiddenInCanvasIds: new Set(),
 
   initTree: (blocks) => {
     set((state) => ({
@@ -214,6 +244,9 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       undoStack: [],
       redoStack: [],
       savePoint: CLEAN_SAVE_POINT,
+      // Stato UI del canvas legato alla sessione di editing precedente: un nodo
+      // "nascosto" nella bozza appena sostituita non ha più motivo di restarlo qui.
+      hiddenInCanvasIds: new Set(),
     }));
   },
 
@@ -226,6 +259,10 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
 
   toggleStructurePanel: () =>
     set((state) => ({ isStructurePanelOpen: !state.isStructurePanelOpen })),
+
+  setSidebarOpen: (opened) => set({ isSidebarOpen: opened }),
+
+  toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
 
   setActiveSidebarTab: (tab) => set({ activeSidebarTab: tab }),
 
@@ -394,6 +431,14 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
     });
   },
 
+  toggleHiddenInCanvas: (id) =>
+    set((state) => {
+      const next = new Set(state.hiddenInCanvasIds);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return { hiddenInCanvasIds: next };
+    }),
+
   undo: () => {
     set((state) => {
       if (state.undoStack.length === 0) return {};
@@ -486,6 +531,11 @@ export function useIsStructurePanelOpen(): boolean {
   return useBlockEditorStore((state) => state.isStructurePanelOpen);
 }
 
+/** Selettore granulare: solo lo stato di apertura della sidebar sinistra "Widgets"/"Proprietà". */
+export function useIsSidebarOpen(): boolean {
+  return useBlockEditorStore((state) => state.isSidebarOpen);
+}
+
 /** Selettore granulare: solo la scheda attiva della sidebar sinistra ("Widgets"/"Proprietà"). */
 export function useActiveSidebarTab(): EditorSidebarTab {
   return useBlockEditorStore((state) => state.activeSidebarTab);
@@ -499,6 +549,16 @@ export function useTreeGeneration(): number {
 /** Selettore granulare: solo la radice dell'albero (uso raro — canvas T4 la consuma per iterare i nodi di primo livello). */
 export function useRootBlocks(): BlockNode[] {
   return useBlockEditorStore((state) => state.tree);
+}
+
+/**
+ * Selettore granulare: il nodo `id` è nascosto nel canvas (stato UI effimero, mai
+ * persistito — vedi {@link hiddenInCanvasIds}). Sottoscrive solo
+ * l'appartenenza di questo id all'insieme, non l'insieme intero: un toggle su un altro
+ * nodo non ri-renderizza questo consumer.
+ */
+export function useIsHiddenInCanvas(id: string): boolean {
+  return useBlockEditorStore((state) => state.hiddenInCanvasIds.has(id));
 }
 
 /** Selettore granulare: c'è almeno un comando da annullare. */

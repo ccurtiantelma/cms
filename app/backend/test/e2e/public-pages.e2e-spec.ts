@@ -165,6 +165,16 @@ describe('PublicPagesController (e2e, DB/Redis reali)', () => {
     });
   }
 
+  /** Registra il registro Locale attivi (RFC-F05 § 1) come farebbe un Admin da UI. */
+  async function setActiveLocales(admin: Auth, active: string[], defaultLocale: string): Promise<void> {
+    await request(app.getHttpServer())
+      .put('/api/v1/app/settings/multilingual')
+      .set('Authorization', admin.bearer)
+      .set('Cookie', admin.cookie)
+      .send({ active, default: defaultLocale })
+      .expect(200);
+  }
+
   /** `GET public/pages?path=...`, senza header di auth: la superficie è anonima per costruzione. */
   function publicGet(path: string): request.Test {
     return request(app.getHttpServer()).get(
@@ -365,6 +375,86 @@ describe('PublicPagesController (e2e, DB/Redis reali)', () => {
 
       expect(res.status).toBe(308);
       expect(res.headers.location).toBe('/api/v1/public/pages?path=/prova-canonica-3');
+    });
+  });
+
+  // ─── 4b. Risoluzione pubblica locale-prefissata (RFC-F05 § 4) ───────────
+
+  describe('Risoluzione pubblica locale-prefissata (RFC-F05 § 4)', () => {
+    it('un Locale attivo non di default con prefisso risolve alla Pagina pubblicata in quel Locale', async () => {
+      const admin = await seedAuth(AppUserRoles.Admin, 'locpref1');
+      await setActiveLocales(admin, ['it-IT', 'en-GB'], 'it-IT');
+      const page = await createDraftPage(admin, {
+        title: 'About us',
+        slug: 'about-us',
+        locale: 'en-GB',
+      });
+      await changeStatus(admin, page.guid, 'published').expect(200);
+
+      const res = await publicGet('/en-gb/about-us');
+
+      expect(res.status).toBe(200);
+      expect(res.body.locale).toBe('en-GB');
+      expect(res.body.slug).toBe('about-us');
+    });
+
+    it('fallback SEMPRE 404, mai automatico alla lingua di default quando la traduzione non esiste in quel Locale', async () => {
+      const admin = await seedAuth(AppUserRoles.Admin, 'locpref2');
+      await setActiveLocales(admin, ['it-IT', 'en-GB'], 'it-IT');
+      // Pubblicata SOLO in it-IT, mai in en-GB — stesso slug.
+      const page = await createDraftPage(admin, {
+        title: 'Chi siamo',
+        slug: 'chi-siamo-fallback',
+        locale: 'it-IT',
+      });
+      await changeStatus(admin, page.guid, 'published').expect(200);
+
+      const res = await publicGet('/en-gb/chi-siamo-fallback');
+
+      expect(res.status).toBe(404);
+    });
+
+    it('primo segmento non corrisponde a nessun Locale attivo → non è un prefisso, entra come primo slug in lingua di default', async () => {
+      const admin = await seedAuth(AppUserRoles.Admin, 'locpref3');
+      await setActiveLocales(admin, ['it-IT', 'en-GB'], 'it-IT');
+      // Una Pagina IT il cui slug root coincide col nome di un Locale NON attivo ("fr-fr").
+      const page = await createDraftPage(admin, {
+        title: 'Slug come locale non attivo',
+        slug: 'fr-fr',
+        locale: 'it-IT',
+      });
+      await changeStatus(admin, page.guid, 'published').expect(200);
+
+      const res = await publicGet('/fr-fr');
+
+      expect(res.status).toBe(200);
+      expect(res.body.locale).toBe('it-IT');
+    });
+
+    it('lingua di default: percorso senza prefisso invariato, anche con più Locale attivi', async () => {
+      const admin = await seedAuth(AppUserRoles.Admin, 'locpref4');
+      await setActiveLocales(admin, ['it-IT', 'en-GB'], 'it-IT');
+      const page = await createDraftPage(admin, {
+        title: 'Pagina default',
+        slug: 'pagina-default',
+        locale: 'it-IT',
+      });
+      await changeStatus(admin, page.guid, 'published').expect(200);
+
+      const res = await publicGet('/pagina-default');
+
+      expect(res.status).toBe(200);
+      expect(res.body.locale).toBe('it-IT');
+    });
+
+    it('la canonicalizzazione si applica anche al percorso con prefisso di lingua (maiuscole + slash finale)', async () => {
+      const admin = await seedAuth(AppUserRoles.Admin, 'locpref5');
+      await setActiveLocales(admin, ['it-IT', 'en-GB'], 'it-IT');
+
+      const res = await publicGet('/EN-GB/About-Us/');
+
+      expect(res.status).toBe(308);
+      expect(res.headers.location).toBe('/api/v1/public/pages?path=/en-gb/about-us');
     });
   });
 

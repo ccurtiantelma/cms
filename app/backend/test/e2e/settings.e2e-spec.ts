@@ -8,11 +8,14 @@ import * as request from 'supertest';
 import { NextFunction, Request, Response } from 'express';
 import { SettingsController } from '../../src/settings/settings.controller';
 import {
+  DEFAULT_MULTILINGUAL_CONFIG,
   DEFAULT_THEME_CONFIG,
+  MULTILINGUAL_SETTING_KEY,
   SettingsService,
   THEME_SETTING_KEY,
 } from '../../src/settings/settings.service';
 import { ThemeConfigDto } from '../../src/settings/dto/theme-config.dto';
+import { MultilingualConfigDto } from '../../src/settings/dto/multilingual-config.dto';
 import { AuthMiddleware } from '../../src/auth/auth.middleware';
 import { DbService } from '../../src/db/db.service';
 import { RedisService } from '../../src/redis/redis.service';
@@ -677,6 +680,142 @@ describe('SettingsController (integration)', () => {
       await request(app.getHttpServer())
         .put('/api/v1/app/settings/theme')
         .send(validTheme)
+        .expect(401);
+    });
+  });
+
+  describe('GET /app/settings/multilingual', () => {
+    it('happy path: installazione mai personalizzata → default di fabbrica bootstrap (ogni ruolo)', async () => {
+      const auth = makeAuthFor(AppUserRoles.User);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/app/settings/multilingual')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .expect(200);
+
+      expect(res.body).toEqual(DEFAULT_MULTILINGUAL_CONFIG);
+    });
+
+    it('happy path: registro salvato → restituisce il jsonb della riga multilingual.locales', async () => {
+      const saved: MultilingualConfigDto = { active: ['it-IT', 'en-GB'], default: 'it-IT' };
+      findFirstMock.mockResolvedValue({ id: 1, key: MULTILINGUAL_SETTING_KEY, value: saved });
+      const auth = makeAuthFor(AppUserRoles.Manager);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/app/settings/multilingual')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .expect(200);
+
+      expect(res.body).toEqual(saved);
+    });
+
+    it('errore: senza JWT → 401 dal middleware globale', async () => {
+      await request(app.getHttpServer()).get('/api/v1/app/settings/multilingual').expect(401);
+    });
+  });
+
+  describe('PUT /app/settings/multilingual', () => {
+    it('happy path: Admin salva il registro Locale → upsert + audit log + echo', async () => {
+      const auth = makeAuthFor(AppUserRoles.Admin, 9);
+      const payload: MultilingualConfigDto = { active: ['it-IT', 'en-GB', 'fr-FR'], default: 'it-IT' };
+
+      const res = await request(app.getHttpServer())
+        .put('/api/v1/app/settings/multilingual')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .send(payload)
+        .expect(200);
+
+      expect(res.body).toEqual(payload);
+      expect(valuesMock).toHaveBeenCalledWith(
+        expect.objectContaining({ key: MULTILINGUAL_SETTING_KEY, createdBy: 9, updatedBy: 9 }),
+      );
+      expect(onConflictMock).toHaveBeenCalledTimes(1);
+      expect(auditLogMock).toHaveBeenCalledWith(
+        9,
+        'settings.multilingual.update',
+        'app_settings',
+        MULTILINGUAL_SETTING_KEY,
+        JSON.stringify(payload),
+        undefined,
+        expect.anything(),
+      );
+    });
+
+    it('happy path: SuperAdmin (sopra la soglia Admin) può salvare comunque', async () => {
+      const auth = makeAuthFor(AppUserRoles.SuperAdmin);
+
+      await request(app.getHttpServer())
+        .put('/api/v1/app/settings/multilingual')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .send({ active: ['it-IT'], default: 'it-IT' })
+        .expect(200);
+    });
+
+    it('errore: il Locale di default non compare fra gli attivi → 400, nessuna scrittura', async () => {
+      const auth = makeAuthFor(AppUserRoles.Admin);
+
+      const res = await request(app.getHttpServer())
+        .put('/api/v1/app/settings/multilingual')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .send({ active: ['en-GB', 'fr-FR'], default: 'it-IT' })
+        .expect(400);
+
+      expect(res.body.message).toContain('Locale di default');
+      expect(insertMock).not.toHaveBeenCalled();
+      expect(auditLogMock).not.toHaveBeenCalled();
+    });
+
+    it('errore: active vuoto → 400 (ArrayMinSize/ArrayNotEmpty)', async () => {
+      const auth = makeAuthFor(AppUserRoles.Admin);
+
+      const res = await request(app.getHttpServer())
+        .put('/api/v1/app/settings/multilingual')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .send({ active: [], default: 'it-IT' })
+        .expect(400);
+
+      expect(validationMessages(res.body)).toBeTruthy();
+      expect(insertMock).not.toHaveBeenCalled();
+    });
+
+    it('errore: campo extra nel payload → 400 (forbidNonWhitelisted)', async () => {
+      const auth = makeAuthFor(AppUserRoles.Admin);
+
+      await request(app.getHttpServer())
+        .put('/api/v1/app/settings/multilingual')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .send({ active: ['it-IT'], default: 'it-IT', evil: true })
+        .expect(400);
+
+      expect(insertMock).not.toHaveBeenCalled();
+    });
+
+    it('RBAC: Manager (sotto Admin) → 403 e nessuna scrittura', async () => {
+      const auth = makeAuthFor(AppUserRoles.Manager);
+
+      const res = await request(app.getHttpServer())
+        .put('/api/v1/app/settings/multilingual')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .send({ active: ['it-IT'], default: 'it-IT' })
+        .expect(403);
+
+      expect(res.body.message).toContain('Permessi insufficienti');
+      expect(insertMock).not.toHaveBeenCalled();
+      expect(auditLogMock).not.toHaveBeenCalled();
+    });
+
+    it('errore: senza JWT → 401 dal middleware globale', async () => {
+      await request(app.getHttpServer())
+        .put('/api/v1/app/settings/multilingual')
+        .send({ active: ['it-IT'], default: 'it-IT' })
         .expect(401);
     });
   });

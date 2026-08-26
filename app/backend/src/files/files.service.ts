@@ -1,13 +1,22 @@
-import { ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { createHash } from 'crypto';
-import { and, eq } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, SQL } from 'drizzle-orm';
 import { DbService } from '../db/db.service';
-import { fileEntity } from '../db/schema';
+import { fileEntity, pageEntity, pageRevisionEntity } from '../db/schema';
 import { AppConstants } from '../common/app-constants';
 import { AppUserRoles } from '../common/enums';
 import { AuditLogService } from '../common/audit-log.service';
-import { AuthInfo } from '../common/types';
+import { AuthInfo, FilesQueryParams } from '../common/types';
+import { Pagination } from '../common/pagination';
 import { Utils } from '../common/utils';
+import { findBlockDefinition } from '../blocks/block-registry';
 import { STORAGE_DRIVER, StorageDriver } from './storage/storage-driver.interface';
 import { FileMetadataDto } from './dto/file-metadata.dto';
 import { UploadFileDto } from './dto/upload-file.dto';
@@ -85,6 +94,50 @@ export class FilesService {
   }
 
   /**
+   * Lista paginata dei file attivi, più recenti prima (RFC-F09 § 1, T1).
+   * Nessun filtro di ownership: la rotta è ristretta a Manager+ dal
+   * controller (`GuardManager`), quindi al ruolo `User` non arriva mai qui.
+   * @param params Filtri di paginazione/ricerca (`p`/`i`/`q` su `originalName`/`mimeType` esatto).
+   * @param authInfo Identità del chiamante — accettata per coerenza di firma con gli altri
+   * elenchi del modulo (`PagesService.findAll`, `NotificationsService.findAllForUser`),
+   * non usata a filtro qui: nessuna regola di ownership è definita per questo elenco.
+   */
+  async list(
+    params: FilesQueryParams,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- vedi JSDoc: firma coerente con gli altri elenchi, nessun filtro di ownership per questo endpoint
+    authInfo: AuthInfo,
+  ): Promise<Pagination<FileMetadataDto>> {
+    const page = params.p > 0 ? params.p : 1;
+    const perPage = params.i > 0 ? params.i : 20;
+
+    const conditions: (SQL | undefined)[] = [eq(fileEntity.isActive, true)];
+    if (params.q) {
+      conditions.push(ilike(fileEntity.originalName, `%${params.q}%`));
+    }
+    if (params.mimeType) {
+      conditions.push(eq(fileEntity.mimeType, params.mimeType));
+    }
+    const where = and(...conditions);
+
+    const [rows, [{ total }]] = await Promise.all([
+      this.db.db.query.fileEntity.findMany({
+        where,
+        orderBy: desc(fileEntity.createdAt),
+        limit: perPage,
+        offset: (page - 1) * perPage,
+      }),
+      this.db.db.select({ total: count() }).from(fileEntity).where(where),
+    ]);
+
+    return new Pagination(
+      rows.map((row) => this.toMetadataDto(row)),
+      total,
+      page,
+      perPage,
+    );
+  }
+
+  /**
    * Recupera lo stream del blob associato a `guid`, se il file esiste ed è attivo.
    * @param guid Identificatore pubblico del file.
    */
@@ -99,6 +152,11 @@ export class FilesService {
    * rimosso subito (ADR-8, Conseguenze — pulizia rimandata a un job futuro,
    * per non rendere irreversibile un'operazione pensata come reversibile).
    * Consentito solo all'autore del file o a un ruolo Admin/superiore.
+   * Protezione referenziale (RFC-F09 N7): rifiutata con `409` se il file è
+   * referenziato da un nodo `mediaRef` nell'albero della Revisione
+   * attualmente pubblicata di una Pagina `published` — verificato **prima**
+   * di qualunque side-effect (nessuna scrittura DB, nessuna chiamata al
+   * driver di storage).
    * @param guid Identificatore pubblico del file.
    * @param authInfo Identità del chiamante.
    * @param ip Indirizzo IP del chiamante, per l'audit log.
@@ -109,6 +167,8 @@ export class FilesService {
     if (authInfo.role > AppUserRoles.Admin && row.createdBy !== authInfo.userId) {
       throw new ForbiddenException("Solo l'autore del file o un Admin possono eliminarlo.");
     }
+
+    await this.assertNotReferencedByPublishedPage(guid);
 
     await this.db.db
       .update(fileEntity)
@@ -125,6 +185,76 @@ export class FilesService {
       authInfo.impersonatedBy,
       ip,
     );
+  }
+
+  /**
+   * Lancia `409 Conflict` se `guid` è referenziato da un nodo `mediaRef`
+   * nell'albero della Revisione attualmente pubblicata di una Pagina
+   * `published` (RFC-F09 N7). Legge tutte le Revisioni che sono la revisione
+   * pubblicata corrente di una Pagina `published`/attiva (join
+   * `pages`↔`page_revisions` su `publishedRevisionId`), poi cammina ciascun
+   * albero in JS con {@link pageReferencesFile} — il registro dei tipi
+   * (`kind: 'mediaRef'`) non è esprimibile in SQL.
+   */
+  private async assertNotReferencedByPublishedPage(guid: string): Promise<void> {
+    const publishedRevisions = await this.db.db
+      .select({ content: pageRevisionEntity.content })
+      .from(pageEntity)
+      .innerJoin(pageRevisionEntity, eq(pageRevisionEntity.id, pageEntity.publishedRevisionId))
+      .where(and(eq(pageEntity.status, 'published'), eq(pageEntity.isActive, true)));
+
+    const isReferenced = publishedRevisions.some((row) =>
+      this.pageReferencesFile(row.content, guid),
+    );
+    if (isReferenced) {
+      throw new ConflictException(
+        'Impossibile eliminare il file: è referenziato da una o più pagine pubblicate.',
+      );
+    }
+  }
+
+  /**
+   * Cammina ricorsivamente l'albero `content.blocks` (qualunque profondità,
+   * via `children`, vedi `pages/content-tree.ts`) cercando un nodo la cui
+   * definizione (`findBlockDefinition`, registro blocchi) dichiara una prop
+   * di `kind: 'mediaRef'` con valore uguale a `guid`. Genera per **ogni**
+   * prop `kind: 'mediaRef'` del registro, presente o futura — mai un nome di
+   * prop hardcoded (oggi solo `image.mediaRef`, ma il registro può
+   * estendersi senza toccare questa protezione).
+   * @param content Contenuto grezzo di `page_revisions.content` (`unknown`: snapshot jsonb non tipizzato).
+   * @param guid Guid del file cercato.
+   */
+  private pageReferencesFile(content: unknown, guid: string): boolean {
+    const walk = (node: unknown): boolean => {
+      if (node === null || typeof node !== 'object' || Array.isArray(node)) {
+        return false;
+      }
+      const block = node as Record<string, unknown>;
+
+      if (typeof block.type === 'string') {
+        const definition = findBlockDefinition(block.type);
+        const props = (
+          block.props !== null && typeof block.props === 'object' ? block.props : {}
+        ) as Record<string, unknown>;
+        if (definition) {
+          for (const [propName, propSpec] of Object.entries(definition.props)) {
+            if (propSpec.kind === 'mediaRef' && props[propName] === guid) {
+              return true;
+            }
+          }
+        }
+      }
+
+      const children = Array.isArray(block.children) ? block.children : [];
+      return children.some(walk);
+    };
+
+    if (content === null || typeof content !== 'object' || Array.isArray(content)) {
+      return false;
+    }
+    const tree = content as Record<string, unknown>;
+    const blocks = Array.isArray(tree.blocks) ? tree.blocks : [];
+    return blocks.some(walk);
   }
 
   /** Cerca un file attivo per guid, lanciando 404 se assente o soft-deleted. */

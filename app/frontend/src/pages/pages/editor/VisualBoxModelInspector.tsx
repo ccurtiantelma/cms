@@ -24,9 +24,15 @@
  * silenzio al primo refactor disallineato fra le due. `setAndCommit` è la stessa closure
  * di `PropertyForm` (chiude sullo stato locale `draft` di quel form): arriva come prop,
  * non viene mai ricreata qui, per restare sull'unica fonte di verità del form.
+ *
+ * Il lucchetto per gruppo (Margine/Padding) è stato locale del pannello, non una prop: blocca
+ * solo *come* si scrive sui quattro lati di quel gruppo (stesso token su tutti e quattro
+ * invece che sul solo lato toccato), mai *cosa* si scrive — resta comunque una scrittura per
+ * prop via `setAndCommit`, quindi nessun formato composito nuovo nel `jsonb`.
  */
 import { useState } from 'react';
-import { Popover, SegmentedControl, Stack, Text, UnstyledButton } from '@mantine/core';
+import { ActionIcon, Popover, SegmentedControl, Stack, Text, Tooltip, UnstyledButton } from '@mantine/core';
+import { IconLock, IconLockOpen } from '@tabler/icons-react';
 import type { BlockPropDescriptor } from '../../../types/blocks.types';
 import type { EditorViewport } from '../../../hooks/useBlockEditorStore';
 import {
@@ -173,17 +179,39 @@ export default function VisualBoxModelInspector({
   setAndCommit,
 }: VisualBoxModelInspectorProps): JSX.Element {
   const activeBreakpoint = breakpointKey(activeViewport);
+  // Bloccato = i quattro lati del gruppo si muovono insieme (un lato cambiato propaga lo
+  // stesso token agli altri tre), come nel pattern "catena spezzata" di Elementor/DevTools.
+  // Stato locale, non nel `draft` del form: è una preferenza di editing del pannello, non un
+  // valore di prop — non deve né sopravvivere al salvataggio né viaggiare verso il server.
+  const [marginLocked, setMarginLocked] = useState(false);
+  const [paddingLocked, setPaddingLocked] = useState(false);
 
   /**
    * Scrive solo la chiave del breakpoint attivo, preservando le altre già salvate —
    * stesso pattern di `PropertyInspector.tsx` (mai un merge scritto qui una seconda volta).
+   * Con il gruppo bloccato scrive lo stesso token sui quattro lati del gruppo invece del solo
+   * lato toccato: resta comunque una scrittura per prop (mai un valore composito), quindi
+   * undo/redo e dirty-tracking restano quelli già garantiti da `setAndCommit`.
    */
-  function writeSide(prop: BlockPropDescriptor, propName: string, nextToken: string): void {
-    const envelope = responsiveEnvelope(prop, draft[propName]);
-    setAndCommit(propName, { ...envelope, [activeBreakpoint]: nextToken });
+  function writeSide(
+    propName: keyof SpacingPropsByName,
+    nextToken: string,
+    locked: boolean,
+    groupSides: readonly SideDescriptor[],
+  ): void {
+    const targets = locked ? groupSides.map((side) => side.propName) : [propName];
+    for (const target of targets) {
+      const prop = spacingProps[target];
+      const envelope = responsiveEnvelope(prop, draft[target]);
+      setAndCommit(target, { ...envelope, [activeBreakpoint]: nextToken });
+    }
   }
 
-  function renderSide(descriptor: SideDescriptor): JSX.Element {
+  function renderSide(
+    descriptor: SideDescriptor,
+    locked: boolean,
+    groupSides: readonly SideDescriptor[],
+  ): JSX.Element {
     const prop = spacingProps[descriptor.propName];
     const label = propLabel(prop, propsMeta);
     return (
@@ -194,8 +222,30 @@ export default function VisualBoxModelInspector({
         value={draft[descriptor.propName]}
         activeViewport={activeViewport}
         side={descriptor.side}
-        onChangeToken={(nextToken) => writeSide(prop, descriptor.propName, nextToken)}
+        onChangeToken={(nextToken) => writeSide(descriptor.propName, nextToken, locked, groupSides)}
       />
+    );
+  }
+
+  function renderLockToggle(
+    locked: boolean,
+    setLocked: (next: boolean) => void,
+    groupLabel: string,
+  ): JSX.Element {
+    const action = locked ? 'Sblocca' : 'Blocca';
+    return (
+      <Tooltip label={`${action} ${groupLabel.toLowerCase()}: modifica i quattro lati insieme`} withArrow>
+        <ActionIcon
+          variant={locked ? 'light' : 'subtle'}
+          color={locked ? 'blue' : 'gray'}
+          size="sm"
+          aria-label={`${action} ${groupLabel.toLowerCase()}`}
+          aria-pressed={locked}
+          onClick={() => setLocked(!locked)}
+        >
+          {locked ? <IconLock size={14} /> : <IconLockOpen size={14} />}
+        </ActionIcon>
+      </Tooltip>
     );
   }
 
@@ -206,9 +256,9 @@ export default function VisualBoxModelInspector({
       </Text>
 
       <div className={`${styles.box} ${styles.marginBox}`}>
-        {MARGIN_SIDES.map(renderSide)}
+        {MARGIN_SIDES.map((side) => renderSide(side, marginLocked, MARGIN_SIDES))}
         <div className={`${styles.center} ${styles.box} ${styles.paddingBox}`}>
-          {PADDING_SIDES.map(renderSide)}
+          {PADDING_SIDES.map((side) => renderSide(side, paddingLocked, PADDING_SIDES))}
           <div className={`${styles.center} ${styles.contentBox}`} aria-hidden="true">
             Contenuto
           </div>
@@ -220,10 +270,12 @@ export default function VisualBoxModelInspector({
         <Text size="xs" c="dimmed">
           Margine
         </Text>
+        {renderLockToggle(marginLocked, setMarginLocked, 'Margine')}
         <span className={`${styles.legendDot} ${styles.legendDotPadding}`} aria-hidden="true" />
         <Text size="xs" c="dimmed">
           Padding
         </Text>
+        {renderLockToggle(paddingLocked, setPaddingLocked, 'Padding')}
       </div>
     </Stack>
   );

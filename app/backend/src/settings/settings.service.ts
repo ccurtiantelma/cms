@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
 import { DbService } from '../db/db.service';
 import { appSettingEntity } from '../db/schema';
 import { AuditLogService } from '../common/audit-log.service';
+import { AppConstants } from '../common/app-constants';
 import { AuthInfo } from '../common/types';
 import { Utils } from '../common/utils';
 import {
@@ -13,9 +14,13 @@ import {
   ThemeUnit,
   THEME_UNSET,
 } from './dto/theme-config.dto';
+import { MultilingualConfigDto } from './dto/multilingual-config.dto';
 
 /** Chiave della riga di `app_settings` che contiene il tema globale (ADR-4). */
 export const THEME_SETTING_KEY = 'theme';
+
+/** Chiave della riga di `app_settings` che contiene il registro Locale attivi (RFC-F05 § 1). */
+export const MULTILINGUAL_SETTING_KEY = 'multilingual.locales';
 
 /**
  * Default di fabbrica del tema (contratto v7) — SPECULARE a
@@ -147,6 +152,16 @@ export const DEFAULT_THEME_CONFIG: ThemeConfigDto = {
     navbarActiveText: '#ffffff',
     navbarBorder: '#dee2e6',
   },
+};
+
+/**
+ * Default di fabbrica del registro Locale: bootstrap da `AppConstants.defaultLocale`
+ * (env var) finché nessun Admin ha mai salvato il registro (RFC-F05 § 1). Un solo
+ * Locale attivo, coincidente col default — non un'assunzione multilingua implicita.
+ */
+export const DEFAULT_MULTILINGUAL_CONFIG: MultilingualConfigDto = {
+  active: [AppConstants.defaultLocale],
+  default: AppConstants.defaultLocale,
 };
 
 /** Le 11 chiavi colore del contratto storico (v1/v2), prima dei colori per titolo introdotti in v3. */
@@ -466,6 +481,68 @@ export class SettingsService {
       'settings.theme.update',
       'app_settings',
       THEME_SETTING_KEY,
+      JSON.stringify(dto),
+      authInfo.impersonatedBy,
+      ip,
+    );
+    return dto;
+  }
+
+  /**
+   * Registro Locale attivi corrente: la riga `key='multilingual.locales'` se
+   * presente e attiva, altrimenti il bootstrap da `AppConstants.defaultLocale`
+   * (installazione mai personalizzata, RFC-F05 § 1).
+   */
+  async getMultilingualConfig(): Promise<MultilingualConfigDto> {
+    const row = await this.db.db.query.appSettingEntity.findFirst({
+      where: and(eq(appSettingEntity.key, MULTILINGUAL_SETTING_KEY), eq(appSettingEntity.isActive, true)),
+    });
+    if (!row) {
+      return DEFAULT_MULTILINGUAL_CONFIG;
+    }
+    return row.value as MultilingualConfigDto;
+  }
+
+  /**
+   * Salva (upsert sulla chiave univoca) il registro Locale attivi e registra
+   * l'operazione su audit log. Admin+ only (guard sul controller, RFC-F05 §
+   * 1/M6). `default` deve comparire in `active`: violazione cross-field non
+   * esprimibile da class-validator sul DTO, verificata qui.
+   */
+  async updateMultilingualConfig(
+    dto: MultilingualConfigDto,
+    authInfo: AuthInfo,
+    ip?: string,
+  ): Promise<MultilingualConfigDto> {
+    if (!dto.active.includes(dto.default)) {
+      throw new BadRequestException('Il Locale di default deve comparire fra i Locale attivi.');
+    }
+
+    await this.db.db
+      .insert(appSettingEntity)
+      .values({
+        guid: Utils.randomString(16),
+        key: MULTILINGUAL_SETTING_KEY,
+        value: dto,
+        createdBy: authInfo.userId,
+        updatedBy: authInfo.userId,
+      })
+      .onConflictDoUpdate({
+        target: appSettingEntity.key,
+        set: {
+          value: dto,
+          isActive: true,
+          updatedAt: new Date(),
+          updatedBy: authInfo.userId,
+        },
+      });
+
+    this.logger.log(`Registro Locale aggiornato (userId=${authInfo.userId}).`);
+    await this.auditLogService.log(
+      authInfo.userId,
+      'settings.multilingual.update',
+      'app_settings',
+      MULTILINGUAL_SETTING_KEY,
       JSON.stringify(dto),
       authInfo.impersonatedBy,
       ip,

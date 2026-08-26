@@ -79,7 +79,9 @@ Transizioni **ammesse** (ogni altra transizione è respinta con `400`):
 draft     → review | scheduled | published
 review    → draft | scheduled | published
 scheduled → draft | published | archived
-published → draft (nuova bozza, il pubblicato resta online) | archived
+published → draft (nuova bozza, il pubblicato resta online)
+          | published (ripubblicazione: nuova Revisione, stesso stato)
+          | archived
 archived  → draft | published
 ```
 

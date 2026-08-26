@@ -34,6 +34,27 @@ export const imageBlock: BlockDefinition = {
       values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
       default: { default: 'none' },
     },
+    styleLayer: {
+      kind: 'enum',
+      required: false,
+      values: ['base', 'raised', 'overlay', 'top'],
+      default: 'base',
+    },
+    styleHideDesktop: {
+      kind: 'boolean',
+      required: false,
+      default: false,
+    },
+    styleHideTablet: {
+      kind: 'boolean',
+      required: false,
+      default: false,
+    },
+    styleHideMobile: {
+      kind: 'boolean',
+      required: false,
+      default: false,
+    },
   },
   children: { allow: [] },
   migrations: [],
@@ -47,6 +68,10 @@ export const imageBlock: BlockDefinition = {
       alt: { label: 'Testo alternativo', order: 2 },
       styleSpaceBefore: { label: 'Spazio prima', tab: 'style', order: 3 },
       styleSpaceAfter: { label: 'Spazio dopo', tab: 'style', order: 4 },
+      styleLayer: { label: 'Livello di sovrapposizione', tab: 'advanced', order: 5 },
+      styleHideDesktop: { label: 'Nascondi su Desktop', tab: 'advanced', order: 6 },
+      styleHideTablet: { label: 'Nascondi su Tablet', tab: 'advanced', order: 7 },
+      styleHideMobile: { label: 'Nascondi su Mobile', tab: 'advanced', order: 8 },
     },
   },
 };

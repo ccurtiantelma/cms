@@ -1,0 +1,30 @@
+/*
+  Rifinitura visiva condivisa delle schede Contenuto/Stile (T-inspector-restyle). Solo token
+  Mantine: questo pannello è chrome amministrativo (sidebar dell'editor), non il canvas
+  WYSIWYG — l'accento resta il blue di Mantine, mai il magenta/blu fisso riservato al canvas
+  in EditorBlockWrapper.module.css (vedi il suo commento di testa sulla distinzione).
+*/
+
+/*
+  Divisore fra un campo e il successivo, stile Elementor (righe di campo separate da un
+  filo sottile invece di uno spazio nudo). Selettore sul figlio successivo di un fratello
+  (`> * + *`) invece di un `Divider` esplicito fra ogni coppia: `ContentTab`/`StyleTab`
+  mappano un array di descrittori a una lista piatta di controlli, un `Divider` intercalato
+  richiederebbe una seconda passata solo per inserirlo. Il primo campo resta senza bordo
+  sopra (non è "successivo" a nulla).
+*/
+.fieldList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.fieldList > * + * {
+  margin-top: var(--mantine-spacing-md);
+  padding-top: var(--mantine-spacing-md);
+  border-top: 1px solid var(--mantine-color-gray-3);
+}
+
+[data-mantine-color-scheme='dark'] .fieldList > * + * {
+  border-top-color: var(--mantine-color-dark-4);
+}

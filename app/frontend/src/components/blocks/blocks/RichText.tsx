@@ -16,7 +16,11 @@
  */
 import styles from './RichText.module.css';
 import tokenStyles from '../style-tokens.module.css';
-import { resolveResponsiveClassNames } from '../style-tokens';
+import {
+  resolveHideClassName,
+  resolveLayerClassName,
+  resolveResponsiveClassNames,
+} from '../style-tokens';
 
 interface RichTextProps {
   html: string;
@@ -26,6 +30,10 @@ interface RichTextProps {
   styleFontSize?: unknown;
   styleFontWeight?: unknown;
   styleFontFamily?: unknown;
+  styleLayer?: unknown;
+  styleHideDesktop?: unknown;
+  styleHideTablet?: unknown;
+  styleHideMobile?: unknown;
   /** Editing in-place attivo (solo editor, solo nodo selezionato — mai sul sito pubblico). */
   editable?: boolean;
   /** Commit dell'HTML modificato — chiamato su `blur`. */
@@ -42,6 +50,10 @@ export default function RichText({
   styleFontSize,
   styleFontWeight,
   styleFontFamily,
+  styleLayer,
+  styleHideDesktop,
+  styleHideTablet,
+  styleHideMobile,
   editable = false,
   onHtmlChange,
   onHtmlInput,
@@ -55,6 +67,10 @@ export default function RichText({
     resolveResponsiveClassNames(tokenStyles, 'fontSize', styleFontSize),
     resolveResponsiveClassNames(tokenStyles, 'fontWeight', styleFontWeight),
     resolveResponsiveClassNames(tokenStyles, 'fontFamily', styleFontFamily),
+    resolveLayerClassName(tokenStyles, styleLayer),
+    resolveHideClassName(tokenStyles, 'hideDesktop', styleHideDesktop),
+    resolveHideClassName(tokenStyles, 'hideTablet', styleHideTablet),
+    resolveHideClassName(tokenStyles, 'hideMobile', styleHideMobile),
   ]
     .filter(Boolean)
     .join(' ');
@@ -67,14 +83,38 @@ export default function RichText({
   // da lì in poi, come in `Heading.tsx`, il DOM è l'unica fonte di verità — nessun
   // re-render con `html` come `value` controllato, che sposterebbe il cursore ad ogni
   // digitazione. `onInput` notifica ad ogni tasto, `onBlur` resta il commit definitivo.
+  //
+  // `defaultParagraphSeparator` a `p` (su `focus`, non una sola volta al mount: il comando
+  // agisce sul documento attivo, e più blocchi `richText` possono alternarsi in editing
+  // nella stessa sessione): senza, Chrome andrebbe a capo con un `<div>` a ogni `Enter`, un
+  // tag fuori dall'allowlist del profilo `basic` (`block-sanitize-profiles.config.ts`) che
+  // il server scarterebbe silenziosamente al salvataggio — la formattazione sparirebbe
+  // senza errore visibile. `Shift+Enter` forza esplicitamente un `<br>` (a capo semplice,
+  // sempre ammesso), invece di affidarsi al comportamento di default del browser per quel
+  // tasto. `Escape` annulla le modifiche non consolidate riportando il DOM a `html` — la
+  // prop resta invariata durante l'editing (vedi commento di testa del file) — e sfoca:
+  // l'`onBlur` sotto committa quindi il valore appena ripristinato, cancellando anche un
+  // eventuale aggiornamento debounced ancora in sospeso lato chiamante
+  // (`EditorBlockWrapper.tsx`, che cancella il timer prima di ogni `onHtmlChange`).
   return (
     <div
       className={className}
       contentEditable
       suppressContentEditableWarning
       dangerouslySetInnerHTML={{ __html: html }}
+      onFocus={() => document.execCommand('defaultParagraphSeparator', false, 'p')}
       onInput={(event) => onHtmlInput?.(event.currentTarget.innerHTML)}
       onBlur={(event) => onHtmlChange?.(event.currentTarget.innerHTML)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' && event.shiftKey) {
+          event.preventDefault();
+          document.execCommand('insertLineBreak');
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          event.currentTarget.innerHTML = html;
+          event.currentTarget.blur();
+        }
+      }}
     />
   );
 }

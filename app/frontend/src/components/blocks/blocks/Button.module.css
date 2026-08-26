@@ -1,3 +1,26 @@
+/*
+ * Chrome di base del blocco `button` (gap non coperto da ADR-29/ADR-21, SPEC-F02-blocchi.md
+ * § 3.6: "variant"/"size" sono rendering, fuori schema — nessuna prop nuova, solo un default
+ * statico). Prima di questa regola l'elemento (un `<a>`, che non ha chrome nativo come
+ * `<button>`) era un link nudo indistinguibile dal testo circostante. Colori fissi, non
+ * token — non esiste ancora un vocabolario di token "sfondo pulsante" in style-tokens.module.css,
+ * e introdurne uno andrebbe oltre lo scope di questo fix. `styleTextColor`/`styleFontSize`/ecc.
+ * (già applicati da Button.tsx) restano liberi di sovrascrivere in cascata: dichiarati dopo
+ * questa classe nell'ordine delle classi risolte da Button.tsx.
+ */
 .button {
   display: inline-block;
+  padding: 0.625rem 1.5rem;
+  border-radius: 4px;
+  background-color: var(--cms-text-color-accent);
+  color: var(--cms-text-color-inverse);
+  text-decoration: none;
+  font-weight: var(--cms-font-weight-medium);
+  line-height: 1.2;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+
+.button:hover {
+  opacity: 0.85;
 }

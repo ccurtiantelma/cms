@@ -19,10 +19,12 @@ import { AuthInfo, PagesQueryParams, PaginationParams } from '../common/types';
 import { Pagination } from '../common/pagination';
 import { PagesService } from './pages.service';
 import { CreatePageDto } from './dto/create-page.dto';
+import { CreateTranslationDto } from './dto/create-translation.dto';
 import { UpdatePageDto } from './dto/update-page.dto';
 import { ChangeStatusDto } from './dto/change-status.dto';
 import { PageDto } from './dto/page.dto';
 import { PageRevisionDetailDto, PageRevisionSummaryDto } from './dto/page-revision.dto';
+import { PageTranslationDto } from './dto/page-translation.dto';
 import { PagePreviewTokenDto } from './dto/page-preview-token.dto';
 
 /**
@@ -92,6 +94,46 @@ export class PagesController {
   async create(@Body() dto: CreatePageDto, @Req() req: Request): Promise<PageDto> {
     const authInfo = req['authInfo'] as AuthInfo;
     return this.pagesService.create(dto, authInfo);
+  }
+
+  /**
+   * Crea una traduzione da una Pagina sorgente (RFC-F05 § 3). Nessun
+   * `@UseGuards` di ruolo: stessa soglia di `create` — chiunque possa creare
+   * una Pagina può creare una traduzione.
+   */
+  @Post(':guid/translations')
+  @ApiOperation({ summary: 'Crea una traduzione da una Pagina sorgente' })
+  @ApiResponse({ status: 201, description: 'Traduzione creata', type: PageDto })
+  @ApiResponse({ status: 400, description: 'Locale non fra i Locale attivi' })
+  @ApiResponse({ status: 404, description: 'Pagina sorgente non trovata o eliminata' })
+  @ApiResponse({ status: 409, description: 'Esiste già una traduzione per questo locale' })
+  async createTranslation(
+    @Param('guid') guid: string,
+    @Body() dto: CreateTranslationDto,
+    @Req() req: Request,
+  ): Promise<PageDto> {
+    const authInfo = req['authInfo'] as AuthInfo;
+    return this.pagesService.createTranslation(guid, dto, authInfo);
+  }
+
+  /**
+   * Elenco delle righe sorelle attive del gruppo di traduzione, sorgente
+   * inclusa (RFC-F05 § 3, dipendenza aperta di T6 — switcher lingua
+   * dell'editor). Nessun `@UseGuards` di ruolo: stessa soglia minima di
+   * `findOne`/`createTranslation` — chi può vedere/creare una traduzione
+   * può anche listare il gruppo. Dichiarato prima di `:guid` (un solo
+   * segmento) per prudenza di routing, coerente con `POST :guid/translations`.
+   */
+  @Get(':guid/translations')
+  @ApiOperation({ summary: 'Elenco delle traduzioni del gruppo (bozze incluse), sorgente inclusa' })
+  @ApiResponse({
+    status: 200,
+    description: 'Traduzioni del gruppo (bozze incluse)',
+    type: [PageTranslationDto],
+  })
+  @ApiResponse({ status: 404, description: 'Pagina sorgente non trovata o eliminata' })
+  async listTranslations(@Param('guid') guid: string): Promise<PageTranslationDto[]> {
+    return this.pagesService.listTranslations(guid);
   }
 
   /** Dettaglio di una Pagina, bozza corrente inclusa. */

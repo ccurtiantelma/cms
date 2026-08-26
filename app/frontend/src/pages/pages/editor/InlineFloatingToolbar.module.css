@@ -1,0 +1,50 @@
+/* Toolbar di formattazione fluttuante sulla selezione testuale (T9-toolbar). Vedi InlineFloatingToolbar.tsx. */
+
+.toolbar {
+  position: fixed;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 6px;
+  background: var(--mantine-color-white);
+  border: 1px solid #2271b1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  /* Misurata prima di essere posizionata (InlineFloatingToolbar.tsx, useLayoutEffect):
+     invisibile finché la posizione clampata al viewport non è nota, per non far
+     lampeggiare la barra nell'angolo in alto a sinistra per un frame. */
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toolbarVisible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+[data-mantine-color-scheme='dark'] .toolbar {
+  background: var(--mantine-color-dark-6);
+}
+
+.divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 2px;
+  background: var(--mantine-color-gray-3);
+}
+
+[data-mantine-color-scheme='dark'] .divider {
+  background: var(--mantine-color-dark-4);
+}
+
+.linkForm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+}
+
+.linkInput {
+  width: 220px;
+}

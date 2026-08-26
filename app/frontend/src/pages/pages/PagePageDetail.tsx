@@ -219,8 +219,16 @@ export default function PagePageDetail(): JSX.Element {
   const [viewRevision, setViewRevision] = useState<PageRevisionDetail | null>(null);
   const [viewRevisionLoading, setViewRevisionLoading] = useState(false);
 
-  /** `Tabs` controllato per comunicare al layout persistente se l'editor è attivo. */
-  const [activeTab, setActiveTab] = useState<string | null>('metadata');
+  /**
+   * `Tabs` controllato per comunicare al layout persistente se l'editor è attivo.
+   * `?tab=` iniziale (letto una sola volta, mai risincronizzato dopo il mount): usato dal
+   * redirect di `CreateTranslationModal.tsx` per aprire la nuova traduzione direttamente
+   * sulla scheda "Contenuto" invece che su "Metadati" — l'unico consumer oggi, ma un valore
+   * non riconosciuto ricade silenziosamente sul default invece di rompere il rendering.
+   */
+  const [activeTab, setActiveTab] = useState<string | null>(
+    () => new URLSearchParams(window.location.search).get('tab') ?? 'metadata',
+  );
 
   const form = useForm<MetadataFormValues>({
     mode: 'controlled',
@@ -644,7 +652,7 @@ export default function PagePageDetail(): JSX.Element {
                     withArrow
                     multiline
                     w={280}
-                    label="Il sito pubblico (porta 4000) non risponde: la pagina potrebbe non essere raggiungibile."
+                    label="Il sito pubblico (porta 54000) non risponde: la pagina potrebbe non essere raggiungibile."
                   >
                     <Center aria-label="Sito pubblico non raggiungibile">
                       <IconAlertTriangle size={18} color="var(--mantine-color-yellow-6)" />

@@ -82,7 +82,10 @@ function WidgetTile({ descriptor, onAdd }: WidgetTileProps): JSX.Element {
       {...attributes}
       {...listeners}
     >
-      {icon}
+      {/* Wrapper di solo stile: l'icona resta lo stesso elemento stabile di `blockIcon`
+          (nessuna modifica alla logica sopra), solo un colore d'accento fisso invece di
+          ereditare `currentColor` dal testo della tessera. */}
+      <span className={styles.tileIcon}>{icon}</span>
       <Text size="xs" className={styles.tileLabel}>
         {label}
       </Text>

@@ -8,10 +8,6 @@
   transition: border-color 120ms ease;
 }
 
-.wrapper:hover {
-  border-color: var(--mantine-color-gray-4);
-}
-
 /* Selezione da tastiera (T-canvas-cleanup): il wrapper è il bersaglio `tabIndex`, vedi
    EditorBlockWrapper.tsx. Solo `:focus-visible`, mai su focus da mouse/click. */
 .wrapper:focus-visible {
@@ -20,20 +16,23 @@
 }
 
 /*
-  Hover promosso a stato esplicito (`isHovered`, EditorBlockWrapper.tsx): a differenza del
-  `:hover` qui sopra, questa classe è applicata via JS solo al nodo effettivamente sotto il
-  puntatore (mai contemporaneamente ai suoi antenati/discendenti) — bordo azzurro sottile,
-  distinto dal blu pieno di `.selected`.
+  Hover promosso a stato esplicito (`isHovered`, EditorBlockWrapper.tsx), niente `:hover`
+  CSS nativo sul wrapper (rimosso: cadrebbe su ogni antenato del nodo puntato, il DOM di un
+  figlio è geometricamente dentro quello del padre) — questa classe è applicata via JS solo
+  al nodo effettivamente sotto il puntatore (mai contemporaneamente ai suoi
+  antenati/discendenti). Colore Elementor-style (`#2271b1`, richiesta esplicita del task),
+  non il blue-5 di Mantine usato altrove in chrome admin: qui la superficie è il canvas
+  WYSIWYG, non un pannello.
 */
 .hovered {
   border-style: solid;
-  border-color: var(--mantine-color-blue-4);
+  border-color: #2271b1;
 }
 
 .selected,
 .selected:hover {
   border-style: solid;
-  border-color: var(--mantine-color-blue-5);
+  border-color: #2271b1;
 }
 
 /*
@@ -134,19 +133,45 @@
   opacity: 0.4;
 }
 
+/*
+  "Occhio" del pannello Struttura/Navigator (EditorStructureNavigator.tsx): nascondi
+  effettivo, non un'attenuazione. Distinta da `previewHidden` (style-tokens.module.css),
+  che mantiene il nodo selezionabile per la visibilità per-viewport persistita — qui
+  l'intento è "sparisci dal canvas", stato UI mai persistito.
+*/
+.hiddenInCanvas {
+  display: none;
+}
+
 /* Maniglia di trascinamento nella toolbar: mai il corpo del blocco. */
 .dragHandle {
   cursor: grab;
 }
 
 /*
-  Badge del tipo di blocco (hover/selezione, T8; solo icona da T-canvas-cleanup — niente
-  più testo fisso "SEZIONE"/"TITOLO"/…, vedi EditorBlockWrapper.tsx): fuori dal box del
-  wrapper (top negativo), mai dentro il flusso della toolbar — così non compete per spazio
-  con le sue azioni. Un badge di un nodo innestato è sempre dipinto sopra quello del suo
-  contenitore: entrambi sono discendenti dello stesso stacking context implicito (nessuno
-  dei due wrapper dichiara un proprio `z-index`), e l'ordine del DOM mette il badge del
-  figlio dopo quello del padre.
+  Bersaglio invisibile del menu contestuale (tasto destro, EditorBlockWrapper.tsx): un
+  punto 1x1 posizionato sulle coordinate del click via `top`/`left` inline (calcolate ad
+  ogni apertura, non esprimibili come classe statica) — questa classe porta solo ciò che
+  non cambia mai (posizionamento fisso, dimensione, nessuna interazione propria).
+*/
+.contextMenuAnchor {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+/*
+  Badge del tipo di blocco (hover/selezione, T8; di nuovo icona+nome dal restyle
+  Elementor-style — il testo fisso rimosso da T-canvas-cleanup torna qui su richiesta
+  esplicita del task, ma resta `aria-hidden` come prima: l'etichetta accessibile del
+  blocco è già sugli `aria-label` dei pulsanti della toolbar, non su questo badge, quindi
+  non duplica nulla per chi usa lo screen reader). Fuori dal box del wrapper (top
+  negativo), mai dentro il flusso della toolbar — così non compete per spazio con le sue
+  azioni. Un badge di un nodo innestato è sempre dipinto sopra quello del suo contenitore:
+  entrambi sono discendenti dello stesso stacking context implicito (nessuno dei due
+  wrapper dichiara un proprio `z-index`), e l'ordine del DOM mette il badge del figlio
+  dopo quello del padre.
 */
 .hoverBadge {
   position: absolute;
@@ -155,12 +180,44 @@
   z-index: 2;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 4px 4px 0 0;
-  background: var(--mantine-color-blue-5);
+  gap: 4px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 3px 3px 0 0;
+  background: #2271b1;
   color: var(--mantine-color-white);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/*
+  Badge "Nascosto su [Device]" (ADR-37 § 3): sempre visibile (non solo hover/selezione,
+  a differenza di `.hoverBadge` sopra) quando il nodo è nascosto sul dispositivo attivo
+  del Device Switcher — l'attenuazione del contenuto (`previewHidden`,
+  `style-tokens.module.css`) da sola non spiegherebbe perché il blocco appare sbiadito.
+  In alto a destra, sullo stesso bordo di `.hoverBadge` (in alto a sinistra): mai
+  sovrapposti. Colore d'allerta (arancione), distinto dal blu/magenta di hover/selezione
+  e dal rosso di `.invalid` — tre segnali visivi diversi per tre stati diversi.
+*/
+.hiddenBadge {
+  position: absolute;
+  top: -20px;
+  right: 0;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 3px 3px 0 0;
+  background: #e8590c;
+  color: var(--mantine-color-white);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
   pointer-events: none;
 }
 
@@ -178,7 +235,7 @@
   padding: 2px;
   border-radius: 6px;
   background: var(--mantine-color-white);
-  border: 1px solid var(--mantine-color-blue-5);
+  border: 1px solid #2271b1;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
@@ -201,8 +258,10 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 3;
-  padding: 3px 8px;
-  border-radius: 4px;
+  padding: 4px 10px;
+  /* Pill (richiesta esplicita del task): metà dell'altezza della barra basta e avanza a
+     produrre estremi semicircolari con qualunque padding verticale sopra. */
+  border-radius: 999px;
   background: #a333c8;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
 }
@@ -235,25 +294,62 @@
   bottom: -6px;
 }
 
+/*
+ * Linea d'inserimento con pallini terminali (stile Elementor, richiesta esplicita del
+ * task): un solo pseudo-elemento che dipinge tre livelli di sfondo sovrapposti — due
+ * cerchi (`radial-gradient`, un raggio per lato) ancorati agli estremi della dropzone via
+ * `background-position: 0/100%`, più la linea (`linear-gradient` orizzontale, alta 2px,
+ * centrata) fra i due. `background-repeat: no-repeat` su tutti e tre evita che i cerchi,
+ * dichiarati come pattern ripetibile di default, si moltiplichino lungo l'asse. A riposo
+ * `background-image: none`: niente da disegnare, i colori arrivano solo dagli stati
+ * `[data-over]`/`[data-rejected]` sotto — stesso principio del vecchio `background:
+ * transparent`, senza dover ridichiarare tre gradient "trasparenti" a vuoto.
+ */
 .dropZone::before {
   content: '';
   position: absolute;
   left: 0;
   right: 0;
   top: 50%;
-  height: 2px;
-  border-radius: 1px;
-  background: transparent;
-  transform: translateY(-50%) scaleY(1);
-  transition: background-color 100ms ease;
+  height: 6px;
+  transform: translateY(-50%);
+  background-image: none;
+  background-repeat: no-repeat;
+  background-position:
+    0 center,
+    100% center,
+    center;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 2px;
+  box-shadow: none;
+  transition:
+    background-image 100ms ease,
+    box-shadow 100ms ease;
 }
 
+/*
+ * Punto di inserimento risolto da dnd-kit (T7): linea+pallini d'accento magenta con
+ * bagliore, stesso `#a333c8` dell'accento Section (`.sectionAccent` sopra) — un solo
+ * colore "drag & drop" riconoscibile in tutto l'editor, non più il blu generico. La
+ * posizione è quella già calcolata da `dropZoneAttrs`/`before:<id>`/`after:<id>` in
+ * `EditorBlockWrapper.tsx`: qui si sostituisce solo lo stile, mai la geometria.
+ */
 .dropZone[data-over='true']::before {
-  background: var(--mantine-color-blue-6);
+  background-image:
+    radial-gradient(circle, #a333c8 0 3px, transparent 3px 100%),
+    radial-gradient(circle, #a333c8 0 3px, transparent 3px 100%),
+    linear-gradient(#a333c8, #a333c8);
+  box-shadow: 0 0 6px 1px rgba(163, 51, 200, 0.6);
 }
 
 .dropZone[data-over='true'][data-rejected='true']::before {
-  background: var(--mantine-color-red-6);
+  background-image:
+    radial-gradient(circle, var(--mantine-color-red-6) 0 3px, transparent 3px 100%),
+    radial-gradient(circle, var(--mantine-color-red-6) 0 3px, transparent 3px 100%),
+    linear-gradient(var(--mantine-color-red-6), var(--mantine-color-red-6));
+  box-shadow: none;
 }
 
 /*
@@ -275,12 +371,14 @@
   border: 1px dashed transparent;
   transition:
     border-color 100ms ease,
-    background-color 100ms ease;
+    background-color 100ms ease,
+    box-shadow 100ms ease;
 }
 
 .containerDropZone[data-over='true'] {
-  border-color: var(--mantine-color-blue-6);
-  background: var(--mantine-color-blue-light);
+  border-color: #a333c8;
+  background: rgba(163, 51, 200, 0.08);
+  box-shadow: inset 0 0 8px 0 rgba(163, 51, 200, 0.35);
 }
 
 .containerDropZone[data-over='true'][data-rejected='true'] {
@@ -289,16 +387,56 @@
 }
 
 /*
-  Su `section` (T-layout-colonne-section), l'evidenziazione "dentro" riusa il magenta
-  d'accento della Section stessa (`.sectionAccent`/`.sectionActionTab` sopra) invece del
-  blu generico: dentro una griglia a più colonne il blu del riordino fra fratelli
-  (`.dropZone::before`) e il blu generico di "dentro un contenitore" si confonderebbero
-  visivamente — il magenta li distingue subito. Dichiarata dopo le regole generiche
-  `[data-over]` sopra, stessa specificità (due attributi), vince per ordine; `:not` sul
-  rifiuto lascia intatto il rosso quando il drop non sarebbe ammesso — quella regola non
-  cambia mai, coerente con lo schema esistente (ADR-28 § 6).
+  Su `section` (T-layout-colonne-section): stessa evidenziazione magenta ora applicata
+  genericamente a `.containerDropZone[data-over='true']` sopra (l'intero editor usa un solo
+  colore "drag & drop", non più un blu generico riservato alle altre destinazioni) —
+  dichiarazione ridondante per valore, mantenuta per non toccare il calcolo della classe in
+  `EditorBlockWrapper.tsx` (`isSection ? styles.containerDropZoneSection : ''`), fuori scope
+  qui. `:not` sul rifiuto lascia intatto il rosso quando il drop non sarebbe ammesso — quella
+  regola non cambia mai, coerente con lo schema esistente (ADR-28 § 6).
 */
 .containerDropZoneSection[data-over='true']:not([data-rejected='true']) {
   border-color: #a333c8;
   background: rgba(163, 51, 200, 0.08);
+}
+
+/*
+  Maniglia di resize inter-colonna (Section a due colonne, `EditorBlockWrapper.tsx`):
+  `position: absolute` la esclude dal posizionamento automatico della griglia CSS del
+  genitore (stesso principio di `.dropZone`/`.containerDropZone` sopra), `left` inline
+  la centra sul confine reale fra le due colonne per il `columnRatio` corrente. Striscia
+  larga (10px) ma linea sottile visibile (`::before`), stesso accento magenta "drag &
+  drop" del resto dell'editor (`#a333c8`, coerente con `.sectionAccent`/`.dropZone`
+  sopra) — mai il blu generico di hover/selezione, per non confondersi con quello.
+*/
+.columnResizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  transform: translateX(-50%);
+  z-index: 4;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.columnResizer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: transparent;
+  transition: background-color 100ms ease;
+}
+
+.columnResizer:hover::before {
+  background: rgba(163, 51, 200, 0.5);
+}
+
+.columnResizer:active::before {
+  background: #a333c8;
+  width: 3px;
 }

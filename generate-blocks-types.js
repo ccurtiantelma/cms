@@ -69,7 +69,7 @@ export interface BlockPropDescriptor {
 /** Metadati d'editor di una singola prop (ADR-30 § 1), opachi alla validazione. */
 export interface BlockEditorPropMeta {
   label: string;
-  tab?: 'content' | 'style';
+  tab?: 'content' | 'style' | 'advanced';
   order?: number;
   help?: string;
 }

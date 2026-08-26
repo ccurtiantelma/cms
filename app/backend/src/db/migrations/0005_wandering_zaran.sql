@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "pages_translation_group_locale_uq" ON "pages" USING btree ("translation_group_id","locale") WHERE "pages"."is_active";

@@ -69,10 +69,19 @@
 
 /* --- Sidebar sinistra (Widgets/Proprietà) --- */
 /* Larghezza/bg/border/scroll interno sono di proprietà di `EditorSidebar.module.css`: questo
-   è solo il contenitore flex a larghezza fissa dentro `.workArea`. */
+   è solo il contenitore flex a larghezza fissa dentro `.workArea`. Sempre montata nel DOM
+   (vedi FullScreenEditorLayout.tsx): la transizione anima `flex-basis`, non presenza/assenza
+   dell'elemento, così apertura/chiusura non scattano di colpo. */
 .sidebar {
   flex: 0 0 320px;
   overflow: hidden;
+  transition: flex-basis 200ms ease;
+}
+
+/* Sidebar collassata: nessuna larghezza, contenuto invisibile (`overflow: hidden` sopra),
+   ma l'elemento resta nel DOM — `EditorSidebar` non perde `activeSidebarTab`/scroll. */
+.sidebarCollapsed {
+  flex-basis: 0;
 }
 
 /*
@@ -105,11 +114,35 @@
   width: 100%;
   max-width: 100%;
   container-type: inline-size;
-  transition: width 200ms ease, max-width 200ms ease;
+  transition:
+    width 0.3s ease-in-out,
+    max-width 0.3s ease-in-out,
+    margin 0.3s ease-in-out,
+    box-shadow 0.3s ease-in-out;
 }
 
+/* Desktop: piena larghezza dell'area di lavoro, con un tetto oltre il quale il layout
+   pubblico stesso smette di allargarsi ulteriormente (coerente coi `maxWidth`/`contentWidth`
+   di Section, ADR-31) — non un frame, nessuna ombreggiatura. */
 .viewportDesktop {
   width: 100%;
+  max-width: 1280px;
+}
+
+/*
+ * Tablet/Mobile: oltre alla larghezza simulata, un vero "device frame" — margine verticale
+ * (lo sfondo neutro di `.canvasArea` resta visibile tutt'intorno, a fare da cornice esterna),
+ * sfondo proprio e ombreggiatura, così il contenuto simulato si stacca visivamente dal resto
+ * del canvas invece di confondersi con la larghezza piena del desktop.
+ */
+.viewportTablet,
+.viewportMobile {
+  margin-block: 24px;
+  background-color: var(--mantine-color-body);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.08),
+    0 12px 32px rgba(0, 0, 0, 0.18);
+  border-radius: 4px;
 }
 
 .viewportTablet {
@@ -138,4 +171,18 @@
 [data-mantine-color-scheme='dark'] .structurePanel {
   border-left-color: var(--mantine-color-dark-4);
   background-color: var(--mantine-color-dark-6);
+}
+
+/*
+ * "Ghost card" del `DragOverlay` (punto 2 del task): icona + etichetta del tipo di blocco
+ * trascinato (nuovo dalla palette, o riordino di un nodo esistente — stesso aspetto per
+ * entrambi), semitrasparente sul contenuto — non sul `Paper` bordo di
+ * `FullScreenEditorLayout.tsx`, che resta nitido per restare leggibile come "carta"
+ * sollevata durante il drag.
+ */
+.dragGhostContent {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.65;
 }

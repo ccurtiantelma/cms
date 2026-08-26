@@ -17,7 +17,11 @@
  */
 import styles from './Heading.module.css';
 import tokenStyles from '../style-tokens.module.css';
-import { resolveResponsiveClassNames } from '../style-tokens';
+import {
+  resolveHideClassName,
+  resolveLayerClassName,
+  resolveResponsiveClassNames,
+} from '../style-tokens';
 
 interface HeadingProps {
   level: 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
@@ -28,6 +32,10 @@ interface HeadingProps {
   styleFontSize?: unknown;
   styleFontWeight?: unknown;
   styleFontFamily?: unknown;
+  styleLayer?: unknown;
+  styleHideDesktop?: unknown;
+  styleHideTablet?: unknown;
+  styleHideMobile?: unknown;
   /** Editing in-place attivo (solo editor, solo nodo selezionato — mai sul sito pubblico). */
   editable?: boolean;
   /** Commit del testo modificato — chiamato su `blur`. */
@@ -45,6 +53,10 @@ export default function Heading({
   styleFontSize,
   styleFontWeight,
   styleFontFamily,
+  styleLayer,
+  styleHideDesktop,
+  styleHideTablet,
+  styleHideMobile,
   editable = false,
   onTextChange,
   onTextInput,
@@ -58,6 +70,10 @@ export default function Heading({
     resolveResponsiveClassNames(tokenStyles, 'fontSize', styleFontSize),
     resolveResponsiveClassNames(tokenStyles, 'fontWeight', styleFontWeight),
     resolveResponsiveClassNames(tokenStyles, 'fontFamily', styleFontFamily),
+    resolveLayerClassName(tokenStyles, styleLayer),
+    resolveHideClassName(tokenStyles, 'hideDesktop', styleHideDesktop),
+    resolveHideClassName(tokenStyles, 'hideTablet', styleHideTablet),
+    resolveHideClassName(tokenStyles, 'hideMobile', styleHideMobile),
   ]
     .filter(Boolean)
     .join(' ');
@@ -71,6 +87,14 @@ export default function Heading({
   // resta l'unica fonte di verità del contenuto in corso di modifica. `onInput` notifica
   // ad ogni tasto (il chiamante decide se/come debounced verso lo store), `onBlur` resta il
   // commit immediato e definitivo.
+  //
+  // `Enter` consolida e sfoca (un titolo è testo su una riga sola, mai multi-paragrafo):
+  // `blur()` innesca `onBlur` sotto, che commit il testo già presente nel DOM. `Escape`
+  // annulla le modifiche non consolidate riportando il DOM al valore di `text` — l'ultima
+  // prop committata, che resta invariata durante l'editing (vedi commento di testa) — e
+  // sfoca a sua volta: lo stesso `onBlur` committa quindi il valore appena ripristinato,
+  // cancellando anche un eventuale aggiornamento debounced ancora in sospeso lato chiamante
+  // (`EditorBlockWrapper.tsx`, che cancella il timer prima di ogni `onTextChange`).
   return (
     <Level
       className={className}
@@ -78,6 +102,16 @@ export default function Heading({
       suppressContentEditableWarning
       onInput={(event) => onTextInput?.(event.currentTarget.textContent ?? '')}
       onBlur={(event) => onTextChange?.(event.currentTarget.textContent ?? '')}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          event.currentTarget.blur();
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          event.currentTarget.textContent = text;
+          event.currentTarget.blur();
+        }
+      }}
     >
       {text}
     </Level>

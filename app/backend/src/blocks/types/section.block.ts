@@ -137,6 +137,27 @@ export const sectionBlock: BlockDefinition = {
       values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
       default: { default: '0' },
     },
+    styleLayer: {
+      kind: 'enum',
+      required: false,
+      values: ['base', 'raised', 'overlay', 'top'],
+      default: 'base',
+    },
+    styleHideDesktop: {
+      kind: 'boolean',
+      required: false,
+      default: false,
+    },
+    styleHideTablet: {
+      kind: 'boolean',
+      required: false,
+      default: false,
+    },
+    styleHideMobile: {
+      kind: 'boolean',
+      required: false,
+      default: false,
+    },
   },
   children: { allow: ['heading', 'richText', 'image', 'button'] },
   migrations: [],
@@ -175,6 +196,10 @@ export const sectionBlock: BlockDefinition = {
       styleMarginRight: { label: 'Margine destro', tab: 'style', order: 17 },
       styleMarginBottom: { label: 'Margine inferiore', tab: 'style', order: 18 },
       styleMarginLeft: { label: 'Margine sinistro', tab: 'style', order: 19 },
+      styleLayer: { label: 'Livello di sovrapposizione', tab: 'advanced', order: 20 },
+      styleHideDesktop: { label: 'Nascondi su Desktop', tab: 'advanced', order: 21 },
+      styleHideTablet: { label: 'Nascondi su Tablet', tab: 'advanced', order: 22 },
+      styleHideMobile: { label: 'Nascondi su Mobile', tab: 'advanced', order: 23 },
     },
   },
 };

@@ -42,6 +42,15 @@ export type UpdatePagePayload = Omit<components['schemas']['UpdatePageDto'], 'pa
 /** Payload di transizione di stato. */
 export type ChangeStatusPayload = components['schemas']['ChangeStatusDto'];
 
+/** Payload di creazione di una traduzione (`POST /app/pages/:guid/translations`) — riuso diretto. */
+export type CreateTranslationPayload = components['schemas']['CreateTranslationDto'];
+
+/**
+ * Riepilogo leggero di una riga del gruppo di traduzione — sorgente inclusa, bozze incluse
+ * (`GET /app/pages/:guid/translations`) — riuso diretto.
+ */
+export type PageTranslationSummary = components['schemas']['PageTranslationDto'];
+
 /** Dettaglio completo di una Revisione (snapshot immutabile) — riuso diretto. */
 export type PageRevisionDetail = components['schemas']['PageRevisionDetailDto'];
 

@@ -57,6 +57,27 @@ export const richTextBlock: BlockDefinition = {
       values: ['default', 'inter', 'roboto', 'playfair', 'montserrat', 'monospace'],
       default: { default: 'default' },
     },
+    styleLayer: {
+      kind: 'enum',
+      required: false,
+      values: ['base', 'raised', 'overlay', 'top'],
+      default: 'base',
+    },
+    styleHideDesktop: {
+      kind: 'boolean',
+      required: false,
+      default: false,
+    },
+    styleHideTablet: {
+      kind: 'boolean',
+      required: false,
+      default: false,
+    },
+    styleHideMobile: {
+      kind: 'boolean',
+      required: false,
+      default: false,
+    },
   },
   children: { allow: [] },
   migrations: [],
@@ -73,6 +94,10 @@ export const richTextBlock: BlockDefinition = {
       styleFontSize: { label: 'Dimensione testo', tab: 'style', order: 5 },
       styleFontWeight: { label: 'Spessore testo', tab: 'style', order: 6 },
       styleFontFamily: { label: 'Famiglia Font', tab: 'style', order: 8 },
+      styleLayer: { label: 'Livello di sovrapposizione', tab: 'advanced', order: 9 },
+      styleHideDesktop: { label: 'Nascondi su Desktop', tab: 'advanced', order: 10 },
+      styleHideTablet: { label: 'Nascondi su Tablet', tab: 'advanced', order: 11 },
+      styleHideMobile: { label: 'Nascondi su Mobile', tab: 'advanced', order: 12 },
     },
   },
 };

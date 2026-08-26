@@ -29,7 +29,7 @@ export interface BlockPropDescriptor {
 /** Metadati d'editor di una singola prop (ADR-30 § 1), opachi alla validazione. */
 export interface BlockEditorPropMeta {
   label: string;
-  tab?: 'content' | 'style';
+  tab?: 'content' | 'style' | 'advanced';
   order?: number;
   help?: string;
 }
@@ -401,6 +401,36 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "96"
         ],
         "responsive": true
+      },
+      {
+        "name": "styleLayer",
+        "kind": "enum",
+        "required": false,
+        "default": "base",
+        "values": [
+          "base",
+          "raised",
+          "overlay",
+          "top"
+        ]
+      },
+      {
+        "name": "styleHideDesktop",
+        "kind": "boolean",
+        "required": false,
+        "default": false
+      },
+      {
+        "name": "styleHideTablet",
+        "kind": "boolean",
+        "required": false,
+        "default": false
+      },
+      {
+        "name": "styleHideMobile",
+        "kind": "boolean",
+        "required": false,
+        "default": false
       }
     ],
     "meta": {
@@ -504,6 +534,26 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Margine sinistro",
           "tab": "style",
           "order": 19
+        },
+        "styleLayer": {
+          "label": "Livello di sovrapposizione",
+          "tab": "advanced",
+          "order": 20
+        },
+        "styleHideDesktop": {
+          "label": "Nascondi su Desktop",
+          "tab": "advanced",
+          "order": 21
+        },
+        "styleHideTablet": {
+          "label": "Nascondi su Tablet",
+          "tab": "advanced",
+          "order": 22
+        },
+        "styleHideMobile": {
+          "label": "Nascondi su Mobile",
+          "tab": "advanced",
+          "order": 23
         }
       }
     }
@@ -626,6 +676,36 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "monospace"
         ],
         "responsive": true
+      },
+      {
+        "name": "styleLayer",
+        "kind": "enum",
+        "required": false,
+        "default": "base",
+        "values": [
+          "base",
+          "raised",
+          "overlay",
+          "top"
+        ]
+      },
+      {
+        "name": "styleHideDesktop",
+        "kind": "boolean",
+        "required": false,
+        "default": false
+      },
+      {
+        "name": "styleHideTablet",
+        "kind": "boolean",
+        "required": false,
+        "default": false
+      },
+      {
+        "name": "styleHideMobile",
+        "kind": "boolean",
+        "required": false,
+        "default": false
       }
     ],
     "meta": {
@@ -670,6 +750,26 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Famiglia Font",
           "tab": "style",
           "order": 8
+        },
+        "styleLayer": {
+          "label": "Livello di sovrapposizione",
+          "tab": "advanced",
+          "order": 9
+        },
+        "styleHideDesktop": {
+          "label": "Nascondi su Desktop",
+          "tab": "advanced",
+          "order": 10
+        },
+        "styleHideTablet": {
+          "label": "Nascondi su Tablet",
+          "tab": "advanced",
+          "order": 11
+        },
+        "styleHideMobile": {
+          "label": "Nascondi su Mobile",
+          "tab": "advanced",
+          "order": 12
         }
       }
     }
@@ -781,6 +881,36 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "monospace"
         ],
         "responsive": true
+      },
+      {
+        "name": "styleLayer",
+        "kind": "enum",
+        "required": false,
+        "default": "base",
+        "values": [
+          "base",
+          "raised",
+          "overlay",
+          "top"
+        ]
+      },
+      {
+        "name": "styleHideDesktop",
+        "kind": "boolean",
+        "required": false,
+        "default": false
+      },
+      {
+        "name": "styleHideTablet",
+        "kind": "boolean",
+        "required": false,
+        "default": false
+      },
+      {
+        "name": "styleHideMobile",
+        "kind": "boolean",
+        "required": false,
+        "default": false
       }
     ],
     "meta": {
@@ -821,6 +951,26 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Famiglia Font",
           "tab": "style",
           "order": 8
+        },
+        "styleLayer": {
+          "label": "Livello di sovrapposizione",
+          "tab": "advanced",
+          "order": 9
+        },
+        "styleHideDesktop": {
+          "label": "Nascondi su Desktop",
+          "tab": "advanced",
+          "order": 10
+        },
+        "styleHideTablet": {
+          "label": "Nascondi su Tablet",
+          "tab": "advanced",
+          "order": 11
+        },
+        "styleHideMobile": {
+          "label": "Nascondi su Mobile",
+          "tab": "advanced",
+          "order": 12
         }
       }
     }
@@ -876,6 +1026,36 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "xl"
         ],
         "responsive": true
+      },
+      {
+        "name": "styleLayer",
+        "kind": "enum",
+        "required": false,
+        "default": "base",
+        "values": [
+          "base",
+          "raised",
+          "overlay",
+          "top"
+        ]
+      },
+      {
+        "name": "styleHideDesktop",
+        "kind": "boolean",
+        "required": false,
+        "default": false
+      },
+      {
+        "name": "styleHideTablet",
+        "kind": "boolean",
+        "required": false,
+        "default": false
+      },
+      {
+        "name": "styleHideMobile",
+        "kind": "boolean",
+        "required": false,
+        "default": false
       }
     ],
     "meta": {
@@ -900,6 +1080,26 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Spazio dopo",
           "tab": "style",
           "order": 4
+        },
+        "styleLayer": {
+          "label": "Livello di sovrapposizione",
+          "tab": "advanced",
+          "order": 5
+        },
+        "styleHideDesktop": {
+          "label": "Nascondi su Desktop",
+          "tab": "advanced",
+          "order": 6
+        },
+        "styleHideTablet": {
+          "label": "Nascondi su Tablet",
+          "tab": "advanced",
+          "order": 7
+        },
+        "styleHideMobile": {
+          "label": "Nascondi su Mobile",
+          "tab": "advanced",
+          "order": 8
         }
       }
     }
@@ -1016,6 +1216,36 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "monospace"
         ],
         "responsive": true
+      },
+      {
+        "name": "styleLayer",
+        "kind": "enum",
+        "required": false,
+        "default": "base",
+        "values": [
+          "base",
+          "raised",
+          "overlay",
+          "top"
+        ]
+      },
+      {
+        "name": "styleHideDesktop",
+        "kind": "boolean",
+        "required": false,
+        "default": false
+      },
+      {
+        "name": "styleHideTablet",
+        "kind": "boolean",
+        "required": false,
+        "default": false
+      },
+      {
+        "name": "styleHideMobile",
+        "kind": "boolean",
+        "required": false,
+        "default": false
       }
     ],
     "meta": {
@@ -1060,6 +1290,26 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Famiglia Font",
           "tab": "style",
           "order": 8
+        },
+        "styleLayer": {
+          "label": "Livello di sovrapposizione",
+          "tab": "advanced",
+          "order": 9
+        },
+        "styleHideDesktop": {
+          "label": "Nascondi su Desktop",
+          "tab": "advanced",
+          "order": 10
+        },
+        "styleHideTablet": {
+          "label": "Nascondi su Tablet",
+          "tab": "advanced",
+          "order": 11
+        },
+        "styleHideMobile": {
+          "label": "Nascondi su Mobile",
+          "tab": "advanced",
+          "order": 12
         }
       }
     }

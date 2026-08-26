@@ -1,0 +1,41 @@
+/*
+ * CanvasAddSectionZone.tsx — zona di inserimento sezione sempre visibile in-canvas.
+ * Stesso accento magenta "struttura" del drag & drop (`#a333c8`, `EditorCanvas.module.css`/
+ * `EditorBlockWrapper.module.css`) per il pulsante "+" — un solo colore per quel ruolo in
+ * tutto l'editor. Il selettore di struttura vero e proprio (box tratteggiati dei preset)
+ * vive in `SectionStructureModal.module.css`, non qui: questo file resta solo il trigger.
+ */
+
+.zone {
+  width: 100%;
+}
+
+/*
+  Box del trigger: stesso bordo tratteggiato dello stato vuoto storico del canvas
+  (`EditorCanvas.module.css` `.emptyDropzone`), qui riusato anche quando l'albero non è
+  vuoto — la zona è sempre visibile, non solo a canvas vuoto.
+*/
+.box {
+  border: 2px dashed var(--mantine-color-gray-4);
+  border-radius: 4px;
+  padding: 24px;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+[data-mantine-color-scheme='dark'] .box {
+  border-color: var(--mantine-color-dark-4);
+}
+
+/*
+  Pulsante "+" circolare, unico accento primary/magenta dell'intero editor (vedi commento
+  di testa): `variant="filled"` di Mantine calcola il proprio sfondo da `color`/
+  `theme.primaryColor` via custom property interna, che una singola classe della stessa
+  specificità non batte in modo affidabile — da qui `!important`, l'unico in questo modulo,
+  mirato solo a questo bottone.
+*/
+.addButton,
+.addButton:hover,
+.addButton:focus {
+  background-color: #a333c8 !important;
+  color: var(--mantine-color-white) !important;
+}

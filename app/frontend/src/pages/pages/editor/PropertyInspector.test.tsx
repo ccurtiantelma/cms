@@ -15,7 +15,7 @@
  * bastare ("aggiungere una prop nel registro non richiede toccare questo file").
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../../test/utils';
 import type { BlockNode } from './block-tree.utils';
@@ -52,6 +52,21 @@ const EMPTY_PROPS_TYPE = {
   meta: { label: 'Sonda senza props', category: 'test' },
 } as const;
 
+/**
+ * La Media Library è mockata al confine di rete (`services/media.service`): questi test
+ * coprono l'ispettore, non la modal — che ha la sua suite in
+ * `components/media/MediaLibraryModal.test.tsx`. Mockare il service invece del componente
+ * lascia però la modal **vera** nell'albero, quindi il percorso "clic su Sfoglia → scelta
+ * → scrittura in store" è esercitato per intero.
+ */
+const fetchMediaFiles = vi.fn();
+const uploadMediaFile = vi.fn();
+
+vi.mock('../../../services/media.service', () => ({
+  fetchMediaFiles: (params: unknown) => fetchMediaFiles(params),
+  uploadMediaFile: (file: unknown) => uploadMediaFile(file),
+}));
+
 vi.mock('../../../types/blocks.types', async (importOriginal) => {
   const original = await importOriginal<typeof import('../../../types/blocks.types')>();
   return {
@@ -86,7 +101,30 @@ function propsInStore(id: string): Record<string, unknown> {
   return found.props;
 }
 
+/** Un media di comodo, come lo restituirebbe `GET app/files`. */
+const MEDIA_RECORD = {
+  guid: 'a1b2c3d4e5f6a7b8',
+  originalName: 'logo.png',
+  mimeType: 'image/png',
+  sizeBytes: 2048,
+  width: 800,
+  height: 600,
+  url: null,
+  entity: 'page-media',
+  entityId: null,
+  createdAt: '2026-08-25T10:00:00.000Z',
+};
+
 beforeEach(() => {
+  fetchMediaFiles.mockReset();
+  uploadMediaFile.mockReset();
+  fetchMediaFiles.mockResolvedValue({
+    items: [MEDIA_RECORD],
+    totalItems: 1,
+    totalPages: 1,
+    currentPage: 1,
+    itemsPerPage: 20,
+  });
   useBlockEditorStore.getState().initTree([]);
   useBlockEditorStore.getState().setActiveViewport('desktop');
 });
@@ -114,11 +152,12 @@ describe('PropertyInspector — nessuna selezione e tipi fuori registro', () => 
 });
 
 describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
-  it('section (nessuna prop di contenuto, solo di stile) mostra una sola scheda, senza tab, con le etichette del registro', () => {
+  it('section (nessuna prop di contenuto, solo di stile e avanzate) mostra Stile e Avanzato, mai Contenuto, con le etichette del registro', () => {
     renderInspectorWith(node('sec-1', 'section'));
 
     expect(screen.queryByRole('tab', { name: 'Contenuto' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('tab', { name: 'Stile' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Stile' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Avanzato' })).toBeInTheDocument();
     expect(screen.getByText('Spazio prima')).toBeInTheDocument();
     expect(screen.getByText('Spazio dopo')).toBeInTheDocument();
     expect(screen.getByText('Spaziatura interna')).toBeInTheDocument();
@@ -297,17 +336,18 @@ describe('PropertyInspector — i sette kind del registro', () => {
     expect(propsInStore('b-1').href).toBe('https://esempio.it/contatti');
   });
 
-  it('mediaRef → campo disabilitato che dichiara l’assenza della libreria media (F09)', async () => {
+  it('mediaRef → campo in sola lettura affiancato dal pulsante della libreria', async () => {
     const user = userEvent.setup();
     renderInspectorWith(node('i-1', 'image', { mediaRef: '', alt: '' }));
 
     const input = screen.getByRole('textbox', { name: 'File' });
-    expect(input).toBeDisabled();
-    expect(input).toHaveAttribute('placeholder', expect.stringContaining('F09'));
+    expect(input).toHaveAttribute('readonly');
+    expect(screen.getByRole('button', { name: /Sfoglia Media Library/ })).toBeInTheDocument();
 
     await user.type(input, 'file-123');
 
-    // Disabilitato davvero: nessuna scorciatoia che finga una media library.
+    // Il `guid` non si digita: la scrittura passa solo dalla libreria, che restituisce un
+    // riferimento davvero presente in `files`.
     expect(propsInStore('i-1').mediaRef).toBe('');
   });
 
@@ -349,7 +389,9 @@ describe('PropertyInspector — obbligatorietà e cambio di selezione', () => {
 
   it('nonEmpty è trattato come obbligatorio quanto required (alt di image)', async () => {
     const user = userEvent.setup();
-    renderInspectorWith(node('i-1', 'image', { mediaRef: '', alt: '' }));
+    // `mediaRef` valorizzato di proposito: da quando la Media Library esiste anche quel
+    // campo segnala l'obbligatorietà, e qui l'unica prop sotto esame deve restare `alt`.
+    renderInspectorWith(node('i-1', 'image', { mediaRef: 'a1b2c3d4e5f6a7b8', alt: '' }));
 
     const alt = screen.getByRole('textbox', { name: 'Testo alternativo' });
     await user.type(alt, '   ');
@@ -403,8 +445,10 @@ describe('PropertyInspector — copertura del registro reale', () => {
         .map((prop) => prop.kind),
     );
 
-    // I kind assenti dai tipi approvati (boolean, number) sono coperti dal tipo sintetico.
+    // `boolean` è in uso reale da ADR-37 (styleHideDesktop/Tablet/Mobile). `number` resta
+    // l'unico kind assente dai tipi approvati, coperto dal solo tipo sintetico.
     expect([...kindsNelRegistro].sort()).toEqual([
+      'boolean',
       'color',
       'enum',
       'mediaRef',
@@ -429,5 +473,125 @@ describe('PropertyInspector — copertura del registro reale', () => {
       'richText',
       'url',
     ]);
+  });
+});
+
+/**
+ * Integrazione della Media Library nell'ispettore (RFC-F05/F09 § 5, PLAN T5/T7).
+ *
+ * Il criterio che questi test difendono è **dove finisce la scelta**: nello store Zustand,
+ * sotto la prop `mediaRef`, come un `guid` nudo. Verificarlo sul solo DOM lascerebbe
+ * passare una scrittura mancata, una scrittura su `props.url` (prop che il blocco `image`
+ * non ha) o un URL composto qui invece che da `resolveMediaSrc()` in rendering (ADR-27 § 6).
+ */
+describe('PropertyInspector — Media Library', () => {
+  /** Apre la libreria dal pulsante dell'ispettore e attende la griglia. */
+  async function openLibrary(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: /Sfoglia Media Library/ }));
+    return screen.findByRole('button', { name: 'logo.png' });
+  }
+
+  it('scrive il guid scelto nello store, sotto la prop mediaRef', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('i-1', 'image', { mediaRef: '', alt: 'Logo' }));
+
+    const tile = await openLibrary(user);
+    await user.click(tile);
+    await user.click(screen.getByRole('button', { name: /Seleziona Immagine/ }));
+
+    expect(propsInStore('i-1').mediaRef).toBe('a1b2c3d4e5f6a7b8');
+  });
+
+  it('scrive un guid nudo, mai un URL composto (ADR-27 § 6)', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('i-1', 'image', { mediaRef: '', alt: 'Logo' }));
+
+    const tile = await openLibrary(user);
+    await user.click(tile);
+    await user.click(screen.getByRole('button', { name: /Seleziona Immagine/ }));
+
+    const written = propsInStore('i-1').mediaRef as string;
+    expect(written).toMatch(/^[0-9a-f]{16}$/);
+    expect(written).not.toContain('/');
+    expect(written).not.toContain('http');
+  });
+
+  it('non introduce una prop `url` sul blocco image (nessuna modifica al registro)', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('i-1', 'image', { mediaRef: '', alt: 'Logo' }));
+
+    const tile = await openLibrary(user);
+    await user.click(tile);
+    await user.click(screen.getByRole('button', { name: /Seleziona Immagine/ }));
+
+    expect(propsInStore('i-1')).not.toHaveProperty('url');
+    expect(Object.keys(propsInStore('i-1'))).toEqual(['mediaRef', 'alt']);
+  });
+
+  it('la selezione è annullabile: passa da updateBlockPropsAction, quindi da undo/redo', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('i-1', 'image', { mediaRef: '', alt: 'Logo' }));
+
+    const tile = await openLibrary(user);
+    await user.click(tile);
+    await user.click(screen.getByRole('button', { name: /Seleziona Immagine/ }));
+    expect(propsInStore('i-1').mediaRef).toBe('a1b2c3d4e5f6a7b8');
+
+    useBlockEditorStore.getState().undo();
+    expect(propsInStore('i-1').mediaRef).toBe('');
+
+    useBlockEditorStore.getState().redo();
+    expect(propsInStore('i-1').mediaRef).toBe('a1b2c3d4e5f6a7b8');
+  });
+
+  it('riflette il guid scelto nel campo in sola lettura e chiude la libreria', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('i-1', 'image', { mediaRef: '', alt: 'Logo' }));
+
+    const tile = await openLibrary(user);
+    await user.click(tile);
+    await user.click(screen.getByRole('button', { name: /Seleziona Immagine/ }));
+
+    expect(screen.getByRole('textbox', { name: 'File' })).toHaveValue('a1b2c3d4e5f6a7b8');
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'logo.png' })).not.toBeInTheDocument(),
+    );
+  });
+
+  it('preseleziona nella libreria il media già referenziato dal blocco', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('i-1', 'image', { mediaRef: 'a1b2c3d4e5f6a7b8', alt: 'Logo' }));
+
+    const tile = await openLibrary(user);
+    expect(tile).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('chiudere senza scegliere non tocca lo store', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('i-1', 'image', { mediaRef: 'aaaabbbbccccdddd', alt: 'Logo' }));
+
+    await openLibrary(user);
+    const [annulla] = screen.getAllByRole('button', { name: 'Annulla' });
+    await user.click(annulla);
+
+    expect(propsInStore('i-1').mediaRef).toBe('aaaabbbbccccdddd');
+  });
+
+  it('la libreria filtra sui soli media editoriali di tipo immagine', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('i-1', 'image', { mediaRef: '', alt: 'Logo' }));
+
+    await openLibrary(user);
+
+    expect(fetchMediaFiles.mock.calls[0][0]).toMatchObject({
+      entity: 'page-media',
+      mimePrefix: 'image/',
+    });
+  });
+
+  it('nessun altro kind mostra il pulsante della libreria (mappa per kind, non per type)', async () => {
+    renderInspectorWith(node('h-1', 'heading', { text: 'Titolo', level: 'h2' }));
+
+    expect(screen.queryByRole('button', { name: /Sfoglia Media Library/ })).not.toBeInTheDocument();
   });
 });

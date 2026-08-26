@@ -2,7 +2,6 @@ import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { and, eq, isNull } from 'drizzle-orm';
 import { DbService } from '../db/db.service';
 import { pageEntity, pageRevisionEntity } from '../db/schema';
-import { AppConstants } from '../common/app-constants';
 import { BLOCK_REGISTRY_TOKEN, BlockRegistry } from '../blocks/block-registry';
 import { BlockTreeValidatorService } from '../blocks/validator/block-tree-validator.service';
 import { ValidatableBlockNode } from '../blocks/validator/validatable-node.types';
@@ -10,8 +9,14 @@ import { migrateEnvelope, ENVELOPE_VERSION } from '../blocks/migration/envelope-
 import { migrateBlockTree } from '../blocks/migration/block-tree-migration.engine';
 import { MigratableBlockNode } from '../blocks/migration/block-migration.types';
 import { PublicPageDto } from './dto/public-page.dto';
-import { HOME_SLUG, MAX_PUBLIC_PATH_SEGMENTS, splitPathSegments } from './public-path.util';
+import {
+  extractLocalePrefix,
+  HOME_SLUG,
+  MAX_PUBLIC_PATH_SEGMENTS,
+  splitPathSegments,
+} from './public-path.util';
 import { PublicPageCacheService } from './public-page-cache.service';
+import { SettingsService } from '../settings/settings.service';
 
 type PageRow = typeof pageEntity.$inferSelect;
 
@@ -41,6 +46,7 @@ export class PublicPagesService {
     private readonly blockTreeValidator: BlockTreeValidatorService,
     @Inject(BLOCK_REGISTRY_TOKEN) private readonly blockRegistry: BlockRegistry,
     private readonly publicPageCache: PublicPageCacheService,
+    private readonly settingsService: SettingsService,
   ) {}
 
   /**
@@ -57,14 +63,19 @@ export class PublicPagesService {
    * cade sul database (ADR-23 § 7).
    */
   async resolveByPath(canonicalPath: string): Promise<PublicPageDto> {
-    const locale = AppConstants.defaultLocale;
+    const multilingualConfig = await this.settingsService.getMultilingualConfig();
+    const { locale, residualPath } = extractLocalePrefix(
+      canonicalPath,
+      multilingualConfig.active,
+      multilingualConfig.default,
+    );
 
-    const cached = await this.publicPageCache.getCached(locale, canonicalPath);
+    const cached = await this.publicPageCache.getCached(locale, residualPath);
     if (cached) {
       return cached;
     }
 
-    const page = await this.resolvePageRow(locale, canonicalPath);
+    const page = await this.resolvePageRow(locale, residualPath);
 
     if (page.status !== 'published') {
       throw new NotFoundException();
@@ -98,7 +109,7 @@ export class PublicPagesService {
       seo: (revision.seo as Record<string, unknown>) ?? {},
     };
 
-    await this.publicPageCache.setCached(locale, canonicalPath, dto);
+    await this.publicPageCache.setCached(locale, residualPath, dto);
     return dto;
   }
 

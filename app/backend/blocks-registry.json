@@ -338,6 +338,36 @@
             "96"
           ],
           "responsive": true
+        },
+        {
+          "name": "styleLayer",
+          "kind": "enum",
+          "required": false,
+          "default": "base",
+          "values": [
+            "base",
+            "raised",
+            "overlay",
+            "top"
+          ]
+        },
+        {
+          "name": "styleHideDesktop",
+          "kind": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "styleHideTablet",
+          "kind": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "styleHideMobile",
+          "kind": "boolean",
+          "required": false,
+          "default": false
         }
       ],
       "meta": {
@@ -441,6 +471,26 @@
             "label": "Margine sinistro",
             "tab": "style",
             "order": 19
+          },
+          "styleLayer": {
+            "label": "Livello di sovrapposizione",
+            "tab": "advanced",
+            "order": 20
+          },
+          "styleHideDesktop": {
+            "label": "Nascondi su Desktop",
+            "tab": "advanced",
+            "order": 21
+          },
+          "styleHideTablet": {
+            "label": "Nascondi su Tablet",
+            "tab": "advanced",
+            "order": 22
+          },
+          "styleHideMobile": {
+            "label": "Nascondi su Mobile",
+            "tab": "advanced",
+            "order": 23
           }
         }
       }
@@ -563,6 +613,36 @@
             "monospace"
           ],
           "responsive": true
+        },
+        {
+          "name": "styleLayer",
+          "kind": "enum",
+          "required": false,
+          "default": "base",
+          "values": [
+            "base",
+            "raised",
+            "overlay",
+            "top"
+          ]
+        },
+        {
+          "name": "styleHideDesktop",
+          "kind": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "styleHideTablet",
+          "kind": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "styleHideMobile",
+          "kind": "boolean",
+          "required": false,
+          "default": false
         }
       ],
       "meta": {
@@ -607,6 +687,26 @@
             "label": "Famiglia Font",
             "tab": "style",
             "order": 8
+          },
+          "styleLayer": {
+            "label": "Livello di sovrapposizione",
+            "tab": "advanced",
+            "order": 9
+          },
+          "styleHideDesktop": {
+            "label": "Nascondi su Desktop",
+            "tab": "advanced",
+            "order": 10
+          },
+          "styleHideTablet": {
+            "label": "Nascondi su Tablet",
+            "tab": "advanced",
+            "order": 11
+          },
+          "styleHideMobile": {
+            "label": "Nascondi su Mobile",
+            "tab": "advanced",
+            "order": 12
           }
         }
       }
@@ -718,6 +818,36 @@
             "monospace"
           ],
           "responsive": true
+        },
+        {
+          "name": "styleLayer",
+          "kind": "enum",
+          "required": false,
+          "default": "base",
+          "values": [
+            "base",
+            "raised",
+            "overlay",
+            "top"
+          ]
+        },
+        {
+          "name": "styleHideDesktop",
+          "kind": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "styleHideTablet",
+          "kind": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "styleHideMobile",
+          "kind": "boolean",
+          "required": false,
+          "default": false
         }
       ],
       "meta": {
@@ -758,6 +888,26 @@
             "label": "Famiglia Font",
             "tab": "style",
             "order": 8
+          },
+          "styleLayer": {
+            "label": "Livello di sovrapposizione",
+            "tab": "advanced",
+            "order": 9
+          },
+          "styleHideDesktop": {
+            "label": "Nascondi su Desktop",
+            "tab": "advanced",
+            "order": 10
+          },
+          "styleHideTablet": {
+            "label": "Nascondi su Tablet",
+            "tab": "advanced",
+            "order": 11
+          },
+          "styleHideMobile": {
+            "label": "Nascondi su Mobile",
+            "tab": "advanced",
+            "order": 12
           }
         }
       }
@@ -813,6 +963,36 @@
             "xl"
           ],
           "responsive": true
+        },
+        {
+          "name": "styleLayer",
+          "kind": "enum",
+          "required": false,
+          "default": "base",
+          "values": [
+            "base",
+            "raised",
+            "overlay",
+            "top"
+          ]
+        },
+        {
+          "name": "styleHideDesktop",
+          "kind": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "styleHideTablet",
+          "kind": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "styleHideMobile",
+          "kind": "boolean",
+          "required": false,
+          "default": false
         }
       ],
       "meta": {
@@ -837,6 +1017,26 @@
             "label": "Spazio dopo",
             "tab": "style",
             "order": 4
+          },
+          "styleLayer": {
+            "label": "Livello di sovrapposizione",
+            "tab": "advanced",
+            "order": 5
+          },
+          "styleHideDesktop": {
+            "label": "Nascondi su Desktop",
+            "tab": "advanced",
+            "order": 6
+          },
+          "styleHideTablet": {
+            "label": "Nascondi su Tablet",
+            "tab": "advanced",
+            "order": 7
+          },
+          "styleHideMobile": {
+            "label": "Nascondi su Mobile",
+            "tab": "advanced",
+            "order": 8
           }
         }
       }
@@ -953,6 +1153,36 @@
             "monospace"
           ],
           "responsive": true
+        },
+        {
+          "name": "styleLayer",
+          "kind": "enum",
+          "required": false,
+          "default": "base",
+          "values": [
+            "base",
+            "raised",
+            "overlay",
+            "top"
+          ]
+        },
+        {
+          "name": "styleHideDesktop",
+          "kind": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "styleHideTablet",
+          "kind": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "styleHideMobile",
+          "kind": "boolean",
+          "required": false,
+          "default": false
         }
       ],
       "meta": {
@@ -997,6 +1227,26 @@
             "label": "Famiglia Font",
             "tab": "style",
             "order": 8
+          },
+          "styleLayer": {
+            "label": "Livello di sovrapposizione",
+            "tab": "advanced",
+            "order": 9
+          },
+          "styleHideDesktop": {
+            "label": "Nascondi su Desktop",
+            "tab": "advanced",
+            "order": 10
+          },
+          "styleHideTablet": {
+            "label": "Nascondi su Tablet",
+            "tab": "advanced",
+            "order": 11
+          },
+          "styleHideMobile": {
+            "label": "Nascondi su Mobile",
+            "tab": "advanced",
+            "order": 12
           }
         }
       }

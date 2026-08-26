@@ -8,11 +8,13 @@ import type { Pagination, PaginationParams } from '../types/common.types';
 import type {
   ChangeStatusPayload,
   CreatePagePayload,
+  CreateTranslationPayload,
   PagePreviewToken,
   PageRecord,
   PageRevisionDetail,
   PageRevisionSummary,
   PagesQueryParams,
+  PageTranslationSummary,
   UpdatePagePayload,
 } from '../types/pages.types';
 
@@ -55,6 +57,29 @@ export async function changePageStatus(
   payload: ChangeStatusPayload,
 ): Promise<PageRecord> {
   const { data } = await api.post<PageRecord>(`${PAGES_PREFIX}/${guid}/status`, payload);
+  return data;
+}
+
+/**
+ * `GET /app/pages/:guid/translations` — righe attive dello stesso gruppo di traduzione
+ * (`translationGroupId`), bozze e Pagina `:guid` stessa incluse. Nessun filtro di ownership
+ * (stesso principio di `createPageTranslation` — vedi `pages.service.ts` backend): chi può
+ * vedere/creare una traduzione può anche listare il gruppo.
+ */
+export async function fetchPageTranslations(guid: string): Promise<PageTranslationSummary[]> {
+  const { data } = await api.get<PageTranslationSummary[]>(`${PAGES_PREFIX}/${guid}/translations`);
+  return data;
+}
+
+/**
+ * `POST /app/pages/:guid/translations` — crea una traduzione in `draft` nello stesso
+ * gruppo. `409` se il gruppo ha già una riga in quel locale (corsa fra due editor).
+ */
+export async function createPageTranslation(
+  guid: string,
+  payload: CreateTranslationPayload,
+): Promise<PageRecord> {
+  const { data } = await api.post<PageRecord>(`${PAGES_PREFIX}/${guid}/translations`, payload);
   return data;
 }
 

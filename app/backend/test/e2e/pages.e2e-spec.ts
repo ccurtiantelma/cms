@@ -121,7 +121,7 @@ describe('PagesController (e2e, DB/Redis reali)', () => {
   }
 
   function authedRequest(
-    method: 'get' | 'post' | 'patch' | 'delete',
+    method: 'get' | 'post' | 'patch' | 'delete' | 'put',
     path: string,
     auth: Auth,
   ): request.Test {
@@ -196,6 +196,13 @@ describe('PagesController (e2e, DB/Redis reali)', () => {
       status,
       ...(scheduledAt ? { scheduledAt } : {}),
     });
+  }
+
+  /** Registra il registro Locale attivi (RFC-F05 § 1) come farebbe un Admin da UI. */
+  async function setActiveLocales(admin: Auth, active: string[], defaultLocale: string): Promise<void> {
+    await authedRequest('put', '/api/v1/app/settings/multilingual', admin)
+      .send({ active, default: defaultLocale })
+      .expect(200);
   }
 
   // ─── 1. Macchina a stati: transizioni non ammesse ──────────────────────
@@ -880,6 +887,174 @@ describe('PagesController (e2e, DB/Redis reali)', () => {
         where: eq(pageRevisionEntity.guid, legacyRevision.guid),
       });
       expect(JSON.stringify(legacyAfter!.content)).toMatch(/<script/i);
+    });
+  });
+
+  // ─── Traduzioni: POST /app/pages/:guid/translations (RFC-F05 § 3) ─────
+
+  describe('POST /app/pages/:guid/translations (RFC-F05 § 3)', () => {
+    it('happy path: crea una traduzione nello stesso translationGroupId, in draft, con contenuto copiato dalla sorgente', async () => {
+      const manager = await seedAuth(AppUserRoles.Manager, 'transl1');
+      const admin1 = await seedAuth(AppUserRoles.Admin, 'transl1admin');
+      await setActiveLocales(admin1, ['it-IT', 'en-GB'], 'it-IT');
+      const source = await createDraftPage(manager, {
+        title: 'Chi siamo',
+        slug: 'chi-siamo',
+        locale: 'it-IT',
+        draftContent: safeContentTree('Testo originale italiano'),
+      });
+
+      const res = await authedRequest(
+        'post',
+        `/api/v1/app/pages/${source.guid}/translations`,
+        manager,
+      )
+        .send({ locale: 'en-GB' })
+        .expect(201);
+
+      expect(res.body.guid).not.toBe(source.guid);
+      expect(res.body.translationGroupId).toBe(source.translationGroupId);
+      expect(res.body.locale).toBe('en-GB');
+      expect(res.body.status).toBe('draft');
+      expect(res.body.slug).toBe('chi-siamo');
+      expect(res.body.title).toBe('Chi siamo');
+      expect(res.body.parentGuid).toBeNull();
+      expect(res.body.draftContent).toEqual(source.draftContent);
+
+      const db = getTestDb();
+      const rows = await db.query.pageEntity.findMany({
+        where: eq(pageEntity.translationGroupId, source.translationGroupId as string),
+      });
+      expect(rows).toHaveLength(2);
+    });
+
+    it('title fornito nel body sovrascrive quello ereditato dalla sorgente', async () => {
+      const manager = await seedAuth(AppUserRoles.Manager, 'transl2');
+      const admin2 = await seedAuth(AppUserRoles.Admin, 'transl2admin');
+      await setActiveLocales(admin2, ['it-IT', 'en-GB'], 'it-IT');
+      const source = await createDraftPage(manager, {
+        title: 'Chi siamo',
+        slug: 'chi-siamo-2',
+        locale: 'it-IT',
+      });
+
+      const res = await authedRequest(
+        'post',
+        `/api/v1/app/pages/${source.guid}/translations`,
+        manager,
+      )
+        .send({ locale: 'en-GB', title: 'About us' })
+        .expect(201);
+
+      expect(res.body.title).toBe('About us');
+    });
+
+    it('parentId non è mai copiato: la traduzione nasce sempre root, anche se la sorgente ha un genitore', async () => {
+      const manager = await seedAuth(AppUserRoles.Manager, 'transl3');
+      const admin3 = await seedAuth(AppUserRoles.Admin, 'transl3admin');
+      await setActiveLocales(admin3, ['it-IT', 'en-GB'], 'it-IT');
+      const parent = await createDraftPage(manager, { title: 'Genitore', slug: 'genitore' });
+      const source = await createDraftPage(manager, {
+        title: 'Figlia',
+        slug: 'figlia',
+        locale: 'it-IT',
+      });
+      await authedRequest('patch', `/api/v1/app/pages/${source.guid}`, manager)
+        .send({ parentGuid: parent.guid, version: source.version })
+        .expect(200);
+
+      const res = await authedRequest(
+        'post',
+        `/api/v1/app/pages/${source.guid}/translations`,
+        manager,
+      )
+        .send({ locale: 'en-GB' })
+        .expect(201);
+
+      expect(res.body.parentGuid).toBeNull();
+    });
+
+    it('404: pagina sorgente inesistente', async () => {
+      const manager = await seedAuth(AppUserRoles.Manager, 'transl4');
+      const admin4 = await seedAuth(AppUserRoles.Admin, 'transl4admin');
+      await setActiveLocales(admin4, ['it-IT', 'en-GB'], 'it-IT');
+
+      await authedRequest('post', '/api/v1/app/pages/0000000000000000/translations', manager)
+        .send({ locale: 'en-GB' })
+        .expect(404);
+    });
+
+    it('404: pagina sorgente soft-eliminata', async () => {
+      const admin = await seedAuth(AppUserRoles.Admin, 'transl5');
+      await setActiveLocales(admin, ['it-IT', 'en-GB'], 'it-IT');
+      const source = await createDraftPage(admin, { title: 'Da eliminare', slug: 'da-eliminare' });
+      await authedRequest('delete', `/api/v1/app/pages/${source.guid}`, admin).expect(204);
+
+      await authedRequest('post', `/api/v1/app/pages/${source.guid}/translations`, admin)
+        .send({ locale: 'en-GB' })
+        .expect(404);
+    });
+
+    it('400: locale richiesto non fra i Locale attivi', async () => {
+      const manager = await seedAuth(AppUserRoles.Manager, 'transl6');
+      const admin6 = await seedAuth(AppUserRoles.Admin, 'transl6admin');
+      await setActiveLocales(admin6, ['it-IT', 'en-GB'], 'it-IT');
+      const source = await createDraftPage(manager, { title: 'Pagina', slug: 'pagina-locale' });
+
+      const res = await authedRequest(
+        'post',
+        `/api/v1/app/pages/${source.guid}/translations`,
+        manager,
+      )
+        .send({ locale: 'de-DE' })
+        .expect(400);
+
+      expect(res.body.message).toContain('Locale attivi');
+    });
+
+    it('409 PAGE_TRANSLATION_LOCALE_DUPLICATE: il gruppo ha già una riga in quel locale', async () => {
+      const manager = await seedAuth(AppUserRoles.Manager, 'transl7');
+      const admin7 = await seedAuth(AppUserRoles.Admin, 'transl7admin');
+      await setActiveLocales(admin7, ['it-IT', 'en-GB'], 'it-IT');
+      const source = await createDraftPage(manager, { title: 'Pagina', slug: 'pagina-dup' });
+      const firstTranslation = await authedRequest(
+        'post',
+        `/api/v1/app/pages/${source.guid}/translations`,
+        manager,
+      )
+        .send({ locale: 'en-GB' })
+        .expect(201);
+
+      // Cambia lo slug della prima traduzione: altrimenti il secondo tentativo
+      // (che copia lo slug invariato dalla sorgente) violerebbe ANCHE
+      // `pages_slug_locale_root_uq` insieme al vincolo qui sotto oggetto del
+      // test, e Postgres potrebbe segnalare l'uno o l'altro indistintamente —
+      // isolato così, l'unico vincolo ancora violabile è quello di gruppo.
+      await authedRequest('patch', `/api/v1/app/pages/${firstTranslation.body.guid}`, manager)
+        .send({ slug: 'pagina-dup-en', version: firstTranslation.body.version })
+        .expect(200);
+
+      const res = await authedRequest(
+        'post',
+        `/api/v1/app/pages/${source.guid}/translations`,
+        manager,
+      )
+        .send({ locale: 'en-GB' })
+        .expect(409);
+
+      expect(res.body.code).toBe('PAGE_TRANSLATION_LOCALE_DUPLICATE');
+    });
+
+    it('nessuna ownership sulla creazione: un User diverso dall\'autore della sorgente può comunque creare la traduzione', async () => {
+      const author = await seedAuth(AppUserRoles.User, 'transl8a');
+      const admin = await seedAuth(AppUserRoles.Admin, 'transl8b');
+      await setActiveLocales(admin, ['it-IT', 'en-GB'], 'it-IT');
+      const source = await createDraftPage(author, { title: 'Pagina altrui', slug: 'pagina-altrui' });
+
+      const other = await seedAuth(AppUserRoles.User, 'transl8c');
+      await authedRequest('post', `/api/v1/app/pages/${source.guid}/translations`, other)
+        .send({ locale: 'en-GB' })
+        .expect(201);
     });
   });
 

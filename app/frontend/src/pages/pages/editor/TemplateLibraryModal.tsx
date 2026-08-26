@@ -55,7 +55,20 @@ export default function TemplateLibraryModal({
   }
 
   return (
-    <Modal opened={opened} onClose={onClose} title="Libreria Sezioni" size="lg" centered>
+    // zIndex sopra la chrome full-screen dell'editor (z-index 1000,
+    // FullScreenEditorLayout.module.css), stesso valore/stesso motivo di
+    // `CreateTranslationModal.tsx` e dei `ConfirmModal` di `BlockEditorPanel.tsx`/
+    // `PagePageDetail.tsx`: senza, il Modal di Mantine monta al suo z-index di default
+    // (200) e resta invisibile dietro l'overlay, pur essendo aperto (bug: il pulsante
+    // "Libreria sezioni" della topbar sembrava non rispondere al click).
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      title="Libreria Sezioni"
+      size="lg"
+      centered
+      zIndex={1100}
+    >
       <Text size="sm" c="dimmed" mb="md">
         Sezioni Predefinite
       </Text>

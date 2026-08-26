@@ -14,19 +14,17 @@
  * Lo stato vuoto ("nessun blocco") è anche una drop-zone (`useDroppable`, id
  * `root-empty-dropzone`, stesso schema dati `{ parentId, index }` letto da
  * `FullScreenEditorLayout.handleDragEnd`): senza un nodo già in radice non c'è nessuna
- * striscia `before`/`after` di `EditorBlockWrapper` su cui rilasciare il primo blocco.
+ * striscia `before`/`after` di `EditorBlockWrapper` su cui rilasciare il primo blocco. Il
+ * div resta montato — solo invisibile, senza contenuto proprio — anche ad albero vuoto:
+ * la resa visiva "Aggiungi sezione" è ora interamente di `CanvasAddSectionZone`, montata
+ * subito sotto, che occupa la stessa funzione sia ad albero vuoto sia pieno.
  */
-import { useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { ActionIcon, Group, Stack, Text, Tooltip } from '@mantine/core';
+import { Stack } from '@mantine/core';
 import { useDroppable } from '@dnd-kit/core';
-import { notifications } from '@mantine/notifications';
-import { IconFolder, IconPlus, IconSparkles } from '@tabler/icons-react';
 import { useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
-import BlockPalette from './BlockPalette';
+import CanvasAddSectionZone from './CanvasAddSectionZone';
 import EditorBlockWrapper from './EditorBlockWrapper';
-import SectionStructureModal from './SectionStructureModal';
-import TemplateLibraryModal from './TemplateLibraryModal';
 import styles from './EditorCanvas.module.css';
 
 /** Superficie di editing dell'albero di blocchi della bozza corrente. */
@@ -37,20 +35,6 @@ export default function EditorCanvas(): JSX.Element {
     id: 'root-empty-dropzone',
     data: { parentId: null, index: 0 },
   });
-  // ADR-33 § 7: il pulsante "+" apre il selettore di struttura invece di creare
-  // direttamente una Section con i default puri del registro.
-  const [structureModalOpened, setStructureModalOpened] = useState(false);
-  // ADR-34 § 5: alternativa a "Section vuota" — libreria di preset statici già composti,
-  // stesso punto di apertura (`parentId`/`index` della radice, in coda).
-  const [templateLibraryOpened, setTemplateLibraryOpened] = useState(false);
-
-  /** Placeholder: nessuna funzione AI ancora disponibile (mai un bottone silenzioso). */
-  function handleAiFeaturesClick(): void {
-    notifications.show({
-      color: 'blue',
-      message: 'Funzioni AI non ancora disponibili',
-    });
-  }
 
   return (
     <div
@@ -61,87 +45,22 @@ export default function EditorCanvas(): JSX.Element {
     >
       <Stack gap="sm">
         {rootIds.length === 0 ? (
-          <div
-            ref={setEmptyDropRef}
-            className={styles.emptyDropzone}
-            data-over={isOverEmpty}
-            // Un click sui pulsanti sotto non deve deselezionare via il click-through
-            // dello sfondo del contenitore (`onClick={() => selectNode(null)}` qui
-            // sopra): già gestito pulsante per pulsante con `stopPropagation`, coerente
-            // con lo stesso idioma di `BlockPalette`/`EditorBlockWrapper` in questo modulo.
-          >
-            <Group justify="center" gap="md" mb="sm">
-              <Tooltip label="Aggiungi una Section vuota" withArrow>
-                <ActionIcon
-                  variant="light"
-                  color="gray"
-                  radius="xl"
-                  size="xl"
-                  aria-label="Aggiungi una Section vuota"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setStructureModalOpened(true);
-                  }}
-                >
-                  <IconPlus size={22} />
-                </ActionIcon>
-              </Tooltip>
-              <Tooltip label="Libreria template" withArrow>
-                <ActionIcon
-                  variant="light"
-                  color="gray"
-                  radius="xl"
-                  size="xl"
-                  aria-label="Libreria template"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setTemplateLibraryOpened(true);
-                  }}
-                >
-                  <IconFolder size={22} />
-                </ActionIcon>
-              </Tooltip>
-              <Tooltip label="Funzioni AI" withArrow>
-                <ActionIcon
-                  variant="filled"
-                  color="grape"
-                  radius="xl"
-                  size="xl"
-                  aria-label="Funzioni AI"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    handleAiFeaturesClick();
-                  }}
-                >
-                  <IconSparkles size={22} />
-                </ActionIcon>
-              </Tooltip>
-            </Group>
-            <Text size="sm" fs="italic" c="dimmed" ta="center">
-              Trascina il widget qui
-            </Text>
-          </div>
+          // Nessun contenuto visivo proprio (scelta di giudizio, vedi il commento di testa):
+          // la resa "Aggiungi sezione" è ora interamente di `CanvasAddSectionZone`, montata
+          // subito sotto anche in questo ramo. Il div resta solo come bersaglio
+          // `useDroppable` per il primo blocco trascinato — a riposo è una striscia quasi
+          // invisibile (`EditorCanvas.module.css`), che si allarga ed evidenzia in magenta
+          // solo durante un trascinamento sopra di lei (`data-over`).
+          <div ref={setEmptyDropRef} className={styles.emptyDropzone} data-over={isOverEmpty} />
         ) : (
           rootIds.map((id) => <EditorBlockWrapper key={id} id={id} />)
         )}
 
-        <div onClick={(event) => event.stopPropagation()}>
-          <BlockPalette parentId={null} label="Aggiungi blocco in fondo" />
-        </div>
+        {/* Zona "Aggiungi sezione" (sostituisce il vecchio popover `BlockPalette` di
+            "Aggiungi blocco in fondo"), sempre montata in coda: sia ad albero vuoto sia
+            pieno, un solo punto di ingresso invece di due meccaniche separate. */}
+        <CanvasAddSectionZone parentId={null} index={rootIds.length} />
       </Stack>
-
-      <SectionStructureModal
-        opened={structureModalOpened}
-        onClose={() => setStructureModalOpened(false)}
-        parentId={null}
-        index={rootIds.length}
-      />
-      <TemplateLibraryModal
-        opened={templateLibraryOpened}
-        onClose={() => setTemplateLibraryOpened(false)}
-        parentId={null}
-        index={rootIds.length}
-      />
     </div>
   );
 }

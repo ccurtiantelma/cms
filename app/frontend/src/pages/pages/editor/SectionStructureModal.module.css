@@ -1,9 +1,42 @@
 /*
- * SectionStructureModal.tsx — box tratteggiati dei cinque preset di struttura (ADR-33 § 7).
- * Chrome dell'editor: CSS Modules + props native Mantine, nessuno stile inline (il vincolo
- * "zero CSS inline" vale anche qui, non solo per i blocchi — l'unica eccezione dell'intero
- * task è `Section.tsx`/`--section-bg`, altrove non applicabile).
+ * SectionStructureModal.tsx — selettore a due passi (tipo di layout, poi preset) per un
+ * nuovo blocco `section` (ADR-33 § 7). Chrome dell'editor: CSS Modules + props native
+ * Mantine, nessuno stile inline (il vincolo "zero CSS inline" vale anche qui, non solo per
+ * i blocchi — l'unica eccezione dell'intero task è `Section.tsx`/`--section-bg`, altrove non
+ * applicabile).
  */
+
+/*
+  Card grande del passo "chooseType" ("Flexbox"/"Griglia"): stesso bordo tratteggiato di
+  `.presetButton` sotto, solo più alta e con icona+etichetta impilate — sceglie il *tipo* di
+  layout, un passo prima di scegliere il preset.
+*/
+.typeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 96px;
+  padding: 16px;
+  border: 1px dashed var(--mantine-color-gray-4);
+  border-radius: 6px;
+  background-color: transparent;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.typeCard:hover,
+.typeCard:focus-visible {
+  border-style: solid;
+  border-color: var(--mantine-color-blue-6);
+  background-color: var(--mantine-color-blue-light);
+}
+
+[data-mantine-color-scheme='dark'] .typeCard {
+  border-color: var(--mantine-color-dark-4);
+}
 
 .presetButton {
   display: flex;
@@ -50,5 +83,31 @@
 .grid_oneCol { grid-template-columns: 1fr; }
 .grid_twoEqual { grid-template-columns: 1fr 1fr; }
 .grid_threeEqual { grid-template-columns: 1fr 1fr 1fr; }
+.grid_fourEqual { grid-template-columns: 1fr 1fr 1fr 1fr; }
 .grid_3366 { grid-template-columns: 1fr 2fr; }
 .grid_6633 { grid-template-columns: 2fr 1fr; }
+
+/*
+  Righe decorative dell'anteprima "Griglia" (`GridPreset.decorativeRows`): puramente
+  visive, mai una prop persistita — vedi il commento su `GridPreset` in
+  `SectionStructureModal.tsx`.
+*/
+.previewRows1 { grid-template-rows: 1fr; }
+.previewRows2 { grid-template-rows: 1fr 1fr; }
+
+/*
+  Tessera "Colonna"/"Riga" (`FlexboxPreset.directionIcon`): icona direzionale centrata al
+  posto dell'anteprima a tracce, stessa altezza di `.previewBox` per allineare la riga di
+  tessere del `SimpleGrid`.
+*/
+.directionIconBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  color: var(--mantine-color-gray-6);
+}
+
+[data-mantine-color-scheme='dark'] .directionIconBox {
+  color: var(--mantine-color-dark-2);
+}

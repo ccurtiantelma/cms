@@ -21,8 +21,8 @@ export interface BlockChildrenSpec {
 export interface BlockEditorPropMeta {
   /** Etichetta leggibile mostrata nell'ispettore — chiude la voce 3.10 di `docs/TODO.md`. */
   label: string;
-  /** Scheda dell'ispettore che ospita il controllo. Assente = `'content'` (ADR-30 § 3). */
-  tab?: 'content' | 'style';
+  /** Scheda dell'ispettore che ospita il controllo. Assente = `'content'` (ADR-30 § 3, ADR-37 § 5). */
+  tab?: 'content' | 'style' | 'advanced';
   /** Ordine dentro la scheda. Assente = ordine di dichiarazione in `props`. */
   order?: number;
   /** Riga di aiuto sotto il campo, facoltativa. */

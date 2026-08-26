@@ -1,0 +1,101 @@
+/*
+ * MediaLibraryModal.tsx — drop zone e griglia di miniature (RFC-F05/F09 § 5).
+ * Chrome admin: CSS Modules + props native Mantine, nessuno stile inline,
+ * nessun `createStyles`.
+ */
+
+.dropZone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 96px;
+  padding: 16px;
+  border: 2px dashed var(--mantine-color-gray-4);
+  border-radius: var(--mantine-radius-md);
+  background-color: transparent;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.dropZoneActive {
+  border-style: solid;
+  border-color: var(--mantine-color-blue-6);
+  background-color: var(--mantine-color-blue-light);
+}
+
+[data-mantine-color-scheme='dark'] .dropZone {
+  border-color: var(--mantine-color-dark-4);
+}
+
+/* Il file picker nativo resta nel DOM (lo apre il pulsante "Scegli un file")
+   ma fuori dal flusso visivo: `display: none` lo renderebbe non cliccabile
+   via ref in alcuni browser. */
+.hiddenInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.preview {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: var(--mantine-radius-sm);
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-md);
+  background-color: transparent;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.tile:hover,
+.tile:focus-visible {
+  border-color: var(--mantine-color-blue-4);
+}
+
+.tileSelected {
+  border-color: var(--mantine-color-blue-6);
+  background-color: var(--mantine-color-blue-light);
+}
+
+[data-mantine-color-scheme='dark'] .tile {
+  border-color: var(--mantine-color-dark-4);
+}
+
+/*
+ * Proporzione fissa sul contenitore, non sull'immagine: la griglia non salta
+ * di layout né quando `width`/`height` sono valorizzati né quando sono `null`
+ * — righe caricate prima della feature, o migrazione non approvata
+ * (RFC § 3, PLAN T4). Nessuna miniatura ridimensionata server-side: si serve
+ * il blob originale, accettabile finché non esistono le varianti dimensionali.
+ */
+.thumbFrame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--mantine-radius-sm);
+  background-color: var(--mantine-color-gray-1);
+}
+
+[data-mantine-color-scheme='dark'] .thumbFrame {
+  background-color: var(--mantine-color-dark-6);
+}
+
+.thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

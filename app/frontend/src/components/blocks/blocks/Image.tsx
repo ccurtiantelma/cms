@@ -7,7 +7,11 @@
  */
 import styles from './Image.module.css';
 import tokenStyles from '../style-tokens.module.css';
-import { resolveResponsiveClassNames } from '../style-tokens';
+import {
+  resolveHideClassName,
+  resolveLayerClassName,
+  resolveResponsiveClassNames,
+} from '../style-tokens';
 import { resolveMediaSrc } from '../media-url';
 
 interface ImageProps {
@@ -15,13 +19,30 @@ interface ImageProps {
   alt: string;
   styleSpaceBefore?: unknown;
   styleSpaceAfter?: unknown;
+  styleLayer?: unknown;
+  styleHideDesktop?: unknown;
+  styleHideTablet?: unknown;
+  styleHideMobile?: unknown;
 }
 
-export default function Image({ mediaRef, alt, styleSpaceBefore, styleSpaceAfter }: ImageProps) {
+export default function Image({
+  mediaRef,
+  alt,
+  styleSpaceBefore,
+  styleSpaceAfter,
+  styleLayer,
+  styleHideDesktop,
+  styleHideTablet,
+  styleHideMobile,
+}: ImageProps) {
   const className = [
     styles.image,
     resolveResponsiveClassNames(tokenStyles, 'spaceBefore', styleSpaceBefore),
     resolveResponsiveClassNames(tokenStyles, 'spaceAfter', styleSpaceAfter),
+    resolveLayerClassName(tokenStyles, styleLayer),
+    resolveHideClassName(tokenStyles, 'hideDesktop', styleHideDesktop),
+    resolveHideClassName(tokenStyles, 'hideTablet', styleHideTablet),
+    resolveHideClassName(tokenStyles, 'hideMobile', styleHideMobile),
   ]
     .filter(Boolean)
     .join(' ');

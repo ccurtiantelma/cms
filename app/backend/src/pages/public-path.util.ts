@@ -36,3 +36,42 @@ export function canonicalizePublicPath(rawPath: string): string {
 export function splitPathSegments(canonicalPath: string): string[] {
   return canonicalPath.split('/').filter((segment) => segment.length > 0);
 }
+
+/** Esito dell'estrazione del prefisso di lingua da un percorso pubblico già canonico. */
+export interface LocalePrefixExtraction {
+  locale: string;
+  residualPath: string;
+}
+
+/**
+ * Estrae il prefisso di lingua da un percorso pubblico già canonico (RFC-F05
+ * § 4). La lingua di default non ha mai prefisso (ADR-24 § 5): solo il primo
+ * segmento è confrontato contro `activeLocales` **esclusa** `defaultLocale`.
+ * Nessun match → non è un prefisso di lingua, il percorso è servito
+ * interamente nella lingua di default, esattamente come prima di F05 (nessun
+ * fallback: un locale non riconosciuto qui non produce mai un `404` da solo,
+ * il primo segmento entra semplicemente nella risoluzione come primo slug).
+ * Il confronto è case-insensitive per costruzione: `canonicalPath` è già in
+ * minuscolo (`canonicalizePublicPath`), qui si abbassa solo `activeLocales`.
+ */
+export function extractLocalePrefix(
+  canonicalPath: string,
+  activeLocales: string[],
+  defaultLocale: string,
+): LocalePrefixExtraction {
+  const segments = splitPathSegments(canonicalPath);
+  const firstSegment = segments[0];
+  const matchedLocale = firstSegment
+    ? activeLocales.find(
+        (locale) => locale !== defaultLocale && locale.toLowerCase() === firstSegment,
+      )
+    : undefined;
+
+  if (!matchedLocale) {
+    return { locale: defaultLocale, residualPath: canonicalPath };
+  }
+
+  const residualSegments = segments.slice(1);
+  const residualPath = residualSegments.length > 0 ? `/${residualSegments.join('/')}` : '/';
+  return { locale: matchedLocale, residualPath };
+}

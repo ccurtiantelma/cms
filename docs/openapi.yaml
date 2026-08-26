@@ -566,6 +566,47 @@ paths:
       summary: Salva il tema globale (SuperAdmin only, registrato su audit log)
       tags:
         - Settings
+  /api/v1/app/settings/multilingual:
+    get:
+      operationId: SettingsController_getMultilingual
+      parameters: []
+      responses:
+        '200':
+          description: Registro Locale corrente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultilingualConfigDto'
+      security:
+        - access-token: []
+      summary: Registro Locale attivi (default di fabbrica se mai salvato)
+      tags:
+        - Settings
+    put:
+      operationId: SettingsController_updateMultilingual
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MultilingualConfigDto'
+      responses:
+        '200':
+          description: Registro Locale salvato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultilingualConfigDto'
+        '400':
+          description: Il Locale di default non compare fra i Locale attivi
+        '403':
+          description: Ruolo inferiore ad Admin
+      security:
+        - access-token: []
+      summary: Salva il registro Locale attivi (Admin+ only, registrato su audit log)
+      tags:
+        - Settings
   /api/v1/health:
     get:
       operationId: HealthController_check
@@ -706,6 +747,41 @@ paths:
       security:
         - access-token: []
       summary: Carica un documento (multipart/form-data, campo "file")
+      tags:
+        - Files
+    get:
+      operationId: FilesController_findAll
+      parameters:
+        - name: p
+          required: false
+          in: query
+          description: Pagina (default 1)
+          schema:
+            type: string
+        - name: i
+          required: false
+          in: query
+          description: Elementi per pagina (default 20)
+          schema:
+            type: string
+        - name: q
+          required: false
+          in: query
+          description: Ricerca su nome file originale
+          schema:
+            type: string
+        - name: mimeType
+          required: false
+          in: query
+          description: Filtro per MIME type (match esatto, non prefix)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista file paginata
+      security:
+        - access-token: []
+      summary: Lista paginata dei file attivi (Admin/Editor)
       tags:
         - Files
   /api/v1/app/files/{guid}:
@@ -936,6 +1012,63 @@ paths:
       security:
         - access-token: []
       summary: Crea una Pagina in stato draft
+      tags:
+        - Pages
+  /api/v1/app/pages/{guid}/translations:
+    post:
+      operationId: PagesController_createTranslation
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTranslationDto'
+      responses:
+        '201':
+          description: Traduzione creata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageDto'
+        '400':
+          description: Locale non fra i Locale attivi
+        '404':
+          description: Pagina sorgente non trovata o eliminata
+        '409':
+          description: Esiste già una traduzione per questo locale
+      security:
+        - access-token: []
+      summary: Crea una traduzione da una Pagina sorgente
+      tags:
+        - Pages
+    get:
+      operationId: PagesController_listTranslations
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Traduzioni del gruppo (bozze incluse)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PageTranslationDto'
+        '404':
+          description: Pagina sorgente non trovata o eliminata
+      security:
+        - access-token: []
+      summary: Elenco delle traduzioni del gruppo (bozze incluse), sorgente inclusa
       tags:
         - Pages
   /api/v1/app/pages/{guid}:
@@ -2437,6 +2570,24 @@ components:
         - components
         - light
         - dark
+    MultilingualConfigDto:
+      type: object
+      properties:
+        active:
+          description: Codici Locale attivi (BCP-47 libero, es. "it-IT")
+          example:
+            - it-IT
+            - en-GB
+          type: array
+          items:
+            type: string
+        default:
+          type: string
+          description: Locale di default (senza prefisso nelle URL pubbliche, ADR-24 § 5)
+          example: it-IT
+      required:
+        - active
+        - default
     UploadFileDto:
       type: object
       properties:
@@ -2736,6 +2887,43 @@ components:
         - version
         - createdAt
         - updatedAt
+    CreateTranslationDto:
+      type: object
+      properties:
+        locale:
+          type: string
+          description: Locale della nuova traduzione (deve essere fra i Locale attivi)
+          example: en-GB
+        title:
+          type: string
+          description: Titolo della traduzione; se assente, copiato dalla Pagina sorgente
+          example: About us
+      required:
+        - locale
+    PageTranslationDto:
+      type: object
+      properties:
+        guid:
+          type: string
+          description: Identificatore pubblico della Pagina (URL admin)
+          example: b1a2c3d4e5f6a7b8
+        locale:
+          type: string
+          description: Locale della riga
+          example: en-GB
+        title:
+          type: string
+          description: Titolo della riga
+          example: About us
+        status:
+          type: string
+          description: Stato editoriale della riga (draft, review, scheduled, published)
+          example: draft
+      required:
+        - guid
+        - locale
+        - title
+        - status
     UpdatePageDto:
       type: object
       properties:

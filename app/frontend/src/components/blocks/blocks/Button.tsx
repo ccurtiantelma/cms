@@ -15,7 +15,11 @@
  */
 import styles from './Button.module.css';
 import tokenStyles from '../style-tokens.module.css';
-import { resolveResponsiveClassNames } from '../style-tokens';
+import {
+  resolveHideClassName,
+  resolveLayerClassName,
+  resolveResponsiveClassNames,
+} from '../style-tokens';
 
 interface ButtonProps {
   label: string;
@@ -26,6 +30,10 @@ interface ButtonProps {
   styleFontSize?: unknown;
   styleFontWeight?: unknown;
   styleFontFamily?: unknown;
+  styleLayer?: unknown;
+  styleHideDesktop?: unknown;
+  styleHideTablet?: unknown;
+  styleHideMobile?: unknown;
   /** Editing in-place attivo (solo editor, solo nodo selezionato — mai sul sito pubblico). */
   editable?: boolean;
   /** Commit dell'etichetta modificata — chiamato su `blur`, mai ad ogni tasto. */
@@ -43,6 +51,10 @@ export default function Button({
   styleFontSize,
   styleFontWeight,
   styleFontFamily,
+  styleLayer,
+  styleHideDesktop,
+  styleHideTablet,
+  styleHideMobile,
   editable = false,
   onLabelChange,
   onLabelInput,
@@ -55,6 +67,10 @@ export default function Button({
     resolveResponsiveClassNames(tokenStyles, 'fontSize', styleFontSize),
     resolveResponsiveClassNames(tokenStyles, 'fontWeight', styleFontWeight),
     resolveResponsiveClassNames(tokenStyles, 'fontFamily', styleFontFamily),
+    resolveLayerClassName(tokenStyles, styleLayer),
+    resolveHideClassName(tokenStyles, 'hideDesktop', styleHideDesktop),
+    resolveHideClassName(tokenStyles, 'hideTablet', styleHideTablet),
+    resolveHideClassName(tokenStyles, 'hideMobile', styleHideMobile),
   ]
     .filter(Boolean)
     .join(' ');

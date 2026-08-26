@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { DbModule } from '../db/db.module';
 import { BlocksModule } from '../blocks/blocks.module';
 import { CacheInvalidationQueueModule } from '../queues/cache-invalidation-queue/cache-invalidation-queue.module';
+import { SettingsModule } from '../settings/settings.module';
 import { PagesController } from './pages.controller';
 import { PagesService } from './pages.service';
 import { PublicPagesController } from './public-pages.controller';
@@ -31,7 +32,7 @@ import { PublicPageCacheService } from './public-page-cache.service';
  * lettura ad-hoc duplicata in un altro modulo.
  */
 @Module({
-  imports: [DbModule, BlocksModule, CacheInvalidationQueueModule],
+  imports: [DbModule, BlocksModule, CacheInvalidationQueueModule, SettingsModule],
   controllers: [PagesController, PublicPagesController],
   providers: [PagesService, PublicPagesService, PublicPageCacheService],
   exports: [PagesService],

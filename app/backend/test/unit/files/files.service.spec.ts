@@ -1,11 +1,53 @@
 import { createHash } from 'crypto';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { FilesService } from '../../../src/files/files.service';
 import { DbService } from '../../../src/db/db.service';
 import { AuditLogService } from '../../../src/common/audit-log.service';
 import { StorageDriver } from '../../../src/files/storage/storage-driver.interface';
 import { AppUserRoles } from '../../../src/common/enums';
-import { AuthInfo } from '../../../src/common/types';
+import { AuthInfo, FilesQueryParams } from '../../../src/common/types';
+
+/**
+ * Albero minimale di contenuto pagina (`page_revisions.content`) usato per i
+ * test della protezione referenziale N7 — stessa forma di `content.blocks`
+ * validata dal registro blocchi reale (`src/blocks/block-registry.ts`).
+ */
+interface TestBlockNode {
+  id: string;
+  type: string;
+  v: number;
+  props: Record<string, unknown>;
+  children: TestBlockNode[];
+}
+
+interface TestPageContent {
+  version: number;
+  blocks: TestBlockNode[];
+}
+
+/**
+ * Serializza un oggetto SQL di drizzle-orm (`and(...)`/`ilike`/`eq`) in una
+ * stringa ispezionabile nei test, saltando la chiave `table` (circolare) e
+ * ogni altro riferimento già visitato. Usata solo per verificare che la
+ * `where` costruita da `FilesService.list` includa davvero gli operatori
+ * attesi (`ilike`, valore del filtro) — non per accoppiarsi ai dettagli
+ * interni della libreria oltre questo.
+ */
+function serializeWhere(node: unknown): string {
+  const seen = new WeakSet<object>();
+  return JSON.stringify(node, (key, value) => {
+    if (key === 'table') {
+      return undefined;
+    }
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value as object)) {
+        return undefined;
+      }
+      seen.add(value as object);
+    }
+    return value;
+  });
+}
 
 describe('FilesService (unit)', () => {
   let filesService: FilesService;
@@ -13,6 +55,9 @@ describe('FilesService (unit)', () => {
   let updateSetMock: jest.Mock;
   let updateWhereMock: jest.Mock;
   let findFirstMock: jest.Mock;
+  let findManyMock: jest.Mock;
+  let selectWhereMock: jest.Mock;
+  let innerJoinMock: jest.Mock;
   let auditLogMock: jest.Mock;
   let storageDriver: jest.Mocked<StorageDriver>;
 
@@ -47,6 +92,13 @@ describe('FilesService (unit)', () => {
     updateWhereMock = jest.fn().mockResolvedValue(undefined);
     updateSetMock = jest.fn().mockReturnValue({ where: updateWhereMock });
     findFirstMock = jest.fn();
+    findManyMock = jest.fn().mockResolvedValue([]);
+    // Default: nessuna pagina pubblicata referenzia il file — soddisfa i test
+    // di `softDelete` preesistenti senza che debbano configurare la query
+    // referenziale (RFC-F09 N7). Ogni test che vuole simulare un match la
+    // sovrascrive con `mockResolvedValueOnce`.
+    selectWhereMock = jest.fn().mockResolvedValue([]);
+    innerJoinMock = jest.fn().mockReturnValue({ where: selectWhereMock });
     auditLogMock = jest.fn().mockResolvedValue(undefined);
 
     storageDriver = {
@@ -59,7 +111,10 @@ describe('FilesService (unit)', () => {
       db: {
         insert: jest.fn().mockReturnValue({ values: insertValuesMock }),
         update: jest.fn().mockReturnValue({ set: updateSetMock }),
-        query: { fileEntity: { findFirst: findFirstMock } },
+        select: jest.fn().mockReturnValue({
+          from: jest.fn().mockReturnValue({ where: selectWhereMock, innerJoin: innerJoinMock }),
+        }),
+        query: { fileEntity: { findFirst: findFirstMock, findMany: findManyMock } },
       },
     } as unknown as DbService;
 
@@ -148,6 +203,106 @@ describe('FilesService (unit)', () => {
     });
   });
 
+  describe('list', () => {
+    const fileRow1 = { ...insertedRow };
+    const fileRow2 = {
+      ...insertedRow,
+      id: 2,
+      guid: 'b2c3d4e5f6a7b8c9',
+      originalName: 'logo.png',
+      mimeType: 'image/png',
+      entity: null,
+      entityId: null,
+      createdAt: new Date('2026-08-01T09:00:00.000Z'),
+    };
+    const managerAuthInfo = buildAuthInfo(7, AppUserRoles.Manager);
+
+    it('restituisce una Pagination costruita da findMany + count eseguiti in parallelo', async () => {
+      findManyMock.mockResolvedValue([fileRow1, fileRow2]);
+      selectWhereMock.mockResolvedValueOnce([{ total: 2 }]);
+      const params: FilesQueryParams = { p: 1, i: 20 };
+
+      const result = await filesService.list(params, managerAuthInfo);
+
+      expect(findManyMock).toHaveBeenCalledWith(expect.objectContaining({ limit: 20, offset: 0 }));
+      expect(result.items).toEqual([
+        {
+          guid: fileRow1.guid,
+          originalName: fileRow1.originalName,
+          mimeType: fileRow1.mimeType,
+          sizeBytes: fileRow1.sizeBytes,
+          entity: fileRow1.entity,
+          entityId: fileRow1.entityId,
+          createdAt: fileRow1.createdAt,
+        },
+        {
+          guid: fileRow2.guid,
+          originalName: fileRow2.originalName,
+          mimeType: fileRow2.mimeType,
+          sizeBytes: fileRow2.sizeBytes,
+          entity: fileRow2.entity,
+          entityId: fileRow2.entityId,
+          createdAt: fileRow2.createdAt,
+        },
+      ]);
+      expect(result.totalItems).toBe(2);
+      expect(result.currentPage).toBe(1);
+      expect(result.itemsPerPage).toBe(20);
+      expect(result.totalPages).toBe(1);
+    });
+
+    it('calcola limit/offset coerenti con p/i espliciti (pagina 3, 5 per pagina)', async () => {
+      findManyMock.mockResolvedValue([]);
+      selectWhereMock.mockResolvedValueOnce([{ total: 0 }]);
+      const params: FilesQueryParams = { p: 3, i: 5 };
+
+      const result = await filesService.list(params, managerAuthInfo);
+
+      expect(findManyMock).toHaveBeenCalledWith(expect.objectContaining({ limit: 5, offset: 10 }));
+      expect(result.currentPage).toBe(3);
+      expect(result.itemsPerPage).toBe(5);
+    });
+
+    it('applica i default p=1/i=20 quando p/i non sono valorizzati (0)', async () => {
+      findManyMock.mockResolvedValue([]);
+      selectWhereMock.mockResolvedValueOnce([{ total: 0 }]);
+      const params: FilesQueryParams = { p: 0, i: 0 };
+
+      const result = await filesService.list(params, managerAuthInfo);
+
+      expect(findManyMock).toHaveBeenCalledWith(expect.objectContaining({ limit: 20, offset: 0 }));
+      expect(result.currentPage).toBe(1);
+      expect(result.itemsPerPage).toBe(20);
+    });
+
+    it('applica un filtro ilike su originalName quando q è presente', async () => {
+      findManyMock.mockResolvedValue([]);
+      selectWhereMock.mockResolvedValueOnce([{ total: 0 }]);
+      const params: FilesQueryParams = { p: 1, i: 20, q: 'fattura' };
+
+      const result = await filesService.list(params, managerAuthInfo);
+
+      const whereArg: unknown = (findManyMock.mock.calls[0][0] as { where: unknown }).where;
+      const serialized = serializeWhere(whereArg);
+      expect(serialized).toContain('ilike');
+      expect(serialized).toContain('%fattura%');
+      expect(result.totalItems).toBe(0);
+    });
+
+    it('applica un match esatto su mimeType quando presente, senza ilike', async () => {
+      findManyMock.mockResolvedValue([]);
+      selectWhereMock.mockResolvedValueOnce([{ total: 0 }]);
+      const params: FilesQueryParams = { p: 1, i: 20, mimeType: 'image/png' };
+
+      await filesService.list(params, managerAuthInfo);
+
+      const whereArg: unknown = (findManyMock.mock.calls[0][0] as { where: unknown }).where;
+      const serialized = serializeWhere(whereArg);
+      expect(serialized).toContain('image/png');
+      expect(serialized).not.toContain('ilike');
+    });
+  });
+
   describe('softDelete', () => {
     it("consente all'autore del file di eliminarlo", async () => {
       findFirstMock.mockResolvedValue(insertedRow);
@@ -194,6 +349,100 @@ describe('FilesService (unit)', () => {
       await expect(filesService.softDelete('guid-inesistente', authInfo)).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('softDelete — protezione referenziale (N7)', () => {
+    const referencingContent: TestPageContent = {
+      version: 1,
+      blocks: [
+        {
+          id: 'b1',
+          type: 'image',
+          v: 1,
+          props: { mediaRef: insertedRow.guid, alt: 'Logo' },
+          children: [],
+        },
+      ],
+    };
+
+    const nestedReferencingContent: TestPageContent = {
+      version: 1,
+      blocks: [
+        {
+          id: 'section-1',
+          type: 'section',
+          v: 1,
+          props: {},
+          children: [
+            {
+              id: 'b1',
+              type: 'image',
+              v: 1,
+              props: { mediaRef: insertedRow.guid, alt: 'Logo annidato' },
+              children: [],
+            },
+          ],
+        },
+      ],
+    };
+
+    const nonReferencingContent: TestPageContent = {
+      version: 1,
+      blocks: [
+        {
+          id: 'b1',
+          type: 'image',
+          v: 1,
+          props: { mediaRef: 'altro-guid-16chr', alt: 'Altra immagine' },
+          children: [],
+        },
+      ],
+    };
+
+    it('rifiuta con ConflictException (409) se il file è referenziato da una pagina pubblicata, senza eseguire alcuna scrittura', async () => {
+      findFirstMock.mockResolvedValue(insertedRow);
+      selectWhereMock.mockResolvedValueOnce([{ content: referencingContent }]);
+      const authInfo = buildAuthInfo(7, AppUserRoles.User);
+
+      await expect(filesService.softDelete(insertedRow.guid, authInfo)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(updateSetMock).not.toHaveBeenCalled();
+      expect(updateWhereMock).not.toHaveBeenCalled();
+      expect(auditLogMock).not.toHaveBeenCalled();
+    });
+
+    it('rifiuta con ConflictException (409) anche quando il riferimento è annidato sotto un blocco contenitore', async () => {
+      findFirstMock.mockResolvedValue(insertedRow);
+      selectWhereMock.mockResolvedValueOnce([{ content: nestedReferencingContent }]);
+      const authInfo = buildAuthInfo(7, AppUserRoles.User);
+
+      await expect(filesService.softDelete(insertedRow.guid, authInfo)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(updateSetMock).not.toHaveBeenCalled();
+    });
+
+    it('procede alla cancellazione se nessuna pagina pubblicata referenzia il file', async () => {
+      findFirstMock.mockResolvedValue(insertedRow);
+      selectWhereMock.mockResolvedValueOnce([]);
+      const authInfo = buildAuthInfo(7, AppUserRoles.User);
+
+      await filesService.softDelete(insertedRow.guid, authInfo, '1.2.3.4');
+
+      expect(updateSetMock).toHaveBeenCalledWith(expect.objectContaining({ isActive: false }));
+      expect(auditLogMock).toHaveBeenCalled();
+    });
+
+    it('procede alla cancellazione se le pagine pubblicate esistono ma nessuna referenzia questo guid', async () => {
+      findFirstMock.mockResolvedValue(insertedRow);
+      selectWhereMock.mockResolvedValueOnce([{ content: nonReferencingContent }]);
+      const authInfo = buildAuthInfo(7, AppUserRoles.User);
+
+      await filesService.softDelete(insertedRow.guid, authInfo);
+
+      expect(updateSetMock).toHaveBeenCalledWith(expect.objectContaining({ isActive: false }));
     });
   });
 });

@@ -89,6 +89,10 @@ function renderNode(node: RenderableBlockNode, editing: BlockEditingProps | unde
           styleMarginRight={node.props.styleMarginRight}
           styleMarginBottom={node.props.styleMarginBottom}
           styleMarginLeft={node.props.styleMarginLeft}
+          styleLayer={node.props.styleLayer}
+          styleHideDesktop={node.props.styleHideDesktop}
+          styleHideTablet={node.props.styleHideTablet}
+          styleHideMobile={node.props.styleHideMobile}
         >
           {node.children.map((child) => (
             <BlockRenderer key={child.id} node={child} />
@@ -108,6 +112,10 @@ function renderNode(node: RenderableBlockNode, editing: BlockEditingProps | unde
           styleFontSize={node.props.styleFontSize}
           styleFontWeight={node.props.styleFontWeight}
           styleFontFamily={node.props.styleFontFamily}
+          styleLayer={node.props.styleLayer}
+          styleHideDesktop={node.props.styleHideDesktop}
+          styleHideTablet={node.props.styleHideTablet}
+          styleHideMobile={node.props.styleHideMobile}
           editable={editing?.editable}
           onTextChange={editing?.onTextChange}
           onTextInput={editing?.onTextInput}
@@ -125,6 +133,10 @@ function renderNode(node: RenderableBlockNode, editing: BlockEditingProps | unde
           styleFontSize={node.props.styleFontSize}
           styleFontWeight={node.props.styleFontWeight}
           styleFontFamily={node.props.styleFontFamily}
+          styleLayer={node.props.styleLayer}
+          styleHideDesktop={node.props.styleHideDesktop}
+          styleHideTablet={node.props.styleHideTablet}
+          styleHideMobile={node.props.styleHideMobile}
           editable={editing?.editable}
           onHtmlChange={editing?.onHtmlChange}
           onHtmlInput={editing?.onHtmlInput}
@@ -140,6 +152,10 @@ function renderNode(node: RenderableBlockNode, editing: BlockEditingProps | unde
           alt={typeof alt === 'string' ? alt : ''}
           styleSpaceBefore={node.props.styleSpaceBefore}
           styleSpaceAfter={node.props.styleSpaceAfter}
+          styleLayer={node.props.styleLayer}
+          styleHideDesktop={node.props.styleHideDesktop}
+          styleHideTablet={node.props.styleHideTablet}
+          styleHideMobile={node.props.styleHideMobile}
         />
       );
     }
@@ -156,6 +172,10 @@ function renderNode(node: RenderableBlockNode, editing: BlockEditingProps | unde
           styleFontSize={node.props.styleFontSize}
           styleFontWeight={node.props.styleFontWeight}
           styleFontFamily={node.props.styleFontFamily}
+          styleLayer={node.props.styleLayer}
+          styleHideDesktop={node.props.styleHideDesktop}
+          styleHideTablet={node.props.styleHideTablet}
+          styleHideMobile={node.props.styleHideMobile}
           editable={editing?.editable}
           onLabelChange={editing?.onLabelChange}
           onLabelInput={editing?.onLabelInput}

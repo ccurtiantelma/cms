@@ -38,11 +38,14 @@ import {
   auditActionForStatusTransition,
   statusTransitionRequiresElevation,
 } from './pages.state-machine';
+import { SettingsService } from '../settings/settings.service';
 import { CreatePageDto } from './dto/create-page.dto';
+import { CreateTranslationDto } from './dto/create-translation.dto';
 import { UpdatePageDto } from './dto/update-page.dto';
 import { ChangeStatusDto } from './dto/change-status.dto';
 import { PageDto } from './dto/page.dto';
 import { PageRevisionDetailDto, PageRevisionSummaryDto } from './dto/page-revision.dto';
+import { PageTranslationDto } from './dto/page-translation.dto';
 import { PagePreviewTokenDto } from './dto/page-preview-token.dto';
 
 type PageRow = typeof pageEntity.$inferSelect;
@@ -131,6 +134,7 @@ export class PagesService {
     private readonly blockPropSanitizer: BlockPropSanitizerService,
     @Inject(BLOCK_REGISTRY_TOKEN) private readonly blockRegistry: BlockRegistry,
     private readonly publicPageCache: PublicPageCacheService,
+    private readonly settingsService: SettingsService,
   ) {}
 
   /** Lista paginata delle Pagine attive. Un `User` vede solo le proprie (ADR-18 § D6). */
@@ -200,6 +204,91 @@ export class PagesService {
 
     this.logger.log(`Pagina creata (guid=${row.guid}).`);
     return this.toDtoWithContentIssues(row, parent?.guid ?? null);
+  }
+
+  /**
+   * Crea una traduzione da una Pagina sorgente (RFC-F05 § 3, M3): nuova riga
+   * nello stesso `translationGroupId`, `locale` richiesto, `status: 'draft'`,
+   * `draftContent`/`draftSeo` copiati per deep-clone dalla sorgente (regola 5
+   * `business-rules.md` § Multilingua: lascia i testi da tradurre, non li
+   * svuota), `slug` copiato invariato (resta unico perché confrontato per
+   * `locale`), `parentId` **non copiato** — nasce root (RFC-F05 § 3.4: una
+   * gerarchia parallela nel Locale sorgente non è garantita, riparentare è
+   * un'azione manuale successiva). `404` se la sorgente non esiste o è
+   * soft-eliminata; `400` se `locale` non è fra i Locale attivi; `409` se il
+   * gruppo ha già una riga in quel `locale` — mai una `SELECT` preventiva,
+   * il vincolo DB (`pages_translation_group_locale_uq`) arriva da
+   * {@link mapPgError}. Nessuna ownership diversa da `create()`: chiunque
+   * possa creare una Pagina può creare una traduzione.
+   */
+  async createTranslation(
+    guid: string,
+    dto: CreateTranslationDto,
+    authInfo: AuthInfo,
+  ): Promise<PageDto> {
+    const source = await this.loadActiveByGuid(guid);
+
+    const multilingualConfig = await this.settingsService.getMultilingualConfig();
+    if (!multilingualConfig.active.includes(dto.locale)) {
+      throw new BadRequestException('Il locale richiesto non è fra i Locale attivi.');
+    }
+
+    const row = await this.insertOrMapConflict({
+      guid: Utils.randomString(16),
+      title: dto.title ?? source.title,
+      slug: source.slug,
+      locale: dto.locale,
+      parentId: null,
+      translationGroupId: source.translationGroupId,
+      draftContent: structuredClone(source.draftContent),
+      draftSeo: structuredClone(source.draftSeo),
+      createdBy: authInfo.userId,
+      updatedBy: authInfo.userId,
+    });
+
+    this.logger.log(
+      `Traduzione creata (guid=${row.guid}, translationGroupId=${row.translationGroupId}, locale=${dto.locale}).`,
+    );
+    return this.toDtoWithContentIssues(row, null);
+  }
+
+  /**
+   * Elenco delle righe sorelle attive dello stesso gruppo di traduzione,
+   * sorgente inclusa (RFC-F05 § 3, dipendenza aperta di T6: "lo switcher
+   * elenca le traduzioni esistenti del gruppo"). Deliberatamente distinto
+   * da {@link PublicPagesService}/T5 (hreflang): quello è pubblico e
+   * limitato a `published`, questo è admin e deve mostrare anche le bozze
+   * sorelle — l'esclusione della riga corrente (`:guid`) dal risultato è
+   * lasciata al frontend, che la distingue confrontando guid/locale
+   * lato client, non a questa query.
+   *
+   * `404` se `:guid` non esiste o è soft-eliminata. Nessuna
+   * `assertRowOwnership`, né sulla sorgente né sulle righe sorelle: stessa
+   * scelta già presa in {@link createTranslation} ("chiunque possa creare
+   * una Pagina può creare una traduzione") — per coerenza, chi può
+   * vedere/creare una traduzione può anche listare il gruppo. La ricaduta
+   * dell'assenza di ownership è mitigata dal DTO: {@link PageTranslationDto}
+   * espone solo guid/locale/title/status, mai `draftContent`/`draftSeo` di
+   * una riga potenzialmente non posseduta dal chiamante.
+   */
+  async listTranslations(guid: string): Promise<PageTranslationDto[]> {
+    const source = await this.loadActiveByGuid(guid);
+
+    const rows = await this.db.db.query.pageEntity.findMany({
+      where: and(
+        eq(pageEntity.translationGroupId, source.translationGroupId),
+        eq(pageEntity.isActive, true),
+      ),
+      orderBy: asc(pageEntity.locale),
+      columns: { guid: true, locale: true, title: true, status: true },
+    });
+
+    return rows.map((row) => ({
+      guid: row.guid,
+      locale: row.locale,
+      title: row.title,
+      status: row.status,
+    }));
   }
 
   /** Dettaglio di una Pagina attiva. `403` su riga altrui, `404` solo su guid inesistente/soft-deleted (ADR-18 § D7). */

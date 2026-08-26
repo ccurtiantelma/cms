@@ -34,7 +34,7 @@ interface ExportedPropDescriptor {
 
 interface ExportedBlockEditorPropMeta {
   label: string;
-  tab?: 'content' | 'style';
+  tab?: 'content' | 'style' | 'advanced';
   order?: number;
   help?: string;
 }

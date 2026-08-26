@@ -64,3 +64,13 @@ export interface PagesQueryParams extends PaginationParams {
   status?: string;
   locale?: string;
 }
+
+/** Parametri di filtro per GET /app/files (RFC-F09 § 1, T1). */
+export interface FilesQueryParams {
+  p: number;
+  i: number;
+  /** Ricerca su `originalName` (`ILIKE %q%`). */
+  q?: string;
+  /** Match esatto su `mimeType`, non prefix. */
+  mimeType?: string;
+}
