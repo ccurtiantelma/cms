@@ -10,7 +10,19 @@
  * di `CLAUDE.md` § Ask first — richiede firma, non si aggiunge qui.
  */
 export type PropKind =
-  'richText' | 'plainText' | 'number' | 'boolean' | 'enum' | 'url' | 'mediaRef' | 'color';
+  | 'richText'
+  | 'plainText'
+  | 'number'
+  | 'boolean'
+  | 'enum'
+  | 'url'
+  | 'mediaRef'
+  | 'color'
+  | 'unitValue'
+  | 'border'
+  | 'shadow'
+  | 'cssClassName'
+  | 'htmlId';
 
 /**
  * Campi comuni a ogni descrittore di prop. `default` non compare mai su una
@@ -121,6 +133,80 @@ export interface ColorPropSpec extends BasePropSpec {
   default?: string;
 }
 
+/**
+ * Unità di misura ammesse per `kind: 'unitValue'` (ADR-38 § 2). Elenco chiuso
+ * di stringhe: nessuna unità fuori da questo insieme è mai valida, a
+ * prescindere da `units` dichiarato dalla singola prop.
+ */
+export type LengthUnit = 'px' | '%' | 'em' | 'rem' | 'vw' | 'vh';
+
+/**
+ * Valore composto libero ma **vincolato** (ADR-38 § 2, RFC-38 § 2): primo
+ * `kind` a valore oggetto del registro. `value` non è mai libero — deve
+ * cadere dentro `[min, max]` dichiarati dalla prop stessa (ADR-29 § 1: "un
+ * token, mai una misura" — qui la misura è ammessa solo perché ha un
+ * intervallo dichiarato, non perché è tornata libera). `units` è l'elenco
+ * chiuso ammesso per quella prop, sottoinsieme di `LengthUnit`. `min`/`max`
+ * si applicano allo stesso modo a qualunque unità in `units` — una
+ * semplificazione dichiarata (nessun intervallo per-unità), non un difetto
+ * silenzioso.
+ */
+export interface UnitValuePropSpec extends BasePropSpec {
+  kind: 'unitValue';
+  units: readonly LengthUnit[];
+  min: number;
+  max: number;
+  default?: { value: number; unit: LengthUnit };
+}
+
+/** Stile del tratto per `kind: 'border'` — elenco chiuso, come ogni altro enum del registro. */
+export type BorderStyle = 'solid' | 'dashed' | 'dotted' | 'none';
+
+/**
+ * Bordo a forma fissa (ADR-38 § 3): 4 campi, nessuno libero.
+ * `width`/`radius` sono vincolati da intervalli **fissi nel validator**
+ * (0–12 e 0–48, unità implicita px), non configurabili dalla prop — a
+ * differenza di `unitValue`, qui non serve un intervallo per prop perché
+ * esiste un solo uso sensato (spessore/raggio di un bordo). `color` riusa lo
+ * stesso `HEX_COLOR_PATTERN` di `kind: 'color'` (ADR-33 § 3), non un pattern
+ * proprio.
+ */
+export interface BorderPropSpec extends BasePropSpec {
+  kind: 'border';
+  default?: { width: number; style: BorderStyle; color: string; radius: number };
+}
+
+/**
+ * Ombra (box/text) a forma fissa (ADR-38 § 4): 5 campi, tutti con intervallo
+ * **fisso nel validator**, non configurabile — stessa scelta di `border` e
+ * per lo stesso motivo (un solo uso sensato, nessun bisogno di un intervallo
+ * per prop). Unità implicita px.
+ */
+export interface ShadowPropSpec extends BasePropSpec {
+  kind: 'shadow';
+  default?: { x: number; y: number; blur: number; spread: number; color: string };
+}
+
+/**
+ * Nome/i di classe CSS custom (ADR-38 § 5). Pattern **fisso e stretto**,
+ * stesso principio di `kind: 'color'` (riga ~118): non un campo `pattern`
+ * generico configurabile dal registro — quello sarebbe esso stesso una
+ * superficie da validare come sicura (RFC-38, "Alternative valutate"). 1–3
+ * token spazio-separati, ciascuno `^[a-zA-Z_-][a-zA-Z0-9_-]{0,49}$`, somma
+ * ≤ 100 caratteri.
+ */
+export interface CssClassNamePropSpec extends BasePropSpec {
+  kind: 'cssClassName';
+}
+
+/**
+ * Identificativo HTML custom (ADR-38 § 5). Stesso pattern fisso di
+ * `cssClassName`, ma un solo token, ≤ 50 caratteri — mai una lista.
+ */
+export interface HtmlIdPropSpec extends BasePropSpec {
+  kind: 'htmlId';
+}
+
 /** Unione discriminata su `kind` di tutti i descrittori di prop ammessi. */
 export type PropSpec =
   | RichTextPropSpec
@@ -130,4 +216,9 @@ export type PropSpec =
   | EnumPropSpec
   | UrlPropSpec
   | MediaRefPropSpec
-  | ColorPropSpec;
+  | ColorPropSpec
+  | UnitValuePropSpec
+  | BorderPropSpec
+  | ShadowPropSpec
+  | CssClassNamePropSpec
+  | HtmlIdPropSpec;

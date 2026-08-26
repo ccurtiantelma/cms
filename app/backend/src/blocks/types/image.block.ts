@@ -55,6 +55,22 @@ export const imageBlock: BlockDefinition = {
       required: false,
       default: false,
     },
+    styleBorder: {
+      kind: 'border',
+      required: false,
+    },
+    styleShadow: {
+      kind: 'shadow',
+      required: false,
+    },
+    customCssClass: {
+      kind: 'cssClassName',
+      required: false,
+    },
+    customElementId: {
+      kind: 'htmlId',
+      required: false,
+    },
   },
   children: { allow: [] },
   migrations: [],
@@ -72,6 +88,20 @@ export const imageBlock: BlockDefinition = {
       styleHideDesktop: { label: 'Nascondi su Desktop', tab: 'advanced', order: 6 },
       styleHideTablet: { label: 'Nascondi su Tablet', tab: 'advanced', order: 7 },
       styleHideMobile: { label: 'Nascondi su Mobile', tab: 'advanced', order: 8 },
+      styleBorder: { label: 'Bordo', tab: 'style', order: 9 },
+      styleShadow: { label: 'Ombra', tab: 'style', order: 10 },
+      customCssClass: {
+        label: 'Classe CSS personalizzata',
+        tab: 'advanced',
+        order: 11,
+        help: 'Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore.',
+      },
+      customElementId: {
+        label: 'ID elemento personalizzato',
+        tab: 'advanced',
+        order: 12,
+        help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
+      },
     },
   },
 };

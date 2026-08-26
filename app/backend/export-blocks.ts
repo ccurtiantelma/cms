@@ -30,6 +30,11 @@ interface ExportedPropDescriptor {
   profile?: string;
   nonEmpty?: boolean;
   responsive?: boolean;
+  /** Solo `kind: 'unitValue'` (ADR-38 § 2): elenco chiuso di unità ammesse per questa prop. */
+  units?: readonly string[];
+  /** Solo `kind: 'unitValue'` (ADR-38 § 2): intervallo numerico ammesso, dichiarato dalla prop. */
+  min?: number;
+  max?: number;
 }
 
 interface ExportedBlockEditorPropMeta {
@@ -81,6 +86,9 @@ function exportBlocksArtifact(): void {
         ...('profile' in spec ? { profile: spec.profile } : {}),
         ...('nonEmpty' in spec && spec.nonEmpty !== undefined ? { nonEmpty: spec.nonEmpty } : {}),
         ...('responsive' in spec && spec.responsive !== undefined ? { responsive: spec.responsive } : {}),
+        ...('units' in spec ? { units: spec.units } : {}),
+        ...('min' in spec ? { min: spec.min } : {}),
+        ...('max' in spec ? { max: spec.max } : {}),
       })),
       ...(definition.meta ? { meta: definition.meta } : {}),
     }),

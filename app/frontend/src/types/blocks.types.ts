@@ -15,7 +15,20 @@
 /** Un descrittore di prop (SPEC-F02-blocchi.md § 5.1). */
 export interface BlockPropDescriptor {
   name: string;
-  kind: 'richText' | 'plainText' | 'number' | 'boolean' | 'enum' | 'url' | 'mediaRef' | 'color';
+  kind:
+    | 'richText'
+    | 'plainText'
+    | 'number'
+    | 'boolean'
+    | 'enum'
+    | 'url'
+    | 'mediaRef'
+    | 'color'
+    | 'unitValue'
+    | 'border'
+    | 'shadow'
+    | 'cssClassName'
+    | 'htmlId';
   required: boolean;
   default?: unknown;
   maxLength?: number;
@@ -24,6 +37,11 @@ export interface BlockPropDescriptor {
   nonEmpty?: boolean;
   /** `true` = il valore è `{ default, tablet?, mobile? }`, non uno scalare (ADR-29 § 2/§ 3). */
   responsive?: boolean;
+  /** Solo `kind: 'unitValue'` (ADR-38 § 2): elenco chiuso di unità ammesse per questa prop. */
+  units?: readonly ('px' | '%' | 'em' | 'rem' | 'vw' | 'vh')[];
+  /** Solo `kind: 'unitValue'` (ADR-38 § 2): intervallo numerico ammesso, dichiarato dalla prop. */
+  min?: number;
+  max?: number;
 }
 
 /** Metadati d'editor di una singola prop (ADR-30 § 1), opachi alla validazione. */
@@ -431,6 +449,26 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "kind": "boolean",
         "required": false,
         "default": false
+      },
+      {
+        "name": "styleBorder",
+        "kind": "border",
+        "required": false
+      },
+      {
+        "name": "styleShadow",
+        "kind": "shadow",
+        "required": false
+      },
+      {
+        "name": "customCssClass",
+        "kind": "cssClassName",
+        "required": false
+      },
+      {
+        "name": "customElementId",
+        "kind": "htmlId",
+        "required": false
       }
     ],
     "meta": {
@@ -554,6 +592,28 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Nascondi su Mobile",
           "tab": "advanced",
           "order": 23
+        },
+        "styleBorder": {
+          "label": "Bordo",
+          "tab": "style",
+          "order": 24
+        },
+        "styleShadow": {
+          "label": "Ombra",
+          "tab": "style",
+          "order": 25
+        },
+        "customCssClass": {
+          "label": "Classe CSS personalizzata",
+          "tab": "advanced",
+          "order": 26,
+          "help": "Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore."
+        },
+        "customElementId": {
+          "label": "ID elemento personalizzato",
+          "tab": "advanced",
+          "order": 27,
+          "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
         }
       }
     }
@@ -706,6 +766,44 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "kind": "boolean",
         "required": false,
         "default": false
+      },
+      {
+        "name": "styleTextColorCustom",
+        "kind": "color",
+        "required": false
+      },
+      {
+        "name": "styleFontSizeCustom",
+        "kind": "unitValue",
+        "required": false,
+        "units": [
+          "px",
+          "%",
+          "em",
+          "rem"
+        ],
+        "min": 1,
+        "max": 200
+      },
+      {
+        "name": "styleBorder",
+        "kind": "border",
+        "required": false
+      },
+      {
+        "name": "styleShadow",
+        "kind": "shadow",
+        "required": false
+      },
+      {
+        "name": "customCssClass",
+        "kind": "cssClassName",
+        "required": false
+      },
+      {
+        "name": "customElementId",
+        "kind": "htmlId",
+        "required": false
       }
     ],
     "meta": {
@@ -770,6 +868,40 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Nascondi su Mobile",
           "tab": "advanced",
           "order": 12
+        },
+        "styleTextColorCustom": {
+          "label": "Colore testo personalizzato",
+          "tab": "style",
+          "order": 13,
+          "help": "Colore libero (esadecimale). Ha priorità su \"Colore testo\" se impostato."
+        },
+        "styleFontSizeCustom": {
+          "label": "Dimensione testo personalizzata",
+          "tab": "style",
+          "order": 14,
+          "help": "Valore libero con unità. Ha priorità su \"Dimensione testo\" se impostato."
+        },
+        "styleBorder": {
+          "label": "Bordo",
+          "tab": "style",
+          "order": 15
+        },
+        "styleShadow": {
+          "label": "Ombra",
+          "tab": "style",
+          "order": 16
+        },
+        "customCssClass": {
+          "label": "Classe CSS personalizzata",
+          "tab": "advanced",
+          "order": 17,
+          "help": "Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore."
+        },
+        "customElementId": {
+          "label": "ID elemento personalizzato",
+          "tab": "advanced",
+          "order": 18,
+          "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
         }
       }
     }
@@ -911,6 +1043,44 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "kind": "boolean",
         "required": false,
         "default": false
+      },
+      {
+        "name": "styleTextColorCustom",
+        "kind": "color",
+        "required": false
+      },
+      {
+        "name": "styleFontSizeCustom",
+        "kind": "unitValue",
+        "required": false,
+        "units": [
+          "px",
+          "%",
+          "em",
+          "rem"
+        ],
+        "min": 1,
+        "max": 200
+      },
+      {
+        "name": "styleBorder",
+        "kind": "border",
+        "required": false
+      },
+      {
+        "name": "styleShadow",
+        "kind": "shadow",
+        "required": false
+      },
+      {
+        "name": "customCssClass",
+        "kind": "cssClassName",
+        "required": false
+      },
+      {
+        "name": "customElementId",
+        "kind": "htmlId",
+        "required": false
       }
     ],
     "meta": {
@@ -971,6 +1141,40 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Nascondi su Mobile",
           "tab": "advanced",
           "order": 12
+        },
+        "styleTextColorCustom": {
+          "label": "Colore testo personalizzato",
+          "tab": "style",
+          "order": 13,
+          "help": "Colore libero (esadecimale). Ha priorità su \"Colore testo\" se impostato."
+        },
+        "styleFontSizeCustom": {
+          "label": "Dimensione testo personalizzata",
+          "tab": "style",
+          "order": 14,
+          "help": "Valore libero con unità. Ha priorità su \"Dimensione testo\" se impostato."
+        },
+        "styleBorder": {
+          "label": "Bordo",
+          "tab": "style",
+          "order": 15
+        },
+        "styleShadow": {
+          "label": "Ombra",
+          "tab": "style",
+          "order": 16
+        },
+        "customCssClass": {
+          "label": "Classe CSS personalizzata",
+          "tab": "advanced",
+          "order": 17,
+          "help": "Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore."
+        },
+        "customElementId": {
+          "label": "ID elemento personalizzato",
+          "tab": "advanced",
+          "order": 18,
+          "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
         }
       }
     }
@@ -1056,6 +1260,26 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "kind": "boolean",
         "required": false,
         "default": false
+      },
+      {
+        "name": "styleBorder",
+        "kind": "border",
+        "required": false
+      },
+      {
+        "name": "styleShadow",
+        "kind": "shadow",
+        "required": false
+      },
+      {
+        "name": "customCssClass",
+        "kind": "cssClassName",
+        "required": false
+      },
+      {
+        "name": "customElementId",
+        "kind": "htmlId",
+        "required": false
       }
     ],
     "meta": {
@@ -1100,6 +1324,28 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Nascondi su Mobile",
           "tab": "advanced",
           "order": 8
+        },
+        "styleBorder": {
+          "label": "Bordo",
+          "tab": "style",
+          "order": 9
+        },
+        "styleShadow": {
+          "label": "Ombra",
+          "tab": "style",
+          "order": 10
+        },
+        "customCssClass": {
+          "label": "Classe CSS personalizzata",
+          "tab": "advanced",
+          "order": 11,
+          "help": "Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore."
+        },
+        "customElementId": {
+          "label": "ID elemento personalizzato",
+          "tab": "advanced",
+          "order": 12,
+          "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
         }
       }
     }
@@ -1246,6 +1492,16 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "kind": "boolean",
         "required": false,
         "default": false
+      },
+      {
+        "name": "customCssClass",
+        "kind": "cssClassName",
+        "required": false
+      },
+      {
+        "name": "customElementId",
+        "kind": "htmlId",
+        "required": false
       }
     ],
     "meta": {
@@ -1310,6 +1566,18 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Nascondi su Mobile",
           "tab": "advanced",
           "order": 12
+        },
+        "customCssClass": {
+          "label": "Classe CSS personalizzata",
+          "tab": "advanced",
+          "order": 13,
+          "help": "Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore."
+        },
+        "customElementId": {
+          "label": "ID elemento personalizzato",
+          "tab": "advanced",
+          "order": 14,
+          "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
         }
       }
     }

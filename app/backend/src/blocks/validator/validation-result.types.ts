@@ -7,9 +7,22 @@ export type BlockValidationErrorCode =
   | 'BLOCK_PROP_NOT_DECLARED'
   | 'BLOCK_PROP_INVALID';
 
-/** Insieme chiuso dei `reason` di `BLOCK_PROP_INVALID` (SPEC-F02-blocchi.md § 4.1). */
+/**
+ * Insieme chiuso dei `reason` di `BLOCK_PROP_INVALID` (SPEC-F02-blocchi.md § 4.1).
+ * `range` è nuovo in ADR-38 § 2/§ 3/§ 4: un numero fuori dall'intervallo
+ * dichiarato (`unitValue`) o fisso (`border`/`shadow`) — mai un valore
+ * libero, sempre un intervallo noto a monte.
+ */
 export type BlockPropInvalidReason =
-  'required' | 'empty' | 'type' | 'maxLength' | 'enum' | 'urlScheme' | 'guidFormat' | 'format';
+  | 'required'
+  | 'empty'
+  | 'type'
+  | 'maxLength'
+  | 'enum'
+  | 'urlScheme'
+  | 'guidFormat'
+  | 'format'
+  | 'range';
 
 /** `type` sconosciuto, `enabled: false`, o `minRole` non soddisfatto. */
 export interface BlockTypeUnknownDetails {
@@ -38,7 +51,9 @@ export interface BlockPropNotDeclaredDetails {
  * Prop dichiarata ma non conforme. `constraint`/`actual` sono sempre
  * **misure**, mai il valore colpevole (SPEC-F02-blocchi.md § 4): per
  * `maxLength` sono lunghezze in code point, per `enum` `constraint` è
- * l'elenco dei valori ammessi e `actual` resta assente.
+ * l'elenco dei valori ammessi e `actual` resta assente. Per `reason:
+ * 'range'` (ADR-38) `constraint` è la tupla `[min, max]` dichiarata (o fissa)
+ * e `actual` il numero fuori intervallo.
  */
 export interface BlockPropInvalidDetails {
   path: string;
@@ -46,7 +61,7 @@ export interface BlockPropInvalidDetails {
   prop: string;
   kind: PropKind;
   reason: BlockPropInvalidReason;
-  constraint?: number | string[];
+  constraint?: number | string[] | [number, number];
   actual?: number;
 }
 

@@ -55,7 +55,20 @@ function renderTypeScript(artifact) {
 /** Un descrittore di prop (SPEC-F02-blocchi.md § 5.1). */
 export interface BlockPropDescriptor {
   name: string;
-  kind: 'richText' | 'plainText' | 'number' | 'boolean' | 'enum' | 'url' | 'mediaRef' | 'color';
+  kind:
+    | 'richText'
+    | 'plainText'
+    | 'number'
+    | 'boolean'
+    | 'enum'
+    | 'url'
+    | 'mediaRef'
+    | 'color'
+    | 'unitValue'
+    | 'border'
+    | 'shadow'
+    | 'cssClassName'
+    | 'htmlId';
   required: boolean;
   default?: unknown;
   maxLength?: number;
@@ -64,6 +77,11 @@ export interface BlockPropDescriptor {
   nonEmpty?: boolean;
   /** \`true\` = il valore è \`{ default, tablet?, mobile? }\`, non uno scalare (ADR-29 § 2/§ 3). */
   responsive?: boolean;
+  /** Solo \`kind: 'unitValue'\` (ADR-38 § 2): elenco chiuso di unità ammesse per questa prop. */
+  units?: readonly ('px' | '%' | 'em' | 'rem' | 'vw' | 'vh')[];
+  /** Solo \`kind: 'unitValue'\` (ADR-38 § 2): intervallo numerico ammesso, dichiarato dalla prop. */
+  min?: number;
+  max?: number;
 }
 
 /** Metadati d'editor di una singola prop (ADR-30 § 1), opachi alla validazione. */

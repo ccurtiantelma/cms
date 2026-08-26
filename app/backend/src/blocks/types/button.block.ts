@@ -82,6 +82,14 @@ export const buttonBlock: BlockDefinition = {
       required: false,
       default: false,
     },
+    customCssClass: {
+      kind: 'cssClassName',
+      required: false,
+    },
+    customElementId: {
+      kind: 'htmlId',
+      required: false,
+    },
   },
   children: { allow: [] },
   migrations: [],
@@ -103,6 +111,18 @@ export const buttonBlock: BlockDefinition = {
       styleHideDesktop: { label: 'Nascondi su Desktop', tab: 'advanced', order: 10 },
       styleHideTablet: { label: 'Nascondi su Tablet', tab: 'advanced', order: 11 },
       styleHideMobile: { label: 'Nascondi su Mobile', tab: 'advanced', order: 12 },
+      customCssClass: {
+        label: 'Classe CSS personalizzata',
+        tab: 'advanced',
+        order: 13,
+        help: 'Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore.',
+      },
+      customElementId: {
+        label: 'ID elemento personalizzato',
+        tab: 'advanced',
+        order: 14,
+        help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
+      },
     },
   },
 };

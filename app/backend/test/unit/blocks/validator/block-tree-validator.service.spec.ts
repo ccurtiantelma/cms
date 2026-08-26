@@ -264,6 +264,10 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
               'styleHideDesktop',
               'styleHideTablet',
               'styleHideMobile',
+              'styleBorder',
+              'styleShadow',
+              'customCssClass',
+              'customElementId',
             ],
           },
         },
@@ -294,6 +298,12 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
             'styleHideDesktop',
             'styleHideTablet',
             'styleHideMobile',
+            'styleTextColorCustom',
+            'styleFontSizeCustom',
+            'styleBorder',
+            'styleShadow',
+            'customCssClass',
+            'customElementId',
           ],
         },
       });
@@ -515,6 +525,307 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
       ]);
       expect(result.valid).toBe(true);
     });
+  });
+
+  // ─── kind "unitValue"/"border"/"shadow"/"cssClassName"/"htmlId" (ADR-38) ─
+
+  describe('BLOCK_PROP_INVALID — kind "unitValue" (ADR-38 § 2)', () => {
+    it('heading.styleFontSizeCustom con value/unit dentro i vincoli dichiarati è accettato', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'heading',
+          props: { level: 'h2', text: 'T', styleFontSizeCustom: { value: 32, unit: 'px' } },
+        }),
+      ]);
+      expect(result.valid).toBe(true);
+    });
+
+    it('heading.styleFontSizeCustom con value fuori da [min,max] produce reason "range" sul sotto-path .value', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'heading',
+          props: { level: 'h2', text: 'T', styleFontSizeCustom: { value: 500, unit: 'px' } },
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleFontSizeCustom.value',
+          type: 'heading',
+          prop: 'styleFontSizeCustom',
+          kind: 'unitValue',
+          reason: 'range',
+          constraint: [1, 200],
+          actual: 500,
+        },
+      });
+    });
+
+    it('heading.styleFontSizeCustom con unit fuori dall\'elenco chiuso produce reason "enum" sul sotto-path .unit', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'heading',
+          props: { level: 'h2', text: 'T', styleFontSizeCustom: { value: 16, unit: 'vw' } },
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleFontSizeCustom.unit',
+          type: 'heading',
+          prop: 'styleFontSizeCustom',
+          kind: 'unitValue',
+          reason: 'enum',
+          constraint: ['px', '%', 'em', 'rem'],
+        },
+      });
+    });
+
+    it('heading.styleFontSizeCustom non oggetto ({value,unit}) produce reason "type" sul path della prop, non sui sotto-campi', () => {
+      const result = validator.validateTree([
+        node({ type: 'heading', props: { level: 'h2', text: 'T', styleFontSizeCustom: '32px' } }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleFontSizeCustom',
+          type: 'heading',
+          prop: 'styleFontSizeCustom',
+          kind: 'unitValue',
+          reason: 'type',
+        },
+      });
+    });
+
+    it('heading.styleFontSizeCustom con una chiave estranea nell\'oggetto è respinto per intero (nessuna chiave oltre value/unit)', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'heading',
+          props: {
+            level: 'h2',
+            text: 'T',
+            styleFontSizeCustom: { value: 16, unit: 'px', evil: '</style>' },
+          },
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleFontSizeCustom',
+          type: 'heading',
+          prop: 'styleFontSizeCustom',
+          kind: 'unitValue',
+          reason: 'type',
+        },
+      });
+    });
+  });
+
+  describe('BLOCK_PROP_INVALID — kind "border" (ADR-38 § 3)', () => {
+    it('section.styleBorder con i 4 campi dentro i vincoli fissi è accettato', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'section',
+          props: { styleBorder: { width: 2, style: 'solid', color: '#333', radius: 8 } },
+        }),
+      ]);
+      expect(result.valid).toBe(true);
+    });
+
+    it('section.styleBorder.width oltre il massimo fisso (12) produce reason "range"', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'section',
+          props: { styleBorder: { width: 50, style: 'solid', color: '#333', radius: 8 } },
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleBorder.width',
+          type: 'section',
+          prop: 'styleBorder',
+          kind: 'border',
+          reason: 'range',
+          constraint: [0, 12],
+          actual: 50,
+        },
+      });
+    });
+
+    it('section.styleBorder.style fuori dall\'elenco chiuso produce reason "enum"', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'section',
+          props: { styleBorder: { width: 2, style: 'groove', color: '#333', radius: 8 } },
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleBorder.style',
+          type: 'section',
+          prop: 'styleBorder',
+          kind: 'border',
+          reason: 'enum',
+          constraint: ['solid', 'dashed', 'dotted', 'none'],
+        },
+      });
+    });
+
+    it('section.styleBorder.color non esadecimale (stesso HEX_COLOR_PATTERN di kind "color") produce reason "format"', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'section',
+          props: { styleBorder: { width: 2, style: 'solid', color: 'rgb(0,0,0)', radius: 8 } },
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleBorder.color',
+          type: 'section',
+          prop: 'styleBorder',
+          kind: 'border',
+          reason: 'format',
+        },
+      });
+    });
+
+    it('section.styleBorder non oggetto a 4 campi fissi produce reason "type" sul path della prop', () => {
+      const result = validator.validateTree([
+        node({ type: 'section', props: { styleBorder: '2px solid #333' } }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleBorder',
+          type: 'section',
+          prop: 'styleBorder',
+          kind: 'border',
+          reason: 'type',
+        },
+      });
+    });
+  });
+
+  describe('BLOCK_PROP_INVALID — kind "shadow" (ADR-38 § 4)', () => {
+    it('section.styleShadow con i 5 campi dentro gli intervalli fissi è accettato', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'section',
+          props: { styleShadow: { x: 0, y: 4, blur: 12, spread: 0, color: '#000000' } },
+        }),
+      ]);
+      expect(result.valid).toBe(true);
+    });
+
+    it('section.styleShadow.blur oltre il massimo fisso (64) produce reason "range"', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'section',
+          props: { styleShadow: { x: 0, y: 4, blur: 999, spread: 0, color: '#000000' } },
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleShadow.blur',
+          type: 'section',
+          prop: 'styleShadow',
+          kind: 'shadow',
+          reason: 'range',
+          constraint: [0, 64],
+          actual: 999,
+        },
+      });
+    });
+
+    it('section.styleShadow.color non esadecimale produce reason "format"', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'section',
+          props: { styleShadow: { x: 0, y: 4, blur: 12, spread: 0, color: 'black' } },
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleShadow.color',
+          type: 'section',
+          prop: 'styleShadow',
+          kind: 'shadow',
+          reason: 'format',
+        },
+      });
+    });
+  });
+
+  describe('BLOCK_PROP_INVALID — kind "cssClassName"/"htmlId" (ADR-38 § 5)', () => {
+    it.each(['hero-title', 'hero_title', '_hero', 'hero title'])(
+      'section.customCssClass = %j (1-3 token validi) è accettato',
+      (customCssClass) => {
+        const result = validator.validateTree([node({ type: 'section', props: { customCssClass } })]);
+        expect(result.valid).toBe(true);
+      },
+    );
+
+    it.each([
+      '1leading-digit',
+      'has spaces and more than three tokens here',
+      'contains<script>',
+      'a'.repeat(101),
+    ])('section.customCssClass = %j è respinto con reason "format"', (customCssClass) => {
+      const result = validator.validateTree([node({ type: 'section', props: { customCssClass } })]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.customCssClass',
+          type: 'section',
+          prop: 'customCssClass',
+          kind: 'cssClassName',
+          reason: 'format',
+        },
+      });
+    });
+
+    it('section.customElementId con un solo token valido è accettato', () => {
+      const result = validator.validateTree([
+        node({ type: 'section', props: { customElementId: 'hero-block' } }),
+      ]);
+      expect(result.valid).toBe(true);
+    });
+
+    it.each(['hero block', '9leading-digit', 'a'.repeat(51)])(
+      'section.customElementId = %j è respinto con reason "format"',
+      (customElementId) => {
+        const result = validator.validateTree([
+          node({ type: 'section', props: { customElementId } }),
+        ]);
+
+        expect(result.errors).toContainEqual({
+          code: 'BLOCK_PROP_INVALID',
+          details: {
+            path: 'blocks[0].props.customElementId',
+            type: 'section',
+            prop: 'customElementId',
+            kind: 'htmlId',
+            reason: 'format',
+          },
+        });
+      },
+    );
   });
 
   // ─── kind number/boolean/inline: senza consumatore reale (A-F02-2) ─────

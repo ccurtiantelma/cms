@@ -1,7 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { BlockDefinition } from '../block-definition.types';
 import { BlockRegistry, DEFAULT_BLOCK_REGISTRY } from '../block-registry';
-import { EnumPropSpec, PropSpec, RESPONSIVE_BREAKPOINTS, ResponsiveBreakpointName } from '../prop-spec.types';
+import {
+  BorderPropSpec,
+  BorderStyle,
+  EnumPropSpec,
+  LengthUnit,
+  PropKind,
+  PropSpec,
+  RESPONSIVE_BREAKPOINTS,
+  ResponsiveBreakpointName,
+  ShadowPropSpec,
+  UnitValuePropSpec,
+} from '../prop-spec.types';
 import { ValidatableBlockNode } from './validatable-node.types';
 import {
   BlockPropInvalidReason,
@@ -29,6 +40,27 @@ const GUID_PATTERN = /^[0-9a-f]{16}$/;
  * CSS — non un campo `pattern` generico riusabile da altre prop.
  */
 const HEX_COLOR_PATTERN = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+/**
+ * Pattern **fisso e stretto** per un singolo token di `cssClassName`/`htmlId`
+ * (ADR-38 § 5): lettere/cifre/`-`/`_`, mai una cifra iniziale, ≤ 50
+ * caratteri — stesso principio di `HEX_COLOR_PATTERN`, non un `pattern`
+ * generico configurabile dal registro.
+ */
+const CSS_IDENTIFIER_TOKEN_PATTERN = /^[a-zA-Z_-][a-zA-Z0-9_-]{0,49}$/;
+const CSS_CLASS_NAME_MAX_LENGTH = 100;
+const CSS_CLASS_NAME_MAX_TOKENS = 3;
+
+/** Stili ammessi per `kind: 'border'` (ADR-38 § 3). */
+const BORDER_STYLES: readonly BorderStyle[] = ['solid', 'dashed', 'dotted', 'none'];
+/** Intervalli fissi (unità implicita px) per `kind: 'border'` — non configurabili dalla prop (ADR-38 § 3). */
+const BORDER_WIDTH_RANGE: [number, number] = [0, 12];
+const BORDER_RADIUS_RANGE: [number, number] = [0, 48];
+
+/** Intervalli fissi (unità implicita px) per `kind: 'shadow'` — non configurabili dalla prop (ADR-38 § 4). */
+const SHADOW_OFFSET_RANGE: [number, number] = [-48, 48];
+const SHADOW_BLUR_RANGE: [number, number] = [0, 64];
+const SHADOW_SPREAD_RANGE: [number, number] = [-24, 24];
 
 /**
  * L'unico interprete che valida qualunque albero di blocchi contro il
@@ -263,6 +295,28 @@ export class BlockTreeValidatorService {
         if (!HEX_COLOR_PATTERN.test(value)) return invalid('format');
         return;
       }
+      case 'cssClassName': {
+        if (typeof value !== 'string') return invalid('type');
+        if (!isValidCssClassName(value)) return invalid('format');
+        return;
+      }
+      case 'htmlId': {
+        if (typeof value !== 'string') return invalid('type');
+        if (!CSS_IDENTIFIER_TOKEN_PATTERN.test(value)) return invalid('format');
+        return;
+      }
+      case 'unitValue': {
+        this.validateUnitValue(value, propName, path, type, spec, errors);
+        return;
+      }
+      case 'border': {
+        this.validateBorder(value, propName, path, type, errors);
+        return;
+      }
+      case 'shadow': {
+        this.validateShadow(value, propName, path, type, errors);
+        return;
+      }
       /* istanbul ignore next -- `PropKind` è un'unione chiusa: nessun altro caso possibile a compile time. */
       default: {
         // Exhaustiveness check: se un `kind` nuovo viene aggiunto a PropSpec
@@ -323,6 +377,158 @@ export class BlockTreeValidatorService {
       }
     }
   }
+
+  /** Spinge un errore `BLOCK_PROP_INVALID` con `path` esplicito — usato dai `kind` a valore oggetto per puntare al campo interno colpevole (ADR-38). */
+  private pushPropInvalid(
+    errors: BlockValidationError[],
+    path: string,
+    type: string,
+    prop: string,
+    kind: PropKind,
+    reason: BlockPropInvalidReason,
+    extra?: { constraint?: number | string[] | [number, number]; actual?: number },
+  ): void {
+    errors.push({ code: 'BLOCK_PROP_INVALID', details: { path, type, prop, kind, reason, ...extra } });
+  }
+
+  /**
+   * Valida `kind: 'unitValue'` (ADR-38 § 2): oggetto `{value, unit}`, mai
+   * libero — `value` dentro `[spec.min, spec.max]`, `unit` dentro
+   * `spec.units`. Forma diversa da `{value,unit}` → `reason: 'type'` sul
+   * path della prop, non sui sotto-campi.
+   */
+  private validateUnitValue(
+    value: unknown,
+    propName: string,
+    path: string,
+    type: string,
+    spec: UnitValuePropSpec,
+    errors: BlockValidationError[],
+  ): void {
+    if (!isPlainObject(value) || !hasOnlyKeys(value, ['value', 'unit'])) {
+      this.pushPropInvalid(errors, path, type, propName, 'unitValue', 'type');
+      return;
+    }
+
+    const numericValue = value.value;
+    if (typeof numericValue !== 'number' || Number.isNaN(numericValue)) {
+      this.pushPropInvalid(errors, `${path}.value`, type, propName, 'unitValue', 'type');
+    } else if (numericValue < spec.min || numericValue > spec.max) {
+      this.pushPropInvalid(errors, `${path}.value`, type, propName, 'unitValue', 'range', {
+        constraint: [spec.min, spec.max],
+        actual: numericValue,
+      });
+    }
+
+    const unit = value.unit;
+    if (typeof unit !== 'string' || !spec.units.includes(unit as LengthUnit)) {
+      this.pushPropInvalid(errors, `${path}.unit`, type, propName, 'unitValue', 'enum', {
+        constraint: [...spec.units],
+      });
+    }
+  }
+
+  /** Valida `kind: 'border'` (ADR-38 § 3): oggetto a 4 campi fissi, ogni campo vincolato. */
+  private validateBorder(
+    value: unknown,
+    propName: string,
+    path: string,
+    type: string,
+    errors: BlockValidationError[],
+  ): void {
+    if (!isPlainObject(value) || !hasOnlyKeys(value, ['width', 'style', 'color', 'radius'])) {
+      this.pushPropInvalid(errors, path, type, propName, 'border', 'type');
+      return;
+    }
+
+    const { width, style, color, radius } = value;
+
+    if (typeof width !== 'number' || Number.isNaN(width)) {
+      this.pushPropInvalid(errors, `${path}.width`, type, propName, 'border', 'type');
+    } else if (width < BORDER_WIDTH_RANGE[0] || width > BORDER_WIDTH_RANGE[1]) {
+      this.pushPropInvalid(errors, `${path}.width`, type, propName, 'border', 'range', {
+        constraint: BORDER_WIDTH_RANGE,
+        actual: width,
+      });
+    }
+
+    if (typeof style !== 'string' || !BORDER_STYLES.includes(style as BorderStyle)) {
+      this.pushPropInvalid(errors, `${path}.style`, type, propName, 'border', 'enum', {
+        constraint: [...BORDER_STYLES],
+      });
+    }
+
+    if (typeof color !== 'string' || !HEX_COLOR_PATTERN.test(color)) {
+      this.pushPropInvalid(errors, `${path}.color`, type, propName, 'border', 'format');
+    }
+
+    if (typeof radius !== 'number' || Number.isNaN(radius)) {
+      this.pushPropInvalid(errors, `${path}.radius`, type, propName, 'border', 'type');
+    } else if (radius < BORDER_RADIUS_RANGE[0] || radius > BORDER_RADIUS_RANGE[1]) {
+      this.pushPropInvalid(errors, `${path}.radius`, type, propName, 'border', 'range', {
+        constraint: BORDER_RADIUS_RANGE,
+        actual: radius,
+      });
+    }
+  }
+
+  /** Valida `kind: 'shadow'` (ADR-38 § 4): oggetto a 5 campi fissi, ogni campo numerico vincolato da un intervallo fisso. */
+  private validateShadow(
+    value: unknown,
+    propName: string,
+    path: string,
+    type: string,
+    errors: BlockValidationError[],
+  ): void {
+    if (!isPlainObject(value) || !hasOnlyKeys(value, ['x', 'y', 'blur', 'spread', 'color'])) {
+      this.pushPropInvalid(errors, path, type, propName, 'shadow', 'type');
+      return;
+    }
+
+    const { x, y, blur, spread, color } = value;
+    const numericFields: Array<[string, unknown, [number, number]]> = [
+      ['x', x, SHADOW_OFFSET_RANGE],
+      ['y', y, SHADOW_OFFSET_RANGE],
+      ['blur', blur, SHADOW_BLUR_RANGE],
+      ['spread', spread, SHADOW_SPREAD_RANGE],
+    ];
+    for (const [field, fieldValue, range] of numericFields) {
+      if (typeof fieldValue !== 'number' || Number.isNaN(fieldValue)) {
+        this.pushPropInvalid(errors, `${path}.${field}`, type, propName, 'shadow', 'type');
+      } else if (fieldValue < range[0] || fieldValue > range[1]) {
+        this.pushPropInvalid(errors, `${path}.${field}`, type, propName, 'shadow', 'range', {
+          constraint: range,
+          actual: fieldValue,
+        });
+      }
+    }
+
+    if (typeof color !== 'string' || !HEX_COLOR_PATTERN.test(color)) {
+      this.pushPropInvalid(errors, `${path}.color`, type, propName, 'shadow', 'format');
+    }
+  }
+}
+
+/** Vero se `value` è un oggetto semplice (mai `null`, mai un array) — guardia comune ai `kind` a valore oggetto (ADR-38). */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Vero se le chiavi di `value` sono un sottoinsieme esatto di `keys` — nessuna chiave estranea ammessa in un `kind` a forma fissa (ADR-38). */
+function hasOnlyKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
+  return Object.keys(value).every((key) => keys.includes(key));
+}
+
+/**
+ * Verifica `kind: 'cssClassName'` (ADR-38 § 5): 1–3 token spazio-separati,
+ * ciascuno conforme a `CSS_IDENTIFIER_TOKEN_PATTERN`, somma ≤ 100 caratteri.
+ * Spazi multipli o ai bordi producono token vuoti, che il pattern respinge.
+ */
+function isValidCssClassName(value: string): boolean {
+  if (value.length === 0 || value.length > CSS_CLASS_NAME_MAX_LENGTH) return false;
+  const tokens = value.split(' ');
+  if (tokens.length > CSS_CLASS_NAME_MAX_TOKENS) return false;
+  return tokens.every((token) => CSS_IDENTIFIER_TOKEN_PATTERN.test(token));
 }
 
 /**

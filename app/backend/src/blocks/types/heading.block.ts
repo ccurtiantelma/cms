@@ -82,6 +82,33 @@ export const headingBlock: BlockDefinition = {
       required: false,
       default: false,
     },
+    styleTextColorCustom: {
+      kind: 'color',
+      required: false,
+    },
+    styleFontSizeCustom: {
+      kind: 'unitValue',
+      required: false,
+      units: ['px', '%', 'em', 'rem'],
+      min: 1,
+      max: 200,
+    },
+    styleBorder: {
+      kind: 'border',
+      required: false,
+    },
+    styleShadow: {
+      kind: 'shadow',
+      required: false,
+    },
+    customCssClass: {
+      kind: 'cssClassName',
+      required: false,
+    },
+    customElementId: {
+      kind: 'htmlId',
+      required: false,
+    },
   },
   children: { allow: [] },
   migrations: [],
@@ -103,6 +130,32 @@ export const headingBlock: BlockDefinition = {
       styleHideDesktop: { label: 'Nascondi su Desktop', tab: 'advanced', order: 10 },
       styleHideTablet: { label: 'Nascondi su Tablet', tab: 'advanced', order: 11 },
       styleHideMobile: { label: 'Nascondi su Mobile', tab: 'advanced', order: 12 },
+      styleTextColorCustom: {
+        label: 'Colore testo personalizzato',
+        tab: 'style',
+        order: 13,
+        help: 'Colore libero (esadecimale). Ha priorità su "Colore testo" se impostato.',
+      },
+      styleFontSizeCustom: {
+        label: 'Dimensione testo personalizzata',
+        tab: 'style',
+        order: 14,
+        help: 'Valore libero con unità. Ha priorità su "Dimensione testo" se impostato.',
+      },
+      styleBorder: { label: 'Bordo', tab: 'style', order: 15 },
+      styleShadow: { label: 'Ombra', tab: 'style', order: 16 },
+      customCssClass: {
+        label: 'Classe CSS personalizzata',
+        tab: 'advanced',
+        order: 17,
+        help: 'Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore.',
+      },
+      customElementId: {
+        label: 'ID elemento personalizzato',
+        tab: 'advanced',
+        order: 18,
+        help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
+      },
     },
   },
 };

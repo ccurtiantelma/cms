@@ -54,7 +54,12 @@ export interface BlockTreeSanitizationResult {
  * effettivamente scritto — non nel validator (ADR-21 § 3, correzione T3).
  * `number`, `boolean`, `enum`, `mediaRef` non passano da `sanitize-html`
  * (SPEC-F02 § 2.3.4); `url` non è HTML e non è toccato da questo stadio
- * (SPEC-F02 § 2.3.7).
+ * (SPEC-F02 § 2.3.7). `unitValue`/`border`/`shadow`/`cssClassName`/`htmlId`
+ * (ADR-38) sono validati per forma/intervallo/pattern **solo** dal
+ * validator, a monte di questo stadio: nessuno dei cinque è testo HTML,
+ * quindi nessuno passa da `sanitize-html` qui, ma la correttezza di questo
+ * stadio per i tre `kind` a valore oggetto dipende interamente dal validator
+ * — un buco lì non verrebbe intercettato qui (ADR-38 § 7).
  */
 @Injectable()
 export class BlockPropSanitizerService {
@@ -142,8 +147,12 @@ export class BlockPropSanitizerService {
       return value;
     }
 
-    // Altri `kind` (`number`, `boolean`, `enum`, `mediaRef`): nessuna
-    // trasformazione, nessun passaggio da `sanitize-html` (SPEC-F02 § 2.3.4).
+    // Altri `kind` (`number`, `boolean`, `enum`, `mediaRef`, `cssClassName`,
+    // `htmlId`): nessuna trasformazione, nessun passaggio da `sanitize-html`
+    // (SPEC-F02 § 2.3.4). `unitValue`/`border`/`shadow` sono oggetti, non
+    // stringhe: escono già dalla guardia `typeof value !== 'string'` in
+    // testa al metodo, invariati — validati per forma solo dal validator
+    // (ADR-38 § 7).
     return value;
   }
 

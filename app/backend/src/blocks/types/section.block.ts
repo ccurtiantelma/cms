@@ -158,6 +158,22 @@ export const sectionBlock: BlockDefinition = {
       required: false,
       default: false,
     },
+    styleBorder: {
+      kind: 'border',
+      required: false,
+    },
+    styleShadow: {
+      kind: 'shadow',
+      required: false,
+    },
+    customCssClass: {
+      kind: 'cssClassName',
+      required: false,
+    },
+    customElementId: {
+      kind: 'htmlId',
+      required: false,
+    },
   },
   children: { allow: ['heading', 'richText', 'image', 'button'] },
   migrations: [],
@@ -200,6 +216,20 @@ export const sectionBlock: BlockDefinition = {
       styleHideDesktop: { label: 'Nascondi su Desktop', tab: 'advanced', order: 21 },
       styleHideTablet: { label: 'Nascondi su Tablet', tab: 'advanced', order: 22 },
       styleHideMobile: { label: 'Nascondi su Mobile', tab: 'advanced', order: 23 },
+      styleBorder: { label: 'Bordo', tab: 'style', order: 24 },
+      styleShadow: { label: 'Ombra', tab: 'style', order: 25 },
+      customCssClass: {
+        label: 'Classe CSS personalizzata',
+        tab: 'advanced',
+        order: 26,
+        help: 'Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore.',
+      },
+      customElementId: {
+        label: 'ID elemento personalizzato',
+        tab: 'advanced',
+        order: 27,
+        help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
+      },
     },
   },
 };
