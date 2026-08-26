@@ -6,13 +6,15 @@
  *
  * Trigger statico, nessuno stato di selezione locale: la scelta del tipo di layout e del
  * preset non vive più qui, è stata spostata in `SectionStructureModal.tsx` (un unico
- * componente condiviso da questa zona, da `BlockPalette.tsx` e da `EditorBlockWrapper.tsx`
- * — nessuna copia della UI di selezione). Questo componente si limita ad aprire/chiudere
- * quel modal e il `TemplateLibraryModal`, entrambi controllati da uno `useState` booleano
- * locale ciascuno. Una sola istanza in tutto l'editor, montata da `EditorCanvas.tsx` in
- * fondo al canvas: la seconda istanza che stava sopra ogni Section (aperta dal "+" della
- * `sectionActionTab`) è stata rimossa da `EditorBlockWrapper.tsx`, che ora monta
- * `SectionStructureModal` direttamente, senza passare da questo componente.
+ * componente condiviso da questa zona e da `BlockPalette.tsx` — nessuna copia della UI di
+ * selezione). Questo componente si limita ad aprire/chiudere quel modal e il
+ * `TemplateLibraryModal`, entrambi controllati da uno `useState` booleano locale ciascuno.
+ * Una sola istanza in tutto l'editor, montata da `EditorCanvas.tsx` in fondo al canvas:
+ * l'istanza che `EditorBlockWrapper.tsx` montava sopra ogni Section (aperta dal "+" della
+ * `sectionActionTab`) è stata rimossa insieme a quella barra (T-canvas-declutter,
+ * consolidata nella Handle Bar unica) — la stessa azione resta raggiungibile dalla voce
+ * "Sezione" del menu "Inserisci sopra/sotto" (`BlockPalette`, montata dalla toolbar
+ * integrata di `EditorBlockWrapper.tsx`).
  *
  * Terzo trigger ("Aggiungi widget", icona `IconSparkles`): stesso menu di inserimento
  * blocco già montato altrove nel canvas (`BlockPalette`, radice dell'albero) — riusato qui

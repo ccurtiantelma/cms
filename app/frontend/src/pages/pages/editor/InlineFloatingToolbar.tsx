@@ -1,8 +1,8 @@
 /**
  * Barra di formattazione fluttuante sopra la selezione testuale del blocco `richText` in
- * editing (PLAN-F04c-editor-maturo.md T9, estensione richiesta esplicitamente: la toolbar
- * generica del nodo selezionato — `floatingActionBar`/`sectionActionTab`, EditorBlockWrapper.tsx
- * — governa drag/duplica/elimina, non la formattazione del testo). Solo su `richText`: `heading`
+ * editing (PLAN-F04c-editor-maturo.md T9, estensione richiesta esplicitamente: la Handle
+ * Bar del nodo selezionato — `EditorBlockWrapper.tsx` — governa drag/duplica/elimina, non
+ * la formattazione del testo). Solo su `richText`: `heading`
  * ha `text` dichiarato `plainText` dal registro (SPEC-F02-blocchi.md § 3.3) — Grassetto/Corsivo/
  * Link cambierebbero il `kind` della prop, una modifica di schema blocco fuori scope (CLAUDE.md
  * § Ask first), quindi questo componente non viene montato su `heading`.

@@ -33,6 +33,7 @@
  */
 import {
   createContext,
+  createElement,
   memo,
   useCallback,
   useContext,
@@ -43,7 +44,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
-import { ActionIcon, Group, Menu, Tooltip } from '@mantine/core';
+import { ActionIcon, Group, Menu, Text, Tooltip } from '@mantine/core';
 import { useShallow } from 'zustand/react/shallow';
 import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core';
 import { notifications } from '@mantine/notifications';
@@ -52,15 +53,12 @@ import {
   IconArrowUp,
   IconClipboard,
   IconCopy,
-  IconCornerLeftUp,
   IconGripVertical,
   IconHeading,
   IconIndentDecrease,
   IconIndentIncrease,
   IconPalette,
-  IconPlus,
   IconTrash,
-  IconX,
 } from '@tabler/icons-react';
 import { BLOCK_TYPES } from '../../../types/blocks.types';
 import {
@@ -79,7 +77,6 @@ import Section from '../../../components/blocks/blocks/Section';
 import tokenStyles from '../../../components/blocks/style-tokens.module.css';
 import ConfirmModal from '../../../components/ConfirmModal';
 import BlockPalette, { blockIcon } from './BlockPalette';
-import SectionStructureModal from './SectionStructureModal';
 import InlineFloatingToolbar from './InlineFloatingToolbar';
 import styles from './EditorBlockWrapper.module.css';
 
@@ -310,8 +307,6 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const [confirmOpened, setConfirmOpened] = useState(false);
   /** Solo il nodo direttamente sotto il puntatore (vedi commento di testa). */
   const [isHovered, setIsHovered] = useState(false);
-  /** `SectionStructureModal` aperto dal "+" della `sectionActionTab` più sotto, per inserire una Section sopra questa. */
-  const [sectionModalOpened, setSectionModalOpened] = useState(false);
   /**
    * Menu contestuale al tasto destro (punto 3 del task): coordinate del click che lo apre,
    * `null` quando è chiuso. Un `Menu` Mantine controllato (`opened`/`onClose`) ancorato a un
@@ -459,6 +454,18 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const label = descriptor?.meta?.label ?? node.type;
   const ContainerComponent = CONTAINER_COMPONENTS[node.type];
   const isContainer = (descriptor?.childrenAllow.length ?? 0) > 0;
+  /**
+   * Icona del tipo di blocco per la Handle Bar (badge in alto a sinistra, punto 2 del
+   * task). `createElement`, non un tag JSX `<Icon />` assegnato a una variabile locale:
+   * `blockIcon` restituisce sempre lo stesso riferimento stabile di `ICON_MAP` (mai una
+   * funzione creata a questo render), ma per l'analisi statica di React Compiler
+   * (`react-hooks/static-components`) un tag JSX con nome dinamico è indistinguibile da un
+   * componente creato a ogni render — stesso idioma già in uso in `WidgetPalette.tsx`.
+   */
+  const badgeIconElement = createElement(blockIcon(descriptor?.meta?.icon), {
+    size: 12,
+    'aria-hidden': true,
+  });
 
   /** Apre il menu contestuale sulle coordinate del click, al posto di quello nativo del browser. */
   function handleContextMenu(event: ReactMouseEvent): void {
@@ -602,12 +609,13 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
 
   const className = [
     styles.wrapper,
-    // `.hovered`/`.selected` restano applicate anche sulla Section (governano ancora
-    // l'opacità della toolbar integrata più sotto, CSS `.selected > .toolbar`):
-    // `.sectionAccent`, dichiarata dopo nel CSS module, vince solo sul colore del bordo.
+    // Overlay di selezione/hover (punto 1 del task T-canvas-declutter): un solo bordo
+    // ciano `#2271b1`, identico per ogni tipo di blocco — inclusa `section`, che prima
+    // aveva qui una variante magenta propria (`.sectionAccent`, rimossa): due colori per
+    // lo stesso stato erano già la prima fonte di "affollamento" percepito, non solo le
+    // barre duplicate.
     isHovered ? styles.hovered : '',
     isSelected ? styles.selected : '',
-    isSection && (isHovered || isSelected) ? styles.sectionAccent : '',
     isInvalid ? styles.invalid : '',
     isDragging ? styles.dragging : '',
     isHiddenForActiveViewport ? tokenStyles.previewHidden : '',
@@ -696,27 +704,89 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
         />
 
         {/*
-          Badge del tipo di blocco (T8, restyle Elementor-style): icona + nome del tipo di
-          blocco, in alto a sinistra sul bordo del wrapper. Stesso trigger di prima (hover
-          del nodo puntato, o selezione), stessa posizione. `aria-hidden`: l'etichetta
-          accessibile del blocco resta sugli `aria-label` dei pulsanti della toolbar
-          ("Duplica il blocco {label}" ecc.), non su questo badge puramente decorativo.
+          Handle Bar (punto 2 del task T-canvas-declutter, stile Elementor Pro): **unico**
+          elemento fluttuante in alto a sinistra sul bordo del wrapper, stesso trigger di
+          prima (hover del nodo puntato, o selezione). Sostituisce integralmente tre
+          elementi che prima coesistevano e si sovrapponevano nello stesso angolo — il
+          badge sola-etichetta, la linguetta piena `sectionActionTab` (solo `section`) e la
+          barra `floatingActionBar` in alto a destra (ogni altro tipo) — con un solo badge
+          compatto (icona + nome del tipo) e tre azioni rapide minime: Drag, Duplica,
+          Elimina. "Seleziona il blocco padre" (ex `floatingActionBar`) e "Aggiungi Section
+          sopra" (ex "+" della `sectionActionTab`) non sono duplicate qui: la prima non ha
+          equivalente diretto altrove ed è stata giudicata accessoria rispetto al obiettivo
+          di decluttering; la seconda resta comunque raggiungibile dalla voce "Sezione" del
+          menu "Inserisci sopra" della toolbar integrata più sotto (`BlockPalette`, che
+          monta lo stesso `SectionStructureModal`) — nessuna funzionalità irraggiungibile,
+          solo non più duplicata in una seconda barra. Gli `aria-label` di Duplica/Elimina
+          restano distinti per formulazione (non solo suffisso) da quelli canonici della
+          toolbar integrata sotto, stesso motivo di sempre: senza `exact: true`,
+          `getByRole('button', { name })` di Playwright confronta per sottostringa, quindi
+          due bottoni con lo stesso testo/suffisso soddisferebbero entrambi la stessa query
+          (`strict mode violation`). La toolbar integrata resta la sorgente del nome
+          canonico, invariato, usato da `e2e/tests/helpers/page-editor.ts`.
         */}
-        {(isHovered || isSelected) &&
-          (() => {
-            const BadgeIcon = blockIcon(descriptor?.meta?.icon);
-            return (
-              <span className={styles.hoverBadge} aria-hidden="true">
-                <BadgeIcon size={12} />
-                {label}
-              </span>
-            );
-          })()}
+        {(isHovered || isSelected) && (
+          <Group
+            className={styles.handleBar}
+            gap={4}
+            wrap="nowrap"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {badgeIconElement}
+            <Text size="xs" fw={500} className={styles.handleBarLabel} aria-hidden="true">
+              {label}
+            </Text>
+
+            <Tooltip label="Trascina per riordinare" withArrow>
+              <ActionIcon
+                variant="transparent"
+                color="white"
+                size="xs"
+                aria-label={`Sposta il blocco ${label} (azione rapida)`}
+                onClick={(event) => event.stopPropagation()}
+                {...attributes}
+                {...listeners}
+              >
+                <IconGripVertical size={12} />
+              </ActionIcon>
+            </Tooltip>
+
+            <Tooltip label="Duplica" withArrow>
+              <ActionIcon
+                variant="transparent"
+                color="white"
+                size="xs"
+                aria-label={`Duplica rapidamente il blocco ${label}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  duplicateNodeAction(id);
+                }}
+              >
+                <IconCopy size={12} />
+              </ActionIcon>
+            </Tooltip>
+
+            <Tooltip label="Elimina" withArrow>
+              <ActionIcon
+                variant="transparent"
+                color="white"
+                size="xs"
+                aria-label={`Elimina subito il blocco ${label}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setConfirmOpened(true);
+                }}
+              >
+                <IconTrash size={12} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+        )}
 
         {/*
           Badge "Nascosto su [Device]" (ADR-37 § 3): sempre visibile quando il nodo è
           nascosto sul dispositivo attivo del Device Switcher — non solo su hover/
-          selezione come `.hoverBadge` sopra, altrimenti l'attenuazione applicata dal
+          selezione come la Handle Bar sopra, altrimenti l'attenuazione applicata dal
           contenuto (`tokenStyles.previewHidden`) resterebbe senza spiegazione appena il
           puntatore si allontana. `aria-hidden`: puramente informativo, nessuna azione.
         */}
@@ -724,151 +794,6 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           <span className={styles.hiddenBadge} aria-hidden="true">
             Nascosto su {VIEWPORT_LABEL[activeViewport]}
           </span>
-        )}
-
-        {/*
-          Action bar floating: solo sul nodo selezionato. Due varianti mutuamente
-          esclusive, mai entrambe (punto 3 del task): su `section` la linguetta stile
-          Elementor (`sectionActionTab`, sotto) sostituisce integralmente la barra
-          generica — un'unica azione "aggiungi" (Section vuota sopra) al posto delle due
-          separate ("seleziona padre"/"duplica") che qui contavano meno. Ogni altro tipo
-          di blocco vede la barra generica invariata, con le sue 4 azioni rapide (drag,
-          seleziona padre, duplica, elimina). Aggiuntiva rispetto alla toolbar integrata
-          qui sotto, che resta invariata con tutti i comandi esistenti (riordino,
-          indent/outdent, inserimento posizionale) — nessuna funzionalità rimossa. Il "+"
-          apre `SectionStructureModal` (modale centrata, `sectionModalOpened` più sotto),
-          non più un'espansione inline nel canvas.
-        */}
-        {(isSelected || isHovered) && isSection && (
-          <Group
-            className={styles.sectionActionTab}
-            gap={2}
-            wrap="nowrap"
-            justify="space-between"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <Tooltip label="Scegli la struttura della sezione da aggiungere sopra" withArrow>
-              <ActionIcon
-                variant="transparent"
-                color="white"
-                size="sm"
-                aria-label="Scegli la struttura della sezione da aggiungere sopra"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setSectionModalOpened(true);
-                }}
-              >
-                <IconPlus size={14} />
-              </ActionIcon>
-            </Tooltip>
-
-            <Tooltip label="Trascina per riordinare" withArrow>
-              <ActionIcon
-                variant="transparent"
-                color="white"
-                size="sm"
-                aria-label={`Sposta il blocco ${label} (azione rapida)`}
-                onClick={(event) => event.stopPropagation()}
-                {...attributes}
-                {...listeners}
-              >
-                <IconGripVertical size={14} />
-              </ActionIcon>
-            </Tooltip>
-
-            <Tooltip label="Elimina" withArrow>
-              <ActionIcon
-                variant="transparent"
-                color="white"
-                size="sm"
-                aria-label={`Elimina subito il blocco ${label}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setConfirmOpened(true);
-                }}
-              >
-                <IconX size={14} />
-              </ActionIcon>
-            </Tooltip>
-          </Group>
-        )}
-
-        {/*
-          Le tre azioni qui sotto duplicano funzionalità già presenti nella toolbar
-          integrata più in basso (drag, duplica, elimina), montata sempre — non solo su
-          selezione. Le due barre coesistono quando il nodo è selezionato (nessuna
-          funzionalità rimossa, vedi commento più sopra), quindi qui l'`aria-label` usa una
-          formulazione diversa da quella canonica, non solo un suffisso in coda: senza
-          `exact: true`, `getByRole('button', { name })` di Playwright confronta per
-          sottostringa, quindi "Duplica il blocco X (azione rapida)" continuerebbe a
-          soddisfare anche la query per "Duplica il blocco X" — due bottoni, `strict mode
-          violation`. La toolbar integrata resta la sorgente del nome canonico, invariato,
-          usato da `e2e/tests/helpers/page-editor.ts`.
-        */}
-        {isSelected && !isSection && (
-          <Group className={styles.floatingActionBar} gap={2} wrap="nowrap">
-            <Tooltip label="Trascina per riordinare" withArrow>
-              <ActionIcon
-                variant="subtle"
-                size="sm"
-                aria-label={`Sposta il blocco ${label} (azione rapida)`}
-                onClick={(event) => event.stopPropagation()}
-                {...attributes}
-                {...listeners}
-              >
-                <IconGripVertical size={14} />
-              </ActionIcon>
-            </Tooltip>
-
-            <Tooltip
-              label={
-                location.parentId !== null ? 'Seleziona il blocco padre' : 'Nessun blocco padre'
-              }
-              withArrow
-            >
-              <ActionIcon
-                variant="subtle"
-                size="sm"
-                aria-label={`Seleziona il blocco padre di ${label}`}
-                disabled={location.parentId === null}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  if (location.parentId !== null) selectNode(location.parentId);
-                }}
-              >
-                <IconCornerLeftUp size={14} />
-              </ActionIcon>
-            </Tooltip>
-
-            <Tooltip label="Duplica" withArrow>
-              <ActionIcon
-                variant="subtle"
-                size="sm"
-                aria-label={`Duplica rapidamente il blocco ${label}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  duplicateNodeAction(id);
-                }}
-              >
-                <IconCopy size={14} />
-              </ActionIcon>
-            </Tooltip>
-
-            <Tooltip label="Elimina" withArrow>
-              <ActionIcon
-                variant="subtle"
-                color="red"
-                size="sm"
-                aria-label={`Elimina subito il blocco ${label}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setConfirmOpened(true);
-                }}
-              >
-                <IconTrash size={14} />
-              </ActionIcon>
-            </Tooltip>
-          </Group>
         )}
 
         <Group className={styles.toolbar} gap={4} wrap="nowrap">
@@ -1209,20 +1134,6 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
         {isSelected && node.type === 'richText' && (
           <InlineFloatingToolbar getTarget={getRichTextTarget} onApplied={commitHtml} />
         )}
-
-        {/*
-          Selettore di struttura per la Section da inserire sopra questa (aperto dal "+"
-          della `sectionActionTab` più sopra): stessa destinazione di inserimento
-          (`location.parentId`/`location.index`, sopra questo nodo) che aveva la vecchia
-          zona intermedia inline, ora sostituita da questa modale centrata condivisa con
-          `BlockPalette.tsx` e `CanvasAddSectionZone.tsx` (nessuna copia della UI).
-        */}
-        <SectionStructureModal
-          opened={sectionModalOpened}
-          onClose={() => setSectionModalOpened(false)}
-          parentId={location.parentId}
-          index={location.index}
-        />
 
         {confirmOpened && (
           <ConfirmModal

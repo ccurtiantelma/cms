@@ -3,10 +3,14 @@
  * blocco `section` — prima il tipo di layout (Flexbox/Griglia), poi il preset — fedele a
  * Elementor Pro. Unico proprietario di questa UI: era divisa fra questo modal (cinque
  * preset piatti) e il box inline a due passi di `CanvasAddSectionZone.tsx`; ora è tutta
- * qui, montata da tre punti (`BlockPalette.tsx` per la voce "Sezione" del suo menu,
- * `CanvasAddSectionZone.tsx` per il "+" della zona sempre visibile in fondo al canvas,
- * `EditorBlockWrapper.tsx` per il "+" della `sectionActionTab` sopra ogni Section) che
- * condividono lo stesso componente controllato — nessuna copia.
+ * qui, montata da due punti (`BlockPalette.tsx` per la voce "Sezione" del suo menu —
+ * quindi raggiungibile anche dalla toolbar integrata di `EditorBlockWrapper.tsx` via
+ * "Inserisci sopra/sotto" — e `CanvasAddSectionZone.tsx` per il "+" della zona sempre
+ * visibile in fondo al canvas) che condividono lo stesso componente controllato — nessuna
+ * copia. Un terzo punto di montaggio, il "+" della `sectionActionTab` di
+ * `EditorBlockWrapper.tsx`, è stato rimosso insieme a quella barra (T-canvas-declutter,
+ * consolidata nella Handle Bar unica): la stessa azione resta raggiungibile dal primo
+ * punto sopra.
  *
  * Componente frontend puro nella palette, stesso principio di `WidgetPalette`/
  * `BlockPalette` (ADR-32 § 4): la selezione chiama `addBlockAction` già esistente con un
@@ -36,8 +40,13 @@ const SECTION_DESCRIPTOR = BLOCK_TYPES.find((entry) => entry.type === 'section')
 type Step = 'chooseType' | 'flexbox' | 'grid';
 
 /** Valori ammessi per `columns`/`columnRatio` (`section.block.ts`): niente oltre questi. */
-type SectionColumnsValue = '1' | '2' | '3' | '4';
+type SectionColumnsToken = '1' | '2' | '3' | '4';
 type SectionColumnRatioValue = 'equal' | '33-66' | '66-33';
+
+/** Forma persistita della prop responsive `columns` (ADR-29). */
+interface SectionColumnsValue {
+  default: SectionColumnsToken;
+}
 
 /** `columns`/`columnRatio` da scrivere sul nodo `section` — comune a ogni preset dei due step. */
 interface SectionPresetValue {
@@ -69,15 +78,15 @@ const FLEXBOX_PRESETS: readonly FlexboxPreset[] = [
   {
     id: 'column',
     label: 'Colonna',
-    columns: '1',
+    columns: { default: '1' },
     columnRatio: 'equal',
     directionIcon: IconArrowDown,
   },
-  { id: 'row', label: 'Riga', columns: '2', columnRatio: 'equal', directionIcon: IconArrowRight },
+  { id: 'row', label: 'Riga', columns: { default: '2' }, columnRatio: 'equal', directionIcon: IconArrowRight },
   {
     id: '50-50',
     label: '2 colonne (50/50)',
-    columns: '2',
+    columns: { default: '2' },
     columnRatio: 'equal',
     gridClassName: 'grid_twoEqual',
     trackCount: 2,
@@ -85,7 +94,7 @@ const FLEXBOX_PRESETS: readonly FlexboxPreset[] = [
   {
     id: '33-67',
     label: '2 colonne (33/67)',
-    columns: '2',
+    columns: { default: '2' },
     columnRatio: '33-66',
     gridClassName: 'grid_3366',
     trackCount: 2,
@@ -93,7 +102,7 @@ const FLEXBOX_PRESETS: readonly FlexboxPreset[] = [
   {
     id: '67-33',
     label: '2 colonne (67/33)',
-    columns: '2',
+    columns: { default: '2' },
     columnRatio: '66-33',
     gridClassName: 'grid_6633',
     trackCount: 2,
@@ -101,7 +110,7 @@ const FLEXBOX_PRESETS: readonly FlexboxPreset[] = [
   {
     id: 'col-3',
     label: '3 colonne',
-    columns: '3',
+    columns: { default: '3' },
     columnRatio: 'equal',
     gridClassName: 'grid_threeEqual',
     trackCount: 3,
@@ -109,7 +118,7 @@ const FLEXBOX_PRESETS: readonly FlexboxPreset[] = [
   {
     id: 'col-4',
     label: '4 colonne',
-    columns: '4',
+    columns: { default: '4' },
     columnRatio: 'equal',
     gridClassName: 'grid_fourEqual',
     trackCount: 4,
@@ -134,7 +143,7 @@ const GRID_PRESETS: readonly GridPreset[] = [
   {
     id: '2x1',
     label: '2×1',
-    columns: '2',
+    columns: { default: '2' },
     columnRatio: 'equal',
     gridClassName: 'grid_twoEqual',
     decorativeRows: 1,
@@ -142,7 +151,7 @@ const GRID_PRESETS: readonly GridPreset[] = [
   {
     id: '1x2',
     label: '1×2',
-    columns: '1',
+    columns: { default: '1' },
     columnRatio: 'equal',
     gridClassName: 'grid_oneCol',
     decorativeRows: 2,
@@ -150,7 +159,7 @@ const GRID_PRESETS: readonly GridPreset[] = [
   {
     id: '2x2',
     label: '2×2',
-    columns: '2',
+    columns: { default: '2' },
     columnRatio: 'equal',
     gridClassName: 'grid_twoEqual',
     decorativeRows: 2,
@@ -158,7 +167,7 @@ const GRID_PRESETS: readonly GridPreset[] = [
   {
     id: '3x2',
     label: '3×2',
-    columns: '3',
+    columns: { default: '3' },
     columnRatio: 'equal',
     gridClassName: 'grid_threeEqual',
     decorativeRows: 2,

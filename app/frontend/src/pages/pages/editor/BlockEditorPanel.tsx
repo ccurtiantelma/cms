@@ -55,14 +55,27 @@ function toEditorBlocks(raw: unknown): BlockNode[] {
     if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
     const node = entry as Record<string, unknown>;
     if (typeof node.id !== 'string' || typeof node.type !== 'string') return [];
+    const rawProps =
+      node.props && typeof node.props === 'object' && !Array.isArray(node.props)
+        ? (node.props as Record<string, unknown>)
+        : {};
+    const descriptor = BLOCK_TYPES.find((entry) => entry.type === node.type);
+    const props = Object.fromEntries(
+      Object.entries(rawProps).map(([name, value]) => {
+        const prop = descriptor?.props.find((candidate) => candidate.name === name);
+        return [
+          name,
+          prop?.responsive && (typeof value !== 'object' || value === null || Array.isArray(value))
+            ? { default: value }
+            : value,
+        ];
+      }),
+    );
     return [
       {
         id: node.id,
         type: node.type,
-        props:
-          node.props && typeof node.props === 'object' && !Array.isArray(node.props)
-            ? { ...(node.props as Record<string, unknown>) }
-            : {},
+        props,
         children: toEditorBlocks({ blocks: node.children }),
       },
     ];

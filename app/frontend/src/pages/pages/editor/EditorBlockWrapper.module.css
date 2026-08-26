@@ -35,21 +35,6 @@
   border-color: #2271b1;
 }
 
-/*
-  Variante Elementor, solo su `section` (hover o selezione, EditorBlockWrapper.tsx):
-  bordo d'accento magenta/viola al posto del blu generico di `.hovered`/`.selected`.
-  Dichiarata dopo entrambe nel foglio: stessa specificità (una classe), vince per
-  ordine — le due classi restano applicate insieme a questa per non perdere l'opacità
-  della toolbar integrata, che dipende da `.selected > .toolbar` qui sotto. Dichiarata
-  **prima** di `.invalid`: un nodo respinto dalla validazione server-side deve restare
-  rosso anche se è una Section selezionata, l'errore vince sempre sull'estetica.
-*/
-.sectionAccent,
-.sectionAccent:hover {
-  border-style: solid;
-  border-color: #a333c8;
-}
-
 /* Nodo respinto dall'ultima validazione server-side (400 con path del colpevole). */
 .invalid,
 .invalid:hover {
@@ -155,45 +140,56 @@
 }
 
 /*
-  Badge del tipo di blocco (hover/selezione, T8; di nuovo icona+nome dal restyle
-  Elementor-style — il testo fisso rimosso da T-canvas-cleanup torna qui su richiesta
-  esplicita del task, ma resta `aria-hidden` come prima: l'etichetta accessibile del
-  blocco è già sugli `aria-label` dei pulsanti della toolbar, non su questo badge, quindi
-  non duplica nulla per chi usa lo screen reader). Fuori dal box del wrapper (top
-  negativo), mai dentro il flusso della toolbar — così non compete per spazio con le sue
-  azioni. Un badge di un nodo innestato è sempre dipinto sopra quello del suo contenitore:
-  entrambi sono discendenti dello stesso stacking context implicito (nessuno dei due
-  wrapper dichiara un proprio `z-index`), e l'ordine del DOM mette il badge del figlio
-  dopo quello del padre.
+  Handle Bar (punto 1/2 del task T-canvas-declutter, stile Elementor Pro): **unico**
+  elemento fluttuante in alto a sinistra sul bordo del wrapper — badge compatto (icona +
+  nome del tipo di blocco) più le tre azioni rapide (Drag/Duplica/Elimina, `ActionIcon`
+  Mantine nel JSX). Sostituisce tre elementi che prima coesistevano nello stesso angolo e
+  si sovrapponevano fra loro e con la selezione: il vecchio badge sola-etichetta
+  (`.hoverBadge`), la barra `.floatingActionBar` in alto a destra e la linguetta
+  `.sectionActionTab` sopra le `section` (quest'ultima, a sua volta, sostituiva una "pill"
+  centrata magenta/viola ancora precedente — vedi git history — il punto di origine più
+  probabile del badge viola "orfano" lamentato: con questa Handle Bar unica, quella
+  stratificazione di varianti sparisce). Fuori dal box del wrapper (top negativo), mai
+  dentro il flusso della toolbar integrata sotto — così non compete per spazio con le sue
+  azioni. Stesso blu `#2271b1` di `.hovered`/`.selected`: un solo accento "blocco sotto il
+  puntatore" in tutto l'editor, per ogni tipo di blocco incluso `section` (mai una
+  variante di colore dedicata). Una Handle Bar di un nodo innestato è sempre dipinta sopra
+  quella del suo contenitore: entrambe sono discendenti dello stesso stacking context
+  implicito (nessuno dei due wrapper dichiara un proprio `z-index`), e l'ordine del DOM
+  mette quella del figlio dopo quella del padre.
 */
-.hoverBadge {
+.handleBar {
   position: absolute;
-  top: -20px;
+  top: -22px;
   left: 0;
-  z-index: 2;
+  z-index: 3;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 20px;
-  padding: 0 6px;
+  height: 22px;
+  padding: 0 4px 0 6px;
   border-radius: 3px 3px 0 0;
   background: #2271b1;
   color: var(--mantine-color-white);
+  pointer-events: auto;
+}
+
+/* Nome del tipo di blocco dentro la Handle Bar: stesso colore/assenza di wrap del badge che sostituisce. */
+.handleBarLabel {
+  color: var(--mantine-color-white);
   font-size: 11px;
-  font-weight: 500;
-  line-height: 1;
   white-space: nowrap;
-  pointer-events: none;
+  line-height: 1;
 }
 
 /*
   Badge "Nascosto su [Device]" (ADR-37 § 3): sempre visibile (non solo hover/selezione,
-  a differenza di `.hoverBadge` sopra) quando il nodo è nascosto sul dispositivo attivo
+  a differenza della Handle Bar sopra) quando il nodo è nascosto sul dispositivo attivo
   del Device Switcher — l'attenuazione del contenuto (`previewHidden`,
   `style-tokens.module.css`) da sola non spiegherebbe perché il blocco appare sbiadito.
-  In alto a destra, sullo stesso bordo di `.hoverBadge` (in alto a sinistra): mai
-  sovrapposti. Colore d'allerta (arancione), distinto dal blu/magenta di hover/selezione
-  e dal rosso di `.invalid` — tre segnali visivi diversi per tre stati diversi.
+  In alto a destra, sullo stesso bordo della Handle Bar (in alto a sinistra): mai
+  sovrapposti. Colore d'allerta (arancione), distinto dal blu di hover/selezione e dal
+  rosso di `.invalid` — tre segnali visivi diversi per tre stati diversi.
 */
 .hiddenBadge {
   position: absolute;
@@ -212,56 +208,6 @@
   line-height: 1;
   white-space: nowrap;
   pointer-events: none;
-}
-
-/*
-  Action bar floating (T8): solo sul nodo selezionato, ancorata in alto a destra — sulla
-  stessa riga del badge (in alto a sinistra), mai sovrapposta. Regola di posizionamento
-  fissa ("sempre sopra"): più semplice del calcolo dinamico dello spazio disponibile, e il
-  requisito non lo impone.
-*/
-.floatingActionBar {
-  position: absolute;
-  top: -28px;
-  right: 0;
-  z-index: 3;
-  padding: 2px;
-  border-radius: 6px;
-  background: var(--mantine-color-white);
-  border: 1px solid #2271b1;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
-}
-
-[data-mantine-color-scheme='dark'] .floatingActionBar {
-  background: var(--mantine-color-dark-6);
-}
-
-/*
-  Linguetta d'azione stile Elementor, solo su `section` selezionata: sostituisce
-  interamente `.floatingActionBar` per questo tipo (mai le due insieme, vedi
-  EditorBlockWrapper.tsx). A cavallo del bordo superiore, centrata — non in alto a
-  destra come la barra generica, perché qui non convive con `.hoverBadge` (badge e
-  linguetta userebbero lo stesso spazio: la linguetta lo sostituisce anche visivamente).
-  `top` negativo pari a metà della sua stessa altezza approssimativa, così il bordo
-  della Section attraversa esattamente il centro della linguetta.
-*/
-/*
-  Restyle Elementor Pro (richiesta esplicita del task): non più la pill centrata
-  magenta, ma una barra piena che ricopre il bordo superiore della Section — stesso blu
-  `#2271b1` di `.hovered`/`.selected` sopra (un solo accento "sezione sotto il puntatore"
-  in tutto l'editor, non due). `left/right: 0` invece del centraggio via `transform`:
-  la barra segue la larghezza reale della Section, come in Elementor.
-*/
-.sectionActionTab {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 3;
-  padding: 3px 8px;
-  border-radius: 4px 4px 0 0;
-  background: #2271b1;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
 }
 
 /*

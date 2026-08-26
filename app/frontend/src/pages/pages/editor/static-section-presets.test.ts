@@ -78,7 +78,10 @@ describe('static-section-presets.json — round-trip contro BLOCK_TYPES', () => 
         for (const [propName, value] of Object.entries(node.props)) {
           const propDescriptor = descriptor?.props.find((entry) => entry.name === propName);
           if (propDescriptor?.kind === 'enum' && propDescriptor.values) {
-            expect(propDescriptor.values).toContain(value);
+            const values = propDescriptor.responsive && value && typeof value === 'object'
+              ? Object.values(value)
+              : [value];
+            for (const token of values) expect(propDescriptor.values).toContain(token);
           }
         }
       });

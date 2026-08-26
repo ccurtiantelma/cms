@@ -5,7 +5,7 @@
     "subtree": {
       "id": "preset-root",
       "type": "section",
-      "props": { "columns": "1" },
+      "props": { "columns": { "default": "1" } },
       "children": [
         {
           "id": "preset-heading",
@@ -34,7 +34,7 @@
     "subtree": {
       "id": "preset-root",
       "type": "section",
-      "props": { "columns": "3", "gap": "md" },
+      "props": { "columns": { "default": "3" }, "gap": { "default": "md" } },
       "children": [
         {
           "id": "preset-heading-1",
@@ -81,7 +81,7 @@
     "subtree": {
       "id": "preset-root",
       "type": "section",
-      "props": { "styleBackground": "accent" },
+      "props": { "styleBackground": { "default": "accent" } },
       "children": [
         {
           "id": "preset-heading",
@@ -104,7 +104,7 @@
     "subtree": {
       "id": "preset-root",
       "type": "section",
-      "props": { "columns": "2" },
+      "props": { "columns": { "default": "2" } },
       "children": [
         {
           "id": "preset-richtext",
