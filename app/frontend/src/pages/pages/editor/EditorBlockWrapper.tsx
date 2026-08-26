@@ -51,6 +51,7 @@ import { notifications } from '@mantine/notifications';
 import {
   IconArrowDown,
   IconArrowUp,
+  IconChevronUp,
   IconClipboard,
   IconCopy,
   IconGripVertical,
@@ -449,6 +450,10 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   // annidate (`handleCopyStyle` ecc.) — TypeScript non propaga il narrowing oltre un confine
   // di funzione.
   const currentNode = node;
+  /** `null` alla radice: guardia per "Seleziona il blocco padre" nella Handle Bar, alias
+   * non-`undefined` di `location.parentId` per lo stesso motivo di `currentNode` sopra
+   * (il narrowing di TypeScript su un accesso a proprietà non attraversa una closure). */
+  const parentIdForSelector = location.parentId;
 
   const descriptor = BLOCK_TYPES.find((entry) => entry.type === node.type);
   const label = descriptor?.meta?.label ?? node.type;
@@ -609,12 +614,12 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
 
   const className = [
     styles.wrapper,
-    // Overlay di selezione/hover (punto 1 del task T-canvas-declutter): un solo bordo
-    // ciano `#2271b1`, identico per ogni tipo di blocco — inclusa `section`, che prima
-    // aveva qui una variante magenta propria (`.sectionAccent`, rimossa): due colori per
-    // lo stesso stato erano già la prima fonte di "affollamento" percepito, non solo le
-    // barre duplicate.
-    isHovered ? styles.hovered : '',
+    // Overlay hover/selezione (Gap Analysis §2, P0 "differenziazione cromatica"): due stati
+    // distinti, non più un solo bordo ciano condiviso — `.hovered` (blu `#2271b1`, 1px,
+    // "puntamento") e `.selected` (magenta `#93003c`, 2px, "modifica attiva") sono
+    // mutuamente esclusivi per costruzione (`isSelected` non implica `isHovered` in questo
+    // array: un nodo selezionato ma non sotto il puntatore prende solo `.selected`).
+    isHovered && !isSelected ? styles.hovered : '',
     isSelected ? styles.selected : '',
     isInvalid ? styles.invalid : '',
     isDragging ? styles.dragging : '',
@@ -727,7 +732,9 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
         */}
         {(isHovered || isSelected) && (
           <Group
-            className={styles.handleBar}
+            className={[styles.handleBar, isSelected ? styles.handleBarSelected : '']
+              .filter(Boolean)
+              .join(' ')}
             gap={4}
             wrap="nowrap"
             onClick={(event) => event.stopPropagation()}
@@ -736,6 +743,31 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
             <Text size="xs" fw={500} className={styles.handleBarLabel} aria-hidden="true">
               {label}
             </Text>
+
+            {/*
+              "Seleziona il blocco padre" (Gap Analysis §2, P0 — regressione rispetto a
+              Elementor Pro, richiesta esplicita di ripristino): visibile solo quando questo
+              nodo ha un genitore (`location.parentId`, `findLocation`), mai alla radice
+              dell'albero. `stopPropagation` impedisce che il click raggiunga anche l'`onClick`
+              del wrapper (selezione del blocco corrente) — solo il padre deve risultare
+              selezionato dopo il click, mai insieme al figlio.
+            */}
+            {parentIdForSelector && (
+              <Tooltip label="Seleziona il blocco padre" withArrow>
+                <ActionIcon
+                  variant="transparent"
+                  color="white"
+                  size="xs"
+                  aria-label={`Seleziona il blocco padre di ${label}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    selectNode(parentIdForSelector);
+                  }}
+                >
+                  <IconChevronUp size={12} />
+                </ActionIcon>
+              </Tooltip>
+            )}
 
             <Tooltip label="Trascina per riordinare" withArrow>
               <ActionIcon

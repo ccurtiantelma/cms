@@ -20,19 +20,31 @@
   CSS nativo sul wrapper (rimosso: cadrebbe su ogni antenato del nodo puntato, il DOM di un
   figlio è geometricamente dentro quello del padre) — questa classe è applicata via JS solo
   al nodo effettivamente sotto il puntatore (mai contemporaneamente ai suoi
-  antenati/discendenti). Colore Elementor-style (`#2271b1`, richiesta esplicita del task),
-  non il blue-5 di Mantine usato altrove in chrome admin: qui la superficie è il canvas
-  WYSIWYG, non un pannello.
+  antenati/discendenti), e mai insieme a `.selected` (`isHovered && !isSelected` in
+  `EditorBlockWrapper.tsx`): "puntamento" e "modifica attiva" restano due segnali sempre
+  distinguibili, mai lo stesso colore per due stati diversi (Gap Analysis §2, P0). Colore
+  Elementor-style (`#2271b1`, richiesta esplicita del task), non il blue-5 di Mantine usato
+  altrove in chrome admin: qui la superficie è il canvas WYSIWYG, non un pannello.
 */
 .hovered {
+  border-width: 1px;
   border-style: solid;
   border-color: #2271b1;
 }
 
+/*
+  Selezione: bordo marcato (2px, non 1px come l'hover) in magenta Elementor
+  (`#93003c`) invece del blu di puntamento — prima condivideva `#2271b1` con `.hovered`,
+  rendendo indistinguibile "sto passando sopra" da "sto modificando questo" (Gap Analysis
+  §2, P0). `padding: 3px` compensa il pixel di bordo in più rispetto a `.wrapper` (1px +
+  4px di padding) così il contenuto non trasla quando il nodo passa da hover a selezionato.
+*/
 .selected,
 .selected:hover {
+  border-width: 2px;
   border-style: solid;
-  border-color: #2271b1;
+  border-color: #93003c;
+  padding: 3px;
 }
 
 /* Nodo respinto dall'ultima validazione server-side (400 con path del colpevole). */
@@ -151,9 +163,10 @@
   probabile del badge viola "orfano" lamentato: con questa Handle Bar unica, quella
   stratificazione di varianti sparisce). Fuori dal box del wrapper (top negativo), mai
   dentro il flusso della toolbar integrata sotto — così non compete per spazio con le sue
-  azioni. Stesso blu `#2271b1` di `.hovered`/`.selected`: un solo accento "blocco sotto il
-  puntatore" in tutto l'editor, per ogni tipo di blocco incluso `section` (mai una
-  variante di colore dedicata). Una Handle Bar di un nodo innestato è sempre dipinta sopra
+  azioni. Blu `#2271b1` a riposo (solo hover), stesso di `.hovered` — `.handleBarSelected`
+  sotto la ridipinge in magenta quando il nodo è selezionato, coerente con `.selected` sul
+  bordo (Gap Analysis §2, P0: hover e selezione restano due segnali distinti anche qui, non
+  solo sul bordo del wrapper). Una Handle Bar di un nodo innestato è sempre dipinta sopra
   quella del suo contenitore: entrambe sono discendenti dello stesso stacking context
   implicito (nessuno dei due wrapper dichiara un proprio `z-index`), e l'ordine del DOM
   mette quella del figlio dopo quella del padre.
@@ -172,6 +185,11 @@
   background: #2271b1;
   color: var(--mantine-color-white);
   pointer-events: auto;
+}
+
+/* Blocco selezionato (Gap Analysis §2, P0): la Handle Bar segue lo stesso accento magenta di `.selected`, mai lo stesso blu di `.hovered`. */
+.handleBarSelected {
+  background: #93003c;
 }
 
 /* Nome del tipo di blocco dentro la Handle Bar: stesso colore/assenza di wrap del badge che sostituisce. */
