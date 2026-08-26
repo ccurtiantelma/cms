@@ -11,6 +11,29 @@
 }
 
 /*
+ * Reset scoped al blocco (Canvas del builder e superficie pubblica SSR condividono questo
+ * stesso file via alias Vite `@blocks`, ADR-22 § 3 — un solo reset per entrambe le
+ * superfici, mai duplicato): l'HTML sanitizzato salvato dal server (ADR-20/ADR-21) può
+ * contenere `<a>` senza classi/stili propri, che altrimenti erediterebbero i colori di
+ * default del browser per i link visitati/non visitati (#0000ee/#551a8b) invece del colore
+ * neutro del tema. `inherit` compone con `.textColor_*` (`style-tokens.module.css`, che usa
+ * a sua volta `inherit` come default — stessa convenzione) e con un eventuale colore inline
+ * scritto a mano nell'editor Codice, che resta più specifico e quindi vince comunque.
+ */
+.richText a,
+.richText a:link,
+.richText a:visited {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.richText a:hover,
+.richText a:focus-visible {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/*
   Editing in-place (editor, blocco selezionato — mai sul sito pubblico): colore fisso, non
   una variabile CSS di Mantine (CLAUDE.md § confine Mantine/blocchi).
 */

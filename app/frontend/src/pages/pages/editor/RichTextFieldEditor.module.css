@@ -28,3 +28,49 @@
   box-shadow: var(--mantine-shadow-xl);
   overflow: auto;
 }
+
+/*
+ * Isolamento del riquadro `RichTextEditor` (toolbar + contenuto) dal resto della sidebar
+ * (T-wysiwyg-richtext, anomalia "contenuto formattato altera il layout del Property
+ * Inspector"): `contain: layout style` impedisce che margini/list-style del documento
+ * Tiptap dentro (`<ul>`/`<ol>`/`<p>` prodotti da grassetto, elenchi, link) si propaghino o
+ * collassino verso l'esterno del riquadro — la sidebar non "salta" più quando l'HTML
+ * digitato introduce formattazione. Non applicato in `.fullscreenPanel`: lì il riquadro
+ * *è* la superficie, non un campo dentro un contenitore più grande da proteggere.
+ */
+.editorFrame {
+  contain: layout style;
+}
+
+/*
+ * Box a scroll indipendente per il contenuto Tiptap fuori da schermo intero: altezza
+ * massima fissa (220px) invece di crescere con il contenuto, `overflow-y: auto` per
+ * scorrere dentro il riquadro invece che spingere in basso il resto del form. In schermo
+ * intero l'altezza resta quella storica (`65vh`, via style inline in
+ * `RichTextFieldEditor.tsx`), dove non c'è un form circostante da proteggere.
+ */
+.editorContent {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+/*
+ * Reset tipografico locale al riquadro: margini/indentazione delle liste prodotte
+ * dall'editor visuale (`RichTextEditor.BulletList`/`OrderedList`) non ereditano gli stili
+ * di lista del contesto Mantine circostante (dove `<ul>`/`<ol>` non hanno affatto
+ * `list-style`, essendo la sidebar tutta `Stack`/`Group`, mai testo discorsivo) e restano
+ * confinati dentro il riquadro invece di sporgere oltre il padding del form.
+ */
+.editorContent :global(ul),
+.editorContent :global(ol) {
+  margin: 0 0 0 1.2em;
+  padding: 0;
+}
+
+.editorContent :global(p) {
+  margin: 0 0 0.5em;
+}
+
+.editorContent :global(p:last-child) {
+  margin-bottom: 0;
+}

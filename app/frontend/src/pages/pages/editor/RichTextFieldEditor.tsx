@@ -164,7 +164,7 @@ export default function RichTextFieldEditor({
       </Group>
 
       {tab === 'visual' ? (
-        <RichTextEditor editor={editor}>
+        <RichTextEditor editor={editor} className={fullscreen ? undefined : styles.editorFrame}>
           <RichTextEditor.Toolbar>
             <RichTextEditor.ControlsGroup>
               <RichTextEditor.Bold />
@@ -188,7 +188,8 @@ export default function RichTextFieldEditor({
             </RichTextEditor.ControlsGroup>
           </RichTextEditor.Toolbar>
           <RichTextEditor.Content
-            style={{ minHeight: fullscreen ? '65vh' : 160, maxHeight: fullscreen ? '65vh' : 320 }}
+            className={fullscreen ? undefined : styles.editorContent}
+            style={{ minHeight: fullscreen ? '65vh' : 120, maxHeight: fullscreen ? '65vh' : undefined }}
           />
         </RichTextEditor>
       ) : (
