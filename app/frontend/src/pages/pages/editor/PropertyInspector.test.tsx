@@ -336,18 +336,42 @@ describe('PropertyInspector — i sette kind del registro', () => {
     expect(propsInStore('b-1').href).toBe('https://esempio.it/contatti');
   });
 
-  it('mediaRef → campo in sola lettura affiancato dal pulsante della libreria', async () => {
-    const user = userEvent.setup();
+  it('mediaRef vuoto → miniatura placeholder e pulsante "Scegli Immagine", nessun campo digitabile', () => {
     renderInspectorWith(node('i-1', 'image', { mediaRef: '', alt: '' }));
 
-    const input = screen.getByRole('textbox', { name: 'File' });
-    expect(input).toHaveAttribute('readonly');
-    expect(screen.getByRole('button', { name: /Sfoglia Media Library/ })).toBeInTheDocument();
+    // Il `guid` non si digita mai: niente `textbox` per questo controllo — solo la
+    // miniatura e i pulsanti verso la libreria.
+    expect(screen.queryByRole('textbox', { name: 'File' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Scegli Immagine' })).toBeInTheDocument();
+    // Senza un `guid` non c'è nulla da rimuovere.
+    expect(screen.queryByRole('button', { name: 'Rimuovi' })).not.toBeInTheDocument();
+  });
 
-    await user.type(input, 'file-123');
+  it('mediaRef valorizzato → miniatura risolta via resolveMediaSrc e pulsante "Sostituisci Immagine"', () => {
+    // La miniatura è decorativa (`alt=""`, ridondante col pulsante accanto): si legge dal
+    // DOM via `container`, non da un ruolo d'accessibilità che un `alt` vuoto non espone.
+    const { container } = renderInspectorWith(
+      node('i-1', 'image', { mediaRef: 'a1b2c3d4e5f6a7b8', alt: 'Logo' }),
+    );
 
-    // Il `guid` non si digita: la scrittura passa solo dalla libreria, che restituisce un
-    // riferimento davvero presente in `files`.
+    const thumb = container.querySelector('img') as HTMLImageElement;
+    expect(thumb).not.toBeNull();
+    expect(thumb.src).toContain('a1b2c3d4e5f6a7b8');
+    expect(screen.getByRole('button', { name: 'Sostituisci Immagine' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rimuovi' })).toBeInTheDocument();
+  });
+
+  it('"Rimuovi" scrive un mediaRef vuoto tramite lo stesso canale di commit di ogni altra prop (undo/redo)', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('i-1', 'image', { mediaRef: 'a1b2c3d4e5f6a7b8', alt: 'Logo' }));
+
+    await user.click(screen.getByRole('button', { name: 'Rimuovi' }));
+    expect(propsInStore('i-1').mediaRef).toBe('');
+
+    useBlockEditorStore.getState().undo();
+    expect(propsInStore('i-1').mediaRef).toBe('a1b2c3d4e5f6a7b8');
+
+    useBlockEditorStore.getState().redo();
     expect(propsInStore('i-1').mediaRef).toBe('');
   });
 
@@ -485,9 +509,16 @@ describe('PropertyInspector — copertura del registro reale', () => {
  * non ha) o un URL composto qui invece che da `resolveMediaSrc()` in rendering (ADR-27 § 6).
  */
 describe('PropertyInspector — Media Library', () => {
-  /** Apre la libreria dal pulsante dell'ispettore e attende la griglia. */
-  async function openLibrary(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(screen.getByRole('button', { name: /Sfoglia Media Library/ }));
+  /**
+   * Apre la libreria dal pulsante dell'ispettore e attende la griglia. L'etichetta del
+   * pulsante dipende dal valore corrente di `mediaRef` ("Scegli Immagine" a vuoto,
+   * "Sostituisci Immagine" quando un `guid` è già scritto).
+   */
+  async function openLibrary(
+    user: ReturnType<typeof userEvent.setup>,
+    buttonName: RegExp = /Scegli Immagine|Sostituisci Immagine/,
+  ) {
+    await user.click(screen.getByRole('button', { name: buttonName }));
     return screen.findByRole('button', { name: 'logo.png' });
   }
 
@@ -544,15 +575,17 @@ describe('PropertyInspector — Media Library', () => {
     expect(propsInStore('i-1').mediaRef).toBe('a1b2c3d4e5f6a7b8');
   });
 
-  it('riflette il guid scelto nel campo in sola lettura e chiude la libreria', async () => {
+  it('riflette il guid scelto nella miniatura e nel pulsante, e chiude la libreria', async () => {
     const user = userEvent.setup();
-    renderInspectorWith(node('i-1', 'image', { mediaRef: '', alt: 'Logo' }));
+    const { container } = renderInspectorWith(node('i-1', 'image', { mediaRef: '', alt: 'Logo' }));
 
     const tile = await openLibrary(user);
     await user.click(tile);
     await user.click(screen.getByRole('button', { name: /Seleziona Immagine/ }));
 
-    expect(screen.getByRole('textbox', { name: 'File' })).toHaveValue('a1b2c3d4e5f6a7b8');
+    expect(screen.getByRole('button', { name: 'Sostituisci Immagine' })).toBeInTheDocument();
+    const thumb = container.querySelector('img') as HTMLImageElement;
+    expect(thumb.src).toContain('a1b2c3d4e5f6a7b8');
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: 'logo.png' })).not.toBeInTheDocument(),
     );
@@ -589,9 +622,11 @@ describe('PropertyInspector — Media Library', () => {
     });
   });
 
-  it('nessun altro kind mostra il pulsante della libreria (mappa per kind, non per type)', async () => {
+  it('nessun altro kind mostra il pulsante della libreria (mappa per kind, non per type)', () => {
     renderInspectorWith(node('h-1', 'heading', { text: 'Titolo', level: 'h2' }));
 
-    expect(screen.queryByRole('button', { name: /Sfoglia Media Library/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Scegli Immagine|Sostituisci Immagine/ }),
+    ).not.toBeInTheDocument();
   });
 });

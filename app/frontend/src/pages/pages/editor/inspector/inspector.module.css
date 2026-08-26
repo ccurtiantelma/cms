@@ -28,3 +28,43 @@
 [data-mantine-color-scheme='dark'] .fieldList > * + * {
   border-top-color: var(--mantine-color-dark-4);
 }
+
+/*
+  Miniatura 60×60 del controllo `mediaRef` (PropField), stile Elementor: la scelta
+  dell'immagine si vede prima di aprire la libreria, invece del solo `guid` in un campo di
+  testo. Stesso vocabolario di token del `.thumbFrame` di `MediaLibraryModal.module.css`
+  (bordo grigio, sfondo neutro), qui a dimensione fissa perché il controllo vive in una
+  riga stretta della sidebar, non in una griglia.
+*/
+.mediaThumbFrame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  overflow: hidden;
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-sm);
+  background-color: var(--mantine-color-gray-1);
+  transition: border-color 120ms ease;
+}
+
+.mediaThumbFrame:hover {
+  border-color: var(--mantine-color-blue-5);
+}
+
+[data-mantine-color-scheme='dark'] .mediaThumbFrame {
+  border-color: var(--mantine-color-dark-4);
+  background-color: var(--mantine-color-dark-6);
+}
+
+.mediaThumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mediaThumbPlaceholder {
+  color: var(--mantine-color-gray-5);
+}

@@ -99,3 +99,48 @@
   height: 100%;
   object-fit: cover;
 }
+
+/*
+ * Layout a due colonne stile Elementor Pro: libreria (ricerca+griglia) a sinistra,
+ * pannello dettagli dell'asset selezionato a destra. Percentuali sul `flex-basis`
+ * dentro il `Flex` padre, non `Grid`: due colonne fisse non hanno bisogno del sistema
+ * a celle di `Grid`, e `flex-basis` permette lo stack verticale sotto `sm` via la prop
+ * `direction` responsive del `Flex` (vedi `MediaLibraryModal.tsx`).
+ */
+.libraryColumn {
+  flex: 7 1 0;
+  min-width: 0;
+}
+
+.detailsPanel {
+  flex: 3 1 0;
+  min-width: 220px;
+  padding: var(--mantine-spacing-sm);
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-md);
+  background-color: var(--mantine-color-gray-0);
+}
+
+[data-mantine-color-scheme='dark'] .detailsPanel {
+  border-color: var(--mantine-color-dark-4);
+  background-color: var(--mantine-color-dark-6);
+}
+
+.detailsPreviewFrame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--mantine-radius-sm);
+  background-color: var(--mantine-color-gray-1);
+}
+
+[data-mantine-color-scheme='dark'] .detailsPreviewFrame {
+  background-color: var(--mantine-color-dark-5);
+}
+
+.detailsPreview {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}

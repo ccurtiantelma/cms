@@ -18,14 +18,16 @@ import {
   NumberInput,
   Select,
   Slider,
+  Stack,
   Switch,
   Text,
   TextInput,
   Textarea,
 } from '@mantine/core';
-import { IconPhoto } from '@tabler/icons-react';
+import { IconPhoto, IconTrash } from '@tabler/icons-react';
 import type { BlockPropDescriptor } from '../../../../types/blocks.types';
 import type { EditorViewport } from '../../../../hooks/useBlockEditorStore';
+import { resolveMediaSrc } from '../../../../components/blocks/media-url';
 import RichTextFieldEditor from '../RichTextFieldEditor';
 import {
   MULTILINE_THRESHOLD,
@@ -38,6 +40,7 @@ import {
   uxError,
   type PropsMeta,
 } from './inspector.utils';
+import styles from './inspector.module.css';
 
 export interface PropFieldProps {
   prop: BlockPropDescriptor;
@@ -182,12 +185,15 @@ export default function PropField({
         />
       );
 
-    case 'mediaRef':
-      // Il campo resta in **sola lettura**: il valore è un `guid` di 16 esadecimali, che
-      // nessuno digita a memoria: un campo libero inviterebbe a incollare un riferimento
-      // che il server rifiuta (era la ragione del `disabled` prima che la libreria
-      // esistesse). La scrittura passa solo dalla Media Library, che restituisce un
-      // record davvero presente in `files`.
+    case 'mediaRef': {
+      // Niente campo libero: il valore è un `guid` di 16 esadecimali, che nessuno digita a
+      // memoria — un campo di testo inviterebbe a incollare un riferimento che il server
+      // rifiuta. La scrittura passa solo dalla Media Library (`onOpenMediaPicker`), che
+      // restituisce un record davvero presente in `files`; la rimozione passa da
+      // `onSetAndCommit`, lo stesso canale di scrittura di ogni altra prop — un guid vuoto
+      // attraversa `updateBlockPropsAction` ed entra nella pila undo/redo come qualunque
+      // altro commit, mai un ramo di cancellazione dedicato.
+      const guid = asString(value);
       return (
         <div>
           <Text size="sm" fw={500} mb={4}>
@@ -199,21 +205,44 @@ export default function PropField({
               </Text>
             )}
           </Text>
-          <Group gap="xs" align="flex-start" wrap="nowrap">
-            <TextInput
-              flex={1}
-              readOnly
-              aria-label={label}
-              value={asString(value)}
-              error={error}
-              placeholder="Nessuna immagine selezionata"
-            />
-            <Button variant="light" leftSection={<IconPhoto size={16} />} onClick={onOpenMediaPicker}>
-              Sfoglia Media Library
-            </Button>
+          <Group gap="sm" align="flex-start" wrap="nowrap">
+            <span className={styles.mediaThumbFrame}>
+              {guid ? (
+                <img className={styles.mediaThumb} src={resolveMediaSrc(guid)} alt="" />
+              ) : (
+                <IconPhoto size={22} className={styles.mediaThumbPlaceholder} />
+              )}
+            </span>
+            <Stack gap={6} flex={1}>
+              <Button
+                variant="light"
+                size="xs"
+                leftSection={<IconPhoto size={14} />}
+                onClick={onOpenMediaPicker}
+              >
+                {guid ? 'Sostituisci Immagine' : 'Scegli Immagine'}
+              </Button>
+              {guid && (
+                <Button
+                  variant="subtle"
+                  color="red"
+                  size="xs"
+                  leftSection={<IconTrash size={14} />}
+                  onClick={() => onSetAndCommit('')}
+                >
+                  Rimuovi
+                </Button>
+              )}
+            </Stack>
           </Group>
+          {error && (
+            <Text size="xs" c="red" mt={4}>
+              {error}
+            </Text>
+          )}
         </div>
       );
+    }
 
     case 'url':
       return (

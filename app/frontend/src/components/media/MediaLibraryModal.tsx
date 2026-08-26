@@ -25,8 +25,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Box,
   Button,
   Center,
+  Flex,
   Group,
   Loader,
   Modal,
@@ -37,7 +39,14 @@ import {
   TextInput,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconAlertCircle, IconPhoto, IconSearch, IconUpload, IconX } from '@tabler/icons-react';
+import {
+  IconAlertCircle,
+  IconCopy,
+  IconPhoto,
+  IconSearch,
+  IconUpload,
+  IconX,
+} from '@tabler/icons-react';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { fetchMediaFiles, uploadMediaFile } from '../../services/media.service';
 import {
@@ -59,6 +68,12 @@ function formatSize(sizeBytes: number): string {
   if (sizeBytes < KILOBYTE) return `${sizeBytes} B`;
   if (sizeBytes < KILOBYTE * KILOBYTE) return `${Math.round(sizeBytes / KILOBYTE)} KB`;
   return `${(sizeBytes / (KILOBYTE * KILOBYTE)).toFixed(1)} MB`;
+}
+
+/** Estensione del nome file, in maiuscolo, senza il punto — solo display nel pannello dettagli. */
+function fileExtension(originalName: string): string {
+  const dot = originalName.lastIndexOf('.');
+  return dot === -1 ? '' : originalName.slice(dot + 1).toUpperCase();
 }
 
 interface MediaLibraryModalProps {
@@ -174,6 +189,20 @@ export default function MediaLibraryModal({
     }
   }
 
+  /** Record selezionato nella pagina corrente, o `null` — governa il pannello dettagli. */
+  const selectedRecord = records.find((record) => record.guid === selectedGuid) ?? null;
+
+  /** Copia negli appunti l'URL pubblico del record selezionato, con notifica di conferma. */
+  async function handleCopyLink(): Promise<void> {
+    if (!selectedRecord) return;
+    try {
+      await navigator.clipboard.writeText(resolveMediaSrc(selectedRecord.guid));
+      notifications.show({ color: 'green', message: 'Link copiato negli appunti.' });
+    } catch {
+      notifications.show({ color: 'red', message: 'Copia del link non riuscita.' });
+    }
+  }
+
   /** Conferma la selezione corrente e chiude. */
   function handleConfirm(): void {
     const chosen = records.find((record) => record.guid === selectedGuid);
@@ -192,143 +221,211 @@ export default function MediaLibraryModal({
       zIndex={zIndex}
     >
       <Stack gap="md">
-        {/* ─── Drop zone ─────────────────────────────────────────────────── */}
-        <div
-          className={`${styles.dropZone} ${isDragging ? styles.dropZoneActive : ''}`}
-          data-testid="media-drop-zone"
-          onDragOver={(event) => {
-            event.preventDefault();
-            setIsDragging(true);
-          }}
-          onDragLeave={() => setIsDragging(false)}
-          onDrop={(event) => {
-            event.preventDefault();
-            setIsDragging(false);
-            acceptFile(event.dataTransfer.files?.[0]);
-          }}
-        >
-          {previewUrl && pendingFile ? (
-            <Group justify="space-between" wrap="nowrap" w="100%">
-              <Group wrap="nowrap" gap="sm">
-                <img className={styles.preview} src={previewUrl} alt={pendingFile.name} />
-                <div>
-                  <Text size="sm" fw={600} lineClamp={1}>
-                    {pendingFile.name}
-                  </Text>
-                  <Text size="xs" c="dimmed">
-                    {formatSize(pendingFile.size)}
-                  </Text>
-                </div>
-              </Group>
-              <Group gap="xs" wrap="nowrap">
-                <Button
-                  size="xs"
-                  loading={uploading}
-                  leftSection={<IconUpload size={14} />}
-                  onClick={() => void handleUpload()}
-                >
-                  Carica
-                </Button>
-                <Button
-                  size="xs"
-                  variant="subtle"
-                  color="gray"
-                  disabled={uploading}
-                  leftSection={<IconX size={14} />}
-                  onClick={clearPending}
-                >
-                  Annulla
-                </Button>
-              </Group>
-            </Group>
-          ) : (
-            <Stack align="center" gap={4}>
-              <IconUpload size={22} />
-              <Text size="sm">Trascina qui un&apos;immagine, oppure</Text>
-              <Button size="xs" variant="light" onClick={() => fileInputRef.current?.click()}>
-                Scegli un file
-              </Button>
-            </Stack>
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={`${mimePrefix}*`}
-            className={styles.hiddenInput}
-            data-testid="media-file-input"
-            onChange={(event) => acceptFile(event.currentTarget.files?.[0])}
-          />
-        </div>
+        {/* ─── Colonne: libreria (sinistra) + pannello dettagli (destra) ──── */}
+        <Flex gap="md" direction={{ base: 'column', sm: 'row' }} align="stretch">
+          {/* ─── Colonna sinistra (~70%) ──────────────────────────────────── */}
+          <Stack gap="md" className={styles.libraryColumn}>
+            {/* ─── Drop zone ───────────────────────────────────────────────── */}
+            <div
+              className={`${styles.dropZone} ${isDragging ? styles.dropZoneActive : ''}`}
+              data-testid="media-drop-zone"
+              onDragOver={(event) => {
+                event.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={(event) => {
+                event.preventDefault();
+                setIsDragging(false);
+                acceptFile(event.dataTransfer.files?.[0]);
+              }}
+            >
+              {previewUrl && pendingFile ? (
+                <Group justify="space-between" wrap="nowrap" w="100%">
+                  <Group wrap="nowrap" gap="sm">
+                    <img className={styles.preview} src={previewUrl} alt={pendingFile.name} />
+                    <div>
+                      <Text size="sm" fw={600} lineClamp={1}>
+                        {pendingFile.name}
+                      </Text>
+                      <Text size="xs" c="dimmed">
+                        {formatSize(pendingFile.size)}
+                      </Text>
+                    </div>
+                  </Group>
+                  <Group gap="xs" wrap="nowrap">
+                    <Button
+                      size="xs"
+                      loading={uploading}
+                      leftSection={<IconUpload size={14} />}
+                      onClick={() => void handleUpload()}
+                    >
+                      Carica
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="subtle"
+                      color="gray"
+                      disabled={uploading}
+                      leftSection={<IconX size={14} />}
+                      onClick={clearPending}
+                    >
+                      Annulla
+                    </Button>
+                  </Group>
+                </Group>
+              ) : (
+                <Stack align="center" gap={4}>
+                  <IconUpload size={22} />
+                  <Text size="sm">Trascina qui un&apos;immagine, oppure</Text>
+                  <Button size="xs" variant="light" onClick={() => fileInputRef.current?.click()}>
+                    Scegli un file
+                  </Button>
+                </Stack>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={`${mimePrefix}*`}
+                className={styles.hiddenInput}
+                data-testid="media-file-input"
+                onChange={(event) => acceptFile(event.currentTarget.files?.[0])}
+              />
+            </div>
 
-        {/* ─── Ricerca ───────────────────────────────────────────────────── */}
-        <TextInput
-          placeholder="Cerca per nome file"
-          aria-label="Cerca per nome file"
-          leftSection={<IconSearch size={16} />}
-          value={search}
-          onChange={(event) => {
-            setSearch(event.currentTarget.value);
-            setPage(1);
-          }}
-        />
+            {/* ─── Ricerca ─────────────────────────────────────────────────── */}
+            <TextInput
+              placeholder="Cerca per nome file"
+              aria-label="Cerca per nome file"
+              leftSection={<IconSearch size={16} />}
+              value={search}
+              onChange={(event) => {
+                setSearch(event.currentTarget.value);
+                setPage(1);
+              }}
+            />
 
-        {/* ─── Griglia ───────────────────────────────────────────────────── */}
-        {loading ? (
-          <Center mih={200}>
-            <Loader size="sm" />
-          </Center>
-        ) : records.length === 0 ? (
-          <Alert color="gray" icon={<IconAlertCircle size={16} />}>
-            {search
-              ? 'Nessuna immagine corrisponde alla ricerca.'
-              : 'Nessuna immagine in libreria: caricane una trascinandola qui sopra.'}
-          </Alert>
-        ) : (
-          <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="sm">
-            {records.map((record) => (
-              <button
-                key={record.guid}
-                type="button"
-                className={`${styles.tile} ${
-                  record.guid === selectedGuid ? styles.tileSelected : ''
-                }`}
-                aria-pressed={record.guid === selectedGuid}
-                aria-label={record.originalName}
-                onClick={() => setSelectedGuid(record.guid)}
-                onDoubleClick={() => {
-                  setSelectedGuid(record.guid);
-                  onSelect(record);
-                  onClose();
-                }}
-              >
-                <span className={styles.thumbFrame}>
-                  {/* `resolveMediaSrc` e non `record.url`: unica risoluzione del
-                      src, condivisa con il sito pubblico (ADR-27 § 6). */}
+            {/* ─── Griglia ─────────────────────────────────────────────────── */}
+            {loading ? (
+              <Center mih={200}>
+                <Loader size="sm" />
+              </Center>
+            ) : records.length === 0 ? (
+              <Alert color="gray" icon={<IconAlertCircle size={16} />}>
+                {search
+                  ? 'Nessuna immagine corrisponde alla ricerca.'
+                  : 'Nessuna immagine in libreria: caricane una trascinandola qui sopra.'}
+              </Alert>
+            ) : (
+              <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="sm">
+                {records.map((record) => (
+                  <button
+                    key={record.guid}
+                    type="button"
+                    className={`${styles.tile} ${
+                      record.guid === selectedGuid ? styles.tileSelected : ''
+                    }`}
+                    aria-pressed={record.guid === selectedGuid}
+                    aria-label={record.originalName}
+                    onClick={() => setSelectedGuid(record.guid)}
+                    onDoubleClick={() => {
+                      setSelectedGuid(record.guid);
+                      onSelect(record);
+                      onClose();
+                    }}
+                  >
+                    <span className={styles.thumbFrame}>
+                      {/* `resolveMediaSrc` e non `record.url`: unica risoluzione del
+                          src, condivisa con il sito pubblico (ADR-27 § 6). */}
+                      <img
+                        className={styles.thumb}
+                        src={resolveMediaSrc(record.guid)}
+                        alt={record.originalName}
+                        loading="lazy"
+                      />
+                    </span>
+                    <Text size="xs" lineClamp={1} ta="center">
+                      {record.originalName}
+                    </Text>
+                    <Text size="xs" c="dimmed" ta="center">
+                      {record.width && record.height
+                        ? `${record.width}×${record.height}`
+                        : formatSize(record.sizeBytes)}
+                    </Text>
+                  </button>
+                ))}
+              </SimpleGrid>
+            )}
+
+            {totalPages > 1 && (
+              <Group justify="center">
+                <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
+              </Group>
+            )}
+          </Stack>
+
+          {/* ─── Colonna destra (~30%): pannello dettagli asset ─────────────── */}
+          <Box className={styles.detailsPanel} data-testid="media-details-panel">
+            {selectedRecord ? (
+              <Stack gap="sm">
+                <span className={styles.detailsPreviewFrame}>
                   <img
-                    className={styles.thumb}
-                    src={resolveMediaSrc(record.guid)}
-                    alt={record.originalName}
-                    loading="lazy"
+                    className={styles.detailsPreview}
+                    src={resolveMediaSrc(selectedRecord.guid)}
+                    alt={selectedRecord.originalName}
                   />
                 </span>
-                <Text size="xs" lineClamp={1} ta="center">
-                  {record.originalName}
+                <Text size="sm" fw={600} lineClamp={2}>
+                  {selectedRecord.originalName}
                 </Text>
-                <Text size="xs" c="dimmed" ta="center">
-                  {record.width && record.height
-                    ? `${record.width}×${record.height}`
-                    : formatSize(record.sizeBytes)}
+                <Stack gap={4}>
+                  <Group justify="space-between" wrap="nowrap">
+                    <Text size="xs" c="dimmed">
+                      Tipo
+                    </Text>
+                    <Text size="xs">{fileExtension(selectedRecord.originalName) || '—'}</Text>
+                  </Group>
+                  <Group justify="space-between" wrap="nowrap">
+                    <Text size="xs" c="dimmed">
+                      Dimensioni
+                    </Text>
+                    <Text size="xs">
+                      {selectedRecord.width && selectedRecord.height
+                        ? `${selectedRecord.width}×${selectedRecord.height}`
+                        : '—'}
+                    </Text>
+                  </Group>
+                  <Group justify="space-between" wrap="nowrap">
+                    <Text size="xs" c="dimmed">
+                      Peso
+                    </Text>
+                    <Text size="xs">{formatSize(selectedRecord.sizeBytes)}</Text>
+                  </Group>
+                </Stack>
+                <TextInput
+                  size="xs"
+                  label="URL pubblico"
+                  readOnly
+                  value={resolveMediaSrc(selectedRecord.guid)}
+                />
+                <Button
+                  size="xs"
+                  variant="light"
+                  leftSection={<IconCopy size={14} />}
+                  onClick={() => void handleCopyLink()}
+                >
+                  Copia Link
+                </Button>
+              </Stack>
+            ) : (
+              <Center mih={200}>
+                <Text size="sm" c="dimmed" ta="center">
+                  Nessun elemento selezionato
                 </Text>
-              </button>
-            ))}
-          </SimpleGrid>
-        )}
-
-        {totalPages > 1 && (
-          <Group justify="center">
-            <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
-          </Group>
-        )}
+              </Center>
+            )}
+          </Box>
+        </Flex>
 
         {/* ─── Azioni ────────────────────────────────────────────────────── */}
         <Group justify="flex-end">

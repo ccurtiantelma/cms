@@ -282,6 +282,51 @@ describe('MediaLibraryModal — upload', () => {
   });
 });
 
+describe('MediaLibraryModal — pannello dettagli asset', () => {
+  it('mostra il placeholder quando nulla è selezionato', async () => {
+    fetchMediaFiles.mockResolvedValue(page([record()]));
+    renderWithProviders(<MediaLibraryModal opened onClose={vi.fn()} onSelect={vi.fn()} />);
+    await screen.findByRole('button', { name: 'logo.png' });
+
+    expect(screen.getByText('Nessun elemento selezionato')).toBeInTheDocument();
+  });
+
+  it('mostra nome, estensione, dimensioni e peso della tessera selezionata', async () => {
+    const user = userEvent.setup();
+    fetchMediaFiles.mockResolvedValue(
+      page([record({ originalName: 'logo.png', width: 800, height: 600, sizeBytes: 2048 })]),
+    );
+    renderWithProviders(<MediaLibraryModal opened onClose={vi.fn()} onSelect={vi.fn()} />);
+
+    await user.click(await screen.findByRole('button', { name: 'logo.png' }));
+
+    const panel = screen.getByTestId('media-details-panel');
+    expect(within(panel).getByText('logo.png')).toBeInTheDocument();
+    expect(within(panel).getByText('PNG')).toBeInTheDocument();
+    expect(within(panel).getByText('800×600')).toBeInTheDocument();
+    expect(within(panel).getByText('2 KB')).toBeInTheDocument();
+  });
+
+  it('copia il link pubblico negli appunti e notifica', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+    fetchMediaFiles.mockResolvedValue(page([record({ guid: 'a1b2c3d4e5f6a7b8' })]));
+    renderWithProviders(<MediaLibraryModal opened onClose={vi.fn()} onSelect={vi.fn()} />);
+
+    await user.click(await screen.findByRole('button', { name: 'logo.png' }));
+    await user.click(screen.getByRole('button', { name: /Copia Link/ }));
+
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('a1b2c3d4e5f6a7b8'));
+    await waitFor(() =>
+      expect(notificationsShow).toHaveBeenCalledWith(expect.objectContaining({ color: 'green' })),
+    );
+  });
+});
+
 describe('MediaLibraryModal — degrado senza dimensioni', () => {
   it('mostra la dimensione in byte quando width/height sono null (PLAN T4)', async () => {
     fetchMediaFiles.mockResolvedValue(
