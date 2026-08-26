@@ -94,9 +94,16 @@ export class FilesService {
   }
 
   /**
-   * Lista paginata dei file attivi, più recenti prima (RFC-F09 § 1, T1).
-   * Nessun filtro di ownership: la rotta è ristretta a Manager+ dal
-   * controller (`GuardManager`), quindi al ruolo `User` non arriva mai qui.
+   * Lista paginata dei media editoriali attivi, più recenti prima (RFC-F09 § 1,
+   * ADR-35). Nessun filtro di ownership: i media sono risorsa condivisa
+   * mono-tenant (A5), leggibile da ogni ruolo autenticato — il controller non
+   * applica alcuna soglia RBAC oltre l'autenticazione JWT globale.
+   *
+   * L'esclusione delle righe non editoriali (`entity <> 'page-media'`) è un
+   * default **server-side**, mai delegato a un parametro del chiamante
+   * (ADR-35, decisione § 1): `files` è storage documenti generico (ADR-8) e
+   * vi finiscono anche allegati privati di altri domini verticali (es.
+   * `entity: 'invoice'`) che questa rotta non deve mai enumerare.
    * @param params Filtri di paginazione/ricerca (`p`/`i`/`q` su `originalName`/`mimeType` esatto).
    * @param authInfo Identità del chiamante — accettata per coerenza di firma con gli altri
    * elenchi del modulo (`PagesService.findAll`, `NotificationsService.findAllForUser`),
@@ -110,7 +117,10 @@ export class FilesService {
     const page = params.p > 0 ? params.p : 1;
     const perPage = params.i > 0 ? params.i : 20;
 
-    const conditions: (SQL | undefined)[] = [eq(fileEntity.isActive, true)];
+    const conditions: (SQL | undefined)[] = [
+      eq(fileEntity.isActive, true),
+      eq(fileEntity.entity, 'page-media'),
+    ];
     if (params.q) {
       conditions.push(ilike(fileEntity.originalName, `%${params.q}%`));
     }
@@ -145,6 +155,19 @@ export class FilesService {
     const row = await this.findActiveByGuid(guid);
     const stream = await this.storageDriver.download(row.storageKey);
     return { stream, mimeType: row.mimeType, originalName: row.originalName };
+  }
+
+  /**
+   * Metadati di un file attivo, senza toccare lo storage (RFC-F09 § 1, T1).
+   * Serve alla `PropertyInspector` per mostrare nome/anteprima di un media
+   * già referenziato da un blocco salvato, senza scaricare il blob e senza
+   * enumerare l'intera libreria. Nessun filtro `entity`: a differenza di
+   * `list()`, qui il chiamante conosce già il `guid` esatto.
+   * @param guid Identificatore pubblico del file.
+   */
+  async getMetadata(guid: string): Promise<FileMetadataDto> {
+    const row = await this.findActiveByGuid(guid);
+    return this.toMetadataDto(row);
   }
 
   /**
@@ -268,7 +291,16 @@ export class FilesService {
     return row;
   }
 
-  /** Converte una riga DB nel DTO pubblico (mai storageKey/checksum, dettagli interni del driver). */
+  /**
+   * Converte una riga DB nel DTO pubblico (mai storageKey/checksum, dettagli
+   * interni del driver). `width`/`height` sono sempre `null`: le colonne non
+   * esistono ancora in schema (RFC-F09 N2, non firmata) — il campo resta nel
+   * contratto perché il frontend già lo consuma (`MediaFileRecord`), pronto a
+   * valorizzarsi senza un secondo giro di `openapi:types` quando N2 sarà
+   * firmata. `url` è derivato dal solo `entity` (RFC-F09 § 2): non implica
+   * che il blob sia raster-riconosciuto, verificato invece in lettura da
+   * `PublicMediaService` (ADR-27 § 3/§ 4).
+   */
   private toMetadataDto(row: typeof fileEntity.$inferSelect): FileMetadataDto {
     return {
       guid: row.guid,
@@ -277,6 +309,9 @@ export class FilesService {
       sizeBytes: row.sizeBytes,
       entity: row.entity,
       entityId: row.entityId,
+      width: null,
+      height: null,
+      url: row.entity === 'page-media' ? `api/v1/public/media/${row.guid}` : null,
       createdAt: row.createdAt!,
     };
   }
