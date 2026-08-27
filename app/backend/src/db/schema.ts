@@ -23,7 +23,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 import { Utils } from '../common/utils';
-import { AppUserRoles } from '../common/enums';
+import { AppUserRoles, GlobalSectionLayoutSlot } from '../common/enums';
 
 // ─── USERS ────────────────────────────────────────────────────────────────────
 
@@ -355,6 +355,52 @@ export const pageRevisionEntity = pgTable(
   ],
 );
 
+// ─── GLOBAL SECTIONS ──────────────────────────────────────────────────────────
+// Sezioni Globali (F06, ADR-40): Header/Footer come contenuto a blocchi
+// innestato in uno slot di layout pubblico, non Pagine, non `app_settings`.
+// `content` è lo stesso envelope jsonb di ADR-21 (albero di blocchi validato
+// contro il registro). Al massimo una riga attiva per `layoutSlot` diverso da
+// `none` (indice parziale sotto), così lo stesso vincolo protegge sia
+// `header` che `footer` senza due colonne booleane dedicate.
+
+export const globalSectionEntity = pgTable(
+  'global_sections',
+  {
+    id: serial().notNull().primaryKey(),
+    guid: char('guid', { length: 16 })
+      .notNull()
+      .$defaultFn(() => Utils.randomString(16)),
+    title: varchar('title', { length: 255 }).notNull(),
+    /** Identificatore admin, unico fra le righe attive — non una rotta pubblica. */
+    slug: varchar('slug', { length: 255 }).notNull(),
+    layoutSlot: varchar('layout_slot', { length: 20 })
+      .notNull()
+      .default(GlobalSectionLayoutSlot.None),
+    /** Albero di blocchi (envelope `{ version, blocks }`, ADR-21), stessa pipeline di validazione delle Pagine. */
+    content: jsonb('content').notNull(),
+    /** Lock ottimistico: incrementato a ogni UPDATE, confrontato nella WHERE. */
+    version: integer('version').notNull().default(1),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: integer('created_by')
+      .notNull()
+      .references(() => userEntity.id, { onDelete: 'restrict', onUpdate: 'restrict' }),
+    updatedBy: integer('updated_by')
+      .notNull()
+      .references(() => userEntity.id, { onDelete: 'restrict', onUpdate: 'restrict' }),
+  },
+  (t) => [
+    uniqueIndex('global_sections_guid_idx').on(t.guid),
+    uniqueIndex('global_sections_slug_uq').on(t.slug).where(sql`${t.isActive}`),
+    /** Al massimo una Sezione attiva per slot diverso da `none` (ADR-40 § Decisione). */
+    uniqueIndex('global_sections_layout_slot_uq')
+      .on(t.layoutSlot)
+      .where(sql`${t.layoutSlot} != 'none' and ${t.isActive}`),
+    index('global_sections_layout_slot_idx').on(t.layoutSlot),
+  ],
+);
+
 // ─── RELATIONS ──────────────────────────────────────────────────────────────────
 
 export const usersRelations = relations(userEntity, ({ one, many }) => ({
@@ -435,6 +481,17 @@ export const notificationsRelations = relations(notificationEntity, ({ one }) =>
   }),
   updatedByUser: one(userEntity, {
     fields: [notificationEntity.updatedBy],
+    references: [userEntity.id],
+  }),
+}));
+
+export const globalSectionsRelations = relations(globalSectionEntity, ({ one }) => ({
+  createdByUser: one(userEntity, {
+    fields: [globalSectionEntity.createdBy],
+    references: [userEntity.id],
+  }),
+  updatedByUser: one(userEntity, {
+    fields: [globalSectionEntity.updatedBy],
     references: [userEntity.id],
   }),
 }));

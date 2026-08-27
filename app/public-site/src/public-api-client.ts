@@ -3,6 +3,7 @@ import { PublicSiteConfig } from './config';
 import { DEFAULT_GLOBAL_TOKENS, type GlobalTokens } from '../../frontend/src/libs/globalTokensCompiler';
 
 type PublicPageDto = components['schemas']['PublicPageDto'];
+type PublicActiveGlobalSectionsDto = components['schemas']['PublicActiveGlobalSectionsDto'];
 
 export type PublicPageResolution =
   | { kind: 'ok'; page: PublicPageDto }
@@ -83,5 +84,47 @@ export async function fetchThemeSettings(): Promise<GlobalTokens> {
   } catch (error: unknown) {
     console.error('public-site: errore di rete su global-tokens, uso i default', error);
     return DEFAULT_GLOBAL_TOKENS;
+  }
+}
+
+/**
+ * Nessuna Sezione Globale innestata: forma restituita quando l'endpoint non è
+ * raggiungibile o risponde male. Identica a ciò che il backend restituisce su
+ * un'installazione in cui nessuno slot è stato assegnato (ADR-40: sempre `200`,
+ * slot assente = `null`), così il render non ha un ramo "errore" separato da
+ * quello "non configurato" — in entrambi i casi la Pagina si serve da sola.
+ */
+const NO_GLOBAL_SECTIONS: PublicActiveGlobalSectionsDto = { header: null, footer: null };
+
+/**
+ * Recupera le Sezioni Globali assegnate agli slot `header`/`footer` da innestare
+ * nel layout SSR di ogni Pagina pubblica.
+ *
+ * Chiama `GET /api/v1/public/global-sections/active` (ADR-40), superficie
+ * pubblica anonima servita dalla cache Redis. Il contenuto arriva già
+ * migrato/validato/sanitizzato in scrittura: nessuna rielaborazione qui, stessa
+ * fiducia nel server che `resolvePublicPage` già applica all'albero di Pagina.
+ *
+ * Tollerante ai guasti per costruzione, come `fetchThemeSettings`: nessuna
+ * eccezione esce da questa funzione, né per errore di rete/timeout né per
+ * risposta non `200`. Header e footer sono cromatura del layout, non il
+ * contenuto: la loro indisponibilità degrada la pagina, non la abbatte —
+ * il fallback è renderizzare i soli blocchi della Pagina.
+ */
+export async function fetchActiveGlobalSections(): Promise<PublicActiveGlobalSectionsDto> {
+  const url = `${PublicSiteConfig.apiBaseUrl}/api/v1/public/global-sections/active`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error(
+        `public-site: global-sections/active non disponibile (status ${res.status}), nessun header/footer`,
+      );
+      return NO_GLOBAL_SECTIONS;
+    }
+    return (await res.json()) as PublicActiveGlobalSectionsDto;
+  } catch (error: unknown) {
+    console.error('public-site: errore di rete su global-sections/active, nessun header/footer', error);
+    return NO_GLOBAL_SECTIONS;
   }
 }

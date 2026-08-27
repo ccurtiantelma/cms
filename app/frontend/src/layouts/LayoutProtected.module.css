@@ -2,19 +2,18 @@
  * Chrome di LayoutProtected: sidebar collassabile (chiara, sfondo bianco) +
  * area contenuto grigio chiaro con card bianca arrotondata. Vedi
  * LayoutProtected.tsx. Nessun hex/gradiente custom: solo CSS var Mantine
- * (`--mantine-color-*`, `--mantine-primary-color-*`) e token semantici
- * `--app-*` del Global Theme Customizer (ADR-4), sempre con fallback sul
- * valore nativo: senza customizzazioni l'aspetto è identico ai default.
+ * (`--mantine-color-*`, `--mantine-primary-color-*`), indipendenti dal tema
+ * applicato al contenuto dell'editor e del sito pubblico.
  */
 
 /* Sfondo applicativo: grigio chiaro pieno. */
 .appBg {
   min-height: 100vh;
-  background-color: var(--app-page-bg, var(--mantine-color-gray-0));
+  background-color: var(--mantine-color-gray-0);
 }
 
 [data-mantine-color-scheme='dark'] .appBg {
-  background-color: var(--app-page-bg, var(--mantine-color-dark-8));
+  background-color: var(--mantine-color-dark-8);
 }
 
 /* Transizione fluida su collasso/espansione della sidebar. */
@@ -43,7 +42,7 @@
    garantisce che il nostro sfondo vinca sempre. */
 .navbarSurface,
 nav.navbarSurface {
-  background: var(--app-navbar-bg, var(--mantine-color-white));
+  background: var(--mantine-color-white);
   border-right: none;
 }
 
@@ -87,7 +86,7 @@ nav.navbarSurface {
 }
 
 .brandName {
-  color: var(--app-navbar-text, var(--mantine-color-dark-7));
+  color: var(--mantine-color-text);
   font-weight: 800;
   font-size: 18px;
   letter-spacing: 0.5px;
@@ -123,14 +122,14 @@ nav.navbarSurface {
   padding: 10px 12px;
   margin-bottom: 4px;
   border-radius: 10px;
-  color: var(--app-navbar-text, var(--mantine-color-dark-7));
+  color: var(--mantine-color-text);
   font-size: 14px;
   font-weight: 500;
   transition: background-color 120ms ease, color 120ms ease;
 }
 
 .navItem:hover {
-  background-color: var(--app-navbar-hover-bg, var(--mantine-color-gray-1));
+  background-color: var(--mantine-color-gray-1);
 }
 
 .navItemCollapsed {
@@ -141,8 +140,8 @@ nav.navbarSurface {
 .navItemActive,
 .navItemActive:hover {
   /* Il fallback segue il primario attivo: il token, se customizzato, lo fissa. */
-  background: var(--app-navbar-active-bg, var(--mantine-primary-color-filled));
-  color: var(--app-navbar-active-text, var(--mantine-color-white));
+  background: var(--mantine-primary-color-filled);
+  color: var(--mantine-color-white);
   font-weight: 600;
   box-shadow: var(--mantine-shadow-sm);
 }
@@ -168,7 +167,7 @@ nav.navbarSurface {
 /* --- Sezione utente in basso --- */
 .userSection {
   flex-shrink: 0;
-  border-top: 1px solid var(--app-navbar-border, var(--mantine-color-gray-3));
+  border-top: 1px solid var(--mantine-color-gray-3);
   padding: 12px;
   display: flex;
   align-items: center;
@@ -192,7 +191,7 @@ nav.navbarSurface {
 }
 
 .userLink:hover {
-  background-color: var(--app-navbar-hover-bg, var(--mantine-color-gray-1));
+  background-color: var(--mantine-color-gray-1);
 }
 
 .userInfo {
@@ -204,7 +203,7 @@ nav.navbarSurface {
 }
 
 .userName {
-  color: var(--app-navbar-text, var(--mantine-color-dark-7));
+  color: var(--mantine-color-text);
   font-size: 13px;
   font-weight: 600;
   overflow: hidden;
@@ -213,7 +212,7 @@ nav.navbarSurface {
 }
 
 .userRole {
-  color: var(--app-navbar-text, var(--mantine-color-dark-7));
+  color: var(--mantine-color-text);
   opacity: 0.75;
   font-size: 11px;
   overflow: hidden;
@@ -222,7 +221,7 @@ nav.navbarSurface {
 }
 
 .userEmail {
-  color: var(--app-navbar-text, var(--mantine-color-dark-7));
+  color: var(--mantine-color-text);
   opacity: 0.55;
   font-size: 10px;
   overflow: hidden;
@@ -243,12 +242,12 @@ nav.navbarSurface {
 
 /* Tasti azione in basso: box arrotondato con bordo sottile chiaro. */
 .bottomBtn {
-  border: 1px solid var(--app-navbar-border, var(--mantine-color-gray-4));
+  border: 1px solid var(--mantine-color-gray-4);
   border-radius: 8px;
 }
 
 .bottomBtn:hover {
-  background-color: var(--app-navbar-hover-bg, var(--mantine-color-gray-1));
+  background-color: var(--mantine-color-gray-1);
 }
 
 /* --- Area contenuto --- */
@@ -262,8 +261,8 @@ nav.navbarSurface {
   top: 12px;
   left: 12px;
   z-index: 300;
-  background-color: var(--app-navbar-bg, var(--mantine-color-white));
-  border: 1px solid var(--app-navbar-border, var(--mantine-color-gray-3));
+  background-color: var(--mantine-color-white);
+  border: 1px solid var(--mantine-color-gray-3);
   border-radius: 8px;
   padding: 6px;
 }

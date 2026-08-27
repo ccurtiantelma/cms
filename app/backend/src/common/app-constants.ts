@@ -108,7 +108,7 @@ export class AppConstants {
    * separato non ancora presente in T2: aggiunta qui perché CORS deve ammetterla
    * fin da subito, senza wildcard (`main.ts`).
    */
-  static readonly publicSiteUrl = str('PUBLIC_SITE_URL', 'http://localhost:54000');
+  static readonly publicSiteUrl = str('PUBLIC_SITE_URL', 'http://localhost:55000');
 
   /**
    * Base URL **rivolta al browser** della rotta pubblica dei media (ADR-27

@@ -1,0 +1,48 @@
+.root {
+  flex: 0 0 60px;
+  min-width: 0;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+  background: var(--mantine-color-body);
+}
+
+.section {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pageTitle {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.centerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.actions {
+  justify-content: flex-end;
+}
+
+@media (max-width: 62em) {
+  .root {
+    gap: 6px;
+    padding-inline: 8px;
+  }
+
+  .pageTitle {
+    display: none;
+  }
+}

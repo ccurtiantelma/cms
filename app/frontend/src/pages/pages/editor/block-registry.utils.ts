@@ -41,7 +41,13 @@ function defaultPropValue(prop: BlockPropDescriptor): unknown {
     case 'number':
       return 0;
     default:
-      return '';
+      // Prop di tipo stringa/colore (richText, plainText, url, mediaRef, color,
+      // unitValue, border, shadow, cssClassName, htmlId) senza default esplicito nel
+      // registro: se opzionale, nessun valore fantasma — la chiave va omessa
+      // dalle prop iniziali del nodo (vedi defaultPropsFor) invece di mandare '' al
+      // validatore server, che la respinge con BLOCK_PROP_INVALID. Se obbligatoria,
+      // '' resta il segnaposto minimo per un campo che l'utente deve comunque compilare.
+      return prop.required ? '' : undefined;
   }
 }
 
@@ -49,7 +55,8 @@ function defaultPropValue(prop: BlockPropDescriptor): unknown {
 export function defaultPropsFor(descriptor: BlockTypeDescriptor): Record<string, unknown> {
   const props: Record<string, unknown> = {};
   for (const prop of descriptor.props) {
-    props[prop.name] = defaultPropValue(prop);
+    const value = defaultPropValue(prop);
+    if (value !== undefined) props[prop.name] = value;
   }
   return props;
 }

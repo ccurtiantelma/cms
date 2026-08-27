@@ -32,6 +32,10 @@ import {
   type BlockNode,
 } from '../pages/pages/editor/block-tree.utils';
 import { canContainType } from '../pages/pages/editor/block-registry.utils';
+import {
+  CONTAINER_WIDTH_PROP,
+  toContainerWidthValue,
+} from '../pages/pages/editor/container-resize.utils';
 import { CONTENT_TREE_LIMITS } from '../types/blocks.types';
 import { compileTokensToCss, GLOBAL_TOKENS_STYLE_TAG_ID, type GlobalTokens } from '../libs/globalTokensCompiler';
 
@@ -104,6 +108,18 @@ export type EditorViewport = 'desktop' | 'tablet' | 'mobile';
 /** Scheda attiva della sidebar sinistra dell'editor full-screen (`EditorSidebar`). */
 export type EditorSidebarTab = 'widgets' | 'properties';
 
+/**
+ * Ampiezza che un nodo `container` sta assumendo **mentre** il puntatore trascina la sua
+ * maniglia di ridimensionamento (E03, `ContainerResizeHandle.tsx`). Un solo nodo per volta:
+ * il gesto è esclusivo per costruzione (`setPointerCapture`), quindi un solo slot invece di
+ * una mappa per id.
+ */
+export interface ContainerResizeState {
+  id: string;
+  /** Percentuale della larghezza del contenitore padre, gia clampata nell'intervallo del registro. */
+  percent: number;
+}
+
 interface BlockEditorState {
   tree: BlockNode[];
   selectedId: string | null;
@@ -162,6 +178,17 @@ interface BlockEditorState {
    * "di fabbrica" da precaricare — solo `setGlobalTokens` lo popola.
    */
   globalTokens: GlobalTokens | null;
+  /**
+   * Ridimensionamento di un `container` in corso (E03), oppure `null` a riposo. Stato
+   * **visivo ed effimero**: nessun comando sulla history mentre il puntatore si muove —
+   * un'unica voce di undo/redo viene registrata al rilascio, da
+   * {@link commitContainerWidthAction}. Vive nello store e non in uno stato locale del
+   * wrapper perche il valore in corso deve poter essere letto da un componente diverso da
+   * quello che lo produce (badge, ispettore), cosa che uno `useState` interno non
+   * permetterebbe; il selettore {@link useContainerResizePercent} lo sottoscrive per id, cosi
+   * il trascinamento di un container non ri-renderizza i wrapper degli altri.
+   */
+  containerResize: ContainerResizeState | null;
 
   /** Inizializza l'albero da `draftContent.blocks` esistente (nessun riordino spurio: ordine e struttura conservati com'è). Azzera history e selezione. */
   initTree: (blocks: BlockNode[]) => void;
@@ -253,6 +280,21 @@ interface BlockEditorState {
    * poter annullare con Ctrl+Z (stesso principio di `initTree` rispetto ad `addBlockAction`).
    */
   hydrateGlobalTokens: (tokens: GlobalTokens) => void;
+  /**
+   * Aggiorna l'ampiezza visiva del `container` `id` durante il trascinamento della maniglia.
+   * Non tocca l'albero e non tocca la history: e' un'anteprima, e una voce di undo per pixel
+   * mosso renderebbe Ctrl+Z inutilizzabile.
+   */
+  setContainerResizePreview: (id: string, percent: number) => void;
+  /** Abbandona l'anteprima senza scrivere nulla (`pointercancel`, gesto interrotto). */
+  clearContainerResizePreview: () => void;
+  /**
+   * Chiude il gesto: scrive la percentuale finale sulla prop di larghezza del nodo `id` e
+   * registra **un solo** punto nella history di undo/redo per l'intero trascinamento.
+   * Azzera sempre l'anteprima, anche quando non c'e' nulla da scrivere (valore invariato,
+   * nodo sparito): il gesto e' finito comunque.
+   */
+  commitContainerWidthAction: (id: string, percent: number) => void;
 }
 
 /**
@@ -323,6 +365,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   savePoint: CLEAN_SAVE_POINT,
   hiddenInCanvasIds: new Set(),
   globalTokens: null,
+  containerResize: null,
 
   initTree: (blocks) => {
     set((state) => ({
@@ -335,6 +378,9 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       // Stato UI del canvas legato alla sessione di editing precedente: un nodo
       // "nascosto" nella bozza appena sostituita non ha più motivo di restarlo qui.
       hiddenInCanvasIds: new Set(),
+      // Stesso principio per un ridimensionamento eventualmente rimasto aperto: l'albero
+      // sotto di lui non esiste più.
+      containerResize: null,
     }));
   },
 
@@ -611,7 +657,54 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
     applyGlobalTokensToDocument(compileTokensToCss(tokens), document);
     set({ globalTokens: tokens });
   },
+
+  setContainerResizePreview: (id, percent) =>
+    set((state) => {
+      // Nessun `set` a valore identico: un `pointermove` che non sposta abbastanza da
+      // cambiare il decimo di punto percentuale non deve ri-renderizzare nulla.
+      const current = state.containerResize;
+      if (current && current.id === id && current.percent === percent) return {};
+      return { containerResize: { id, percent } };
+    }),
+
+  clearContainerResizePreview: () => set({ containerResize: null }),
+
+  commitContainerWidthAction: (id, percent) => {
+    set((state) => {
+      const node = findNode(state.tree, id);
+      if (!node) return { containerResize: null };
+
+      const previousValue = node.props[CONTAINER_WIDTH_PROP];
+      const nextValue = toContainerWidthValue(percent);
+      // Un trascinamento che torna esattamente da dove è partito non è una modifica:
+      // nessuna voce di history, nessun contenuto marcato come non salvato.
+      if (readCommittedPercent(previousValue) === percent) return { containerResize: null };
+
+      // Stesso comando invertibile di `updateBlockPropsAction` — una sola prop, il valore
+      // precedente catturato per chiusura, mai uno snapshot dell'albero. È qui che l'intero
+      // trascinamento diventa **un** punto di undo/redo.
+      const command: TreeCommand = {
+        kind: 'tree',
+        apply: (tree) => updateBlockProps(tree, id, { [CONTAINER_WIDTH_PROP]: nextValue }),
+        invert: (tree) => updateBlockProps(tree, id, { [CONTAINER_WIDTH_PROP]: previousValue }),
+      };
+      return { ...pushCommand(state, command), containerResize: null };
+    });
+  },
 }));
+
+/**
+ * Percentuale già persistita sulla prop, o `null` se assente/di altra forma. Duplica di
+ * proposito la lettura di `readContainerWidthPercent` invece di importarla: quel modulo
+ * legge il registro dei blocchi, e lo store non ha motivo di dipenderne per un confronto
+ * di uguaglianza fra due numeri.
+ */
+function readCommittedPercent(value: unknown): number | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const candidate = value as { value?: unknown; unit?: unknown };
+  if (candidate.unit !== '%' || typeof candidate.value !== 'number') return null;
+  return candidate.value;
+}
 
 /**
  * Reinserisce un nodo completo (con id e children originali) a una posizione esatta —
@@ -723,4 +816,15 @@ export function useHasUnsavedChanges(): boolean {
 /** Selettore granulare: solo i Global Design Tokens correnti (`null` se non ancora impostati in questa sessione). */
 export function useGlobalTokens(): GlobalTokens | null {
   return useBlockEditorStore((state) => state.globalTokens);
+}
+
+/**
+ * Selettore granulare: l'ampiezza in corso di trascinamento **per questo nodo**, o `null`
+ * se il gesto riguarda un altro container (o nessuno). Sottoscrive solo il proprio id: il
+ * ridimensionamento di un container non ri-renderizza i wrapper dei fratelli.
+ */
+export function useContainerResizePercent(id: string): number | null {
+  return useBlockEditorStore((state) =>
+    state.containerResize && state.containerResize.id === id ? state.containerResize.percent : null,
+  );
 }

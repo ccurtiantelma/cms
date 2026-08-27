@@ -1,0 +1,78 @@
+/*
+  Maniglia di ridimensionamento orizzontale del blocco `container` (E03). Stesso idioma
+  della maniglia inter-colonna di `section` (`.columnResizer`, EditorBlockWrapper.module.css):
+  `position: absolute` per restare fuori dal posizionamento automatico del contenitore
+  genitore (mai un grid/flex item in più), striscia larga per l'afferrabilità e linea
+  sottile per la resa visiva. L'accento è però il viola di `container` (#a333c8 è il
+  magenta di `section`; qui #7048e8, coerente con `.containerSelected`/`.handleBarContainer`),
+  così le due maniglie restano distinguibili quando un container è annidato in una section.
+*/
+.handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -5px;
+  width: 10px;
+  z-index: 5;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: rgba(112, 72, 232, 0.35);
+  border-radius: 1px;
+  transition: background-color 100ms ease;
+}
+
+.handle:hover::before,
+.handleActive::before {
+  background: rgba(112, 72, 232, 0.9);
+}
+
+/* Presa centrale: rende afferrabile a colpo d'occhio una striscia che altrimenti si
+   leggerebbe come un semplice bordo. */
+.grip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 28px;
+  transform: translate(-50%, -50%);
+  border-radius: 3px;
+  background: #7048e8;
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+
+.handle:hover .grip,
+.handleActive .grip {
+  opacity: 1;
+}
+
+/*
+  Badge dell'ampiezza in tempo reale: appare solo durante il trascinamento
+  (`EditorBlockWrapper.tsx` lo monta solo con `isResizing`), ancorato alla maniglia e
+  spostato a sinistra di essa per non uscire dal canvas quando il container tocca il bordo
+  destro. `pointer-events: none` — non deve mai rubare la cattura del puntatore alla
+  maniglia che lo ospita.
+*/
+.badge {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 6px);
+  transform: translateY(-50%);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #7048e8;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}

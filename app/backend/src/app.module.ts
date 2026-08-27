@@ -22,6 +22,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { PagesModule } from './pages/pages.module';
 import { PreviewPagesModule } from './preview-pages/preview-pages.module';
+import { GlobalSectionsModule } from './global-sections/global-sections.module';
 
 @Module({
   imports: [
@@ -51,7 +52,7 @@ import { PreviewPagesModule } from './preview-pages/preview-pages.module';
         FRONTEND_URL: Joi.string().default('http://localhost:55173'),
         // Origine del sito pubblico SSR (ADR-22, app/public-site, F03/T5): CORS deve
         // ammetterla insieme a FRONTEND_URL, mai un wildcard (main.ts).
-        PUBLIC_SITE_URL: Joi.string().default('http://localhost:54000'),
+        PUBLIC_SITE_URL: Joi.string().default('http://localhost:55000'),
         // Lingua di default per la risoluzione pubblica degli slug (ADR-24 § 5/§ 7):
         // assunzione dichiarata in attesa di F05/app_settings, non una regola approvata.
         DEFAULT_LOCALE: Joi.string().default('it-IT'),
@@ -123,6 +124,7 @@ import { PreviewPagesModule } from './preview-pages/preview-pages.module';
     ...(AppConstants.metricsEnabled ? [MetricsModule] : []),
     PagesModule,
     PreviewPagesModule,
+    GlobalSectionsModule,
     // TODO: aggiungere qui i moduli applicativi del CMS man mano che vengono creati.
   ],
   controllers: [],

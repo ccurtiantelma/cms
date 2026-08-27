@@ -86,6 +86,15 @@
   box-shadow: var(--mantine-shadow-sm);
 }
 
+.kpiGreen {
+  background: var(--mantine-color-green-0);
+  border-color: var(--mantine-color-green-1);
+}
+
+.kpiGreen .kpiIcon {
+  background: var(--mantine-color-green-6);
+}
+
 .kpiText {
   display: flex;
   flex-direction: column;
@@ -115,4 +124,12 @@
 
 [data-mantine-color-scheme='dark'] .kpiValue {
   color: var(--mantine-color-starterPrimary-2);
+}
+
+[data-mantine-color-scheme='dark'] .kpiGreen {
+  border-color: var(--mantine-color-green-8);
+}
+
+[data-mantine-color-scheme='dark'] .kpiGreen .kpiValue {
+  color: var(--mantine-color-green-2);
 }

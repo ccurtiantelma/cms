@@ -24,109 +24,21 @@ import type { AxiosError } from 'axios';
 import { getErrorMessage } from '../../../utils/api.utils';
 import { updatePage } from '../../../services/pages.service';
 import type { PageRecord, PagesErrorData } from '../../../types/pages.types';
-import { BLOCK_TYPES, ENVELOPE_VERSION } from '../../../types/blocks.types';
+import { ENVELOPE_VERSION } from '../../../types/blocks.types';
 import { useBlockEditorStore, useHasUnsavedChanges } from '../../../hooks/useBlockEditorStore';
 import { useUnsavedChangesGuard } from '../../../hooks/useUnsavedChangesGuard';
 import ConfirmModal from '../../../components/ConfirmModal';
-import type { BlockNode } from './block-tree.utils';
+import {
+  blockLabel,
+  propNameFromPath,
+  resolveNodeByPath,
+  toEditorBlocks,
+  toPersistableBlocks,
+} from './block-content.serialization';
 import EditorCanvas from './EditorCanvas';
 import { InvalidBlockProvider } from './EditorBlockWrapper';
 import FullScreenEditorLayout from './FullScreenEditorLayout';
 import EditorStructureNavigator from './EditorStructureNavigator';
-
-/** Etichetta leggibile di un tipo di blocco, presa dal registro (mai scritta a mano). */
-function blockLabel(type: string): string {
-  return BLOCK_TYPES.find((descriptor) => descriptor.type === type)?.meta?.label ?? type;
-}
-
-/**
- * Normalizza il contenuto persistito (`draftContent.blocks`, `jsonb` non tipizzato) nella
- * forma dell'albero di editing. I nodi malformati vengono scartati invece di far esplodere
- * l'editor: la Pagina resta apribile e il salvataggio successivo riscrive la forma valida.
- *
- * `v` non entra nell'albero di editing: è ristampato dal registro al salvataggio (vedi
- * {@link toPersistableBlocks}).
- */
-function toEditorBlocks(raw: unknown): BlockNode[] {
-  if (!raw || typeof raw !== 'object') return [];
-  const blocks = (raw as { blocks?: unknown }).blocks;
-  if (!Array.isArray(blocks)) return [];
-  return blocks.flatMap((entry) => {
-    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
-    const node = entry as Record<string, unknown>;
-    if (typeof node.id !== 'string' || typeof node.type !== 'string') return [];
-    const rawProps =
-      node.props && typeof node.props === 'object' && !Array.isArray(node.props)
-        ? (node.props as Record<string, unknown>)
-        : {};
-    const descriptor = BLOCK_TYPES.find((entry) => entry.type === node.type);
-    const props = Object.fromEntries(
-      Object.entries(rawProps).map(([name, value]) => {
-        const prop = descriptor?.props.find((candidate) => candidate.name === name);
-        return [
-          name,
-          prop?.responsive && (typeof value !== 'object' || value === null || Array.isArray(value))
-            ? { default: value }
-            : value,
-        ];
-      }),
-    );
-    return [
-      {
-        id: node.id,
-        type: node.type,
-        props,
-        children: toEditorBlocks({ blocks: node.children }),
-      },
-    ];
-  });
-}
-
-/**
- * Aggiunge a ogni nodo il `v` del proprio tipo, obbligatorio in scrittura (ADR-21 § 1,
- * `content-tree.ts`). Il valore è preso dal registro e non dall'albero caricato perché
- * la lettura di una Pagina restituisce già il contenuto migrato alla versione corrente
- * (`migrateContentForRead` in `pages.service.ts`): la `v` corrente è quindi l'unica
- * corretta per ciò che l'editor ha in mano. Un tipo non nel registro resta senza `v` —
- * il server lo respinge con il path del nodo, che è esattamente il comportamento voluto
- * (nessuna invenzione di versione lato client).
- */
-function toPersistableBlocks(tree: readonly BlockNode[]): Record<string, unknown>[] {
-  return tree.map((node) => {
-    const descriptor = BLOCK_TYPES.find((entry) => entry.type === node.type);
-    return {
-      id: node.id,
-      type: node.type,
-      ...(descriptor ? { v: descriptor.v } : {}),
-      props: node.props,
-      children: toPersistableBlocks(node.children),
-    };
-  });
-}
-
-/** Segmenti di percorso prodotti dal backend: `blocks[0].children[2].props.text`. */
-const PATH_SEGMENT_RE = /(?:blocks|children)\[(\d+)\]/g;
-
-/** Nome della prop colpevole, se il path del server ne indica una. */
-function propNameFromPath(path: string): string | undefined {
-  return /\.props\.([A-Za-z0-9_]+)/.exec(path)?.[1];
-}
-
-/**
- * Risolve il path di un errore di validazione del server nel nodo corrispondente
- * dell'albero in editing. Il path è posizionale (indici, non id): si percorre l'albero
- * con gli stessi indici usati dal backend.
- */
-function resolveNodeByPath(tree: readonly BlockNode[], path: string): BlockNode | undefined {
-  let siblings: readonly BlockNode[] = tree;
-  let node: BlockNode | undefined;
-  for (const match of path.matchAll(PATH_SEGMENT_RE)) {
-    node = siblings[Number(match[1])];
-    if (!node) return undefined;
-    siblings = node.children;
-  }
-  return node;
-}
 
 interface BlockEditorPanelProps {
   /** La Pagina in editing, già caricata dal dettaglio. */

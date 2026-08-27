@@ -170,11 +170,17 @@ async function handlePreviewRequest(pathname: string, isHead: boolean, res: Serv
 }
 
 const server = createServer((req, res) => {
-  void handleRequest(req, res).catch((error: unknown) => {
+  // `async` + `await`: `renderErrorDocument` è asincrona (legge i Global Design
+  // Tokens). Senza `await` questo `res.end()` riceveva una `Promise` e Node
+  // sollevava `ERR_INVALID_ARG_TYPE` **fuori** da ogni catch, abbattendo il
+  // processo — cioè l'esatto contrario di ciò che questo handler di ultima
+  // istanza esiste per garantire (ADR-22 § 2: un blocco che solleva dà `500`,
+  // mai una pagina mutilata e mai un server morto).
+  void handleRequest(req, res).catch(async (error: unknown) => {
     console.error('public-site: errore non gestito', error);
     if (!res.headersSent) {
       res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(renderErrorDocument(500, 'Errore interno', css.href));
+      res.end(await renderErrorDocument(500, 'Errore interno', css.href));
     } else {
       res.end();
     }

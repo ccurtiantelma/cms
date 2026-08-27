@@ -25,6 +25,14 @@ const PG_CONSTRAINT_CONFLICTS: Readonly<Record<string, { code: string; message: 
     code: 'PAGE_TRANSLATION_LOCALE_DUPLICATE',
     message: 'Esiste già una traduzione di questa pagina per questa lingua.',
   },
+  global_sections_slug_uq: {
+    code: 'GLOBAL_SECTION_SLUG_DUPLICATE',
+    message: 'Esiste già una Sezione Globale con questo slug.',
+  },
+  global_sections_layout_slot_uq: {
+    code: 'GLOBAL_SECTION_LAYOUT_SLOT_TAKEN',
+    message: 'Esiste già una Sezione Globale assegnata a questo slot di layout.',
+  },
 };
 
 /**

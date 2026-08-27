@@ -18,8 +18,8 @@
  * contenitore (stesso criterio `isContainer` di `EditorBlockWrapper`), altrimenti in fondo
  * alla radice — nessuna destinazione esplicita da scegliere prima di cliccare.
  */
-import { createElement, useState } from 'react';
-import { Text, TextInput } from '@mantine/core';
+import { createElement, useMemo, useState } from 'react';
+import { Accordion, Text, TextInput } from '@mantine/core';
 import { useDraggable } from '@dnd-kit/core';
 import { IconSearch } from '@tabler/icons-react';
 import { BLOCK_TYPES, type BlockTypeDescriptor } from '../../../../types/blocks.types';
@@ -31,6 +31,22 @@ import {
   useSelectedId,
 } from '../../../../hooks/useBlockEditorStore';
 import styles from './WidgetPalette.module.css';
+
+const CATEGORY_ORDER = ['Layout', 'Base'] as const;
+const CATEGORY_BY_TYPE: Record<string, string> = {
+  section: 'Layout',
+  container: 'Layout',
+  heading: 'Base',
+  richText: 'Base',
+  button: 'Base',
+  image: 'Base',
+};
+
+function categoryFor(descriptor: BlockTypeDescriptor): string {
+  const category = CATEGORY_BY_TYPE[descriptor.type];
+  if (category) return category;
+  return descriptor.meta?.category ? descriptor.meta.category : 'Altro';
+}
 
 /**
  * Tipi assegnabili in generale: attivi, non deprecati, entro la soglia di ruolo — stesso
@@ -114,15 +130,42 @@ function clickInsertionTarget(selectedNode: { id: string; type: string } | undef
 /** Libreria dei tipi di blocco trascinabili — e cliccabili — con ricerca per etichetta. */
 export default function WidgetPalette(): JSX.Element {
   const [query, setQuery] = useState('');
+  const [openCategories, setOpenCategories] = useState<string[]>(['Layout', 'Base']);
   const roleLevel = useAuthStore((state) => state.user?.role);
   const selectedId = useSelectedId();
   const selectedNode = useNodeById(selectedId);
   const addBlockAction = useBlockEditorStore((state) => state.addBlockAction);
 
-  const descriptors = assignableDescriptors(roleLevel).filter((descriptor) => {
-    const label = descriptor.meta?.label ?? descriptor.type;
-    return label.toLowerCase().includes(query.trim().toLowerCase());
-  });
+  const groups = useMemo(() => {
+    const filtered = assignableDescriptors(roleLevel).filter((descriptor) => {
+      const label = descriptor.meta?.label ?? descriptor.type;
+      const haystack = `${label} ${descriptor.type}`.toLowerCase();
+      return haystack.includes(query.trim().toLowerCase());
+    });
+
+    const map = new Map<string, BlockTypeDescriptor[]>();
+
+    for (const descriptor of filtered) {
+      const groupName = categoryFor(descriptor);
+      const bucket = map.get(groupName);
+      if (bucket) bucket.push(descriptor);
+      else map.set(groupName, [descriptor]);
+    }
+
+    const orderedGroups: { category: string; descriptors: BlockTypeDescriptor[] }[] =
+      CATEGORY_ORDER.flatMap((categoryName) => {
+        const descriptors = map.get(categoryName) ?? [];
+        return descriptors.length > 0 ? [{ category: categoryName, descriptors }] : [];
+      });
+
+    const extraGroups: { category: string; descriptors: BlockTypeDescriptor[] }[] = Array.from(
+      map.entries(),
+    )
+      .filter(([categoryName]) => !CATEGORY_ORDER.includes(categoryName as (typeof CATEGORY_ORDER)[number]))
+      .map(([categoryName, descriptors]) => ({ category: categoryName, descriptors }));
+
+    return orderedGroups.concat(extraGroups);
+  }, [query, roleLevel]);
 
   function handleAdd(descriptor: BlockTypeDescriptor): void {
     const target = clickInsertionTarget(selectedNode);
@@ -139,16 +182,31 @@ export default function WidgetPalette(): JSX.Element {
         className={styles.search}
       />
 
-      {descriptors.length === 0 ? (
+      {groups.length === 0 ? (
         <Text size="sm" c="dimmed" ta="center" mt="md">
           Nessun widget trovato.
         </Text>
       ) : (
-        <div className={styles.grid}>
-          {descriptors.map((descriptor) => (
-            <WidgetTile key={descriptor.type} descriptor={descriptor} onAdd={handleAdd} />
+        <Accordion
+          multiple
+          value={openCategories}
+          onChange={setOpenCategories}
+          className={styles.accordion}
+          variant="separated"
+        >
+          {groups.map(({ category, descriptors }) => (
+            <Accordion.Item key={category} value={category} className={styles.groupItem}>
+              <Accordion.Control className={styles.groupControl}>{category}</Accordion.Control>
+              <Accordion.Panel className={styles.groupPanel}>
+                <div className={styles.grid}>
+                  {descriptors.map((descriptor) => (
+                    <WidgetTile key={descriptor.type} descriptor={descriptor} onAdd={handleAdd} />
+                  ))}
+                </div>
+              </Accordion.Panel>
+            </Accordion.Item>
           ))}
-        </div>
+        </Accordion>
       )}
     </div>
   );

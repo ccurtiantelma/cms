@@ -3,6 +3,7 @@ import { GLOBAL_TOKENS_STYLE_TAG_ID } from '../../frontend/src/libs/globalTokens
 import PageView from './PageView';
 
 type PublicPageDto = components['schemas']['PublicPageDto'];
+type PublicActiveGlobalSectionsDto = components['schemas']['PublicActiveGlobalSectionsDto'];
 
 interface AppProps {
   page: PublicPageDto;
@@ -14,6 +15,12 @@ interface AppProps {
    * hex/whitelist/numero+unità (vedi `globalTokensCompiler.ts`).
    */
   globalTokensCss: string;
+  /**
+   * Sezioni Globali assegnate a `header`/`footer` (ADR-40), risolte da
+   * `entry-server.tsx`. Assenti o con slot `null` ⇒ il documento contiene i soli
+   * blocchi della Pagina, senza errori.
+   */
+  globalSections?: PublicActiveGlobalSectionsDto;
 }
 
 /**
@@ -21,7 +28,7 @@ interface AppProps {
  * `locale` e `content` sono usati: `seo` è il contratto di F07/F08, fuori dal
  * perimetro di F03 (PLAN-F03 § "Il percorso che F03 deve chiudere").
  */
-export default function App({ page, cssHref, globalTokensCss }: AppProps) {
+export default function App({ page, cssHref, globalTokensCss, globalSections }: AppProps) {
   return (
     <html lang={page.locale}>
       <head>
@@ -34,7 +41,7 @@ export default function App({ page, cssHref, globalTokensCss }: AppProps) {
         )}
       </head>
       <body>
-        <PageView content={page.content} />
+        <PageView content={page.content} globalSections={globalSections} />
       </body>
     </html>
   );

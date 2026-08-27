@@ -41,16 +41,10 @@
  * primo antenato comune fra i due.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ActionIcon, Badge, Button, Paper, Text, Tooltip } from '@mantine/core';
+import { ActionIcon, Button, Paper, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import {
-  IconArrowBackUp,
-  IconArrowForwardUp,
-  IconArrowLeft,
-  IconDeviceDesktop,
-  IconDeviceMobile,
-  IconDeviceTablet,
   IconEye,
   IconLayoutGrid,
   IconLayoutSidebar,
@@ -84,6 +78,7 @@ import { BLOCK_TYPES } from '../../../types/blocks.types';
 import type { PageRecord } from '../../../types/pages.types';
 import { blockIcon, defaultPropsFor } from './BlockPalette';
 import EditorSidebar from './sidebar/EditorSidebar';
+import Toolbar from './Toolbar';
 import GlobalTokensDrawer from './GlobalTokensDrawer';
 import LocaleSwitcher from './LocaleSwitcher';
 import TemplateLibraryModal from './TemplateLibraryModal';
@@ -123,19 +118,6 @@ function draggedBlockInfo(event: DragStartEvent): DraggedBlockInfo {
   };
 }
 
-/** Un'opzione del Viewport Switcher: valore di stato, etichetta e icona `@tabler/icons-react`. */
-interface ViewportOption {
-  value: EditorViewport;
-  label: string;
-  icon: typeof IconDeviceDesktop;
-}
-
-const VIEWPORT_OPTIONS: ViewportOption[] = [
-  { value: 'desktop', label: 'Desktop', icon: IconDeviceDesktop },
-  { value: 'tablet', label: 'Tablet', icon: IconDeviceTablet },
-  { value: 'mobile', label: 'Mobile', icon: IconDeviceMobile },
-];
-
 export interface FullScreenEditorLayoutProps {
   /** Titolo della Pagina in editing, mostrato accanto al pulsante "Torna alla Dashboard". */
   pageTitle: string;
@@ -144,8 +126,12 @@ export interface FullScreenEditorLayoutProps {
    * `guid`/`locale`/`translationGroupId` e proporre le traduzioni del gruppo. Non sostituisce
    * `pageTitle` sopra (già usato altrove in questo componente) per non allargare un diff che
    * non serve a quel punto d'uso.
+   *
+   * **Opzionale** da F06 (ADR-40): questo layout è riusato anche dal Builder delle Sezioni
+   * Globali, che non sono Pagine e non hanno né `locale` né gruppo di traduzione. Assente ⇒
+   * il Locale Switcher non viene montato, invece di essere alimentato con una Pagina finta.
    */
-  page: PageRecord;
+  page?: PageRecord;
   /** Rotta admin della lista Pagine — destinazione di "Torna alla Dashboard". */
   backHref: string;
   /**
@@ -368,167 +354,39 @@ export default function FullScreenEditorLayout({
   return (
     <div
       className={styles.root}
-      // Esplicito e non affidato al solo antenato Mantine (vedi commento di testa): quando
-      // non è la scheda attiva, `display: none` qui basta da solo a non intercettare più
-      // alcun click/evento, qualunque cosa faccia (o smetta di fare) `Tabs.Panel`. Quando è
       style={active ? undefined : { display: 'none' }}
     >
-      <header className={styles.topbar}>
-        <div className={styles.topbarSection}>
-          {/*
-            `component="a" href` (non `onClick` + `navigate`): la guardia sulle modifiche
-            non salvate (`useUnsavedChangesGuard`) intercetta solo i click su `<a href>`
-            interni — un `onClick` imperativo bypasserebbe la conferma di uscita.
-          */}
-          <Tooltip label="Torna alla Dashboard" withArrow>
-            <ActionIcon
-              component="a"
-              href={backHref}
-              variant="default"
-              size="lg"
-              aria-label="Torna alla Dashboard"
-            >
-              <IconArrowLeft size={18} />
-            </ActionIcon>
-          </Tooltip>
-          <Text size="sm" fw={600} className={styles.pageTitle} title={pageTitle}>
-            {pageTitle}
-          </Text>
-          <Tooltip label="Annulla (Ctrl+Z)" withArrow>
-            <ActionIcon
-              variant="subtle"
-              size="lg"
-              aria-label="Annulla l'ultima modifica"
-              disabled={!canUndo}
-              onClick={() => undo()}
-            >
-              <IconArrowBackUp size={16} />
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip label="Ripristina (Ctrl+Shift+Z)" withArrow>
-            <ActionIcon
-              variant="subtle"
-              size="lg"
-              aria-label="Ripristina la modifica annullata"
-              disabled={!canRedo}
-              onClick={() => redo()}
-            >
-              <IconArrowForwardUp size={16} />
-            </ActionIcon>
-          </Tooltip>
-          {/*
-            Collassa la sidebar "Widgets"/"Proprietà" per liberare spazio canvas — a
-            differenza del pannello struttura (destra, sempre opzionale) questa colonna era
-            finora sempre montata: su un editing fine di un blocco largo, o su una finestra
-            stretta, non c'era modo di guadagnare quello spazio.
-          */}
-          <Tooltip
-            label={isSidebarOpen ? 'Nascondi pannello widget' : 'Mostra pannello widget'}
-            withArrow
-          >
-            <ActionIcon
-              variant={isSidebarOpen ? 'filled' : 'default'}
-              size="lg"
-              aria-label="Mostra/Nascondi pannello widget"
-              aria-pressed={isSidebarOpen}
-              onClick={() => toggleSidebar()}
-            >
+      <Toolbar
+        pageTitle={pageTitle}
+        backHref={backHref}
+        viewport={activeViewport}
+        onViewportChange={setActiveViewport}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={undo}
+        onRedo={redo}
+        hasUnsavedChanges={hasUnsavedChanges}
+        saving={saving}
+        onPublish={onSaveDraft}
+        leadingActions={
+          <>
+            <ActionIcon variant={isSidebarOpen ? 'filled' : 'default'} size="lg" aria-label="Mostra/Nascondi pannello widget" aria-pressed={isSidebarOpen} onClick={toggleSidebar}>
               <IconLayoutSidebar size={18} />
             </ActionIcon>
-          </Tooltip>
-          {/* F07 step 2: Global Kit — palette/tipografia/spaziatura di sito, condivise da ogni
-              blocco della pagina via variabili CSS (`libs/globalTokensCompiler.ts`). */}
-          <Tooltip label="Impostazioni Sito" withArrow>
-            <ActionIcon
-              variant="default"
-              size="lg"
-              aria-label="Impostazioni Sito"
-              onClick={openGlobalTokens}
-            >
+            <ActionIcon variant="default" size="lg" aria-label="Impostazioni Sito" onClick={openGlobalTokens}>
               <IconWorld size={18} />
             </ActionIcon>
-          </Tooltip>
-        </div>
-
-        {/*
-          Locale Switcher (F05/T6) e Viewport Switcher condividono lo stesso gruppo centrale
-          della topbar — `styles.topbarSection` invece di un terzo `justify-content: space-between`
-          diretto, così i due restano visivamente accostati invece di essere sparpagliati dal
-          layout a tre colonne della `.topbar`.
-        */}
-        <div className={styles.topbarSection}>
-          <LocaleSwitcher page={page} />
-
-          <div className={styles.viewportSwitcher} role="group" aria-label="Viewport di anteprima">
-            {VIEWPORT_OPTIONS.map((option) => {
-              const Icon = option.icon;
-              const isActive = activeViewport === option.value;
-              return (
-                <Tooltip key={option.value} label={option.label} withArrow>
-                  <ActionIcon
-                    variant={isActive ? 'filled' : 'subtle'}
-                    size="lg"
-                    aria-label={`Viewport ${option.label}`}
-                    aria-pressed={isActive}
-                    onClick={() => setActiveViewport(option.value)}
-                  >
-                    <Icon size={18} />
-                  </ActionIcon>
-                </Tooltip>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className={styles.topbarSection}>
-          {hasUnsavedChanges ? (
-            <Badge color="orange" variant="light">
-              Modifiche non salvate
-            </Badge>
-          ) : (
-            <Text size="sm" c="dimmed">
-              Bozza salvata
-            </Text>
-          )}
-          {onPreview && (
-            <Button
-              variant="default"
-              leftSection={<IconEye size={16} />}
-              loading={previewLoading}
-              onClick={onPreview}
-            >
-              Anteprima
-            </Button>
-          )}
-          <Tooltip label="Libreria sezioni" withArrow>
-            <ActionIcon
-              variant="default"
-              size="lg"
-              aria-label="Libreria sezioni"
-              onClick={() => setTemplateLibraryOpened(true)}
-            >
-              <IconLayoutGrid size={18} />
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip
-            label={isStructurePanelOpen ? 'Nascondi struttura' : 'Mostra struttura'}
-            withArrow
-          >
-            <ActionIcon
-              variant={isStructurePanelOpen ? 'filled' : 'default'}
-              size="lg"
-              aria-label="Pannello struttura"
-              aria-pressed={isStructurePanelOpen}
-              onClick={() => toggleStructurePanel()}
-            >
-              <IconLayoutSidebarRight size={18} />
-            </ActionIcon>
-          </Tooltip>
-          <Button onClick={onSaveDraft} loading={saving}>
-            Salva bozza
-          </Button>
-        </div>
-      </header>
+          </>
+        }
+        centerActions={page ? <LocaleSwitcher page={page} /> : undefined}
+        trailingActions={
+          <>
+            {onPreview && <Button variant="default" leftSection={<IconEye size={16} />} loading={previewLoading} onClick={onPreview}>Anteprima</Button>}
+            <ActionIcon variant="default" size="lg" aria-label="Libreria sezioni" onClick={() => setTemplateLibraryOpened(true)}><IconLayoutGrid size={18} /></ActionIcon>
+            <ActionIcon variant={isStructurePanelOpen ? 'filled' : 'default'} size="lg" aria-label="Pannello struttura" aria-pressed={isStructurePanelOpen} onClick={toggleStructurePanel}><IconLayoutSidebarRight size={18} /></ActionIcon>
+          </>
+        }
+      />
 
       <DndContext
         sensors={sensors}

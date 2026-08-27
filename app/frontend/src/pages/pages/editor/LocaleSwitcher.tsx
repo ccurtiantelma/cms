@@ -105,7 +105,7 @@ export default function LocaleSwitcher({ page }: LocaleSwitcherProps): JSX.Eleme
     <>
       <Menu shadow="md" position="bottom-start" withinPortal zIndex={1100}>
         <Menu.Target>
-          <Tooltip label="Locale della pagina" withArrow>
+          <Tooltip label="Lingua della pagina" withArrow>
             <Button
               variant="default"
               size="sm"

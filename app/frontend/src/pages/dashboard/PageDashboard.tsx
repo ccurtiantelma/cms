@@ -67,7 +67,7 @@ export default function PageDashboard(): JSX.Element {
                   radius="md"
                   p="lg"
                   style={{ cursor: 'pointer' }}
-                  onClick={() => navigate('/audit-log')}
+                  onClick={() => navigate('/users?tab=audit-log')}
                 >
                   <Group>
                     <IconHistory size={28} />

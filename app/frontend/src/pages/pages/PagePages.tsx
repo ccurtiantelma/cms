@@ -143,7 +143,7 @@ export default function PagePages(): JSX.Element {
     initialValues: EMPTY_CREATE_FORM,
     validate: {
       title: (value) => (value.trim().length === 0 ? 'Titolo obbligatorio' : null),
-      locale: (value) => (value.trim().length === 0 ? 'Locale obbligatorio' : null),
+      locale: (value) => (value.trim().length === 0 ? 'Lingua obbligatoria' : null),
     },
   });
 
@@ -245,7 +245,7 @@ export default function PagePages(): JSX.Element {
   const columns: ResponsiveTableColumn<PageRecord>[] = [
     { key: 'title', label: 'Titolo' },
     { key: 'slug', label: 'Slug', hideInCard: true },
-    { key: 'locale', label: 'Locale', hideInCard: true },
+    { key: 'locale', label: 'Lingua', hideInCard: true },
     {
       key: 'status',
       label: 'Stato',
@@ -282,7 +282,6 @@ export default function PagePages(): JSX.Element {
           filters={
             <Group gap="sm" wrap="wrap">
               <Select
-                label="Stato"
                 data={STATUS_FILTER_OPTIONS}
                 value={statusFilter}
                 onChange={(value) => {
@@ -293,7 +292,6 @@ export default function PagePages(): JSX.Element {
                 allowDeselect={false}
               />
               <TextInput
-                label="Locale"
                 placeholder="es. it-IT"
                 value={localeFilter}
                 onChange={(e) => {
@@ -367,7 +365,7 @@ export default function PagePages(): JSX.Element {
             {...form.getInputProps('slug')}
           />
           <TextInput
-            label="Locale"
+            label="Lingua"
             withAsterisk
             placeholder="it-IT"
             {...form.getInputProps('locale')}

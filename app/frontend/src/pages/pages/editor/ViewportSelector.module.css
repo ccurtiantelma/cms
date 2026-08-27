@@ -1,0 +1,13 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 2px;
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-sm);
+}
+
+[data-mantine-color-scheme='dark'] .root {
+  border-color: var(--mantine-color-dark-4);
+}

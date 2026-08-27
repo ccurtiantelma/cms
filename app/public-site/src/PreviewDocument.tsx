@@ -3,12 +3,19 @@ import { GLOBAL_TOKENS_STYLE_TAG_ID } from '../../frontend/src/libs/globalTokens
 import PageView from './PageView';
 
 type PagePreviewContentDto = components['schemas']['PagePreviewContentDto'];
+type PublicActiveGlobalSectionsDto = components['schemas']['PublicActiveGlobalSectionsDto'];
 
 interface PreviewDocumentProps {
   page: PagePreviewContentDto;
   cssHref: string;
   /** Blocco `:root { ... }` compilato dai Global Design Tokens, vedi `App.tsx`. */
   globalTokensCss: string;
+  /**
+   * Sezioni Globali degli slot di layout (ADR-40) — presenti anche qui, e non
+   * solo sulla pagina pubblica: l'anteprima mostra il markup che la pubblicazione
+   * produrrebbe, e header/footer ne fanno parte.
+   */
+  globalSections?: PublicActiveGlobalSectionsDto;
 }
 
 /**
@@ -21,7 +28,12 @@ interface PreviewDocumentProps {
  * qui, mai sulla pagina pubblica — l'anteprima non è indicizzabile per
  * costruzione, non per convenzione (ADR-25 § 4).
  */
-export default function PreviewDocument({ page, cssHref, globalTokensCss }: PreviewDocumentProps) {
+export default function PreviewDocument({
+  page,
+  cssHref,
+  globalTokensCss,
+  globalSections,
+}: PreviewDocumentProps) {
   return (
     <html lang={page.locale}>
       <head>
@@ -35,7 +47,7 @@ export default function PreviewDocument({ page, cssHref, globalTokensCss }: Prev
         )}
       </head>
       <body>
-        <PageView content={page.content} />
+        <PageView content={page.content} globalSections={globalSections} />
       </body>
     </html>
   );

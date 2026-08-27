@@ -18,7 +18,7 @@ import { IconBell } from '@tabler/icons-react';
 import { useNotificationsStore } from '../hooks/useNotifications';
 import classes from './NotificationBell.module.css';
 
-/** Formatta una data ISO nel formato locale italiano (data + ora), coerente con PageAuditLog. */
+/** Formatta una data ISO nel formato locale italiano (data + ora). */
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('it-IT');
 }

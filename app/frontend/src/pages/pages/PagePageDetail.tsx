@@ -547,7 +547,16 @@ export default function PagePageDetail(): JSX.Element {
 
       <ContentCard>
         <Group justify="space-between" mb="md">
-          <Group gap="sm">
+          {/*
+            `position: relative` + `zIndex: 1100`: stessa quota della `Menu.Dropdown` sotto
+            (stesso motivo, vedi il suo commento) — senza, non è solo il `Dropdown` a restare
+            dietro la chrome full-screen dell'editor (z-index 1000,
+            `FullScreenEditorLayout.module.css`) quando la scheda "Contenuto" è attiva: anche
+            il `Menu.Target` (il pulsante di stato "Bozza"/"Pubblicata" stesso, nel normale
+            flusso del documento, quota 0) resta coperto e non riceve più click — l'unico modo
+            di pubblicare da dentro l'editor sparisce.
+          */}
+          <Group gap="sm" style={{ position: 'relative', zIndex: 1100 }}>
             {/*
               Tendina di stato: le voci sono le sole transizioni ammesse dallo stato
               corrente, non l'elenco completo degli stati — un menu con tutti gli stati
@@ -652,7 +661,7 @@ export default function PagePageDetail(): JSX.Element {
                     withArrow
                     multiline
                     w={280}
-                    label="Il sito pubblico (porta 54000) non risponde: la pagina potrebbe non essere raggiungibile."
+                    label="Il sito pubblico (porta 55000) non risponde: la pagina potrebbe non essere raggiungibile."
                   >
                     <Center aria-label="Sito pubblico non raggiungibile">
                       <IconAlertTriangle size={18} color="var(--mantine-color-yellow-6)" />
@@ -744,7 +753,7 @@ export default function PagePageDetail(): JSX.Element {
                   <TextInput label="Titolo" withAsterisk {...form.getInputProps('title')} />
                   <TextInput label="Slug" withAsterisk {...form.getInputProps('slug')} />
                   <TextInput
-                    label="Locale"
+                    label="Lingua"
                     value={page.locale}
                     disabled
                     description="Non modificabile dopo la creazione (F05)"

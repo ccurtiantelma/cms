@@ -1439,6 +1439,160 @@ paths:
       summary: Legge la bozza corrente di una Pagina tramite token di anteprima
       tags:
         - Preview Pages
+  /api/v1/app/global-sections:
+    get:
+      operationId: GlobalSectionsController_findAll
+      parameters:
+        - name: p
+          required: false
+          in: query
+          description: Pagina (default 1)
+          schema:
+            type: string
+        - name: i
+          required: false
+          in: query
+          description: Elementi per pagina (default 20)
+          schema:
+            type: string
+        - name: q
+          required: false
+          in: query
+          description: Ricerca testuale su titolo e slug
+          schema:
+            type: string
+        - name: o
+          required: false
+          in: query
+          description: Campo di ordinamento (title, slug, layoutSlot, createdAt, updatedAt)
+          schema:
+            type: string
+        - name: d
+          required: false
+          in: query
+          description: Direzione ordinamento (asc|desc, default desc)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista Sezioni Globali paginata
+      security:
+        - access-token: []
+      summary: Lista paginata delle Sezioni Globali
+      tags:
+        - Global Sections
+    post:
+      operationId: GlobalSectionsController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGlobalSectionDto'
+      responses:
+        '201':
+          description: Sezione Globale creata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSectionDto'
+        '400':
+          description: Slug non valido/riservato o albero blocchi malformato
+        '409':
+          description: Slug o layoutSlot già in uso
+      security:
+        - access-token: []
+      summary: Crea una Sezione Globale
+      tags:
+        - Global Sections
+  /api/v1/app/global-sections/{guid}:
+    get:
+      operationId: GlobalSectionsController_findOne
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sezione Globale trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSectionDto'
+        '404':
+          description: Sezione Globale non trovata o eliminata
+      security:
+        - access-token: []
+      summary: Dettaglio di una Sezione Globale
+      tags:
+        - Global Sections
+    patch:
+      operationId: GlobalSectionsController_update
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGlobalSectionDto'
+      responses:
+        '200':
+          description: Sezione Globale aggiornata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSectionDto'
+        '400':
+          description: Slug non valido/riservato o albero blocchi malformato
+        '404':
+          description: Sezione Globale non trovata o eliminata
+        '409':
+          description: Version obsoleta, oppure slug/layoutSlot già in uso
+      security:
+        - access-token: []
+      summary: Aggiorna una Sezione Globale (richiede version per il lock ottimistico)
+      tags:
+        - Global Sections
+    delete:
+      operationId: GlobalSectionsController_remove
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Sezione Globale eliminata
+        '404':
+          description: Sezione Globale non trovata o già eliminata
+      security:
+        - access-token: []
+      summary: Elimina (soft-delete) una Sezione Globale
+      tags:
+        - Global Sections
+  /api/v1/public/global-sections/active:
+    get:
+      operationId: PublicGlobalSectionsController_getActive
+      parameters: []
+      responses:
+        '200':
+          description: Sezioni attive (slot assenti = null)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicActiveGlobalSectionsDto'
+      summary: Restituisce le Sezioni Globali attive per header e footer
+      tags:
+        - Public Global Sections
 info:
   title: CMS API
   description: >-
@@ -3337,3 +3491,129 @@ components:
         - locale
         - content
         - seo
+    CreateGlobalSectionDto:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Titolo della Sezione Globale
+          example: Header principale
+        slug:
+          type: string
+          description: >-
+            Slug admin proposto (normalizzato server-side); se assente, generato
+            dal titolo
+          example: header-principale
+        layoutSlot:
+          type: string
+          description: Slot di layout pubblico (default "none")
+          enum:
+            - none
+            - header
+            - footer
+          example: header
+        content:
+          type: object
+          description: 'Albero di blocchi iniziale (default: albero vuoto)'
+          additionalProperties: true
+      required:
+        - title
+    GlobalSectionDto:
+      type: object
+      properties:
+        guid:
+          type: string
+          description: Guid della Sezione Globale
+          example: a1b2c3d4e5f6a7b8
+        title:
+          type: string
+          description: Titolo della Sezione Globale
+        slug:
+          type: string
+          description: Slug admin
+        layoutSlot:
+          type: string
+          description: Slot di layout pubblico
+          enum:
+            - none
+            - header
+            - footer
+        content:
+          type: object
+          description: Albero di blocchi corrente
+          additionalProperties: true
+        version:
+          type: number
+          description: Version corrente (lock ottimistico)
+          example: 1
+        createdAt:
+          format: date-time
+          type: string
+          description: Data creazione
+        updatedAt:
+          format: date-time
+          type: string
+          description: Data ultimo aggiornamento
+      required:
+        - guid
+        - title
+        - slug
+        - layoutSlot
+        - content
+        - version
+        - createdAt
+        - updatedAt
+    UpdateGlobalSectionDto:
+      type: object
+      properties:
+        version:
+          type: number
+          description: Version letta al caricamento della Sezione (lock ottimistico)
+          example: 3
+        title:
+          type: string
+          description: Titolo della Sezione Globale
+        slug:
+          type: string
+          description: >-
+            Slug admin (normalizzato server-side); non rigenerato
+            automaticamente dal titolo
+        layoutSlot:
+          type: string
+          description: Slot di layout pubblico
+          enum:
+            - none
+            - header
+            - footer
+          example: footer
+        content:
+          type: object
+          description: >-
+            Albero di blocchi aggiornato (sostituisce integralmente il
+            precedente)
+          additionalProperties: true
+      required:
+        - version
+    PublicGlobalSectionDto:
+      type: object
+      properties:
+        slug:
+          type: string
+          description: Slug admin della Sezione (informativo, non una rotta pubblica)
+        content:
+          type: object
+          description: Albero di blocchi, già migrato/validato/sanitizzato in scrittura
+          additionalProperties: true
+    PublicActiveGlobalSectionsDto:
+      type: object
+      properties:
+        header:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/PublicGlobalSectionDto'
+        footer:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/PublicGlobalSectionDto'

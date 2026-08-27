@@ -101,13 +101,13 @@ export default function LayoutProtected(): JSX.Element {
 
   // Stile del bordo destro della sidebar (ADR-4 v5, personalizzabile dall'Editor
   // tema): bordo sottile oppure ombra proiettata di intensità regolabile.
-  // Applicato inline (non come variabile CSS `--app-*`) perché, a differenza
+  // Applicato inline perché, a differenza
   // dei token colore, è un valore strutturale mutuamente esclusivo — stessa
   // scelta già fatta per `navWidth` sopra.
   const navEdgeStyle: CSSProperties =
     themeConfig.navbarEdgeStyle === 'shadow'
       ? { boxShadow: `2px 0 8px rgba(0, 0, 0, ${themeConfig.navbarEdgeShadowIntensity})` }
-      : { borderRight: '1px solid var(--app-navbar-border, var(--mantine-color-gray-3))' };
+      : { borderRight: '1px solid var(--mantine-color-gray-3)' };
 
   /** Naviga a una voce e chiude il drawer mobile. */
   const goTo = (path: string): void => {
@@ -353,12 +353,12 @@ export default function LayoutProtected(): JSX.Element {
                     {collapsed ? (
                       <IconLayoutSidebarLeftExpand
                         size={18}
-                        color="var(--app-navbar-text, var(--mantine-color-dark-7))"
+                        color="var(--mantine-color-text)"
                       />
                     ) : (
                       <IconLayoutSidebarLeftCollapse
                         size={18}
-                        color="var(--app-navbar-text, var(--mantine-color-dark-7))"
+                        color="var(--mantine-color-text)"
                       />
                     )}
                   </ActionIcon>
@@ -372,7 +372,7 @@ export default function LayoutProtected(): JSX.Element {
                   >
                     <IconLogout
                       size={18}
-                      color="var(--app-navbar-text, var(--mantine-color-dark-7))"
+                      color="var(--mantine-color-text)"
                     />
                   </ActionIcon>
                 </Tooltip>

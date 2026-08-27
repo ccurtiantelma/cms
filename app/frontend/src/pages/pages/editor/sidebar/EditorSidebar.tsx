@@ -21,7 +21,7 @@ import {
   type EditorSidebarTab,
 } from '../../../../hooks/useBlockEditorStore';
 import PropertyInspector from '../PropertyInspector';
-import WidgetPalette from './WidgetPalette';
+import WidgetSidebar from './WidgetSidebar';
 import styles from './EditorSidebar.module.css';
 
 /** Sidebar a schede Widgets/Proprietà dell'editor full-screen. */
@@ -49,7 +49,7 @@ export default function EditorSidebar(): JSX.Element {
 
       <div className={styles.content}>
         {activeTab === 'widgets' ? (
-          <WidgetPalette />
+          <WidgetSidebar />
         ) : selectedId === null ? (
           <Text size="sm" c="dimmed" ta="center" className={styles.emptyState}>
             Seleziona un elemento nel canvas per modificarne le proprietà.

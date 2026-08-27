@@ -13,8 +13,15 @@ import { getToken, homePathForRole } from './utils/auth.utils';
 import { useAuthInit, useAuthStore } from './hooks/useAuth';
 import { AppUserRoles } from './types/common.types';
 
-/** Ruoli ammessi sulle rotte di amministrazione (`/users`, `/audit-log`). */
+/** Ruoli ammessi sulle rotte di amministrazione (`/users`). */
 const ADMIN_ROLES = [AppUserRoles.SuperAdmin, AppUserRoles.Admin];
+
+/**
+ * Ruoli ammessi sulle Sezioni Globali (`/global-sections`, ADR-40): soglia
+ * `Manager`+, la stessa applicata dal `GuardManager` del controller admin.
+ * Nessuna ownership per riga — non esiste la nozione di "proprie" Sezioni Globali.
+ */
+const GLOBAL_SECTIONS_ROLES = [AppUserRoles.SuperAdmin, AppUserRoles.Admin, AppUserRoles.Manager];
 
 const PageLogin = lazy(() => import('./pages/auth/PageLogin'));
 const PageSetPassword = lazy(() => import('./pages/auth/PageSetPassword'));
@@ -24,8 +31,11 @@ const PageProfile = lazy(() => import('./pages/profile/PageProfile'));
 const PagePages = lazy(() => import('./pages/pages/PagePages'));
 const PagePageDetail = lazy(() => import('./pages/pages/PagePageDetail'));
 const PageUsers = lazy(() => import('./pages/admin/PageUsers'));
-const PageAuditLog = lazy(() => import('./pages/admin/PageAuditLog'));
 const PageThemeEditor = lazy(() => import('./pages/theme-editor/PageThemeEditor'));
+const PageGlobalSections = lazy(() => import('./pages/global-sections/PageGlobalSections'));
+const PageGlobalSectionBuilder = lazy(
+  () => import('./pages/global-sections/PageGlobalSectionBuilder'),
+);
 
 /** Fallback mostrato durante il caricamento dei chunk delle pagine lazy. */
 function PageLoadingFallback(): JSX.Element {
@@ -118,18 +128,26 @@ export default function App(): JSX.Element {
             <Route path="pages" element={<PagePages />} />
             <Route path="pages/:guid" element={<PagePageDetail />} />
             <Route
-              path="users"
+              path="global-sections"
               element={
-                <RequireRole allowed={ADMIN_ROLES}>
-                  <PageUsers />
+                <RequireRole allowed={GLOBAL_SECTIONS_ROLES}>
+                  <PageGlobalSections />
                 </RequireRole>
               }
             />
             <Route
-              path="audit-log"
+              path="global-sections/:guid/builder"
+              element={
+                <RequireRole allowed={GLOBAL_SECTIONS_ROLES}>
+                  <PageGlobalSectionBuilder />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="users"
               element={
                 <RequireRole allowed={ADMIN_ROLES}>
-                  <PageAuditLog />
+                  <PageUsers />
                 </RequireRole>
               }
             />

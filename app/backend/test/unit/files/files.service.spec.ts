@@ -174,6 +174,12 @@ describe('FilesService (unit)', () => {
         entity: insertedRow.entity,
         entityId: insertedRow.entityId,
         createdAt: insertedRow.createdAt,
+        // Metadata media (RFC-F09 § 2): `width`/`height` restano `null` — le colonne
+        // non esistono ancora —, `url` è derivato dal solo `entity` ed è `null` per
+        // tutto ciò che non è `page-media`.
+        width: null,
+        height: null,
+        url: null,
       });
       expect(result).not.toHaveProperty('storageKey');
       expect(result).not.toHaveProperty('checksumSha256');
@@ -234,6 +240,9 @@ describe('FilesService (unit)', () => {
           entity: fileRow1.entity,
           entityId: fileRow1.entityId,
           createdAt: fileRow1.createdAt,
+          width: null,
+          height: null,
+          url: null,
         },
         {
           guid: fileRow2.guid,
@@ -243,6 +252,9 @@ describe('FilesService (unit)', () => {
           entity: fileRow2.entity,
           entityId: fileRow2.entityId,
           createdAt: fileRow2.createdAt,
+          width: null,
+          height: null,
+          url: null,
         },
       ]);
       expect(result.totalItems).toBe(2);

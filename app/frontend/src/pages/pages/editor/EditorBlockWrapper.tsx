@@ -65,6 +65,7 @@ import { BLOCK_TYPES } from '../../../types/blocks.types';
 import {
   useActiveViewport,
   useBlockEditorStore,
+  useContainerResizePercent,
   useIsHiddenInCanvas,
   useNodeById,
   type EditorViewport,
@@ -72,6 +73,15 @@ import {
 import { extractStyleProps, useStyleClipboardStore } from '../../../hooks/useStyleClipboardStore';
 import { findLocation, findNode, type BlockNode } from './block-tree.utils';
 import { canContainType, canDropInto } from './block-registry.utils';
+import {
+  containerWidthPercentFromPointer,
+  formatContainerWidthBadge,
+  readContainerWidthPercent,
+  resolveContainerWidthSpec,
+  resolveLayoutParentWidth,
+  CONTAINER_WIDTH_PROP,
+} from './container-resize.utils';
+import ContainerResizeHandle from './components/ContainerResizeHandle';
 import BlockRenderer from '../../../components/blocks/BlockRenderer';
 import BlockErrorBoundary from '../../../components/blocks/BlockErrorBoundary';
 import Section from '../../../components/blocks/blocks/Section';
@@ -81,6 +91,21 @@ import ConfirmModal from '../../../components/ConfirmModal';
 import BlockPalette, { blockIcon } from './BlockPalette';
 import InlineFloatingToolbar from './InlineFloatingToolbar';
 import styles from './EditorBlockWrapper.module.css';
+
+/**
+ * Intervallo dichiarato dal registro per la prop di larghezza di `container` (E03), o
+ * `null` se il registro non la dichiara — che è lo stato attuale: ADR-39 § 2 ha approvato
+ * `container` come layout puro, senza prop di stile. Letto una volta sola all'import: il
+ * registro è un artefatto generato, costante per l'intera vita del bundle.
+ *
+ * `null` **spegne la maniglia di ridimensionamento**: nessun elemento renderizzato, nessun
+ * gesto possibile, nessun commit. Non è un ripiego difensivo, è l'unico comportamento
+ * corretto — il validatore server-side respinge con `BLOCK_PROP_NOT_DECLARED` ogni prop non
+ * dichiarata e rifiuta l'intero albero, quindi una maniglia che scrivesse comunque
+ * `styleFlexBasis` non renderebbe ridimensionabile il container: renderebbe insalvabile la
+ * pagina. Vedi il commento di testa di `container-resize.utils.ts`.
+ */
+const CONTAINER_WIDTH_SPEC = resolveContainerWidthSpec();
 
 /**
  * Valori ammessi per `columnRatio` (`section.block.ts`): `enum` chiuso, non responsive —
@@ -380,6 +405,13 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const removeBlockAction = useBlockEditorStore((state) => state.removeBlockAction);
   const duplicateNodeAction = useBlockEditorStore((state) => state.duplicateNodeAction);
   const updateBlockPropsAction = useBlockEditorStore((state) => state.updateBlockPropsAction);
+  const setContainerResizePreview = useBlockEditorStore((state) => state.setContainerResizePreview);
+  const clearContainerResizePreview = useBlockEditorStore(
+    (state) => state.clearContainerResizePreview,
+  );
+  const commitContainerWidthAction = useBlockEditorStore(
+    (state) => state.commitContainerWidthAction,
+  );
   /** "Occhio" del pannello Struttura/Navigator (`EditorStructureNavigator.tsx`): nascosto solo qui nel canvas, mai persistito. */
   const isHiddenInCanvas = useIsHiddenInCanvas(id);
 
@@ -439,6 +471,31 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const columnResizeRef = useRef<{ containerEl: HTMLElement; lastValue: ColumnRatioValue } | null>(
     null,
   );
+
+  /**
+   * `true` mentre la maniglia di ridimensionamento di questo `container` è sotto
+   * trascinamento (E03, punto 2): disabilita il drag dnd-kit dello stesso nodo
+   * (`useDraggable({ disabled })` sotto), altrimenti il `PointerSensor` del `DndContext`
+   * interpreterebbe lo stesso `pointermove` come l'inizio di uno spostamento del blocco e
+   * il container partirebbe dietro al puntatore invece di allargarsi. Stato React e non
+   * `useRef` proprio perché `useDraggable` deve vederlo cambiare: due render per gesto
+   * (inizio e fine), non uno per pixel.
+   */
+  const [isResizingWidth, setIsResizingWidth] = useState(false);
+
+  /**
+   * Dati del gesto di ridimensionamento in corso, mai in Zustand: `originLeft` (bordo
+   * sinistro del nodo al `pointerdown`, fisso per tutta la durata — un `justifyContent`
+   * centrato lo farebbe altrimenti scivolare sotto le dita) e `parentWidth` (larghezza del
+   * contenitore padre) si misurano una volta sola all'inizio, non ad ogni `pointermove`:
+   * un `getBoundingClientRect()` per pixel forzerebbe un reflow sincrono ad ogni evento.
+   * `lastPercent` è ciò che verrà committato al rilascio.
+   */
+  const widthResizeRef = useRef<{
+    originLeft: number;
+    parentWidth: number;
+    lastPercent: number;
+  } | null>(null);
 
   /** Cancella un dispatch debounced in sospeso, se c'è (blur, deselezione, unmount). */
   function cancelDebouncedUpdate(): void {
@@ -500,7 +557,10 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   } = useDraggable({
     id,
     data: { type: node?.type },
-    disabled: isEditingText,
+    // Il trascinamento generale del nodo cede sempre il passo a un gesto più specifico già
+    // in corso sullo stesso puntatore: editing di testo (punto 2 di T9) o ridimensionamento
+    // della maniglia (E03, punto 2).
+    disabled: isEditingText || isResizingWidth,
   });
   const { setNodeRef: setDropBeforeRef, isOver: isOverBefore } = useDroppable({
     id: `before:${id}`,
@@ -519,6 +579,14 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const activeDragType = active
     ? (active.data.current as { type?: string } | undefined)?.type
     : undefined;
+
+  /**
+   * Ampiezza che questo nodo sta assumendo mentre la sua maniglia è sotto trascinamento
+   * (E03, punto 3), `null` a riposo o se il gesto riguarda un altro container. Sottoscrive
+   * solo il proprio id: il ridimensionamento di un fratello non ri-renderizza questo
+   * wrapper. Chiamato qui, sopra la guardia di uscita, perché è un hook.
+   */
+  const resizePreviewPercent = useContainerResizePercent(id);
 
   // Il nodo può sparire dall'albero fra un render e l'altro (eliminato da questa stessa
   // toolbar): non è un errore, semplicemente non c'è più nulla da renderizzare.
@@ -703,6 +771,114 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
    */
   const isContainerBlockType = node.type === 'container';
 
+  /**
+   * Maniglia di ridimensionamento orizzontale (E03, punto 1): solo su un `container`
+   * **selezionato** — mai su hover, mai su `section` (che ha già il proprio resizer
+   * inter-colonna più sotto), mai se il registro non dichiara la prop di larghezza
+   * ({@link CONTAINER_WIDTH_SPEC}).
+   */
+  const showContainerResizeHandle =
+    isContainerBlockType && isSelected && CONTAINER_WIDTH_SPEC !== null;
+
+  /** Percentuale già persistita sul nodo, `null` se la prop è assente o di altra forma. */
+  const persistedWidthPercent = readContainerWidthPercent(currentNode.props[CONTAINER_WIDTH_PROP]);
+
+  /**
+   * Ampiezza da disegnare: l'anteprima del trascinamento vince sul valore persistito
+   * finché il gesto dura, poi torna a essere quella persistita — che nel frattempo il
+   * commit ha reso uguale, quindi nessuno sfarfallio al rilascio.
+   */
+  const effectiveWidthPercent = resizePreviewPercent ?? persistedWidthPercent;
+
+  /**
+   * Larghezza applicata al wrapper del nodo. Inline e non una classe: è una percentuale
+   * continua, non esprimibile come classe statica (stesso idioma del `left` della maniglia
+   * inter-colonna). `flexGrow: 0`/`flexShrink: 0` sono necessari quanto la larghezza: dentro
+   * un `container` flex il valore di default `flex-shrink: 1` rimpicciolirebbe comunque il
+   * nodo appena la riga si riempie, e la larghezza appena scelta non sarebbe quella resa.
+   */
+  const widthStyle =
+    effectiveWidthPercent === null
+      ? undefined
+      : { width: `${effectiveWidthPercent}%`, flexGrow: 0, flexShrink: 0 };
+
+  /**
+   * Avvio del gesto: si misurano **una volta sola** il bordo sinistro del nodo e la
+   * larghezza del contenitore padre, e si cattura il puntatore sulla maniglia — da qui in
+   * poi ogni `pointermove`/`pointerup` arriva alla maniglia anche se il puntatore esce dal
+   * suo box di 10px, che a un trascinamento veloce succede sempre.
+   *
+   * Il padre di riferimento non è il genitore DOM diretto del wrapper (`.childrenArea` è
+   * `display: contents`, un elemento senza box): {@link resolveLayoutParentWidth} risale
+   * fino al primo antenato con una larghezza reale.
+   */
+  function handleWidthResizePointerDown(event: ReactPointerEvent<HTMLDivElement>): void {
+    event.stopPropagation();
+    if (!CONTAINER_WIDTH_SPEC) return;
+    const wrapperEl = wrapperRef.current;
+    const parentWidth = resolveLayoutParentWidth(wrapperEl);
+    if (!wrapperEl || parentWidth === null) return;
+
+    const originLeft = wrapperEl.getBoundingClientRect().left;
+    // Punto di partenza del badge: la larghezza che il nodo ha davvero adesso, non il solo
+    // valore persistito — un container senza prop di larghezza mostra comunque subito la
+    // propria ampiezza corrente invece di un badge vuoto.
+    const startPercent =
+      containerWidthPercentFromPointer(
+        originLeft + wrapperEl.getBoundingClientRect().width,
+        originLeft,
+        parentWidth,
+        CONTAINER_WIDTH_SPEC,
+      ) ?? CONTAINER_WIDTH_SPEC.max;
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+    widthResizeRef.current = { originLeft, parentWidth, lastPercent: startPercent };
+    setIsResizingWidth(true);
+    setContainerResizePreview(id, startPercent);
+  }
+
+  /** Trascinamento: solo anteprima visiva, mai una voce di history (E03, punto 3). */
+  function handleWidthResizePointerMove(event: ReactPointerEvent<HTMLDivElement>): void {
+    const drag = widthResizeRef.current;
+    if (!drag || !CONTAINER_WIDTH_SPEC) return;
+    const percent = containerWidthPercentFromPointer(
+      event.clientX,
+      drag.originLeft,
+      drag.parentWidth,
+      CONTAINER_WIDTH_SPEC,
+    );
+    if (percent === null) return;
+    drag.lastPercent = percent;
+    setContainerResizePreview(id, percent);
+  }
+
+  /**
+   * Rilascio: **un solo** punto di undo/redo per l'intero trascinamento
+   * (`commitContainerWidthAction`), che azzera anche l'anteprima.
+   */
+  function handleWidthResizePointerUp(event: ReactPointerEvent<HTMLDivElement>): void {
+    const handle = event.currentTarget;
+    if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
+    const drag = widthResizeRef.current;
+    widthResizeRef.current = null;
+    setIsResizingWidth(false);
+    if (!drag) return;
+    commitContainerWidthAction(id, drag.lastPercent);
+  }
+
+  /**
+   * Gesto interrotto dal sistema (`pointercancel`: puntatore perso, gesto rubato dal
+   * browser): l'anteprima si butta via **senza** committare — un trascinamento che non è
+   * mai stato concluso non è una modifica che l'utente ha chiesto.
+   */
+  function handleWidthResizePointerCancel(event: ReactPointerEvent<HTMLDivElement>): void {
+    const handle = event.currentTarget;
+    if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
+    widthResizeRef.current = null;
+    setIsResizingWidth(false);
+    clearContainerResizePreview();
+  }
+
   const className = [
     styles.wrapper,
     // Overlay hover/selezione (Gap Analysis §2, P0 "differenziazione cromatica"): due stati
@@ -732,6 +908,10 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           wrapperRef.current = element;
         }}
         className={className}
+        // Larghezza del container ridimensionato (E03): anteprima durante il gesto, valore
+        // persistito a riposo, `undefined` per ogni altro blocco — mai un `style` inline
+        // vuoto sui blocchi che non c'entrano.
+        style={widthStyle}
         data-block-type={node.type}
         // Bersaglio dello scroll-sync del pannello Struttura/Navigator
         // (`EditorStructureNavigator.tsx`): `querySelector('[data-block-id="…"]')` dal
@@ -799,6 +979,29 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           className={`${styles.dropZone} ${styles.dropZoneBefore}`}
           {...dropZoneAttrs(isOverBefore, activeDragId, activeDragType, location.parentId)}
         />
+
+        {/*
+          Maniglia di ridimensionamento orizzontale del `container` (E03, punto 1). Vive
+          qui dentro — non accanto ai figli come il resizer inter-colonna di `section` — 
+          perché ridimensiona **questo** nodo rispetto al proprio contenitore padre, non
+          il confine fra due figli: il riferimento è il bordo destro del wrapper, e
+          `.wrapper` è già `position: relative` (EditorBlockWrapper.module.css).
+        */}
+        {showContainerResizeHandle && (
+          <ContainerResizeHandle
+            percent={effectiveWidthPercent}
+            isResizing={isResizingWidth}
+            ariaLabel={
+              effectiveWidthPercent === null
+                ? 'Ridimensiona la larghezza del Contenitore'
+                : `Ridimensiona la larghezza del Contenitore (attuale: ${formatContainerWidthBadge(effectiveWidthPercent)})`
+            }
+            onPointerDown={handleWidthResizePointerDown}
+            onPointerMove={handleWidthResizePointerMove}
+            onPointerUp={handleWidthResizePointerUp}
+            onPointerCancel={handleWidthResizePointerCancel}
+          />
+        )}
 
         {/*
           Handle Bar (punto 2 del task T-canvas-declutter, stile Elementor Pro): **unico**

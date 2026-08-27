@@ -8,9 +8,41 @@
   margin-bottom: 12px;
 }
 
+.accordion {
+  border: 0;
+}
+
+.groupItem {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.24);
+  overflow: hidden;
+}
+
+.groupItem + .groupItem {
+  margin-top: 8px;
+}
+
+.groupControl {
+  padding: 10px 12px;
+  background: rgba(15, 23, 42, 0.18);
+  color: var(--mantine-color-text);
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
+}
+
+.groupControl:hover {
+  background: rgba(96, 165, 250, 0.08);
+}
+
+.groupPanel {
+  padding: 10px 10px 12px;
+  background: rgba(15, 23, 42, 0.12);
+}
+
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -20,49 +52,77 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 14px 8px;
-  border: 1px solid var(--mantine-color-gray-3);
-  border-radius: 8px;
-  background-color: var(--mantine-color-white);
+  min-height: 94px;
+  padding: 12px 8px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.38);
+  color: var(--mantine-color-text);
   cursor: grab;
-  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease,
+    transform 120ms ease;
 }
 
 .tile:hover,
 .tile:focus-visible {
-  border-color: var(--mantine-color-blue-5);
-  background-color: var(--mantine-color-blue-light);
-  /* Elevazione stile card (parità visiva Elementor): non solo un bordo che cambia colore. */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: rgba(96, 165, 250, 0.9);
+  background: rgba(37, 99, 235, 0.12);
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.3), 0 8px 20px rgba(15, 23, 42, 0.18);
   outline: none;
 }
 
-[data-mantine-color-scheme='dark'] .tile {
-  border-color: var(--mantine-color-dark-4);
-  background-color: var(--mantine-color-dark-6);
-}
-
-[data-mantine-color-scheme='dark'] .tile:hover,
-[data-mantine-color-scheme='dark'] .tile:focus-visible {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-
-/* Icona d'accento: colore fisso indipendente dal tema (stesso valore in light e dark),
-   invece di ereditare `currentColor` dal testo della `Text` accanto. */
 .tileIcon {
   display: inline-flex;
-  color: var(--mantine-color-blue-6);
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: #8ab4ff;
+  background: rgba(96, 165, 250, 0.08);
 }
 
 .tileLabel {
   text-align: center;
-  line-height: 1.2;
+  line-height: 1.15;
+  font-size: var(--mantine-font-size-xs);
+  letter-spacing: 0.01em;
 }
 
-/* Tessera attualmente trascinata: resta al suo posto, solo attenuata — stesso pattern di
-   `.dragging` in EditorBlockWrapper.module.css. `cursor: grabbing` esplicito perché lo
-   stato attivo di trascinamento non è più un semplice `grab` in attesa. */
 .dragging {
   opacity: 0.4;
   cursor: grabbing;
+}
+
+[data-mantine-color-scheme='light'] .groupItem {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+[data-mantine-color-scheme='light'] .groupControl {
+  background: rgba(15, 23, 42, 0.03);
+}
+
+[data-mantine-color-scheme='light'] .groupPanel {
+  background: rgba(15, 23, 42, 0.02);
+}
+
+[data-mantine-color-scheme='dark'] .groupItem {
+  border-color: rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+[data-mantine-color-scheme='dark'] .groupControl {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+[data-mantine-color-scheme='dark'] .groupPanel {
+  background: rgba(15, 23, 42, 0.2);
+}
+
+[data-mantine-color-scheme='dark'] .tile {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.6);
 }

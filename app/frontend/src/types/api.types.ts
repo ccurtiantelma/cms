@@ -815,6 +815,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/app/global-sections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista paginata delle Sezioni Globali */
+        get: operations["GlobalSectionsController_findAll"];
+        put?: never;
+        /** Crea una Sezione Globale */
+        post: operations["GlobalSectionsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/app/global-sections/{guid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dettaglio di una Sezione Globale */
+        get: operations["GlobalSectionsController_findOne"];
+        put?: never;
+        post?: never;
+        /** Elimina (soft-delete) una Sezione Globale */
+        delete: operations["GlobalSectionsController_remove"];
+        options?: never;
+        head?: never;
+        /** Aggiorna una Sezione Globale (richiede version per il lock ottimistico) */
+        patch: operations["GlobalSectionsController_update"];
+        trace?: never;
+    };
+    "/api/v1/public/global-sections/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Restituisce le Sezioni Globali attive per header e footer */
+        get: operations["PublicGlobalSectionsController_getActive"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2153,6 +2207,96 @@ export interface components {
             seo: {
                 [key: string]: unknown;
             };
+        };
+        CreateGlobalSectionDto: {
+            /**
+             * @description Titolo della Sezione Globale
+             * @example Header principale
+             */
+            title: string;
+            /**
+             * @description Slug admin proposto (normalizzato server-side); se assente, generato dal titolo
+             * @example header-principale
+             */
+            slug?: string;
+            /**
+             * @description Slot di layout pubblico (default "none")
+             * @example header
+             * @enum {string}
+             */
+            layoutSlot?: "none" | "header" | "footer";
+            /** @description Albero di blocchi iniziale (default: albero vuoto) */
+            content?: {
+                [key: string]: unknown;
+            };
+        };
+        GlobalSectionDto: {
+            /**
+             * @description Guid della Sezione Globale
+             * @example a1b2c3d4e5f6a7b8
+             */
+            guid: string;
+            /** @description Titolo della Sezione Globale */
+            title: string;
+            /** @description Slug admin */
+            slug: string;
+            /**
+             * @description Slot di layout pubblico
+             * @enum {string}
+             */
+            layoutSlot: "none" | "header" | "footer";
+            /** @description Albero di blocchi corrente */
+            content: {
+                [key: string]: unknown;
+            };
+            /**
+             * @description Version corrente (lock ottimistico)
+             * @example 1
+             */
+            version: number;
+            /**
+             * Format: date-time
+             * @description Data creazione
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Data ultimo aggiornamento
+             */
+            updatedAt: string;
+        };
+        UpdateGlobalSectionDto: {
+            /**
+             * @description Version letta al caricamento della Sezione (lock ottimistico)
+             * @example 3
+             */
+            version: number;
+            /** @description Titolo della Sezione Globale */
+            title?: string;
+            /** @description Slug admin (normalizzato server-side); non rigenerato automaticamente dal titolo */
+            slug?: string;
+            /**
+             * @description Slot di layout pubblico
+             * @example footer
+             * @enum {string}
+             */
+            layoutSlot?: "none" | "header" | "footer";
+            /** @description Albero di blocchi aggiornato (sostituisce integralmente il precedente) */
+            content?: {
+                [key: string]: unknown;
+            };
+        };
+        PublicGlobalSectionDto: {
+            /** @description Slug admin della Sezione (informativo, non una rotta pubblica) */
+            slug?: string;
+            /** @description Albero di blocchi, già migrato/validato/sanitizzato in scrittura */
+            content?: {
+                [key: string]: unknown;
+            };
+        };
+        PublicActiveGlobalSectionsDto: {
+            header?: components["schemas"]["PublicGlobalSectionDto"] | null;
+            footer?: components["schemas"]["PublicGlobalSectionDto"] | null;
         };
     };
     responses: never;
@@ -4087,6 +4231,196 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    GlobalSectionsController_findAll: {
+        parameters: {
+            query?: {
+                /** @description Pagina (default 1) */
+                p?: string;
+                /** @description Elementi per pagina (default 20) */
+                i?: string;
+                /** @description Ricerca testuale su titolo e slug */
+                q?: string;
+                /** @description Campo di ordinamento (title, slug, layoutSlot, createdAt, updatedAt) */
+                o?: string;
+                /** @description Direzione ordinamento (asc|desc, default desc) */
+                d?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista Sezioni Globali paginata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GlobalSectionsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateGlobalSectionDto"];
+            };
+        };
+        responses: {
+            /** @description Sezione Globale creata */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlobalSectionDto"];
+                };
+            };
+            /** @description Slug non valido/riservato o albero blocchi malformato */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Slug o layoutSlot già in uso */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GlobalSectionsController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sezione Globale trovata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlobalSectionDto"];
+                };
+            };
+            /** @description Sezione Globale non trovata o eliminata */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GlobalSectionsController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sezione Globale eliminata */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sezione Globale non trovata o già eliminata */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GlobalSectionsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateGlobalSectionDto"];
+            };
+        };
+        responses: {
+            /** @description Sezione Globale aggiornata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlobalSectionDto"];
+                };
+            };
+            /** @description Slug non valido/riservato o albero blocchi malformato */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sezione Globale non trovata o eliminata */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Version obsoleta, oppure slug/layoutSlot già in uso */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicGlobalSectionsController_getActive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sezioni attive (slot assenti = null) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicActiveGlobalSectionsDto"];
+                };
             };
         };
     };

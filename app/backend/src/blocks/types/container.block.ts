@@ -56,6 +56,13 @@ export const containerBlock: BlockDefinition = {
       values: ['none', 'sm', 'md', 'lg'],
       default: { default: 'none' },
     },
+    styleFlexBasis: {
+      kind: 'unitValue',
+      required: false,
+      units: ['%'],
+      min: 0,
+      max: 100,
+    },
     customCssClass: {
       kind: 'cssClassName',
       required: false,
@@ -79,16 +86,17 @@ export const containerBlock: BlockDefinition = {
       alignItems: { label: 'Allineamento verticale', tab: 'style', order: 4 },
       wrap: { label: 'A capo', tab: 'style', order: 5 },
       gap: { label: 'Spaziatura', tab: 'style', order: 6 },
+      styleFlexBasis: { label: 'Larghezza', tab: 'style', order: 7 },
       customCssClass: {
         label: 'Classe CSS personalizzata',
         tab: 'advanced',
-        order: 7,
+        order: 8,
         help: 'Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore.',
       },
       customElementId: {
         label: 'ID elemento personalizzato',
         tab: 'advanced',
-        order: 8,
+        order: 9,
         help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
       },
     },

@@ -105,7 +105,7 @@ services:
     # Solo il lato host (stesso motivo del backend sopra): il container resta
     # su 4000 (PORT sopra, invariata).
     ports:
-      - '54000:4000'
+      - '55000:4000'
 
 volumes:
   pgdata_prod:

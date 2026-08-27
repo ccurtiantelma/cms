@@ -109,6 +109,7 @@ function renderNode(node: RenderableBlockNode, editing: BlockEditingProps | unde
           alignItems={node.props.alignItems}
           wrap={node.props.wrap}
           gap={node.props.gap}
+          styleFlexBasis={node.props.styleFlexBasis}
           customCssClass={node.props.customCssClass}
           customElementId={node.props.customElementId}
         >

@@ -16,6 +16,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { renderWithProviders } from '../../../test/utils';
 import type { PageRecord } from '../../../types/pages.types';
 import { useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
+import type { BlockNode } from './block-tree.utils';
 
 const createPageTranslation = vi.fn();
 const notificationsShow = vi.fn();
@@ -127,7 +128,7 @@ describe('CreateTranslationModal — creazione riuscita', () => {
 
   it("non reindirizza e mostra una notifica persistente quando l'editor ha modifiche non salvate", async () => {
     useBlockEditorStore.setState({
-      undoStack: [{ apply: (tree) => tree, invert: (tree) => tree }],
+      undoStack: [{ kind: 'tree', apply: (tree: BlockNode[]) => tree, invert: (tree: BlockNode[]) => tree }],
       savePoint: CLEAN_SAVE_POINT,
     });
     createPageTranslation.mockResolvedValue(

@@ -4,7 +4,7 @@
  * `FormDrawer`). Tabella utenti con toolbar sticky (paginazione + ricerca +
  * totale risultati) e azioni di riga a sole icone con tooltip.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Avatar,
   Badge,
@@ -13,11 +13,13 @@ import {
   Select,
   Stack,
   Switch,
+  Tabs,
   Text,
   TextInput,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
+import { useSearchParams } from 'react-router-dom';
 import { IconLogin, IconShieldOff, IconPencil, IconUser } from '@tabler/icons-react';
 import { useAuthStore } from '../../hooks/useAuth';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
@@ -30,6 +32,7 @@ import {
   resetMfaUser,
   createUser,
   updateUser,
+  fetchAuditLog,
   type UserListItem,
   type CreateUserRequest,
   type UpdateUserRequest,
@@ -43,6 +46,7 @@ import ColumnSelector from '../../components/ColumnSelector';
 import ConfirmModal from '../../components/ConfirmModal';
 import FormDrawer from '../../components/FormDrawer';
 import { AppUserRoles, ROLE_LABELS } from '../../types/common.types';
+import AuditLogPanel from './AuditLogPanel';
 
 /** Ruoli assegnabili da questa UI (SuperAdmin escluso: creato solo via seed). */
 const ROLE_OPTIONS = [
@@ -100,8 +104,31 @@ function userToFormValues(user?: UserListItem): UserFormValues {
 
 /** Pagina di amministrazione utenti (Admin+). */
 export default function PageUsers(): JSX.Element {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [accessCount, setAccessCount] = useState<number | null>(null);
   const currentUser = useAuthStore((state) => state.user);
   const isSuperAdmin = currentUser?.role === AppUserRoles.SuperAdmin;
+  const activeTab = searchParams.get('tab') === 'audit-log' ? 'audit-log' : 'users';
+
+  useEffect(() => {
+    let active = true;
+    fetchAuditLog({ p: 1, i: 1, action: 'login' })
+      .then((result) => {
+        if (active) setAccessCount(result.totalItems);
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          notifications.show({
+            color: 'red',
+            message: getErrorMessage(err, 'Errore nel caricamento del totale accessi'),
+          });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const {
     records,
@@ -286,68 +313,93 @@ export default function PageUsers(): JSX.Element {
       <PageHeader
         breadcrumbs={[{ label: 'Amministrazione' }, { label: 'Utenti' }]}
         title="Utenti"
-        kpis={[{ value: total, label: 'Utenti', icon: IconUser }]}
+        kpis={[
+          { value: total, label: 'Utenti', icon: IconUser },
+          { value: accessCount ?? '—', label: 'Accessi', icon: IconLogin, color: 'green' },
+        ]}
       />
 
-      <ContentCard>
-        <ListToolbar
-          state={{ page, setPage, totalPages, limit, setLimit, total, search, setSearch }}
-          newLabel="Nuovo Utente"
-          onNew={openCreate}
-          columnSelector={
-            <ColumnSelector columns={columns} isVisible={isVisible} onToggle={toggle} />
+      <Tabs
+        value={activeTab}
+        onChange={(value) => {
+          if (value === 'audit-log') {
+            setSearchParams({ tab: value });
+          } else {
+            setSearchParams({});
           }
-        />
+        }}
+      >
+        <Tabs.List mb="md">
+          <Tabs.Tab value="users">Gestione utenti</Tabs.Tab>
+          <Tabs.Tab value="audit-log">Audit Log</Tabs.Tab>
+        </Tabs.List>
 
-        <ScrollArea offsetScrollbars>
-          <ResponsiveTable<UserListItem>
-            data={records}
-            loading={loading}
-            rowKey={(row) => row.guid}
-            columns={visibleColumns}
-            sortable={USER_SORTABLE}
-            sort={sort}
-            onSortChange={toggleSort}
-            cardHeader={(row) => (
-              <Group wrap="nowrap" gap="sm">
-                <Avatar color={roleColor(row.role)} radius="xl">
-                  {initials(row)}
-                </Avatar>
-                <div>
-                  <Text fw={600}>
-                    {row.name} {row.surname}
-                  </Text>
-                  <Text size="sm" c="dimmed">
-                    {roleLabel(row.role)}
-                  </Text>
-                </div>
-              </Group>
-            )}
-            actions={[
-              {
-                label: 'Modifica',
-                icon: <IconPencil size={16} />,
-                onClick: openEdit,
-                hidden: (row) => row.role === AppUserRoles.SuperAdmin,
-              },
-              {
-                label: 'Reset MFA',
-                color: 'orange',
-                icon: <IconShieldOff size={16} />,
-                onClick: (row) => setMfaTarget(row),
-                hidden: (row) => row.role === AppUserRoles.SuperAdmin,
-              },
-              {
-                label: 'Accedi come',
-                color: 'starterPrimary',
-                icon: <IconLogin size={16} />,
-                onClick: (row) => setImpersonateTarget(row),
-                hidden: (row) => !isSuperAdmin || row.role === AppUserRoles.SuperAdmin,
-              },
-            ]}
-          />
-        </ScrollArea>
-      </ContentCard>
+        <Tabs.Panel value="users">
+          <ContentCard>
+            <ListToolbar
+              state={{ page, setPage, totalPages, limit, setLimit, total, search, setSearch }}
+              newLabel="Nuovo Utente"
+              onNew={openCreate}
+              columnSelector={
+                <ColumnSelector columns={columns} isVisible={isVisible} onToggle={toggle} />
+              }
+            />
+
+            <ScrollArea offsetScrollbars>
+              <ResponsiveTable<UserListItem>
+                data={records}
+                loading={loading}
+                rowKey={(row) => row.guid}
+                columns={visibleColumns}
+                sortable={USER_SORTABLE}
+                sort={sort}
+                onSortChange={toggleSort}
+                cardHeader={(row) => (
+                  <Group wrap="nowrap" gap="sm">
+                    <Avatar color={roleColor(row.role)} radius="xl">
+                      {initials(row)}
+                    </Avatar>
+                    <div>
+                      <Text fw={600}>
+                        {row.name} {row.surname}
+                      </Text>
+                      <Text size="sm" c="dimmed">
+                        {roleLabel(row.role)}
+                      </Text>
+                    </div>
+                  </Group>
+                )}
+                actions={[
+                  {
+                    label: 'Modifica',
+                    icon: <IconPencil size={16} />,
+                    onClick: openEdit,
+                    hidden: (row) => row.role === AppUserRoles.SuperAdmin,
+                  },
+                  {
+                    label: 'Reset MFA',
+                    color: 'orange',
+                    icon: <IconShieldOff size={16} />,
+                    onClick: (row) => setMfaTarget(row),
+                    hidden: (row) => row.role === AppUserRoles.SuperAdmin,
+                  },
+                  {
+                    label: 'Accedi come',
+                    color: 'starterPrimary',
+                    icon: <IconLogin size={16} />,
+                    onClick: (row) => setImpersonateTarget(row),
+                    hidden: (row) => !isSuperAdmin || row.role === AppUserRoles.SuperAdmin,
+                  },
+                ]}
+              />
+            </ScrollArea>
+          </ContentCard>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="audit-log">
+          <AuditLogPanel />
+        </Tabs.Panel>
+      </Tabs>
 
       {/* Form Nuovo/Modifica Utente (drawer laterale condiviso). */}
       <FormDrawer
