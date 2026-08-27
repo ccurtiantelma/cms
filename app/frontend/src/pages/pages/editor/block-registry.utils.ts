@@ -59,10 +59,20 @@ export function defaultPropsFor(descriptor: BlockTypeDescriptor): Record<string,
  * (`parentType === undefined`), `childrenAllow` del descrittore altrimenti. Un tipo di
  * contenitore sconosciuto al registro non ammette nulla — non è una foglia con figli
  * liberi, è un tipo che questo frontend non conosce.
+ *
+ * `childrenAllow === '*'` (sentinel di ADR-39 § 4, oggi solo `container`): "qualunque tipo
+ * presente nel registro", risolto qui come l'elenco di **tutti** i `type` in `BLOCK_TYPES` —
+ * non solo quelli abilitati/non deprecati/sotto soglia di ruolo, perché quel filtro è già
+ * applicato a valle da chi consuma questa funzione (`allowedDescriptors` in
+ * `BlockPalette.tsx`, `assignableDescriptors` equivalenti), esattamente come per un elenco
+ * esplicito. Senza questo ramo, `'*'.includes(type)` risolverebbe sempre a `false` (`'*'` è
+ * una stringa, non un array) e `container` non accetterebbe mai alcun figlio nell'editor.
  */
 export function allowedChildTypes(parentType: string | undefined): readonly string[] {
   if (parentType === undefined) return ROOT_ALLOWED;
-  return BLOCK_TYPES.find((entry) => entry.type === parentType)?.childrenAllow ?? [];
+  const childrenAllow = BLOCK_TYPES.find((entry) => entry.type === parentType)?.childrenAllow;
+  if (childrenAllow === '*') return BLOCK_TYPES.map((entry) => entry.type);
+  return childrenAllow ?? [];
 }
 
 /**

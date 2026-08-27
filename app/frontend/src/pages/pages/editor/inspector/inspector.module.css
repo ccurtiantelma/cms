@@ -68,3 +68,43 @@
 .mediaThumbPlaceholder {
   color: var(--mantine-color-gray-5);
 }
+
+/*
+  Voce del popover "Colori globali" (PropField, `case 'color'`, F07 step 2): swatch + etichetta
+  + hex del token, stesso principio informativo di `ThemeEditorColorPicker` (nome + hex nel
+  tooltip), qui reso in riga perché il popover elenca 4 voci fisse invece di aprire una
+  modale con l'intera palette Mantine.
+*/
+.colorTokenOption {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--mantine-radius-sm);
+  background: none;
+  font-size: var(--mantine-font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.colorTokenOption:hover {
+  background-color: var(--mantine-color-gray-1);
+}
+
+[data-mantine-color-scheme='dark'] .colorTokenOption:hover {
+  background-color: var(--mantine-color-dark-5);
+}
+
+.colorTokenSwatch {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--mantine-radius-sm);
+  border: 1px solid var(--mantine-color-gray-4);
+}
+
+[data-mantine-color-scheme='dark'] .colorTokenSwatch {
+  border-color: var(--mantine-color-dark-3);
+}

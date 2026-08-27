@@ -79,7 +79,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
 
   switch (resolution.kind) {
     case 'ok': {
-      const html = isHead ? undefined : renderPageDocument(resolution.page, css.href);
+      const html = isHead ? undefined : await renderPageDocument(resolution.page, css.href);
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(html);
       return;
@@ -91,12 +91,12 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     }
     case 'not-found': {
       res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(isHead ? undefined : renderErrorDocument(404, 'Pagina non trovata', css.href));
+      res.end(isHead ? undefined : await renderErrorDocument(404, 'Pagina non trovata', css.href));
       return;
     }
     case 'error': {
       res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(isHead ? undefined : renderErrorDocument(500, 'Errore interno', css.href));
+      res.end(isHead ? undefined : await renderErrorDocument(500, 'Errore interno', css.href));
       return;
     }
   }
@@ -120,7 +120,7 @@ async function handlePreviewRequest(pathname: string, isHead: boolean, res: Serv
         'Content-Type': 'text/html; charset=utf-8',
         'X-Robots-Tag': PREVIEW_ROBOTS_HEADER,
       });
-      res.end(isHead ? undefined : renderErrorDocument(404, 'Pagina non trovata', css.href));
+      res.end(isHead ? undefined : await renderErrorDocument(404, 'Pagina non trovata', css.href));
       return;
     }
 
@@ -128,7 +128,7 @@ async function handlePreviewRequest(pathname: string, isHead: boolean, res: Serv
 
     switch (resolution.kind) {
       case 'ok': {
-        const html = isHead ? undefined : renderPreviewDocument(resolution.page, css.href);
+        const html = isHead ? undefined : await renderPreviewDocument(resolution.page, css.href);
         res.writeHead(200, {
           'Content-Type': 'text/html; charset=utf-8',
           'X-Robots-Tag': PREVIEW_ROBOTS_HEADER,
@@ -141,7 +141,7 @@ async function handlePreviewRequest(pathname: string, isHead: boolean, res: Serv
           'Content-Type': 'text/html; charset=utf-8',
           'X-Robots-Tag': PREVIEW_ROBOTS_HEADER,
         });
-        res.end(isHead ? undefined : renderErrorDocument(404, 'Pagina non trovata', css.href));
+        res.end(isHead ? undefined : await renderErrorDocument(404, 'Pagina non trovata', css.href));
         return;
       }
       case 'error': {
@@ -149,7 +149,7 @@ async function handlePreviewRequest(pathname: string, isHead: boolean, res: Serv
           'Content-Type': 'text/html; charset=utf-8',
           'X-Robots-Tag': PREVIEW_ROBOTS_HEADER,
         });
-        res.end(isHead ? undefined : renderErrorDocument(500, 'Errore interno', css.href));
+        res.end(isHead ? undefined : await renderErrorDocument(500, 'Errore interno', css.href));
         return;
       }
     }
@@ -162,7 +162,7 @@ async function handlePreviewRequest(pathname: string, isHead: boolean, res: Serv
         'Content-Type': 'text/html; charset=utf-8',
         'X-Robots-Tag': PREVIEW_ROBOTS_HEADER,
       });
-      res.end(renderErrorDocument(500, 'Errore interno', css.href));
+      res.end(await renderErrorDocument(500, 'Errore interno', css.href));
     } else {
       res.end();
     }

@@ -68,7 +68,8 @@ export interface BlockTypeDescriptor {
   enabled: boolean;
   deprecated?: boolean;
   minRole?: number;
-  childrenAllow: readonly string[];
+  /** `'*'` = qualunque tipo risolto dal registro, incluso se stesso (ADR-39 § 4). */
+  childrenAllow: readonly string[] | '*';
   props: readonly BlockPropDescriptor[];
   meta?: BlockEditorMeta;
 }
@@ -82,7 +83,8 @@ export const ROOT_ALLOWED = [
   "heading",
   "richText",
   "image",
-  "button"
+  "button",
+  "container"
 ] as const;
 
 /** Limiti dell'envelope (SPEC-F02-blocchi.md § 1): per avvisare prima del 400, non per applicarli. */
@@ -102,7 +104,8 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
       "heading",
       "richText",
       "image",
-      "button"
+      "button",
+      "container"
     ],
     "props": [
       {
@@ -1577,6 +1580,157 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "ID elemento personalizzato",
           "tab": "advanced",
           "order": 14,
+          "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
+        }
+      }
+    }
+  },
+  {
+    "type": "container",
+    "v": 1,
+    "enabled": true,
+    "childrenAllow": "*",
+    "props": [
+      {
+        "name": "display",
+        "kind": "enum",
+        "required": false,
+        "default": "flex",
+        "values": [
+          "flex"
+        ]
+      },
+      {
+        "name": "flexDirection",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "row"
+        },
+        "values": [
+          "row",
+          "row-reverse",
+          "column",
+          "column-reverse"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "justifyContent",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "flex-start"
+        },
+        "values": [
+          "flex-start",
+          "flex-end",
+          "center",
+          "space-between",
+          "space-around",
+          "space-evenly"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "alignItems",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "stretch"
+        },
+        "values": [
+          "stretch",
+          "flex-start",
+          "center",
+          "flex-end"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "wrap",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "nowrap"
+        },
+        "values": [
+          "nowrap",
+          "wrap"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "gap",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "none"
+        },
+        "values": [
+          "none",
+          "sm",
+          "md",
+          "lg"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "customCssClass",
+        "kind": "cssClassName",
+        "required": false
+      },
+      {
+        "name": "customElementId",
+        "kind": "htmlId",
+        "required": false
+      }
+    ],
+    "meta": {
+      "label": "Contenitore",
+      "category": "layout",
+      "icon": "box-align-top",
+      "props": {
+        "display": {
+          "label": "Layout",
+          "tab": "style",
+          "order": 1
+        },
+        "flexDirection": {
+          "label": "Direzione",
+          "tab": "style",
+          "order": 2
+        },
+        "justifyContent": {
+          "label": "Allineamento orizzontale",
+          "tab": "style",
+          "order": 3
+        },
+        "alignItems": {
+          "label": "Allineamento verticale",
+          "tab": "style",
+          "order": 4
+        },
+        "wrap": {
+          "label": "A capo",
+          "tab": "style",
+          "order": 5
+        },
+        "gap": {
+          "label": "Spaziatura",
+          "tab": "style",
+          "order": 6
+        },
+        "customCssClass": {
+          "label": "Classe CSS personalizzata",
+          "tab": "advanced",
+          "order": 7,
+          "help": "Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore."
+        },
+        "customElementId": {
+          "label": "ID elemento personalizzato",
+          "tab": "advanced",
+          "order": 8,
           "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
         }
       }

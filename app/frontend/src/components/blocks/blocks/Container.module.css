@@ -1,0 +1,17 @@
+/*
+ * `display: flex` (ADR-39 § 2 punto 1): un solo valore possibile in questo round —
+ * nessun token dedicato in `../style-tokens.module.css` per un enum a valore singolo
+ * (sarebbe codice speculativo per un requisito ipotetico, CLAUDE.md). `flexDirection`/
+ * `justifyContent`/`alignItems`/`wrap`/`gap` derivano invece dalle classi generate in
+ * `../style-tokens.module.css` (mai `style` inline), scelte da `Container.tsx` in base
+ * alle rispettive props del nodo.
+ *
+ * `position: relative`: stesso motivo di `.section` (`Section.module.css`) — contesto di
+ * posizionamento per l'overlay di evidenziazione "dentro questo contenitore" che l'editor
+ * sovrappone in `EditorBlockWrapper.module.css` (`.containerDropZone`, `position: absolute;
+ * inset: 0`); il sito pubblico non monta mai quell'overlay, nessuna differenza visiva lì.
+ */
+.container {
+  display: flex;
+  position: relative;
+}

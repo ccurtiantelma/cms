@@ -5,10 +5,14 @@ import { BlockPropsMigrationStep } from './migration/block-migration.types';
  * Regole di annidamento di un tipo di blocco: elenco dei `type` ammessi come
  * figli diretti. Dichiarato in **una sola direzione** — il genitore elenca i
  * figli ammessi, mai un elenco speculare "genitori ammessi" (ADR-21 § 2).
- * `allow: []` significa che il tipo è una foglia.
+ * `allow: []` significa che il tipo è una foglia. `allow: '*'` è il sentinel
+ * wildcard di ADR-39 § 4: "qualunque tipo presente nel registro e risolto da
+ * `resolveDefinition`" (quindi già filtrato per `enabled`/`minRole`), incluso
+ * il tipo stesso — nesting ricorsivo (es. `container` dentro `container`).
+ * Introdotto per `container`, non retroattivo sui tipi già array.
  */
 export interface BlockChildrenSpec {
-  allow: readonly string[];
+  allow: readonly string[] | '*';
 }
 
 /**

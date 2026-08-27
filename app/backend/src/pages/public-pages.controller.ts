@@ -13,6 +13,8 @@ import { Response } from 'express';
 import { PublicPagesService } from './public-pages.service';
 import { PublicPageDto } from './dto/public-page.dto';
 import { canonicalizePublicPath } from './public-path.util';
+import { SettingsService } from '../settings/settings.service';
+import { GlobalTokensDto } from '../settings/dto/global-tokens.dto';
 
 /**
  * Superficie pubblica di lettura delle Pagine (`api/v1/public/pages`,
@@ -27,18 +29,21 @@ import { canonicalizePublicPath } from './public-path.util';
  * esplicito della response Express.
  */
 @ApiTags('Public Pages')
-@Controller('public/pages')
+@Controller('public')
 @UseGuards(ThrottlerGuard)
 export class PublicPagesController {
-  /** Inietta il service di risoluzione pubblica. */
-  constructor(private readonly publicPagesService: PublicPagesService) {}
+  /** Inietta il service di risoluzione pubblica e il service impostazioni (Global Tokens). */
+  constructor(
+    private readonly publicPagesService: PublicPagesService,
+    private readonly settingsService: SettingsService,
+  ) {}
 
   /**
    * Risolve `?path=` alla Pagina pubblicata corrispondente. `path` è
    * obbligatorio; forma non canonica (maiuscole, slash finale) → `308` verso
    * la forma canonica, senza leggere il database.
    */
-  @Get()
+  @Get('pages')
   @Throttle({ public: { limit: 300, ttl: 60_000 } })
   @ApiOperation({ summary: 'Risolve un percorso pubblico alla Pagina pubblicata corrispondente' })
   @ApiQuery({
@@ -77,5 +82,20 @@ export class PublicPagesController {
 
     const dto = await this.publicPagesService.resolveByPath(canonicalPath);
     res.status(HttpStatus.OK).json(dto);
+  }
+
+  /**
+   * Espone i Global Tokens (design tokens) per il rendering SSR del sito
+   * pubblico. Anonima, sola lettura: riusa {@link SettingsService.getGlobalTokens}
+   * (fallback su `DEFAULT_GLOBAL_TOKENS` se non è mai stata salvata alcuna
+   * riga `app_settings` con chiave `global_tokens`), stessa fonte dati della
+   * rotta admin `GET app/settings/global-tokens`.
+   */
+  @Get('settings/global-tokens')
+  @Throttle({ public: { limit: 300, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Restituisce i Global Tokens per il rendering pubblico (SSR)' })
+  @ApiResponse({ status: 200, description: 'Global Tokens correnti', type: GlobalTokensDto })
+  async getGlobalTokens(): Promise<GlobalTokensDto> {
+    return this.settingsService.getGlobalTokens();
   }
 }

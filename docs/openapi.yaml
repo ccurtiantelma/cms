@@ -607,6 +607,49 @@ paths:
       summary: Salva il registro Locale attivi (Admin+ only, registrato su audit log)
       tags:
         - Settings
+  /api/v1/app/settings/global-tokens:
+    get:
+      operationId: SettingsController_getGlobalTokens
+      parameters: []
+      responses:
+        '200':
+          description: Global Design Tokens correnti
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalTokensDto'
+      security:
+        - access-token: []
+      summary: Global Design Tokens del sito (default di fabbrica se mai salvati)
+      tags:
+        - Settings
+    put:
+      operationId: SettingsController_updateGlobalTokens
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GlobalTokensDto'
+      responses:
+        '200':
+          description: Global Design Tokens salvati
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalTokensDto'
+        '400':
+          description: Payload non valido (hex, font, unità o versione)
+        '403':
+          description: Ruolo inferiore ad Admin
+      security:
+        - access-token: []
+      summary: >-
+        Salva i Global Design Tokens del sito (Admin+ only, registrato su audit
+        log)
+      tags:
+        - Settings
   /api/v1/health:
     get:
       operationId: HealthController_check
@@ -1356,6 +1399,20 @@ paths:
             Nessuna Pagina pubblicata a questo percorso (inesistente, non
             pubblicata, o non servibile)
       summary: Risolve un percorso pubblico alla Pagina pubblicata corrispondente
+      tags:
+        - Public Pages
+  /api/v1/public/settings/global-tokens:
+    get:
+      operationId: PublicPagesController_getGlobalTokens
+      parameters: []
+      responses:
+        '200':
+          description: Global Tokens correnti
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalTokensDto'
+      summary: Restituisce i Global Tokens per il rendering pubblico (SSR)
       tags:
         - Public Pages
   /api/v1/preview/pages/{token}:
@@ -2611,6 +2668,105 @@ components:
       required:
         - active
         - default
+    GlobalTokensPaletteDto:
+      type: object
+      properties:
+        primary:
+          type: string
+          description: Colore primario di brand
+          example: '#93003c'
+        secondary:
+          type: string
+          description: Colore secondario di brand
+          example: '#00a0d2'
+        text:
+          type: string
+          description: Colore testo di brand
+          example: '#333333'
+        accent:
+          type: string
+          description: Colore accento di brand
+          example: '#f7a600'
+      required:
+        - primary
+        - secondary
+        - text
+        - accent
+    GlobalTokensDimensionDto:
+      type: object
+      properties:
+        value:
+          type: number
+          description: Valore numerico della dimensione
+          example: 16
+        unit:
+          type: string
+          description: Unità CSS
+          enum:
+            - px
+            - em
+            - rem
+          example: px
+      required:
+        - value
+        - unit
+    GlobalTokensTypographyDto:
+      type: object
+      properties:
+        mainFont:
+          type: string
+          description: Font base di sito (ID whitelisted, stessa whitelist di ADR-4)
+          enum:
+            - inter
+            - system
+            - humanist
+            - geometric
+            - rounded
+            - serif
+            - slab
+          example: inter
+        baseSize:
+          description: Dimensione base del testo
+          allOf:
+            - $ref: '#/components/schemas/GlobalTokensDimensionDto'
+      required:
+        - mainFont
+        - baseSize
+    GlobalTokensSpacingDto:
+      type: object
+      properties:
+        baseUnit:
+          description: Unità di spaziatura base
+          allOf:
+            - $ref: '#/components/schemas/GlobalTokensDimensionDto'
+      required:
+        - baseUnit
+    GlobalTokensDto:
+      type: object
+      properties:
+        version:
+          type: number
+          description: Versione del contratto GlobalTokens
+          example: 1
+          enum:
+            - 1
+        palette:
+          description: Palette di brand a livello di sito
+          allOf:
+            - $ref: '#/components/schemas/GlobalTokensPaletteDto'
+        typography:
+          description: Tipografia base di sito
+          allOf:
+            - $ref: '#/components/schemas/GlobalTokensTypographyDto'
+        spacing:
+          description: Spaziatura base di sito
+          allOf:
+            - $ref: '#/components/schemas/GlobalTokensSpacingDto'
+      required:
+        - version
+        - palette
+        - typography
+        - spacing
     UploadFileDto:
       type: object
       properties:

@@ -19,6 +19,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../../test/utils';
 import type { BlockNode } from './block-tree.utils';
+import { DEFAULT_GLOBAL_TOKENS } from '../../../libs/globalTokensCompiler';
 
 /**
  * Tipo sintetico che copre i sette `kind` in un blocco solo, aggiunto **in coda** ai
@@ -127,6 +128,9 @@ beforeEach(() => {
   });
   useBlockEditorStore.getState().initTree([]);
   useBlockEditorStore.getState().setActiveViewport('desktop');
+  // F07 step 2: nessun Global Design Token idratato di default — ogni test che ne ha bisogno
+  // (token picker di `case 'color'`) lo dichiara esplicitamente con `hydrateGlobalTokens`.
+  useBlockEditorStore.setState({ globalTokens: null });
 });
 
 describe('PropertyInspector — nessuna selezione e tipi fuori registro', () => {
@@ -400,6 +404,217 @@ describe('PropertyInspector — i sette kind del registro', () => {
     expect(propsInStore('k-1').quantita).toBe(42);
     expect(typeof propsInStore('k-1').quantita).toBe('number');
   });
+
+  it('color senza Global Design Token idratati → token picker disabilitato, mai un crash', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+
+    const tokenPicker = screen.getByRole('button', { name: 'Colori globali' });
+    expect(tokenPicker).toBeDisabled();
+  });
+
+  it('color con Global Design Token idratati → il picker scrive l\'hex risolto del token, mai un riferimento "var(...)"', async () => {
+    const user = userEvent.setup();
+    useBlockEditorStore.getState().hydrateGlobalTokens(DEFAULT_GLOBAL_TOKENS);
+    renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+
+    const tokenPicker = screen.getByRole('button', { name: 'Colori globali' });
+    expect(tokenPicker).toBeEnabled();
+    await user.click(tokenPicker);
+
+    const primaryOption = screen.getByText(
+      `Primario · ${DEFAULT_GLOBAL_TOKENS.palette.primary}`,
+    );
+    await user.click(primaryOption);
+
+    expect(propsInStore('h-1').styleTextColorCustom).toBe(DEFAULT_GLOBAL_TOKENS.palette.primary);
+  });
+});
+
+describe('PropertyInspector — i cinque kind di ADR-38 (unitValue/border/shadow/cssClassName/htmlId)', () => {
+  it("unitValue → NumberInput scrive { value, unit }, preservando l'unità corrente", async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
+
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+
+    const label = 'Dimensione testo personalizzata';
+    const numberInput = screen.getByRole('textbox', { name: `${label} — Valore` });
+    await user.clear(numberInput);
+    await user.type(numberInput, '24');
+
+    expect(propsInStore('h-1').styleFontSizeCustom).toEqual({ value: 24, unit: 'px' });
+  });
+
+  it('unitValue → il Select unità scrive solo `unit`, preservando `value`', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(
+      node('h-1', 'heading', {
+        level: 'h2',
+        text: 'Titolo',
+        styleFontSizeCustom: { value: 18, unit: 'px' },
+      }),
+    );
+
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+
+    const label = 'Dimensione testo personalizzata';
+    const unitSelect = screen.getByRole('textbox', { name: `${label} — Unità` });
+    await user.click(unitSelect);
+    await user.click(screen.getByRole('option', { name: 'rem' }));
+
+    expect(propsInStore('h-1').styleFontSizeCustom).toEqual({ value: 18, unit: 'rem' });
+  });
+
+  it('border → il Select stile scrive i 4 campi fissi, mai un valore libero', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
+
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+
+    const styleSelect = screen.getByRole('textbox', { name: 'Bordo — Stile' });
+    await user.click(styleSelect);
+    await user.click(screen.getByRole('option', { name: 'dashed' }));
+
+    expect(propsInStore('h-1').styleBorder).toEqual({
+      width: 0,
+      style: 'dashed',
+      color: '#000000',
+      radius: 0,
+    });
+  });
+
+  it('border → un solo controllo di raggio, mai quattro campi per angolo (ADR-38 § 3)', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
+
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+
+    expect(screen.getByRole('slider', { name: 'Bordo — Raggio' })).toBeInTheDocument();
+    expect(screen.queryByRole('slider', { name: /Angolo/i })).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('slider', { name: /Raggio/i })).toHaveLength(1);
+  });
+
+  it('border → lo Slider dello spessore scrive `width` via tastiera, lasciando gli altri campi intatti', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
+
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+
+    const widthSlider = screen.getByRole('slider', { name: 'Bordo — Spessore' });
+    widthSlider.focus();
+    await user.keyboard('{ArrowRight}{ArrowRight}');
+
+    expect(propsInStore('h-1').styleBorder).toEqual({
+      width: 2,
+      style: 'solid',
+      color: '#000000',
+      radius: 0,
+    });
+  });
+
+  it('shadow → stessa forma per box-shadow e text-shadow, nessun toggle Box/Text', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
+
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+
+    expect(screen.queryByRole('radio', { name: /Box|Text/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /Box|Text/i })).not.toBeInTheDocument();
+
+    const blurSlider = screen.getByRole('slider', { name: 'Ombra — Sfocatura' });
+    blurSlider.focus();
+    await user.keyboard('{ArrowRight}{ArrowRight}{ArrowRight}');
+
+    expect(propsInStore('h-1').styleShadow).toEqual({
+      x: 0,
+      y: 0,
+      blur: 3,
+      spread: 0,
+      color: '#000000',
+    });
+  });
+
+  it('cssClassName → TextInput, avviso UX non bloccante sul formato, scrittura onBlur', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
+
+    await user.click(screen.getByRole('tab', { name: 'Avanzato' }));
+
+    const input = screen.getByRole('textbox', { name: 'Classe CSS personalizzata' });
+    await user.type(input, '1classe-non-valida');
+    await user.tab();
+
+    expect(screen.getByText(/Ammessi 1-3 nomi/i)).toBeInTheDocument();
+    // La validazione client è solo UX: il valore arriva comunque in store.
+    expect(propsInStore('h-1').customCssClass).toBe('1classe-non-valida');
+
+    await user.clear(input);
+    await user.type(input, 'hero-titolo hero-titolo--grande');
+    await user.tab();
+
+    expect(screen.queryByText(/Ammessi 1-3 nomi/i)).not.toBeInTheDocument();
+    expect(propsInStore('h-1').customCssClass).toBe('hero-titolo hero-titolo--grande');
+  });
+
+  it('htmlId → TextInput a token singolo, messaggio UX distinto da cssClassName', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
+
+    await user.click(screen.getByRole('tab', { name: 'Avanzato' }));
+
+    const input = screen.getByRole('textbox', { name: 'ID elemento personalizzato' });
+    await user.type(input, 'due token');
+    await user.tab();
+
+    expect(screen.getByText(/Ammesso un solo identificativo/i)).toBeInTheDocument();
+
+    await user.clear(input);
+    await user.type(input, 'hero-titolo');
+    await user.tab();
+
+    expect(screen.queryByText(/Ammesso un solo identificativo/i)).not.toBeInTheDocument();
+    expect(propsInStore('h-1').customElementId).toBe('hero-titolo');
+  });
+});
+
+describe('PropertyInspector — sezioni Accordion stile Elementor', () => {
+  it('le sezioni con campi compaiono (Bordo, Ombra, Spaziatura) sul tab Stile di heading, tutte aperte di default', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
+
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+
+    // Il nome dell'intestazione Accordion (`Accordion.Control`, un `button`) coincide col
+    // nome della sezione — `getByRole('button', ...)` la distingue dall'etichetta di
+    // gruppo omonima dentro `PropField` (es. il "Bordo" del controllo composito stesso).
+    expect(screen.getByRole('button', { name: 'Tipografia & Colori' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bordo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ombra' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Spaziatura' })).toBeInTheDocument();
+    // Aperte di default: i campi sono già nel DOM, nessun click extra sull'Accordion.
+    expect(screen.getByText('Colore testo')).toBeInTheDocument();
+  });
+
+  it('la sezione "Attributi Custom" compare sul tab Avanzato, insieme a "Layout & Responsive"', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
+
+    await user.click(screen.getByRole('tab', { name: 'Avanzato' }));
+
+    expect(screen.getByText('Layout & Responsive')).toBeInTheDocument();
+    expect(screen.getByText('Attributi Custom')).toBeInTheDocument();
+    expect(screen.getByText('Classe CSS personalizzata')).toBeInTheDocument();
+  });
+
+  it('la sezione "Allineamento" del tab Contenuto non compare per nessun tipo reale (nessuna prop di contenuto è di allineamento oggi)', () => {
+    renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
+
+    expect(screen.queryByText('Allineamento')).not.toBeInTheDocument();
+    expect(screen.getByText('Testo / Media')).toBeInTheDocument();
+  });
 });
 
 describe('PropertyInspector — obbligatorietà e cambio di selezione', () => {
@@ -469,34 +684,50 @@ describe('PropertyInspector — copertura del registro reale', () => {
         .map((prop) => prop.kind),
     );
 
-    // `boolean` è in uso reale da ADR-37 (styleHideDesktop/Tablet/Mobile). `number` resta
-    // l'unico kind assente dai tipi approvati, coperto dal solo tipo sintetico.
-    expect([...kindsNelRegistro].sort()).toEqual([
-      'boolean',
-      'color',
-      'enum',
-      'mediaRef',
-      'plainText',
-      'richText',
-      'url',
-    ]);
+    // `boolean` è in uso reale da ADR-37 (styleHideDesktop/Tablet/Mobile). `border`,
+    // `cssClassName`, `htmlId`, `shadow`, `unitValue` sono in uso reale da ADR-38
+    // (`styleBorder`/`styleShadow`/`customCssClass`/`customElementId`/`styleFontSizeCustom`).
+    // `number` resta l'unico kind assente dai tipi approvati, coperto dal solo tipo sintetico.
+    expect([...kindsNelRegistro].sort()).toEqual(
+      [
+        'border',
+        'boolean',
+        'color',
+        'cssClassName',
+        'enum',
+        'htmlId',
+        'mediaRef',
+        'plainText',
+        'richText',
+        'shadow',
+        'unitValue',
+        'url',
+      ].sort(),
+    );
   });
 
-  it('i sette kind del contratto sono tutti rappresentati fra tipi reali e sonda sintetica', () => {
+  it('i dodici kind del contratto sono tutti rappresentati fra tipi reali e sonda sintetica', () => {
     const coperti = new Set(
       BLOCK_TYPES.flatMap((descriptor) => descriptor.props).map((prop) => prop.kind),
     );
 
-    expect([...coperti].sort()).toEqual([
-      'boolean',
-      'color',
-      'enum',
-      'mediaRef',
-      'number',
-      'plainText',
-      'richText',
-      'url',
-    ]);
+    expect([...coperti].sort()).toEqual(
+      [
+        'border',
+        'boolean',
+        'color',
+        'cssClassName',
+        'enum',
+        'htmlId',
+        'mediaRef',
+        'number',
+        'plainText',
+        'richText',
+        'shadow',
+        'unitValue',
+        'url',
+      ].sort(),
+    );
   });
 });
 

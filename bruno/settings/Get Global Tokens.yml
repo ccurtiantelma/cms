@@ -1,0 +1,17 @@
+info:
+  name: Get Global Tokens
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: "{{baseUrl}}/app/settings/global-tokens"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -33,6 +33,7 @@ import {
 } from '../pages/pages/editor/block-tree.utils';
 import { canContainType } from '../pages/pages/editor/block-registry.utils';
 import { CONTENT_TREE_LIMITS } from '../types/blocks.types';
+import { compileTokensToCss, GLOBAL_TOKENS_STYLE_TAG_ID, type GlobalTokens } from '../libs/globalTokensCompiler';
 
 /** Direzione opposta, usata per costruire l'inverso di un comando `move`. */
 function oppositeDirection(direction: 'up' | 'down'): 'up' | 'down' {
@@ -40,15 +41,39 @@ function oppositeDirection(direction: 'up' | 'down'): 'up' | 'down' {
 }
 
 /**
- * Un comando invertibile della history undo/redo. `apply` produce il nuovo albero dato
- * quello corrente; `invert` produce l'albero che precede l'applicazione di `apply`.
- * Nessuno dei due porta uno snapshot: sono funzioni pure chiuse sui soli parametri
- * necessari all'operazione (patch), non sull'albero intero.
+ * Un comando invertibile che opera sull'albero di blocchi. `apply` produce il nuovo
+ * albero dato quello corrente; `invert` produce l'albero che precede l'applicazione di
+ * `apply`. Nessuno dei due porta uno snapshot: sono funzioni pure chiuse sui soli
+ * parametri necessari all'operazione (patch), non sull'albero intero.
  */
-export interface EditorCommand {
+interface TreeCommand {
+  kind: 'tree';
   apply: (tree: BlockNode[]) => BlockNode[];
   invert: (tree: BlockNode[]) => BlockNode[];
 }
+
+/**
+ * Un comando invertibile che opera sui Global Design Tokens (F04 step 1, libs/
+ * globalTokensCompiler.ts) — stesso principio dei comandi sull'albero: `apply`/`invert`
+ * sono chiusure sul valore precedente/nuovo, mai uno snapshot dell'intero stato dello
+ * store. Vive sulla stessa history di `TreeCommand` (stessa pila undo/redo) perché i
+ * Global Tokens sono un'altra proprietà modificabile della sessione di editing, non un
+ * meccanismo di annullamento a sé stante.
+ */
+interface GlobalTokensCommand {
+  kind: 'globalTokens';
+  apply: (tokens: GlobalTokens | null) => GlobalTokens | null;
+  invert: (tokens: GlobalTokens | null) => GlobalTokens | null;
+}
+
+/**
+ * Un comando invertibile della history undo/redo. Union discriminata da `kind`: la
+ * stessa pila (`undoStack`/`redoStack`) accoglie sia patch sull'albero di blocchi sia
+ * patch sui Global Design Tokens, applicate ciascuna alla propria fetta di stato — un
+ * unico timeline di Ctrl+Z per l'intera sessione di editing, non due meccanismi
+ * paralleli.
+ */
+export type EditorCommand = TreeCommand | GlobalTokensCommand;
 
 /**
  * Il punto della history che corrisponde a ciò che il server ha davvero salvato.
@@ -129,6 +154,14 @@ interface BlockEditorState {
    * navigator, sempre riselezionabile/ri-mostrabile.
    */
   hiddenInCanvasIds: ReadonlySet<string>;
+  /**
+   * Global Design Tokens correnti (F04 step 1, `libs/globalTokensCompiler.ts`) — palette
+   * di brand, font di base, unità di spaziatura, esposti come variabili CSS al canvas.
+   * `null` finché nessuno li ha impostati in questa sessione: né persistenza né UI di
+   * gestione esistono ancora (fuori scope di questo step), quindi non c'è un default
+   * "di fabbrica" da precaricare — solo `setGlobalTokens` lo popola.
+   */
+  globalTokens: GlobalTokens | null;
 
   /** Inizializza l'albero da `draftContent.blocks` esistente (nessun riordino spurio: ordine e struttura conservati com'è). Azzera history e selezione. */
   initTree: (blocks: BlockNode[]) => void;
@@ -202,13 +235,34 @@ interface BlockEditorState {
    * verso in cui vale la pena sbagliare.
    */
   markSaved: (point: SavePoint) => void;
+  /**
+   * Sostituisce i Global Design Tokens correnti, registra un comando invertibile sulla
+   * stessa history undo/redo dell'albero (vedi {@link GlobalTokensCommand}) e aggiorna
+   * subito il tag `<style id="eaidos-global-tokens">` del `document` principale
+   * (`applyGlobalTokensToDocument`) con il CSS ricompilato. Nessuna persistenza verso il
+   * server: quel passaggio (e l'eventuale applicazione al `contentDocument` di un
+   * canvas in iframe, oggi inesistente) restano fuori da questo step.
+   */
+  setGlobalTokens: (tokens: GlobalTokens) => void;
+  /**
+   * Idrata i Global Design Tokens da una fonte non annullabile (F07 step 2: la lettura
+   * iniziale di `GET app/settings/global-tokens` all'apertura dell'editor,
+   * `FullScreenEditorLayout.tsx`) e applica subito il CSS al `document` principale — stesso
+   * meccanismo di `setGlobalTokens`, ma **senza** spingere un `GlobalTokensCommand` sulla
+   * history undo/redo: è un caricamento di stato dal server, non un'azione dell'utente da
+   * poter annullare con Ctrl+Z (stesso principio di `initTree` rispetto ad `addBlockAction`).
+   */
+  hydrateGlobalTokens: (tokens: GlobalTokens) => void;
 }
 
 /**
- * Esegue un comando sull'albero corrente, lo spinge sull'undo stack e svuota il redo
- * stack (una nuova azione dopo un undo invalida i redo pendenti — comportamento standard).
+ * Esegue un comando `tree` sull'albero corrente, lo spinge sull'undo stack e svuota il
+ * redo stack (una nuova azione dopo un undo invalida i redo pendenti — comportamento
+ * standard). Solo per comandi `kind: 'tree'`: `setGlobalTokens` spinge il proprio
+ * comando `kind: 'globalTokens'` direttamente, perché non c'è un albero da confrontare
+ * per rilevare un no-op.
  */
-function pushCommand(state: BlockEditorState, command: EditorCommand): Partial<BlockEditorState> {
+function pushCommand(state: BlockEditorState, command: TreeCommand): Partial<BlockEditorState> {
   const nextTree = command.apply(state.tree);
   if (nextTree === state.tree) {
     // No-op (es. move ai bordi): nessuna mutazione, nessuna voce di history.
@@ -219,6 +273,39 @@ function pushCommand(state: BlockEditorState, command: EditorCommand): Partial<B
     undoStack: [...state.undoStack, command],
     redoStack: [],
   };
+}
+
+/**
+ * Aggiorna (creandolo se assente) il tag `<style id="eaidos-global-tokens">` di `doc`
+ * col CSS compilato dei Global Design Tokens. Funzione standalone ed esportata — non
+ * solo uso interno allo store — perché lo stesso CSS va applicato sia al `document`
+ * principale (chiamato qui sotto) sia, quando esisterà un componente canvas in
+ * `<iframe>`, al `contentDocument` di quell'iframe: al momento nessun componente del
+ * codebase renderizza il canvas in un iframe (`EditorCanvas.tsx` monta i blocchi
+ * direttamente nel DOM della pagina host), quindi non c'è un riferimento del genere da
+ * riusare qui — questo helper resta minimale e indipendente in attesa che un futuro
+ * componente canvas lo richiami con il proprio `contentDocument`.
+ * @param css Blocco CSS già compilato (`compileTokensToCss`).
+ * @param doc Documento su cui applicare/aggiornare il tag `<style>`.
+ */
+export function applyGlobalTokensToDocument(css: string, doc: Document): void {
+  let styleTag = doc.getElementById(GLOBAL_TOKENS_STYLE_TAG_ID) as HTMLStyleElement | null;
+  if (!styleTag) {
+    styleTag = doc.createElement('style');
+    styleTag.id = GLOBAL_TOKENS_STYLE_TAG_ID;
+    doc.head.appendChild(styleTag);
+  }
+  styleTag.textContent = css;
+}
+
+/**
+ * Compila i token per il tag `<style>`, oppure svuota il CSS se `tokens` è `null` — caso
+ * dello stato iniziale o di un undo che torna indietro fino a "nessun token impostato in
+ * questa sessione" (nessun default di fabbrica reintrodotto di nascosto: se l'utente
+ * annulla fino a lì, il canvas torna esattamente come prima di ogni impostazione).
+ */
+function compileOrEmpty(tokens: GlobalTokens | null): string {
+  return tokens ? compileTokensToCss(tokens) : '';
 }
 
 const CLEAN_SAVE_POINT: SavePoint = { depth: 0, top: null };
@@ -235,6 +322,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   redoStack: [],
   savePoint: CLEAN_SAVE_POINT,
   hiddenInCanvasIds: new Set(),
+  globalTokens: null,
 
   initTree: (blocks) => {
     set((state) => ({
@@ -280,7 +368,8 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       const insertedNode = siblings[clampedIndex];
       if (!insertedNode) return {};
 
-      const command: EditorCommand = {
+      const command: TreeCommand = {
+        kind: 'tree',
         apply: (tree) => addBlockAtExact(tree, parentId, clampedIndex, insertedNode),
         invert: (tree) => removeBlock(tree, insertedNode.id),
       };
@@ -294,7 +383,8 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   },
 
   moveBlockAction: (id, direction) => {
-    const command: EditorCommand = {
+    const command: TreeCommand = {
+      kind: 'tree',
       apply: (tree) => moveBlock(tree, id, direction),
       invert: (tree) => moveBlock(tree, id, oppositeDirection(direction)),
     };
@@ -315,7 +405,8 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       if (targetParentId !== null && !targetParent) return {};
       if (!canContainType(targetParent?.type, node.type)) return {};
 
-      const command: EditorCommand = {
+      const command: TreeCommand = {
+        kind: 'tree',
         apply: (tree) => moveNodeTo(tree, id, targetParentId, index),
         invert: (tree) => moveNodeTo(tree, id, origin.parentId, origin.index),
       };
@@ -328,7 +419,8 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       const removedNode = findNode(state.tree, id);
       const location = findLocation(state.tree, id);
       if (!removedNode || !location) return {};
-      const command: EditorCommand = {
+      const command: TreeCommand = {
+        kind: 'tree',
         apply: (tree) => removeBlock(tree, id),
         invert: (tree) => addBlockAtExact(tree, location.parentId, location.index, removedNode),
       };
@@ -361,7 +453,8 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
         return {};
       }
 
-      const command: EditorCommand = {
+      const command: TreeCommand = {
+        kind: 'tree',
         apply: (tree) => addBlockAtExact(tree, location.parentId, location.index + 1, copy),
         invert: (tree) => removeBlock(tree, copy.id),
       };
@@ -404,7 +497,8 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
         return {};
       }
 
-      const command: EditorCommand = {
+      const command: TreeCommand = {
+        kind: 'tree',
         apply: (tree) => addBlockAtExact(tree, parentId, index, copy),
         invert: (tree) => removeBlock(tree, copy.id),
       };
@@ -423,7 +517,8 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       for (const key of changedKeys) {
         previousProps[key] = node.props[key];
       }
-      const command: EditorCommand = {
+      const command: TreeCommand = {
+        kind: 'tree',
         apply: (tree) => updateBlockProps(tree, id, props),
         invert: (tree) => updateBlockProps(tree, id, previousProps),
       };
@@ -443,9 +538,20 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
     set((state) => {
       if (state.undoStack.length === 0) return {};
       const command = state.undoStack[state.undoStack.length - 1];
-      const nextTree = command.invert(state.tree);
+      if (command.kind === 'tree') {
+        return {
+          tree: command.invert(state.tree),
+          undoStack: state.undoStack.slice(0, -1),
+          redoStack: [...state.redoStack, command],
+        };
+      }
+      // `kind === 'globalTokens'`: il tag <style> del documento principale va
+      // riallineato subito, esattamente come fa `setGlobalTokens` — l'undo non è un
+      // altro meccanismo, è lo stesso comando eseguito all'indietro.
+      const nextTokens = command.invert(state.globalTokens);
+      applyGlobalTokensToDocument(compileOrEmpty(nextTokens), document);
       return {
-        tree: nextTree,
+        globalTokens: nextTokens,
         undoStack: state.undoStack.slice(0, -1),
         redoStack: [...state.redoStack, command],
       };
@@ -456,9 +562,17 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
     set((state) => {
       if (state.redoStack.length === 0) return {};
       const command = state.redoStack[state.redoStack.length - 1];
-      const nextTree = command.apply(state.tree);
+      if (command.kind === 'tree') {
+        return {
+          tree: command.apply(state.tree),
+          redoStack: state.redoStack.slice(0, -1),
+          undoStack: [...state.undoStack, command],
+        };
+      }
+      const nextTokens = command.apply(state.globalTokens);
+      applyGlobalTokensToDocument(compileOrEmpty(nextTokens), document);
       return {
-        tree: nextTree,
+        globalTokens: nextTokens,
         redoStack: state.redoStack.slice(0, -1),
         undoStack: [...state.undoStack, command],
       };
@@ -471,6 +585,32 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   },
 
   markSaved: (point) => set({ savePoint: point }),
+
+  setGlobalTokens: (tokens) => {
+    set((state) => {
+      const previous = state.globalTokens;
+      const command: GlobalTokensCommand = {
+        kind: 'globalTokens',
+        apply: () => tokens,
+        invert: () => previous,
+      };
+      // Applicazione immediata al `document` principale: il canvas dell'editor non vive
+      // oggi in un iframe (nessun `contentDocument` da aggiornare in parallelo — vedi il
+      // commento di `applyGlobalTokensToDocument`), quindi questo è l'unico documento da
+      // sincronizzare finché non esisterà un componente canvas con un riferimento proprio.
+      applyGlobalTokensToDocument(compileTokensToCss(tokens), document);
+      return {
+        globalTokens: tokens,
+        undoStack: [...state.undoStack, command],
+        redoStack: [],
+      };
+    });
+  },
+
+  hydrateGlobalTokens: (tokens) => {
+    applyGlobalTokensToDocument(compileTokensToCss(tokens), document);
+    set({ globalTokens: tokens });
+  },
 }));
 
 /**
@@ -578,4 +718,9 @@ export function useCanRedo(): boolean {
  */
 export function useHasUnsavedChanges(): boolean {
   return useBlockEditorStore(isDirty);
+}
+
+/** Selettore granulare: solo i Global Design Tokens correnti (`null` se non ancora impostati in questa sessione). */
+export function useGlobalTokens(): GlobalTokens | null {
+  return useBlockEditorStore((state) => state.globalTokens);
 }

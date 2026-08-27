@@ -5,13 +5,15 @@ import { headingBlock } from './types/heading.block';
 import { richTextBlock } from './types/rich-text.block';
 import { imageBlock } from './types/image.block';
 import { buttonBlock } from './types/button.block';
+import { containerBlock } from './types/container.block';
 
 /**
  * Tipi ammessi come nodo di **radice** dell'albero. Dichiarato qui e mai
  * dedotto altrove (ADR-21 § 2, SPEC-F02-blocchi.md § 3.1). Comprende tutti e
- * cinque i tipi — non solo `section` — perché F01 ha già persistito alberi
+ * sei i tipi — non solo `section` — perché F01 ha già persistito alberi
  * con una foglia in `blocks[0]` e nessuna migrazione può inventare un nodo
  * `section` sintetico senza creare struttura che l'autore non ha scritto.
+ * `container` (ADR-39 § 4) segue lo stesso principio.
  */
 export const ROOT_ALLOWED: readonly string[] = [
   'section',
@@ -19,11 +21,13 @@ export const ROOT_ALLOWED: readonly string[] = [
   'richText',
   'image',
   'button',
+  'container',
 ];
 
 /**
- * I cinque tipi approvati uno per uno da ADR-21 § 5. Tutti a `v: 1`,
- * `enabled: true`, nessun `minRole`, nessun `deprecated` (PLAN-F02 T2).
+ * I cinque tipi approvati uno per uno da ADR-21 § 5, più `container`
+ * (sesto tipo, ADR-39). Tutti a `v: 1`, `enabled: true`, nessun `minRole`,
+ * nessun `deprecated` (PLAN-F02 T2).
  */
 const BLOCK_DEFINITIONS: readonly BlockDefinition[] = [
   sectionBlock,
@@ -31,6 +35,7 @@ const BLOCK_DEFINITIONS: readonly BlockDefinition[] = [
   richTextBlock,
   imageBlock,
   buttonBlock,
+  containerBlock,
 ];
 
 /** Registro dei tipi, indicizzato per `type`. Fonte di verità del backend (ADR-21 § 2). */

@@ -1,0 +1,36 @@
+info:
+  name: Update Global Tokens
+  type: http
+  seq: 4
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/app/settings/global-tokens"
+  body:
+    type: json
+    data: |-
+      {
+        "version": 1,
+        "palette": {
+          "primary": "#93003c",
+          "secondary": "#00a0d2",
+          "text": "#333333",
+          "accent": "#f7a600"
+        },
+        "typography": {
+          "mainFont": "inter",
+          "baseSize": { "value": 16, "unit": "px" }
+        },
+        "spacing": {
+          "baseUnit": { "value": 8, "unit": "px" }
+        }
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -95,8 +95,8 @@ function WidgetTile({ descriptor, onAdd }: WidgetTileProps): JSX.Element {
 
 /**
  * Destinazione di un click-to-add: dentro il nodo selezionato se è un contenitore (stesso
- * criterio `isContainer` di `EditorBlockWrapper.tsx` — `childrenAllow.length > 0`), altrimenti
- * in fondo alla radice. `index` di fallback ricalcato su `BlockPaletteProps.index` di
+ * criterio `isContainer` di `EditorBlockWrapper.tsx` — `childrenAllow === '*'` o
+ * `childrenAllow.length > 0`), altrimenti in fondo alla radice. `index` di fallback ricalcato su `BlockPaletteProps.index` di
  * `BlockPalette.tsx`: `addBlockAction`/`addBlock` clampano comunque ai limiti validi.
  */
 function clickInsertionTarget(selectedNode: { id: string; type: string } | undefined): {
@@ -105,7 +105,8 @@ function clickInsertionTarget(selectedNode: { id: string; type: string } | undef
 } {
   if (!selectedNode) return { parentId: null, index: Number.MAX_SAFE_INTEGER };
   const descriptor = BLOCK_TYPES.find((entry) => entry.type === selectedNode.type);
-  const isContainer = (descriptor?.childrenAllow.length ?? 0) > 0;
+  const isContainer =
+    descriptor?.childrenAllow === '*' || (descriptor?.childrenAllow.length ?? 0) > 0;
   if (!isContainer) return { parentId: null, index: Number.MAX_SAFE_INTEGER };
   return { parentId: selectedNode.id, index: Number.MAX_SAFE_INTEGER };
 }

@@ -1,5 +1,6 @@
 import type { components } from '@api-types';
 import { PublicSiteConfig } from './config';
+import { DEFAULT_GLOBAL_TOKENS, type GlobalTokens } from '../../frontend/src/libs/globalTokensCompiler';
 
 type PublicPageDto = components['schemas']['PublicPageDto'];
 
@@ -53,4 +54,34 @@ export async function resolvePublicPage(pathname: string): Promise<PublicPageRes
   }
 
   return { kind: 'error' };
+}
+
+/**
+ * Recupera i Global Design Tokens (palette/tipografia/spaziatura di brand)
+ * da iniettare come custom property CSS nell'head del documento SSR.
+ *
+ * Chiama `GET /api/v1/public/settings/global-tokens` (`public-pages.controller.ts`),
+ * superficie pubblica anonima che riusa `SettingsService.getGlobalTokens()`
+ * (fallback ai default di fabbrica lato backend se non è mai stata salvata
+ * alcuna riga `app_settings` con chiave `global_tokens`).
+ *
+ * Tollerante ai guasti per costruzione, come `resolvePublicPage`: nessuna
+ * eccezione esce da questa funzione, né per errore di rete/timeout né per
+ * risposta non `200` (server down/errore) — sempre un `GlobalTokens` valido
+ * (quello ricevuto o i default di fabbrica).
+ */
+export async function fetchThemeSettings(): Promise<GlobalTokens> {
+  const url = `${PublicSiteConfig.apiBaseUrl}/api/v1/public/settings/global-tokens`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error(`public-site: global-tokens non disponibile (status ${res.status}), uso i default`);
+      return DEFAULT_GLOBAL_TOKENS;
+    }
+    return (await res.json()) as GlobalTokens;
+  } catch (error: unknown) {
+    console.error('public-site: errore di rete su global-tokens, uso i default', error);
+    return DEFAULT_GLOBAL_TOKENS;
+  }
 }

@@ -8,14 +8,17 @@ import * as request from 'supertest';
 import { NextFunction, Request, Response } from 'express';
 import { SettingsController } from '../../src/settings/settings.controller';
 import {
+  DEFAULT_GLOBAL_TOKENS,
   DEFAULT_MULTILINGUAL_CONFIG,
   DEFAULT_THEME_CONFIG,
+  GLOBAL_TOKENS_SETTING_KEY,
   MULTILINGUAL_SETTING_KEY,
   SettingsService,
   THEME_SETTING_KEY,
 } from '../../src/settings/settings.service';
 import { ThemeConfigDto } from '../../src/settings/dto/theme-config.dto';
 import { MultilingualConfigDto } from '../../src/settings/dto/multilingual-config.dto';
+import { GlobalTokensDto } from '../../src/settings/dto/global-tokens.dto';
 import { AuthMiddleware } from '../../src/auth/auth.middleware';
 import { DbService } from '../../src/db/db.service';
 import { RedisService } from '../../src/redis/redis.service';
@@ -68,6 +71,11 @@ describe('SettingsController (integration)', () => {
   const validTheme: ThemeConfigDto = JSON.parse(
     JSON.stringify(DEFAULT_THEME_CONFIG),
   ) as ThemeConfigDto;
+
+  /** Payload valido di riferimento per il PUT dei Global Design Tokens (clone dei default di fabbrica). */
+  const validGlobalTokens: GlobalTokensDto = JSON.parse(
+    JSON.stringify(DEFAULT_GLOBAL_TOKENS),
+  ) as GlobalTokensDto;
 
   /** Estrae gli 11 token del contratto storico (v1/v2) da un blocco scheme v3, scartando i colori titolo. */
   function toLegacyTokens(tokens: ThemeConfigDto['light']): Record<string, string> {
@@ -816,6 +824,213 @@ describe('SettingsController (integration)', () => {
       await request(app.getHttpServer())
         .put('/api/v1/app/settings/multilingual')
         .send({ active: ['it-IT'], default: 'it-IT' })
+        .expect(401);
+    });
+  });
+
+  describe('GET /app/settings/global-tokens', () => {
+    it('happy path: installazione mai personalizzata → default di fabbrica (ogni ruolo)', async () => {
+      const auth = makeAuthFor(AppUserRoles.User);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/app/settings/global-tokens')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .expect(200);
+
+      expect(res.body).toEqual(DEFAULT_GLOBAL_TOKENS);
+      expect(findFirstMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('happy path: token salvati → restituisce il jsonb della riga global_tokens', async () => {
+      const saved: GlobalTokensDto = {
+        ...validGlobalTokens,
+        palette: { ...validGlobalTokens.palette, primary: '#123456' },
+      };
+      findFirstMock.mockResolvedValue({ id: 1, key: GLOBAL_TOKENS_SETTING_KEY, value: saved });
+      const auth = makeAuthFor(AppUserRoles.Manager);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/app/settings/global-tokens')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .expect(200);
+
+      expect(res.body).toEqual(saved);
+    });
+
+    it('errore: senza JWT → 401 dal middleware globale', async () => {
+      await request(app.getHttpServer()).get('/api/v1/app/settings/global-tokens').expect(401);
+    });
+  });
+
+  describe('PUT /app/settings/global-tokens', () => {
+    it('happy path: Admin salva i token → upsert + audit log + echo, e la GET successiva li riflette', async () => {
+      const auth = makeAuthFor(AppUserRoles.Admin, 11);
+      const payload: GlobalTokensDto = {
+        ...validGlobalTokens,
+        palette: { ...validGlobalTokens.palette, accent: '#00ff00' },
+        typography: { ...validGlobalTokens.typography, mainFont: 'serif' },
+      };
+
+      const putRes = await request(app.getHttpServer())
+        .put('/api/v1/app/settings/global-tokens')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .send(payload)
+        .expect(200);
+
+      expect(putRes.body).toEqual(payload);
+      expect(valuesMock).toHaveBeenCalledWith(
+        expect.objectContaining({ key: GLOBAL_TOKENS_SETTING_KEY, createdBy: 11, updatedBy: 11 }),
+      );
+      expect(onConflictMock).toHaveBeenCalledTimes(1);
+      expect(auditLogMock).toHaveBeenCalledWith(
+        11,
+        'settings.globalTokens.update',
+        'app_settings',
+        GLOBAL_TOKENS_SETTING_KEY,
+        JSON.stringify(payload),
+        undefined,
+        expect.anything(),
+      );
+
+      // Simula la riga ora persistita (l'insert è mockato: non scrive davvero) per verificare che la GET successiva rifletta il salvataggio.
+      findFirstMock.mockResolvedValue({ id: 1, key: GLOBAL_TOKENS_SETTING_KEY, value: payload });
+      const getRes = await request(app.getHttpServer())
+        .get('/api/v1/app/settings/global-tokens')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .expect(200);
+
+      expect(getRes.body).toEqual(payload);
+    });
+
+    it('happy path: SuperAdmin (sopra la soglia Admin) può salvare comunque', async () => {
+      const auth = makeAuthFor(AppUserRoles.SuperAdmin);
+
+      await request(app.getHttpServer())
+        .put('/api/v1/app/settings/global-tokens')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .send(validGlobalTokens)
+        .expect(200);
+    });
+
+    it('errore: colore di palette non hex → 400, nessuna scrittura', async () => {
+      const auth = makeAuthFor(AppUserRoles.Admin);
+      const payload = { ...validGlobalTokens, palette: { ...validGlobalTokens.palette, primary: 'red' } };
+
+      const res = await request(app.getHttpServer())
+        .put('/api/v1/app/settings/global-tokens')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .send(payload)
+        .expect(400);
+
+      expect(validationMessages(res.body)).toContain('#rrggbb');
+      expect(insertMock).not.toHaveBeenCalled();
+      expect(auditLogMock).not.toHaveBeenCalled();
+    });
+
+    it('errore: mainFont fuori whitelist → 400', async () => {
+      const auth = makeAuthFor(AppUserRoles.Admin);
+      const payload = {
+        ...validGlobalTokens,
+        typography: { ...validGlobalTokens.typography, mainFont: 'Comic Sans MS, cursive' },
+      };
+
+      const res = await request(app.getHttpServer())
+        .put('/api/v1/app/settings/global-tokens')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .send(payload)
+        .expect(400);
+
+      expect(validationMessages(res.body)).toContain('Font');
+      expect(insertMock).not.toHaveBeenCalled();
+    });
+
+    it("errore: unità '%' su baseSize/baseUnit → 400 (non ammessa per font/spacing)", async () => {
+      const auth = makeAuthFor(AppUserRoles.Admin);
+      const payload = {
+        ...validGlobalTokens,
+        spacing: { baseUnit: { ...validGlobalTokens.spacing.baseUnit, unit: '%' } },
+      };
+
+      const res = await request(app.getHttpServer())
+        .put('/api/v1/app/settings/global-tokens')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .send(payload)
+        .expect(400);
+
+      expect(validationMessages(res.body)).toContain('Unità');
+      expect(insertMock).not.toHaveBeenCalled();
+    });
+
+    it('errore: versione non supportata → 400', async () => {
+      const auth = makeAuthFor(AppUserRoles.Admin);
+      const payload = { ...validGlobalTokens, version: 2 };
+
+      const res = await request(app.getHttpServer())
+        .put('/api/v1/app/settings/global-tokens')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .send(payload)
+        .expect(400);
+
+      expect(validationMessages(res.body)).toContain('Versione');
+      expect(insertMock).not.toHaveBeenCalled();
+    });
+
+    it('errore: campo extra nel payload → 400 (forbidNonWhitelisted)', async () => {
+      const auth = makeAuthFor(AppUserRoles.Admin);
+      const payload = { ...validGlobalTokens, palette: { ...validGlobalTokens.palette, evil: '#000000' } };
+
+      await request(app.getHttpServer())
+        .put('/api/v1/app/settings/global-tokens')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .send(payload)
+        .expect(400);
+
+      expect(insertMock).not.toHaveBeenCalled();
+    });
+
+    it('RBAC: Manager (sotto Admin) → 403 e nessuna scrittura', async () => {
+      const auth = makeAuthFor(AppUserRoles.Manager);
+
+      const res = await request(app.getHttpServer())
+        .put('/api/v1/app/settings/global-tokens')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .send(validGlobalTokens)
+        .expect(403);
+
+      expect(res.body.message).toContain('Permessi insufficienti');
+      expect(insertMock).not.toHaveBeenCalled();
+      expect(auditLogMock).not.toHaveBeenCalled();
+    });
+
+    it('RBAC: User (sotto Admin) → 403 e nessuna scrittura', async () => {
+      const auth = makeAuthFor(AppUserRoles.User);
+
+      const res = await request(app.getHttpServer())
+        .put('/api/v1/app/settings/global-tokens')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .send(validGlobalTokens)
+        .expect(403);
+
+      expect(res.body.message).toContain('Permessi insufficienti');
+      expect(insertMock).not.toHaveBeenCalled();
+    });
+
+    it('errore: senza JWT → 401 dal middleware globale', async () => {
+      await request(app.getHttpServer())
+        .put('/api/v1/app/settings/global-tokens')
+        .send(validGlobalTokens)
         .expect(401);
     });
   });

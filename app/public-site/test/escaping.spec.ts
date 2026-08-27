@@ -52,8 +52,8 @@ function pageWithPayload(): PublicPageDto {
  * mock di `dangerouslySetInnerHTML`).
  */
 describe('invariante di escaping plainText (ADR-21 § 4, ADR-22 § 7)', () => {
-  it('escapa heading.text, image.alt e button.label nell\'HTML prodotto', () => {
-    const html = renderPageDocument(pageWithPayload(), '/assets/style.css');
+  it('escapa heading.text, image.alt e button.label nell\'HTML prodotto', async () => {
+    const html = await renderPageDocument(pageWithPayload(), '/assets/style.css');
 
     // Il payload grezzo non deve comparire da nessuna parte: né come tag
     // eseguibile né, soprattutto, come attributo capace di rompere il markup
@@ -69,7 +69,7 @@ describe('invariante di escaping plainText (ADR-21 § 4, ADR-22 § 7)', () => {
     expect(occurrences).toBe(3); // heading.text, image.alt, button.label
   });
 
-  it('non tocca richText.html: già sanitizzato server-side, va servito raw', () => {
+  it('non tocca richText.html: già sanitizzato server-side, va servito raw', async () => {
     const richTextHtml = '<p>Testo <strong>sanitizzato</strong></p>';
     const page: PublicPageDto = {
       title: 'Pagina di test',
@@ -81,7 +81,7 @@ describe('invariante di escaping plainText (ADR-21 § 4, ADR-22 § 7)', () => {
       },
     };
 
-    const html = renderPageDocument(page, '/assets/style.css');
+    const html = await renderPageDocument(page, '/assets/style.css');
 
     // Se richText venisse escapato una seconda volta, i tag del rich text
     // sanitizzato apparirebbero come `&lt;p&gt;` invece di renderizzare.
@@ -123,10 +123,20 @@ describe('unicità di dangerouslySetInnerHTML (ADR-22 § 7)', () => {
     expect(hits.map((file) => relative(blocksDir, file))).toEqual([join('blocks', 'RichText.tsx')]);
   });
 
-  it('non compare in app/public-site (server.ts, entry-server.tsx, App.tsx, ...)', () => {
+  // Eccezione nota: l'iniezione del blocco `:root { ... }` dei Global Design
+  // Tokens (`<style id="eaidos-global-tokens">`) in App.tsx, ErrorDocument.tsx
+  // e PreviewDocument.tsx. Non è input utente non fidato: `globalTokensCss` è
+  // compilato server-side da `compileTokensToCss` a partire da valori già
+  // vincolati (hex/whitelist/numero+unità), stesso principio di richText già
+  // sanitizzato server-side.
+  it('non compare in app/public-site salvo l\'iniezione nota dei Global Design Tokens', () => {
     const files = listSourceFiles(publicSiteSrcDir);
     const hits = files.filter((file) => USAGE_PATTERN.test(readFileSync(file, 'utf-8')));
 
-    expect(hits).toEqual([]);
+    const allowedHits = ['App.tsx', 'ErrorDocument.tsx', 'PreviewDocument.tsx']
+      .map((name) => join(publicSiteSrcDir, name))
+      .sort();
+
+    expect(hits.sort()).toEqual(allowedHits);
   });
 });

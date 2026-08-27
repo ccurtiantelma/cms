@@ -451,6 +451,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/app/settings/global-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Global Design Tokens del sito (default di fabbrica se mai salvati) */
+        get: operations["SettingsController_getGlobalTokens"];
+        /** Salva i Global Design Tokens del sito (Admin+ only, registrato su audit log) */
+        put: operations["SettingsController_updateGlobalTokens"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -755,6 +773,23 @@ export interface paths {
         };
         /** Risolve un percorso pubblico alla Pagina pubblicata corrispondente */
         get: operations["PublicPagesController_getPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/settings/global-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Restituisce i Global Tokens per il rendering pubblico (SSR) */
+        get: operations["PublicPagesController_getGlobalTokens"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1619,6 +1654,69 @@ export interface components {
              * @example it-IT
              */
             default: string;
+        };
+        GlobalTokensPaletteDto: {
+            /**
+             * @description Colore primario di brand
+             * @example #93003c
+             */
+            primary: string;
+            /**
+             * @description Colore secondario di brand
+             * @example #00a0d2
+             */
+            secondary: string;
+            /**
+             * @description Colore testo di brand
+             * @example #333333
+             */
+            text: string;
+            /**
+             * @description Colore accento di brand
+             * @example #f7a600
+             */
+            accent: string;
+        };
+        GlobalTokensDimensionDto: {
+            /**
+             * @description Valore numerico della dimensione
+             * @example 16
+             */
+            value: number;
+            /**
+             * @description Unità CSS
+             * @example px
+             * @enum {string}
+             */
+            unit: "px" | "em" | "rem";
+        };
+        GlobalTokensTypographyDto: {
+            /**
+             * @description Font base di sito (ID whitelisted, stessa whitelist di ADR-4)
+             * @example inter
+             * @enum {string}
+             */
+            mainFont: "inter" | "system" | "humanist" | "geometric" | "rounded" | "serif" | "slab";
+            /** @description Dimensione base del testo */
+            baseSize: components["schemas"]["GlobalTokensDimensionDto"];
+        };
+        GlobalTokensSpacingDto: {
+            /** @description Unità di spaziatura base */
+            baseUnit: components["schemas"]["GlobalTokensDimensionDto"];
+        };
+        GlobalTokensDto: {
+            /**
+             * @description Versione del contratto GlobalTokens
+             * @example 1
+             * @enum {number}
+             */
+            version: 1;
+            /** @description Palette di brand a livello di sito */
+            palette: components["schemas"]["GlobalTokensPaletteDto"];
+            /** @description Tipografia base di sito */
+            typography: components["schemas"]["GlobalTokensTypographyDto"];
+            /** @description Spaziatura base di sito */
+            spacing: components["schemas"]["GlobalTokensSpacingDto"];
         };
         UploadFileDto: {
             /**
@@ -2984,6 +3082,64 @@ export interface operations {
             };
         };
     };
+    SettingsController_getGlobalTokens: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Global Design Tokens correnti */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlobalTokensDto"];
+                };
+            };
+        };
+    };
+    SettingsController_updateGlobalTokens: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GlobalTokensDto"];
+            };
+        };
+        responses: {
+            /** @description Global Design Tokens salvati */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlobalTokensDto"];
+                };
+            };
+            /** @description Payload non valido (hex, font, unità o versione) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ruolo inferiore ad Admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     HealthController_check: {
         parameters: {
             query?: never;
@@ -3881,6 +4037,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    PublicPagesController_getGlobalTokens: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Global Tokens correnti */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlobalTokensDto"];
+                };
             };
         };
     };

@@ -1,4 +1,5 @@
 import type { components } from '@api-types';
+import { GLOBAL_TOKENS_STYLE_TAG_ID } from '../../frontend/src/libs/globalTokensCompiler';
 import PageView from './PageView';
 
 type PagePreviewContentDto = components['schemas']['PagePreviewContentDto'];
@@ -6,6 +7,8 @@ type PagePreviewContentDto = components['schemas']['PagePreviewContentDto'];
 interface PreviewDocumentProps {
   page: PagePreviewContentDto;
   cssHref: string;
+  /** Blocco `:root { ... }` compilato dai Global Design Tokens, vedi `App.tsx`. */
+  globalTokensCss: string;
 }
 
 /**
@@ -18,7 +21,7 @@ interface PreviewDocumentProps {
  * qui, mai sulla pagina pubblica — l'anteprima non è indicizzabile per
  * costruzione, non per convenzione (ADR-25 § 4).
  */
-export default function PreviewDocument({ page, cssHref }: PreviewDocumentProps) {
+export default function PreviewDocument({ page, cssHref, globalTokensCss }: PreviewDocumentProps) {
   return (
     <html lang={page.locale}>
       <head>
@@ -27,6 +30,9 @@ export default function PreviewDocument({ page, cssHref }: PreviewDocumentProps)
         <meta name="robots" content="noindex,nofollow" />
         <title>{page.title}</title>
         <link rel="stylesheet" href={cssHref} />
+        {globalTokensCss && (
+          <style id={GLOBAL_TOKENS_STYLE_TAG_ID} dangerouslySetInnerHTML={{ __html: globalTokensCss }} />
+        )}
       </head>
       <body>
         <PageView content={page.content} />

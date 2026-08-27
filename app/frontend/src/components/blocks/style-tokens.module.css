@@ -135,6 +135,23 @@
 .alignItems_default_center { align-items: center; }
 .alignItems_default_flex-end { align-items: flex-end; }
 
+/* ─── flexDirection / justifyContent / wrap (ADR-39) — solo container ──── */
+
+.flexDirection_default_row { flex-direction: row; }
+.flexDirection_default_row-reverse { flex-direction: row-reverse; }
+.flexDirection_default_column { flex-direction: column; }
+.flexDirection_default_column-reverse { flex-direction: column-reverse; }
+
+.justifyContent_default_flex-start { justify-content: flex-start; }
+.justifyContent_default_flex-end { justify-content: flex-end; }
+.justifyContent_default_center { justify-content: center; }
+.justifyContent_default_space-between { justify-content: space-between; }
+.justifyContent_default_space-around { justify-content: space-around; }
+.justifyContent_default_space-evenly { justify-content: space-evenly; }
+
+.wrap_default_nowrap { flex-wrap: nowrap; }
+.wrap_default_wrap { flex-wrap: wrap; }
+
 /* ─── contentWidth / maxWidth (ADR-33 § 1) — solo section, non responsive ── */
 
 /* Nessuna larghezza massima propria: la gestisce `maxWidth`, applicato solo
@@ -318,6 +335,21 @@
   .alignItems_tablet_center { align-items: center; }
   .alignItems_tablet_flex-end { align-items: flex-end; }
 
+  .flexDirection_tablet_row { flex-direction: row; }
+  .flexDirection_tablet_row-reverse { flex-direction: row-reverse; }
+  .flexDirection_tablet_column { flex-direction: column; }
+  .flexDirection_tablet_column-reverse { flex-direction: column-reverse; }
+
+  .justifyContent_tablet_flex-start { justify-content: flex-start; }
+  .justifyContent_tablet_flex-end { justify-content: flex-end; }
+  .justifyContent_tablet_center { justify-content: center; }
+  .justifyContent_tablet_space-between { justify-content: space-between; }
+  .justifyContent_tablet_space-around { justify-content: space-around; }
+  .justifyContent_tablet_space-evenly { justify-content: space-evenly; }
+
+  .wrap_tablet_nowrap { flex-wrap: nowrap; }
+  .wrap_tablet_wrap { flex-wrap: wrap; }
+
   .paddingTop_tablet_0 { padding-top: 0px; }
   .paddingTop_tablet_4 { padding-top: 4px; }
   .paddingTop_tablet_8 { padding-top: 8px; }
@@ -469,6 +501,21 @@
   .alignItems_mobile_flex-start { align-items: flex-start; }
   .alignItems_mobile_center { align-items: center; }
   .alignItems_mobile_flex-end { align-items: flex-end; }
+
+  .flexDirection_mobile_row { flex-direction: row; }
+  .flexDirection_mobile_row-reverse { flex-direction: row-reverse; }
+  .flexDirection_mobile_column { flex-direction: column; }
+  .flexDirection_mobile_column-reverse { flex-direction: column-reverse; }
+
+  .justifyContent_mobile_flex-start { justify-content: flex-start; }
+  .justifyContent_mobile_flex-end { justify-content: flex-end; }
+  .justifyContent_mobile_center { justify-content: center; }
+  .justifyContent_mobile_space-between { justify-content: space-between; }
+  .justifyContent_mobile_space-around { justify-content: space-around; }
+  .justifyContent_mobile_space-evenly { justify-content: space-evenly; }
+
+  .wrap_mobile_nowrap { flex-wrap: nowrap; }
+  .wrap_mobile_wrap { flex-wrap: wrap; }
 
   .paddingTop_mobile_0 { padding-top: 0px; }
   .paddingTop_mobile_4 { padding-top: 4px; }
@@ -672,6 +719,21 @@
   .alignItems_tablet_center { align-items: center; }
   .alignItems_tablet_flex-end { align-items: flex-end; }
 
+  .flexDirection_tablet_row { flex-direction: row; }
+  .flexDirection_tablet_row-reverse { flex-direction: row-reverse; }
+  .flexDirection_tablet_column { flex-direction: column; }
+  .flexDirection_tablet_column-reverse { flex-direction: column-reverse; }
+
+  .justifyContent_tablet_flex-start { justify-content: flex-start; }
+  .justifyContent_tablet_flex-end { justify-content: flex-end; }
+  .justifyContent_tablet_center { justify-content: center; }
+  .justifyContent_tablet_space-between { justify-content: space-between; }
+  .justifyContent_tablet_space-around { justify-content: space-around; }
+  .justifyContent_tablet_space-evenly { justify-content: space-evenly; }
+
+  .wrap_tablet_nowrap { flex-wrap: nowrap; }
+  .wrap_tablet_wrap { flex-wrap: wrap; }
+
   .paddingTop_tablet_0 { padding-top: 0px; }
   .paddingTop_tablet_4 { padding-top: 4px; }
   .paddingTop_tablet_8 { padding-top: 8px; }
@@ -821,6 +883,21 @@
   .alignItems_mobile_flex-start { align-items: flex-start; }
   .alignItems_mobile_center { align-items: center; }
   .alignItems_mobile_flex-end { align-items: flex-end; }
+
+  .flexDirection_mobile_row { flex-direction: row; }
+  .flexDirection_mobile_row-reverse { flex-direction: row-reverse; }
+  .flexDirection_mobile_column { flex-direction: column; }
+  .flexDirection_mobile_column-reverse { flex-direction: column-reverse; }
+
+  .justifyContent_mobile_flex-start { justify-content: flex-start; }
+  .justifyContent_mobile_flex-end { justify-content: flex-end; }
+  .justifyContent_mobile_center { justify-content: center; }
+  .justifyContent_mobile_space-between { justify-content: space-between; }
+  .justifyContent_mobile_space-around { justify-content: space-around; }
+  .justifyContent_mobile_space-evenly { justify-content: space-evenly; }
+
+  .wrap_mobile_nowrap { flex-wrap: nowrap; }
+  .wrap_mobile_wrap { flex-wrap: wrap; }
 
   .paddingTop_mobile_0 { padding-top: 0px; }
   .paddingTop_mobile_4 { padding-top: 4px; }

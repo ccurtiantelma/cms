@@ -1,14 +1,25 @@
 /**
  * Scheda "Contenuto" dell'ispettore (ADR-30 § 1): le props già filtrate da
- * `groupPropsByTab` per `tab: 'content'`, ciascuna resa da `PropField` (unico punto di
- * dispaccio per `kind`, vedi il suo commento di testa). Nessuna logica di dominio qui: solo
- * il ciclo di montaggio e il filo visivo fra un campo e il successivo (`inspector.module.css`).
+ * `groupPropsByTab` per `tab: 'content'`, raggruppate in sezioni Accordion stile Elementor
+ * (`groupPropsBySection`/`contentSectionFor`, T-inspector-elementor-parity) — "Testo /
+ * Media" e "Allineamento". Tutte le sezioni popolate restano aperte di default
+ * (`Accordion` `multiple` + `defaultValue`): nessun campo esistente finisce dietro un click
+ * extra rispetto a prima di questo restyle. Ogni prop resta resa da `PropField` (unico punto
+ * di dispaccio per `kind`, vedi il suo commento di testa) — questo file decide solo *in
+ * quale sezione* mostrarla, mai un ramo diverso per tipo di blocco.
  */
 import type { BlockPropDescriptor } from '../../../../types/blocks.types';
 import type { EditorViewport } from '../../../../hooks/useBlockEditorStore';
+import { Accordion } from '@mantine/core';
 import PropField from './PropField';
 import styles from './inspector.module.css';
-import { breakpointKey, type PropsMeta } from './inspector.utils';
+import {
+  breakpointKey,
+  CONTENT_SECTION_ORDER,
+  contentSectionFor,
+  groupPropsBySection,
+  type PropsMeta,
+} from './inspector.utils';
 
 export interface PropertyTabProps {
   fields: readonly BlockPropDescriptor[];
@@ -33,22 +44,40 @@ export default function ContentTab({
   onOpenMediaPicker,
 }: PropertyTabProps): JSX.Element {
   const activeBreakpoint = breakpointKey(activeViewport);
+
+  function renderField(prop: BlockPropDescriptor): JSX.Element {
+    return (
+      <PropField
+        key={prop.name}
+        prop={prop}
+        value={draft[prop.name]}
+        propsMeta={propsMeta}
+        activeViewport={activeViewport}
+        activeBreakpoint={activeBreakpoint}
+        onLocal={(next) => setLocal(prop.name, next)}
+        onCommit={(next) => commit(prop.name, next)}
+        onSetAndCommit={(next) => setAndCommit(prop.name, next)}
+        onOpenMediaPicker={() => onOpenMediaPicker(prop.name)}
+      />
+    );
+  }
+
+  const sections = groupPropsBySection(fields, contentSectionFor, CONTENT_SECTION_ORDER);
+
   return (
-    <div className={styles.fieldList}>
-      {fields.map((prop) => (
-        <PropField
-          key={prop.name}
-          prop={prop}
-          value={draft[prop.name]}
-          propsMeta={propsMeta}
-          activeViewport={activeViewport}
-          activeBreakpoint={activeBreakpoint}
-          onLocal={(next) => setLocal(prop.name, next)}
-          onCommit={(next) => commit(prop.name, next)}
-          onSetAndCommit={(next) => setAndCommit(prop.name, next)}
-          onOpenMediaPicker={() => onOpenMediaPicker(prop.name)}
-        />
+    <Accordion
+      multiple
+      defaultValue={sections.map((section) => section.section)}
+      variant="separated"
+    >
+      {sections.map((section) => (
+        <Accordion.Item key={section.section} value={section.section}>
+          <Accordion.Control>{section.section}</Accordion.Control>
+          <Accordion.Panel>
+            <div className={styles.fieldList}>{section.items.map(renderField)}</div>
+          </Accordion.Panel>
+        </Accordion.Item>
       ))}
-    </div>
+    </Accordion>
   );
 }

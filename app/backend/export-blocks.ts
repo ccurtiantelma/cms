@@ -50,7 +50,8 @@ interface ExportedBlockType {
   enabled: boolean;
   deprecated?: boolean;
   minRole?: number;
-  childrenAllow: readonly string[];
+  /** `'*'` è il sentinel wildcard di ADR-39 § 4 (nesting ricorsivo, es. `container`). */
+  childrenAllow: readonly string[] | '*';
   props: ExportedPropDescriptor[];
   meta?: {
     label: string;

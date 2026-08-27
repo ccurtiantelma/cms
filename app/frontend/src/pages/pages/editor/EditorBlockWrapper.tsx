@@ -70,11 +70,12 @@ import {
   type EditorViewport,
 } from '../../../hooks/useBlockEditorStore';
 import { extractStyleProps, useStyleClipboardStore } from '../../../hooks/useStyleClipboardStore';
-import { findLocation, findNode } from './block-tree.utils';
+import { findLocation, findNode, type BlockNode } from './block-tree.utils';
 import { canContainType, canDropInto } from './block-registry.utils';
 import BlockRenderer from '../../../components/blocks/BlockRenderer';
 import BlockErrorBoundary from '../../../components/blocks/BlockErrorBoundary';
 import Section from '../../../components/blocks/blocks/Section';
+import Container from '../../../components/blocks/blocks/Container';
 import tokenStyles from '../../../components/blocks/style-tokens.module.css';
 import ConfirmModal from '../../../components/ConfirmModal';
 import BlockPalette, { blockIcon } from './BlockPalette';
@@ -106,7 +107,7 @@ const COLUMN_RATIO_BOUNDARY_PERCENT: Record<ColumnRatioValue, number> = {
  * `section` (ADR-31): duplicate per firma, non per valore, perché qui il montaggio bypassa
  * `BlockRenderer` (i figli hanno bisogno della chrome, non del dispatcher ricorsivo).
  */
-interface ContainerComponentProps {
+interface SectionContainerProps {
   children: ReactNode;
   styleSpaceBefore?: unknown;
   styleSpaceAfter?: unknown;
@@ -133,9 +134,86 @@ interface ContainerComponentProps {
   styleHideMobile?: unknown;
 }
 
+/**
+ * Props del blocco `container` (ADR-39): le sei props di layout flex
+ * (`display`/`flexDirection`/`justifyContent`/`alignItems`/`wrap`/`gap`) più le due props
+ * avanzate universali di ADR-38 § 6 (`customCssClass`/`customElementId`) — schema
+ * indipendente da quello di `section`, mai un solo oggetto condiviso fra i contenitori del
+ * registro (ADR-39 § 2: nessuna prop di stile su `container` in questo round).
+ */
+interface ContainerBlockProps {
+  children: ReactNode;
+  display?: unknown;
+  flexDirection?: unknown;
+  justifyContent?: unknown;
+  alignItems?: unknown;
+  wrap?: unknown;
+  gap?: unknown;
+  customCssClass?: unknown;
+  customElementId?: unknown;
+}
+
+/**
+ * Unione delle props ammesse da un componente montato in `CONTAINER_COMPONENTS`: ogni
+ * tipo contenitore del registro dichiara il proprio schema — qui `section` e `container`
+ * (ADR-39). Entrambe le interfacce sopra dichiarano solo `children` come obbligatoria e
+ * ogni altra prop opzionale (`unknown`): strutturalmente compatibili con l'unione, senza
+ * bisogno di `any` per tipizzare il record qui sotto.
+ */
+type ContainerComponentProps = SectionContainerProps | ContainerBlockProps;
+
 const CONTAINER_COMPONENTS: Record<string, (props: ContainerComponentProps) => JSX.Element> = {
   section: Section,
+  container: Container,
 };
+
+/**
+ * Props da passare al componente di contenuto quando il nodo è un contenitore
+ * (`CONTAINER_COMPONENTS`): ogni tipo ha il proprio insieme di props di registro,
+ * incompatibili l'uno con l'altro (`section` è layout a colonne/stile, `container` è
+ * layout flex puro, ADR-39) — mai un solo oggetto condiviso passato a entrambi.
+ */
+function resolveContainerComponentProps(
+  node: BlockNode,
+): Omit<SectionContainerProps, 'children'> | Omit<ContainerBlockProps, 'children'> {
+  if (node.type === 'container') {
+    return {
+      display: node.props.display,
+      flexDirection: node.props.flexDirection,
+      justifyContent: node.props.justifyContent,
+      alignItems: node.props.alignItems,
+      wrap: node.props.wrap,
+      gap: node.props.gap,
+      customCssClass: node.props.customCssClass,
+      customElementId: node.props.customElementId,
+    };
+  }
+  return {
+    styleSpaceBefore: node.props.styleSpaceBefore,
+    styleSpaceAfter: node.props.styleSpaceAfter,
+    stylePadding: node.props.stylePadding,
+    styleBackground: node.props.styleBackground,
+    columns: node.props.columns,
+    gap: node.props.gap,
+    alignItems: node.props.alignItems,
+    contentWidth: node.props.contentWidth,
+    maxWidth: node.props.maxWidth,
+    columnRatio: node.props.columnRatio,
+    styleBackgroundColor: node.props.styleBackgroundColor,
+    stylePaddingTop: node.props.stylePaddingTop,
+    stylePaddingRight: node.props.stylePaddingRight,
+    stylePaddingBottom: node.props.stylePaddingBottom,
+    stylePaddingLeft: node.props.stylePaddingLeft,
+    styleMarginTop: node.props.styleMarginTop,
+    styleMarginRight: node.props.styleMarginRight,
+    styleMarginBottom: node.props.styleMarginBottom,
+    styleMarginLeft: node.props.styleMarginLeft,
+    styleLayer: node.props.styleLayer,
+    styleHideDesktop: node.props.styleHideDesktop,
+    styleHideTablet: node.props.styleHideTablet,
+    styleHideMobile: node.props.styleHideMobile,
+  };
+}
 
 /** Livelli ammessi per `heading.level` (registro, `blocks.types.ts`): niente `h1`. */
 const HEADING_LEVELS = ['h2', 'h3', 'h4', 'h5', 'h6'] as const;
@@ -458,7 +536,11 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const descriptor = BLOCK_TYPES.find((entry) => entry.type === node.type);
   const label = descriptor?.meta?.label ?? node.type;
   const ContainerComponent = CONTAINER_COMPONENTS[node.type];
-  const isContainer = (descriptor?.childrenAllow.length ?? 0) > 0;
+  // `childrenAllow === '*'` (sentinel di ADR-39 § 4, `container`): esplicito, non più la
+  // coincidenza `'*'.length === 1 > 0` — un contenitore con qualunque tipo ammesso è
+  // comunque un contenitore, indipendentemente da come il registro esprime l'ammissione.
+  const isContainer =
+    descriptor?.childrenAllow === '*' || (descriptor?.childrenAllow.length ?? 0) > 0;
   /**
    * Icona del tipo di blocco per la Handle Bar (badge in alto a sinistra, punto 2 del
    * task). `createElement`, non un tag JSX `<Icon />` assegnato a una variabile locale:
@@ -612,15 +694,25 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
    */
   const isHiddenForActiveViewport = currentNode.props[VIEWPORT_HIDE_PROP[activeViewport]] === true;
 
+  /**
+   * `container` (ADR-39) ha una chrome propria (F08 STEP 3): viola invece del blu/magenta
+   * generico degli altri tipi, per restare distinguibile da `section` a colpo d'occhio
+   * quando i due sono annidati l'uno nell'altro. Solo booleano di tipo, non riusa
+   * `isContainer` più sotto (quello include anche `section`, che mantiene invece il
+   * bordo blu/magenta invariato).
+   */
+  const isContainerBlockType = node.type === 'container';
+
   const className = [
     styles.wrapper,
     // Overlay hover/selezione (Gap Analysis §2, P0 "differenziazione cromatica"): due stati
     // distinti, non più un solo bordo ciano condiviso — `.hovered` (blu `#2271b1`, 1px,
     // "puntamento") e `.selected` (magenta `#93003c`, 2px, "modifica attiva") sono
     // mutuamente esclusivi per costruzione (`isSelected` non implica `isHovered` in questo
-    // array: un nodo selezionato ma non sotto il puntatore prende solo `.selected`).
-    isHovered && !isSelected ? styles.hovered : '',
-    isSelected ? styles.selected : '',
+    // array: un nodo selezionato ma non sotto il puntatore prende solo `.selected`). Su
+    // `container` (F08 STEP 3) le varianti viola tratteggiata/solida sostituiscono queste.
+    isHovered && !isSelected ? (isContainerBlockType ? styles.containerHovered : styles.hovered) : '',
+    isSelected ? (isContainerBlockType ? styles.containerSelected : styles.selected) : '',
     isInvalid ? styles.invalid : '',
     isDragging ? styles.dragging : '',
     isHiddenForActiveViewport ? tokenStyles.previewHidden : '',
@@ -732,7 +824,17 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
         */}
         {(isHovered || isSelected) && (
           <Group
-            className={[styles.handleBar, isSelected ? styles.handleBarSelected : '']
+            className={[
+              styles.handleBar,
+              // Viola su `container` (F08 STEP 3), stesso blu/magenta invariato per ogni
+              // altro tipo — coerente con la variante di bordo scelta sopra.
+              isContainerBlockType ? styles.handleBarContainer : '',
+              isSelected
+                ? isContainerBlockType
+                  ? styles.handleBarContainerSelected
+                  : styles.handleBarSelected
+                : '',
+            ]
               .filter(Boolean)
               .join(' ')}
             gap={4}
@@ -1019,31 +1121,7 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
 
         {isContainer && ContainerComponent ? (
           <BlockErrorBoundary>
-            <ContainerComponent
-              styleSpaceBefore={node.props.styleSpaceBefore}
-              styleSpaceAfter={node.props.styleSpaceAfter}
-              stylePadding={node.props.stylePadding}
-              styleBackground={node.props.styleBackground}
-              columns={node.props.columns}
-              gap={node.props.gap}
-              alignItems={node.props.alignItems}
-              contentWidth={node.props.contentWidth}
-              maxWidth={node.props.maxWidth}
-              columnRatio={node.props.columnRatio}
-              styleBackgroundColor={node.props.styleBackgroundColor}
-              stylePaddingTop={node.props.stylePaddingTop}
-              stylePaddingRight={node.props.stylePaddingRight}
-              stylePaddingBottom={node.props.stylePaddingBottom}
-              stylePaddingLeft={node.props.stylePaddingLeft}
-              styleMarginTop={node.props.styleMarginTop}
-              styleMarginRight={node.props.styleMarginRight}
-              styleMarginBottom={node.props.styleMarginBottom}
-              styleMarginLeft={node.props.styleMarginLeft}
-              styleLayer={node.props.styleLayer}
-              styleHideDesktop={node.props.styleHideDesktop}
-              styleHideTablet={node.props.styleHideTablet}
-              styleHideMobile={node.props.styleHideMobile}
-            >
+            <ContainerComponent {...resolveContainerComponentProps(currentNode)}>
               {/*
                 Evidenziazione "dentro questo contenitore" (dnd-kit T7): overlay a sé
                 (`position: absolute; inset: 0`, EditorBlockWrapper.module.css), non più
@@ -1072,14 +1150,49 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
                   // restano visibili e affiancate anche a zero figli.
                   <div className={styles.childrenArea}>
                     {Array.from({ length: effectiveColumnsCount }).map((_, slotIndex) => (
-                      <div key={slotIndex} className={styles.emptyContainer}>
-                        Colonna vuota — usa &laquo;Aggiungi dentro&raquo; per inserire un blocco.
+                      <div
+                        key={slotIndex}
+                        className={styles.emptyContainer}
+                        // Seleziona questo contenitore come target prima di aprire il menu
+                        // di inserimento (F08 STEP 3): stesso `stopPropagation` del click-
+                        // to-select del wrapper più sopra, mai la selezione risale a un
+                        // antenato.
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          selectNode(id);
+                        }}
+                      >
+                        <BlockPalette
+                          parentId={id}
+                          parentType={node.type}
+                          label="Aggiungi Blocco"
+                          size="xs"
+                          variant="light"
+                        />
+                        <Text size="xs" c="dimmed" className={styles.emptyContainerHint}>
+                          Colonna vuota — trascina qui un blocco
+                        </Text>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className={styles.emptyContainer}>
-                    Contenitore vuoto — usa &laquo;Aggiungi dentro&raquo; per inserire un blocco.
+                  <div
+                    className={styles.emptyContainer}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      selectNode(id);
+                    }}
+                  >
+                    <BlockPalette
+                      parentId={id}
+                      parentType={node.type}
+                      label="Aggiungi Blocco"
+                      size="sm"
+                      variant="light"
+                    />
+                    <Text size="xs" c="dimmed" className={styles.emptyContainerHint}>
+                      Contenitore vuoto — trascina qui un blocco
+                    </Text>
                   </div>
                 )
               ) : (

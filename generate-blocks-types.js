@@ -108,7 +108,8 @@ export interface BlockTypeDescriptor {
   enabled: boolean;
   deprecated?: boolean;
   minRole?: number;
-  childrenAllow: readonly string[];
+  /** \`'*'\` = qualunque tipo risolto dal registro, incluso se stesso (ADR-39 § 4). */
+  childrenAllow: readonly string[] | '*';
   props: readonly BlockPropDescriptor[];
   meta?: BlockEditorMeta;
 }

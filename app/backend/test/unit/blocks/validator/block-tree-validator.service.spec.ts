@@ -4,6 +4,7 @@ import { BlockRegistry, DEFAULT_BLOCK_REGISTRY } from '../../../../src/blocks/bl
 import { BlockDefinition } from '../../../../src/blocks/block-definition.types';
 import { sectionBlock } from '../../../../src/blocks/types/section.block';
 import { richTextBlock } from '../../../../src/blocks/types/rich-text.block';
+import { containerBlock } from '../../../../src/blocks/types/container.block';
 
 /** Costruisce un nodo di test, con default sensati e override puntuali. */
 function node(overrides: Partial<ValidatableBlockNode>): ValidatableBlockNode {
@@ -170,7 +171,7 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
           path: 'blocks[0].children[0]',
           type: 'section',
           parentType: 'section',
-          allowed: ['heading', 'richText', 'image', 'button'],
+          allowed: ['heading', 'richText', 'image', 'button', 'container'],
         },
       });
     });
@@ -1083,6 +1084,209 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
       ]);
       expect(result.valid).toBe(true);
       expect(DEFAULT_BLOCK_REGISTRY.rootAllowed).toContain('heading');
+    });
+  });
+
+  // ─── container — wildcard di nesting "*" (ADR-39 § 4) ───────────────────
+
+  describe('container — wildcard di nesting "*" (ADR-39 § 4)', () => {
+    const minimalPropsByType: Record<string, Record<string, unknown>> = {
+      section: {},
+      heading: { level: 'h2', text: 'T' },
+      richText: { html: '<p>ok</p>' },
+      image: { mediaRef: '0123456789abcdef', alt: 'alt' },
+      button: { label: 'Vai', href: 'https://esempio.it' },
+      container: {},
+    };
+
+    it.each(['heading', 'richText', 'image', 'button', 'section', 'container'])(
+      '%s è ammesso come figlio diretto di container: la wildcard accetta ogni tipo risolto con successo (ADR-39 § 4)',
+      (type) => {
+        const result = validator.validateTree([
+          node({
+            id: 'outer',
+            type: 'container',
+            props: {},
+            children: [node({ id: 'child', type, props: minimalPropsByType[type] })],
+          }),
+        ]);
+
+        expect(result.valid).toBe(true);
+      },
+    );
+
+    it('un container con i cinque tipi foglia più un altro container come figli diretti è valido per intero', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'outer',
+          type: 'container',
+          props: {},
+          children: [
+            node({ id: 'h', type: 'heading', props: minimalPropsByType.heading }),
+            node({ id: 'r', type: 'richText', props: minimalPropsByType.richText }),
+            node({ id: 'i', type: 'image', props: minimalPropsByType.image }),
+            node({ id: 'b', type: 'button', props: minimalPropsByType.button }),
+            node({ id: 's', type: 'section', props: minimalPropsByType.section }),
+            node({ id: 'c', type: 'container', props: minimalPropsByType.container }),
+          ],
+        }),
+      ]);
+
+      expect(result).toEqual({ valid: true, errors: [] });
+    });
+
+    it('nesting ricorsivo profondo: section → container → container → heading è valido per intero (nesting ricorsivo, ADR-39 § 4)', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'sec',
+          type: 'section',
+          props: {},
+          children: [
+            node({
+              id: 'c1',
+              type: 'container',
+              props: {},
+              children: [
+                node({
+                  id: 'c2',
+                  type: 'container',
+                  props: {},
+                  children: [node({ id: 'h', type: 'heading', props: minimalPropsByType.heading })],
+                }),
+              ],
+            }),
+          ],
+        }),
+      ]);
+
+      expect(result).toEqual({ valid: true, errors: [] });
+    });
+
+    it('la wildcard non bypassa enabled:false sul figlio: produce BLOCK_TYPE_UNKNOWN, mai BLOCK_NESTING_NOT_ALLOWED', () => {
+      const disabledRichText: BlockDefinition = { ...richTextBlock, enabled: false };
+      const registry: BlockRegistry = {
+        definitions: new Map([
+          ['container', containerBlock],
+          ['richText', disabledRichText],
+        ]),
+        rootAllowed: ['container'],
+      };
+
+      const result = validator.validateTree(
+        [
+          node({
+            id: 'outer',
+            type: 'container',
+            props: {},
+            children: [node({ id: 'child', type: 'richText', props: { html: '<p>x</p>' } })],
+          }),
+        ],
+        registry,
+      );
+
+      expect(result.errors).toEqual([
+        { code: 'BLOCK_TYPE_UNKNOWN', details: { path: 'blocks[0].children[0]', type: 'richText' } },
+      ]);
+    });
+
+    it('la wildcard non bypassa un minRole non soddisfatto sul figlio: produce BLOCK_TYPE_UNKNOWN, mai BLOCK_NESTING_NOT_ALLOWED', () => {
+      const restrictedRichText: BlockDefinition = { ...richTextBlock, minRole: 5 };
+      const registry: BlockRegistry = {
+        definitions: new Map([
+          ['container', containerBlock],
+          ['richText', restrictedRichText],
+        ]),
+        rootAllowed: ['container'],
+      };
+
+      const result = validator.validateTree(
+        [
+          node({
+            id: 'outer',
+            type: 'container',
+            props: {},
+            children: [node({ id: 'child', type: 'richText', props: { html: '<p>x</p>' } })],
+          }),
+        ],
+        registry,
+        { roleLevel: 30 }, // User: valore più alto di minRole (5) ⇒ non soddisfatto
+      );
+
+      expect(result.errors).toEqual([
+        { code: 'BLOCK_TYPE_UNKNOWN', details: { path: 'blocks[0].children[0]', type: 'richText' } },
+      ]);
+    });
+  });
+
+  // ─── container — reason "enum" su props di layout responsive ───────────
+
+  describe('container — reason "enum" su flexDirection/gap (ADR-39 § 2, responsive: true)', () => {
+    it('container.flexDirection scalare (non envelope) è respinto con reason "type": la forma dichiarata è oggetto responsive', () => {
+      const result = validator.validateTree([
+        node({ type: 'container', props: { flexDirection: 'diagonal' } }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.flexDirection',
+          type: 'container',
+          prop: 'flexDirection',
+          kind: 'enum',
+          reason: 'type',
+        },
+      });
+    });
+
+    it('container.flexDirection = { default: "diagonal" } è respinto con reason "enum" sul path .default, elenco chiuso in constraint', () => {
+      const result = validator.validateTree([
+        node({ type: 'container', props: { flexDirection: { default: 'diagonal' } } }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.flexDirection.default',
+          type: 'container',
+          prop: 'flexDirection',
+          kind: 'enum',
+          reason: 'enum',
+          constraint: ['row', 'row-reverse', 'column', 'column-reverse'],
+        },
+      });
+    });
+
+    it('container.gap scalare (non envelope) è respinto con reason "type"', () => {
+      const result = validator.validateTree([node({ type: 'container', props: { gap: 'huge' } })]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.gap',
+          type: 'container',
+          prop: 'gap',
+          kind: 'enum',
+          reason: 'type',
+        },
+      });
+    });
+
+    it('container.gap = { default: "huge" } è respinto con reason "enum", constraint [none,sm,md,lg]', () => {
+      const result = validator.validateTree([
+        node({ type: 'container', props: { gap: { default: 'huge' } } }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.gap.default',
+          type: 'container',
+          prop: 'gap',
+          kind: 'enum',
+          reason: 'enum',
+          constraint: ['none', 'sm', 'md', 'lg'],
+        },
+      });
     });
   });
 });

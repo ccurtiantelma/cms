@@ -135,7 +135,10 @@ export class BlockTreeValidatorService {
       parentType === null
         ? registry.rootAllowed
         : (registry.definitions.get(parentType)?.children.allow ?? []);
-    if (!allowedHere.includes(node.type)) {
+    // Sentinel wildcard (ADR-39 § 4): '*' ammette qualunque tipo già risolto
+    // con successo sopra (quindi filtrato per `enabled`/`minRole`) — nessun
+    // controllo di appartenenza da fare, il tipo è già noto e ammesso.
+    if (allowedHere !== '*' && !allowedHere.includes(node.type)) {
       errors.push({
         code: 'BLOCK_NESTING_NOT_ALLOWED',
         details: { path, type: node.type, parentType, allowed: [...allowedHere] },

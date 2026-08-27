@@ -15,12 +15,16 @@ import {
   THEME_UNSET,
 } from './dto/theme-config.dto';
 import { MultilingualConfigDto } from './dto/multilingual-config.dto';
+import { GlobalTokensDto } from './dto/global-tokens.dto';
 
 /** Chiave della riga di `app_settings` che contiene il tema globale (ADR-4). */
 export const THEME_SETTING_KEY = 'theme';
 
 /** Chiave della riga di `app_settings` che contiene il registro Locale attivi (RFC-F05 § 1). */
 export const MULTILINGUAL_SETTING_KEY = 'multilingual.locales';
+
+/** Chiave della riga di `app_settings` che contiene i Global Design Tokens (risorsa separata da ADR-4). */
+export const GLOBAL_TOKENS_SETTING_KEY = 'global_tokens';
 
 /**
  * Default di fabbrica del tema (contratto v7) — SPECULARE a
@@ -162,6 +166,28 @@ export const DEFAULT_THEME_CONFIG: ThemeConfigDto = {
 export const DEFAULT_MULTILINGUAL_CONFIG: MultilingualConfigDto = {
   active: [AppConstants.defaultLocale],
   default: AppConstants.defaultLocale,
+};
+
+/**
+ * Default di fabbrica dei Global Design Tokens: restituito da
+ * `GET /app/settings/global-tokens` finché nessun Admin ha mai salvato la
+ * riga. Risorsa a sé, non derivata dal tema Mantine di ADR-4.
+ */
+export const DEFAULT_GLOBAL_TOKENS: GlobalTokensDto = {
+  version: 1,
+  palette: {
+    primary: '#93003c',
+    secondary: '#00a0d2',
+    text: '#333333',
+    accent: '#f7a600',
+  },
+  typography: {
+    mainFont: 'inter',
+    baseSize: { value: 16, unit: 'px' },
+  },
+  spacing: {
+    baseUnit: { value: 8, unit: 'px' },
+  },
 };
 
 /** Le 11 chiavi colore del contratto storico (v1/v2), prima dei colori per titolo introdotti in v3. */
@@ -543,6 +569,68 @@ export class SettingsService {
       'settings.multilingual.update',
       'app_settings',
       MULTILINGUAL_SETTING_KEY,
+      JSON.stringify(dto),
+      authInfo.impersonatedBy,
+      ip,
+    );
+    return dto;
+  }
+
+  /**
+   * Global Design Tokens correnti: la riga `key='global_tokens'` se presente
+   * e attiva, altrimenti i default di fabbrica (installazione mai
+   * personalizzata). Risorsa separata dal tema Mantine di ADR-4.
+   */
+  async getGlobalTokens(): Promise<GlobalTokensDto> {
+    const row = await this.db.db.query.appSettingEntity.findFirst({
+      where: and(
+        eq(appSettingEntity.key, GLOBAL_TOKENS_SETTING_KEY),
+        eq(appSettingEntity.isActive, true),
+      ),
+    });
+    if (!row) {
+      return DEFAULT_GLOBAL_TOKENS;
+    }
+    return row.value as GlobalTokensDto;
+  }
+
+  /**
+   * Salva (upsert sulla chiave univoca) i Global Design Tokens e registra
+   * l'operazione su audit log. Admin+ only (guard sul controller).
+   * @param dto Configurazione token già validata dal ValidationPipe.
+   * @param authInfo Identità del chiamante (autore formale + eventuale impersonificazione).
+   * @param ip Indirizzo IP del chiamante per l'audit log.
+   */
+  async updateGlobalTokens(
+    dto: GlobalTokensDto,
+    authInfo: AuthInfo,
+    ip?: string,
+  ): Promise<GlobalTokensDto> {
+    await this.db.db
+      .insert(appSettingEntity)
+      .values({
+        guid: Utils.randomString(16),
+        key: GLOBAL_TOKENS_SETTING_KEY,
+        value: dto,
+        createdBy: authInfo.userId,
+        updatedBy: authInfo.userId,
+      })
+      .onConflictDoUpdate({
+        target: appSettingEntity.key,
+        set: {
+          value: dto,
+          isActive: true,
+          updatedAt: new Date(),
+          updatedBy: authInfo.userId,
+        },
+      });
+
+    this.logger.log(`Global Design Tokens aggiornati (userId=${authInfo.userId}).`);
+    await this.auditLogService.log(
+      authInfo.userId,
+      'settings.globalTokens.update',
+      'app_settings',
+      GLOBAL_TOKENS_SETTING_KEY,
       JSON.stringify(dto),
       authInfo.impersonatedBy,
       ip,

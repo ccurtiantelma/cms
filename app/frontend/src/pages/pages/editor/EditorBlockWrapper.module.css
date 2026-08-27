@@ -91,14 +91,51 @@
   visibility: visible;
 }
 
-/* Contenitore senza figli: senza questo segnaposto non sarebbe visibile né cliccabile. */
+/*
+  Contenitore senza figli (F08 STEP 3): segnaposto interattivo, non solo un testo — bordo
+  tratteggiato neutro, sfondo leggermente opaco (distinto da `.canvasArea` sotto), pulsante
+  "+" centrale (`BlockPalette`, stesso menu della voce "Aggiungi dentro" già in toolbar,
+  qui solo con un trigger più prominente) che seleziona questo nodo come target
+  (`onClick` sul contenitore, sotto) e apre il menu di inserimento. `cursor: pointer` e
+  l'hover qui sotto segnalano l'intera area come bersaglio del drop, coerente con
+  `.containerDropZone` (`position: absolute; inset: 0`, sopra) che la ricopre per intero
+  durante un trascinamento.
+*/
 .emptyContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border: 1px dashed var(--mantine-color-gray-4);
   border-radius: 6px;
-  padding: 12px;
+  padding: 16px 12px;
   text-align: center;
   font-size: 13px;
   color: var(--mantine-color-dimmed);
+  background-color: var(--mantine-color-gray-0);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+[data-mantine-color-scheme='dark'] .emptyContainer {
+  background-color: var(--mantine-color-dark-6);
+}
+
+.emptyContainer:hover {
+  border-color: var(--mantine-color-blue-4);
+  background-color: var(--mantine-color-blue-0);
+}
+
+[data-mantine-color-scheme='dark'] .emptyContainer:hover {
+  background-color: var(--mantine-color-dark-5);
+}
+
+/* Suggerimento sotto il pulsante "+" (`.emptyContainer`): solo un'etichetta, nessuna interazione propria. */
+.emptyContainerHint {
+  pointer-events: none;
 }
 
 /*
@@ -190,6 +227,38 @@
 /* Blocco selezionato (Gap Analysis §2, P0): la Handle Bar segue lo stesso accento magenta di `.selected`, mai lo stesso blu di `.hovered`. */
 .handleBarSelected {
   background: #93003c;
+}
+
+/*
+  Chrome differenziata per il blocco `container` (ADR-39, F08 STEP 3): viola invece del
+  blu/magenta generico di `.hovered`/`.selected`/`.handleBar(Selected)` sopra, per
+  distinguerlo a colpo d'occhio da `section` e dagli altri contenitori — stesso viola
+  `#a333c8` già usato altrove in questo file come accento "contenitore/drag&drop"
+  (`.containerDropZone[data-over]`, `.dropZone[data-over]`), riuso dello stesso colore
+  invece di introdurne un quarto. Tratteggiato e semi-opaco su hover ("puntamento"),
+  solido su selezione ("modifica attiva") — stessa distinzione di peso/stile di
+  `.hovered`/`.selected`.
+*/
+.containerHovered {
+  border-width: 1px;
+  border-style: dashed;
+  border-color: rgba(163, 51, 200, 0.6);
+}
+
+.containerSelected,
+.containerSelected:hover {
+  border-width: 2px;
+  border-style: solid;
+  border-color: #a333c8;
+  padding: 3px;
+}
+
+.handleBarContainer {
+  background: rgba(163, 51, 200, 0.85);
+}
+
+.handleBarContainerSelected {
+  background: #a333c8;
 }
 
 /* Nome del tipo di blocco dentro la Handle Bar: stesso colore/assenza di wrap del badge che sostituisce. */

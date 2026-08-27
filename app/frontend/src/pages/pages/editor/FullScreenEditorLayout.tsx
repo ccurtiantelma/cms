@@ -42,6 +42,8 @@
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActionIcon, Badge, Button, Paper, Text, Tooltip } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
+import { notifications } from '@mantine/notifications';
 import {
   IconArrowBackUp,
   IconArrowForwardUp,
@@ -53,7 +55,9 @@ import {
   IconLayoutGrid,
   IconLayoutSidebar,
   IconLayoutSidebarRight,
+  IconWorld,
 } from '@tabler/icons-react';
+import type { AxiosError } from 'axios';
 import {
   DndContext,
   DragOverlay,
@@ -74,10 +78,13 @@ import {
   useIsStructurePanelOpen,
   type EditorViewport,
 } from '../../../hooks/useBlockEditorStore';
+import { DEFAULT_GLOBAL_TOKENS } from '../../../libs/globalTokensCompiler';
+import { getGlobalTokensApi, toGlobalTokens } from '../../../services/settings.service';
 import { BLOCK_TYPES } from '../../../types/blocks.types';
 import type { PageRecord } from '../../../types/pages.types';
 import { blockIcon, defaultPropsFor } from './BlockPalette';
 import EditorSidebar from './sidebar/EditorSidebar';
+import GlobalTokensDrawer from './GlobalTokensDrawer';
 import LocaleSwitcher from './LocaleSwitcher';
 import TemplateLibraryModal from './TemplateLibraryModal';
 import styles from './FullScreenEditorLayout.module.css';
@@ -216,6 +223,45 @@ export default function FullScreenEditorLayout({
   // controlli della topbar (struttura, anteprima, undo/redo) — sempre `parentId: null`,
   // in coda alla radice.
   const [templateLibraryOpened, setTemplateLibraryOpened] = useState(false);
+  // F07 step 2: Drawer "Impostazioni Sito" (Global Kit) — stato di apertura locale, stesso
+  // principio di `templateLibraryOpened` sopra (nessuno stato equivalente già in
+  // `useBlockEditorStore`, a differenza di viewport/pannello struttura che sono condivisi con
+  // altri consumer).
+  const [globalTokensOpened, { open: openGlobalTokens, close: closeGlobalTokens }] =
+    useDisclosure(false);
+
+  /**
+   * Idratazione una tantum dei Global Design Tokens all'apertura dell'editor (F07 step 2): se
+   * questa sessione di editing non li ha ancora caricati (`globalTokens === null`), li legge
+   * dal server e li applica subito al canvas via `hydrateGlobalTokens` (non annullabile — vedi
+   * il suo commento in `useBlockEditorStore.ts`). Un errore di rete non lascia mai il
+   * picker/canvas senza token: fallback ai default di fabbrica, con notifica esplicita.
+   */
+  useEffect(() => {
+    if (useBlockEditorStore.getState().globalTokens !== null) return undefined;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const dto = await getGlobalTokensApi();
+        if (cancelled) return;
+        useBlockEditorStore.getState().hydrateGlobalTokens(toGlobalTokens(dto));
+      } catch (err) {
+        if (cancelled) return;
+        const error = err as AxiosError<{ message?: string }>;
+        notifications.show({
+          color: 'red',
+          title: 'Impostazioni sito non disponibili',
+          message:
+            error.response?.data?.message ??
+            'Impossibile caricare i Global Design Tokens: uso i valori di fabbrica.',
+        });
+        useBlockEditorStore.getState().hydrateGlobalTokens(DEFAULT_GLOBAL_TOKENS);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /** Contenitore che scrolla davvero durante il drag (punto 3 del task): `.canvasArea`, non
    * `.canvasRoot` di `EditorCanvas.module.css` (che non ha `overflow` proprio). */
@@ -390,6 +436,18 @@ export default function FullScreenEditorLayout({
               <IconLayoutSidebar size={18} />
             </ActionIcon>
           </Tooltip>
+          {/* F07 step 2: Global Kit — palette/tipografia/spaziatura di sito, condivise da ogni
+              blocco della pagina via variabili CSS (`libs/globalTokensCompiler.ts`). */}
+          <Tooltip label="Impostazioni Sito" withArrow>
+            <ActionIcon
+              variant="default"
+              size="lg"
+              aria-label="Impostazioni Sito"
+              onClick={openGlobalTokens}
+            >
+              <IconWorld size={18} />
+            </ActionIcon>
+          </Tooltip>
         </div>
 
         {/*
@@ -550,6 +608,8 @@ export default function FullScreenEditorLayout({
         parentId={null}
         index={rootBlocksCount}
       />
+
+      <GlobalTokensDrawer opened={globalTokensOpened} onClose={closeGlobalTokens} />
     </div>
   );
 }

@@ -18,6 +18,7 @@ import { BLOCK_TYPES } from '../../types/blocks.types';
 import type { RenderableBlockNode } from './types';
 import BlockErrorBoundary from './BlockErrorBoundary';
 import Section from './blocks/Section';
+import Container from './blocks/Container';
 import Heading from './blocks/Heading';
 import RichText from './blocks/RichText';
 import Image from './blocks/Image';
@@ -98,6 +99,23 @@ function renderNode(node: RenderableBlockNode, editing: BlockEditingProps | unde
             <BlockRenderer key={child.id} node={child} />
           ))}
         </Section>
+      );
+    case 'container':
+      return (
+        <Container
+          display={node.props.display}
+          flexDirection={node.props.flexDirection}
+          justifyContent={node.props.justifyContent}
+          alignItems={node.props.alignItems}
+          wrap={node.props.wrap}
+          gap={node.props.gap}
+          customCssClass={node.props.customCssClass}
+          customElementId={node.props.customElementId}
+        >
+          {node.children.map((child) => (
+            <BlockRenderer key={child.id} node={child} />
+          ))}
+        </Container>
       );
     case 'heading': {
       const level = node.props.level;

@@ -5,6 +5,7 @@ import { GuardAdmin, GuardSuperAdmin } from '../auth/guard';
 import { SettingsService } from './settings.service';
 import { ThemeConfigDto } from './dto/theme-config.dto';
 import { MultilingualConfigDto } from './dto/multilingual-config.dto';
+import { GlobalTokensDto } from './dto/global-tokens.dto';
 import { AuthInfo } from '../common/types';
 
 /**
@@ -65,5 +66,32 @@ export class SettingsController {
   ): Promise<MultilingualConfigDto> {
     const authInfo = req['authInfo'] as AuthInfo;
     return this.settingsService.updateMultilingualConfig(dto, authInfo, req.ip);
+  }
+
+  /** Global Design Tokens correnti (default di fabbrica se mai personalizzati). Risorsa separata dal tema di ADR-4. */
+  @Get('global-tokens')
+  @ApiOperation({
+    summary: 'Global Design Tokens del sito (default di fabbrica se mai salvati)',
+  })
+  @ApiResponse({ status: 200, description: 'Global Design Tokens correnti', type: GlobalTokensDto })
+  async getGlobalTokens(): Promise<GlobalTokensDto> {
+    return this.settingsService.getGlobalTokens();
+  }
+
+  /** Salva i Global Design Tokens del sito (Admin+, audit logged). */
+  @Put('global-tokens')
+  @UseGuards(GuardAdmin)
+  @ApiOperation({
+    summary: 'Salva i Global Design Tokens del sito (Admin+ only, registrato su audit log)',
+  })
+  @ApiResponse({ status: 200, description: 'Global Design Tokens salvati', type: GlobalTokensDto })
+  @ApiResponse({ status: 400, description: 'Payload non valido (hex, font, unità o versione)' })
+  @ApiResponse({ status: 403, description: 'Ruolo inferiore ad Admin' })
+  async updateGlobalTokens(
+    @Body() dto: GlobalTokensDto,
+    @Req() req: Request,
+  ): Promise<GlobalTokensDto> {
+    const authInfo = req['authInfo'] as AuthInfo;
+    return this.settingsService.updateGlobalTokens(dto, authInfo, req.ip);
   }
 }
