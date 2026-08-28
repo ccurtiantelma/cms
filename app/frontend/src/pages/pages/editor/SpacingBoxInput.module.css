@@ -1,0 +1,36 @@
+.root {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  margin-bottom: 8px;
+  color: var(--mantine-color-text);
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+}
+
+.controls :global(.mantine-NumberInput-root) {
+  min-width: 0;
+}
+
+.linkButton {
+  flex: 0 0 auto;
+  margin-bottom: 1px;
+}
+
+.hint {
+  line-height: 1.35;
+}
+
+@media (max-width: 420px) {
+  .controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  }
+}

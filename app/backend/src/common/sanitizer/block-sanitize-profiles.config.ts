@@ -15,6 +15,14 @@ import * as sanitizeHtml from 'sanitize-html';
 const ALLOWED_ATTRIBUTES_A = ['href', 'title', 'target', 'rel'];
 const ALLOWED_SCHEMES = ['http', 'https', 'mailto'];
 
+/** Props colore pass-through: sono validate dal block validator e non sono HTML. */
+export const BLOCK_COLOR_PROP_NAMES = [
+  'styleBackgroundColor',
+  'styleColor',
+  'backgroundColor',
+  'color',
+] as const;
+
 /** `target` ammessi (SPEC-F02-blocchi.md § 2.3.2): ogni altro valore si scarta. */
 const ALLOWED_TARGETS = new Set(['_blank', '_self']);
 

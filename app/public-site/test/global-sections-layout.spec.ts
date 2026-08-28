@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderPageDocument } from '../src/entry-server';
 import type { components } from '@api-types';
-import { DEFAULT_GLOBAL_TOKENS } from '../../frontend/src/libs/globalTokensCompiler';
+import { DEFAULT_THEME_CONFIG } from '../../frontend/src/theme';
 
 type PublicPageDto = components['schemas']['PublicPageDto'];
 type PublicActiveGlobalSectionsDto = components['schemas']['PublicActiveGlobalSectionsDto'];
 
-const GLOBAL_TOKENS_PATH = '/api/v1/public/settings/global-tokens';
+const THEME_PATH = '/api/v1/public/settings/theme';
 const GLOBAL_SECTIONS_PATH = '/api/v1/public/global-sections/active';
 
 /** Albero minimo con un solo `heading`, sufficiente a riconoscere il testo nell'HTML. */
@@ -36,7 +36,7 @@ function page(): PublicPageDto {
 
 /**
  * Sostituisce `fetch` per entrambe le letture di layout di `entry-server.tsx`
- * (Global Design Tokens e Sezioni Globali): mock obbligatorio per i servizi
+ * (tema dell'installazione e Sezioni Globali): mock obbligatorio per i servizi
  * esterni (CLAUDE.md § Testing). `globalSections === 'fail'` simula un backend
  * che non risponde — il caso che ADR-40 lascia degradare, non fallire.
  */
@@ -45,11 +45,11 @@ function stubApi(globalSections: PublicActiveGlobalSectionsDto | 'fail' | 'error
     'fetch',
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.includes(GLOBAL_TOKENS_PATH)) {
-        // I default di fabbrica, non un `{}`: `compileTokensToCss` legge
-        // `palette`/`typography`/`spacing` e un mock a forma libera farebbe
-        // fallire questi test per un motivo che non è quello in esame.
-        return new Response(JSON.stringify(DEFAULT_GLOBAL_TOKENS), {
+      if (url.includes(THEME_PATH)) {
+        // I default di fabbrica, non un `{}`: `generateThemeCss` legge l'intero
+        // contratto e un mock a forma libera farebbe fallire questi test per un
+        // motivo che non è quello in esame.
+        return new Response(JSON.stringify(DEFAULT_THEME_CONFIG), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         });

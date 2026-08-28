@@ -299,7 +299,7 @@ app/frontend/src/pages/
 ├── dashboard/
 ├── admin/           ← gestione utenti, audit log
 ├── profile/         ← dati, password, MFA, sessioni attive, tema
-└── theme-editor/    ← Global Theme Customizer (ADR-4)
+└── theme-editor/    ← Global Theme Customizer (ADR-4): veste il sito pubblicato, non l'admin (ADR-42)
 ```
 
 Stato globale con Zustand (ADR-17, in attesa di approvazione): store auth, notifiche, tema.
@@ -371,9 +371,13 @@ Hook riusabili in `src/hooks/`: `useAuth`, `useColorScheme`, `useColumnVisibilit
 ## Impostazioni globali e tema — SettingsModule
 
 - Modulo `app/backend/src/settings/` sopra la tabella `app_settings`
-- Ospita il contratto del **Global Theme Customizer** (token semantici, risolti lato
-  frontend con `cssVariablesResolver` di Mantine) — vedi
-  `docs/ai/adr/ADR-4-global-theme-customizer.md`
+- Ospita il contratto del **Global Theme Customizer** (token semantici) — vedi
+  `docs/ai/adr/ADR-4-global-theme-customizer.md`. Il tema salvato veste il **sito
+  pubblicato** (`app/public-site`) e l'anteprima del Canvas dell'editor, compilato in
+  variabili CSS da `app/frontend/src/utils/theme-css.utils.ts`; la chrome amministrativa
+  resta sui default di fabbrica di Mantine — vedi
+  `docs/ai/adr/ADR-42-tema-veste-il-sito-non-la-chrome-admin.md`, che supera ADR-4 § 2/§ 4
+  sul solo destinatario del tema
 - **Punto di aggancio del dominio CMS**: le impostazioni di sito (lingua di default,
   lingue attive, `robots.txt`, metadati SEO di fallback, attivazione del chatbot) vivono
   qui, non in nuove tabelle dedicate una per opzione

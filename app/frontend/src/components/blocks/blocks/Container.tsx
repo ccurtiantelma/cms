@@ -11,7 +11,7 @@
  * (`BlockRenderer`), che ricorre e applica il proprio Error Boundary a ciascuno — stesso
  * principio di `Section`.
  */
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import styles from './Container.module.css';
 import tokenStyles from '../style-tokens.module.css';
 import { resolveResponsiveClassNames } from '../style-tokens';
@@ -25,6 +25,8 @@ interface ContainerProps {
   wrap?: unknown;
   gap?: unknown;
   styleFlexBasis?: unknown;
+  styleBackgroundColor?: unknown;
+  styleColor?: unknown;
   customCssClass?: unknown;
   customElementId?: unknown;
 }
@@ -52,6 +54,8 @@ export default function Container({
   wrap,
   gap,
   styleFlexBasis,
+  styleBackgroundColor,
+  styleColor,
   customCssClass,
   customElementId,
 }: ContainerProps) {
@@ -78,15 +82,21 @@ export default function Container({
    * `flexGrow`/`flexShrink` insieme (`EditorBlockWrapper.tsx`).
    */
   const flexBasisValue = isFlexBasisValue(styleFlexBasis) ? styleFlexBasis : undefined;
-  const style = flexBasisValue
-    ? { flexBasis: `${flexBasisValue.value}${flexBasisValue.unit}`, flexGrow: 0 }
-    : undefined;
+  const style: CSSProperties = {
+    ...(flexBasisValue
+      ? { flexBasis: `${flexBasisValue.value}${flexBasisValue.unit}`, flexGrow: 0 }
+      : {}),
+    ...(typeof styleBackgroundColor === 'string' && styleBackgroundColor
+      ? { backgroundColor: styleBackgroundColor }
+      : {}),
+    ...(typeof styleColor === 'string' && styleColor ? { color: styleColor } : {}),
+  };
 
   return (
     <div
       className={className}
       id={typeof customElementId === 'string' && customElementId ? customElementId : undefined}
-      style={style}
+      style={Object.keys(style).length > 0 ? style : undefined}
     >
       {children}
     </div>

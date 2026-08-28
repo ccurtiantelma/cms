@@ -35,6 +35,7 @@ interface SectionProps {
   maxWidth?: unknown;
   columnRatio?: unknown;
   styleBackgroundColor?: unknown;
+  styleColor?: unknown;
   stylePaddingTop?: unknown;
   stylePaddingRight?: unknown;
   stylePaddingBottom?: unknown;
@@ -62,6 +63,7 @@ export default function Section({
   maxWidth,
   columnRatio,
   styleBackgroundColor,
+  styleColor,
   stylePaddingTop,
   stylePaddingRight,
   stylePaddingBottom,
@@ -106,13 +108,6 @@ export default function Section({
     resolveResponsiveClassNames(tokenStyles, 'marginRight', styleMarginRight),
     resolveResponsiveClassNames(tokenStyles, 'marginBottom', styleMarginBottom),
     resolveResponsiveClassNames(tokenStyles, 'marginLeft', styleMarginLeft),
-    // ADR-33 § 6 — solo se un colore è impostato: la classe statica che consuma
-    // `--section-bg` va applicata solo quando la custom property è effettivamente
-    // valorizzata, altrimenti `background-color: var(--section-bg)` risolverebbe a
-    // `unset`/trasparente comunque, ma senza motivo di aggiungere la classe.
-    typeof styleBackgroundColor === 'string' && styleBackgroundColor
-      ? tokenStyles.backgroundColor_custom
-      : '',
     resolveLayerClassName(tokenStyles, styleLayer),
     resolveHideClassName(tokenStyles, 'hideDesktop', styleHideDesktop),
     resolveHideClassName(tokenStyles, 'hideTablet', styleHideTablet),
@@ -121,13 +116,17 @@ export default function Section({
     .filter(Boolean)
     .join(' ');
 
-  // ADR-33 § 6 — unica eccezione ammessa a "zero CSS inline": una sola custom property
-  // scoped, che può contenere solo un valore già passato dal pattern esadecimale
-  // `^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$` validato server-side — non è `style` libero.
+  // I colori arrivano dal JSON già validato server-side e vengono applicati al nodo
+  // principale, così il renderer SSR del sito pubblico conserva lo stile del blocco.
   const inlineStyle: CSSProperties | undefined =
     typeof styleBackgroundColor === 'string' && styleBackgroundColor
-      ? ({ '--section-bg': styleBackgroundColor } as CSSProperties)
-      : undefined;
+      ? {
+          backgroundColor: styleBackgroundColor,
+          ...(typeof styleColor === 'string' && styleColor ? { color: styleColor } : {}),
+        }
+      : typeof styleColor === 'string' && styleColor
+        ? { color: styleColor }
+        : undefined;
 
   return (
     <section className={className} style={inlineStyle}>

@@ -15,6 +15,7 @@ import { PublicPageDto } from './dto/public-page.dto';
 import { canonicalizePublicPath } from './public-path.util';
 import { SettingsService } from '../settings/settings.service';
 import { GlobalTokensDto } from '../settings/dto/global-tokens.dto';
+import { ThemeConfigDto } from '../settings/dto/theme-config.dto';
 
 /**
  * Superficie pubblica di lettura delle Pagine (`api/v1/public/pages`,
@@ -97,5 +98,14 @@ export class PublicPagesController {
   @ApiResponse({ status: 200, description: 'Global Tokens correnti', type: GlobalTokensDto })
   async getGlobalTokens(): Promise<GlobalTokensDto> {
     return this.settingsService.getGlobalTokens();
+  }
+
+  /** Espone la configurazione del tema al sito pubblico senza autenticazione. */
+  @Get('settings/theme')
+  @Throttle({ public: { limit: 300, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Restituisce la configurazione del tema per il sito pubblico' })
+  @ApiResponse({ status: 200, description: 'Configurazione tema corrente', type: ThemeConfigDto })
+  async getThemeConfig(): Promise<ThemeConfigDto> {
+    return this.settingsService.getThemeConfig();
   }
 }

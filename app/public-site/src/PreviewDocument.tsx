@@ -1,15 +1,16 @@
 import type { components } from '@api-types';
-import { GLOBAL_TOKENS_STYLE_TAG_ID } from '../../frontend/src/libs/globalTokensCompiler';
+import type { ThemeConfigDto } from '../../frontend/src/utils/theme-css.utils';
 import PageView from './PageView';
+import ThemeStyleTag from './ThemeStyleTag';
 
 type PagePreviewContentDto = components['schemas']['PagePreviewContentDto'];
 type PublicActiveGlobalSectionsDto = components['schemas']['PublicActiveGlobalSectionsDto'];
 
 interface PreviewDocumentProps {
   page: PagePreviewContentDto;
+  /** Tema dell'installazione, `null` se il backend non ha risposto (vedi `ThemeStyleTag`). */
+  themeConfig: ThemeConfigDto | null;
   cssHref: string;
-  /** Blocco `:root { ... }` compilato dai Global Design Tokens, vedi `App.tsx`. */
-  globalTokensCss: string;
   /**
    * Sezioni Globali degli slot di layout (ADR-40) — presenti anche qui, e non
    * solo sulla pagina pubblica: l'anteprima mostra il markup che la pubblicazione
@@ -21,8 +22,9 @@ interface PreviewDocumentProps {
 /**
  * Documento HTML dell'anteprima di una bozza non pubblicata (ADR-25 § 4).
  * Riusa lo stesso `PageView`/gli stessi componenti blocco della pagina
- * pubblica (`App.tsx`): l'anteprima mostra esattamente il markup che la
- * pubblicazione produrrebbe, non una versione approssimata.
+ * pubblica (`App.tsx`) e lo stesso `ThemeStyleTag`: l'anteprima mostra
+ * esattamente il markup **e** il tema che la pubblicazione produrrebbe, non una
+ * versione approssimata.
  *
  * Unica differenza rispetto ad `App.tsx`: il meta `robots` è sempre presente
  * qui, mai sulla pagina pubblica — l'anteprima non è indicizzabile per
@@ -30,8 +32,8 @@ interface PreviewDocumentProps {
  */
 export default function PreviewDocument({
   page,
+  themeConfig,
   cssHref,
-  globalTokensCss,
   globalSections,
 }: PreviewDocumentProps) {
   return (
@@ -42,9 +44,7 @@ export default function PreviewDocument({
         <meta name="robots" content="noindex,nofollow" />
         <title>{page.title}</title>
         <link rel="stylesheet" href={cssHref} />
-        {globalTokensCss && (
-          <style id={GLOBAL_TOKENS_STYLE_TAG_ID} dangerouslySetInnerHTML={{ __html: globalTokensCss }} />
-        )}
+        <ThemeStyleTag themeConfig={themeConfig} />
       </head>
       <body>
         <PageView content={page.content} globalSections={globalSections} />

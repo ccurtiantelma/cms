@@ -1,24 +1,33 @@
 /**
- * Editor tema (ADR-4, contratto v4) — pagina dedicata alla personalizzazione
- * del tema di installazione, SuperAdmin only.
+ * Editor tema (ADR-4) — pagina dedicata al tema di installazione, SuperAdmin
+ * only. Il tema che si modifica qui veste il **sito pubblicato**
+ * (`app/public-site`, porta 55000), non le pagine di amministrazione: stesso
+ * rapporto che WordPress ha col proprio customizer. Il canale verso il sito è
+ * `utils/theme-css.utils.ts` (variabili CSS compilate e iniettate nell'head del
+ * documento SSR); la chrome admin resta sui default di fabbrica
+ * (`hooks/useThemeColor.tsx`).
  *
- * Header sticky (titolo + toggle scheme + azioni, tutto icon-only). Sotto:
- * la sidebar applicativa (LayoutProtected, solo su questa rotta) mostra le
- * ancore alle sezioni; lo spazio centrale, più ampio, impila le sezioni con
+ * Header sticky (titolo + scheme in anteprima + azioni, tutto icon-only).
+ * Sotto: la sidebar applicativa (LayoutProtected, solo su questa rotta) mostra
+ * le ancore alle sezioni; lo spazio centrale, più ampio, impila le sezioni con
  * titolo + demo reale dei componenti (`ThemeEditorSectionDemo`); a destra una
  * barra fissa con i controlli della sezione attiva
- * (`ThemeEditorSectionPanel` + `ThemeEditorColorPicker` dei token per-scheme), sincronizzata
- * con l'ancora cliccata in sidebar (hash dell'URL).
+ * (`ThemeEditorSectionPanel` + `ThemeEditorColorPicker` dei token per-scheme),
+ * sincronizzata con l'ancora cliccata in sidebar (hash dell'URL).
  *
- * Ogni modifica scrive il draft nel `ThemeColorProvider`: l'anteprima è
- * l'intera app (tema Mantine rimemoizzato + variabili CSS `--app-*`).
+ * L'anteprima dal vivo è **scopata alla sola colonna centrale**: un
+ * `MantineProvider` annidato applica il draft a quel sottoalbero e a nient'altro
+ * (vedi `PREVIEW_SCOPE_CLASS`). Prima di questa separazione l'anteprima era
+ * l'intera app — cioè l'Editor tema ridipingeva l'amministrazione invece del
+ * sito.
  */
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   ActionIcon,
   Button,
   Divider,
   Group,
+  MantineProvider,
   Modal,
   ScrollArea,
   SegmentedControl,
@@ -44,12 +53,27 @@ import { ThemeEditorSectionDemo } from '../../components/theme-editor/ThemeEdito
 import { ThemeEditorSectionPanel } from '../../components/theme-editor/ThemeEditorPanels';
 import { THEME_EDITOR_SECTIONS } from '../../config/themeEditorSections';
 import { useThemeColorStore } from '../../hooks/useThemeColor';
-import { DEFAULT_THEME_CONFIG, ThemeConfig, ThemeTokenName } from '../../theme';
+import {
+  buildAppTheme,
+  buildCssVariablesResolver,
+  DEFAULT_THEME_CONFIG,
+  ThemeConfig,
+  ThemeTokenName,
+} from '../../theme';
 import { saveThemeConfigApi } from '../../services/settings.service';
 import classes from './PageThemeEditor.module.css';
 
 /** Formato hex obbligatorio dei token (ADR-4): input parziali vengono ignorati. */
 const HEX_TOKEN_REGEX = /^#[0-9a-fA-F]{6}$/;
+
+/**
+ * Classe stabile (non un hash di CSS Module) della colonna centrale: è il
+ * `cssVariablesSelector` del `MantineProvider` annidato che applica il draft
+ * alle sole demo. Deve essere un selettore che Mantine possa scrivere nel
+ * proprio `<style>` e che compaia identico sull'elemento — stesso principio di
+ * `GLOBAL_TOKENS_CANVAS_SCOPE_CLASS` in `libs/globalTokensCompiler.ts`.
+ */
+const PREVIEW_SCOPE_CLASS = 'theme-editor-preview-scope';
 
 /**
  * Pagina "Editor tema": sezioni impilate al centro con demo reale dei
@@ -67,6 +91,14 @@ export default function PageThemeEditor(): JSX.Element {
   const [resetModalOpened, { open: openResetModal, close: closeResetModal }] = useDisclosure(false);
 
   const savedConfigRef = useRef(themeConfig);
+
+  // Tema e resolver del draft, ricalcolati ad ogni modifica: alimentano il solo
+  // `MantineProvider` annidato dell'anteprima, non l'app.
+  const previewTheme = useMemo(() => buildAppTheme(themeConfig), [themeConfig]);
+  const previewCssVariablesResolver = useMemo(
+    () => buildCssVariablesResolver(themeConfig),
+    [themeConfig],
+  );
 
   // La sezione "attiva" per la barra a destra segue l'ancora cliccata in
   // sidebar (hash dell'URL) — nessuno stato duplicato, unica fonte di verità.
@@ -152,7 +184,7 @@ export default function PageThemeEditor(): JSX.Element {
             size="xs"
             value={editScheme}
             onChange={(value) => setEditScheme(value as 'light' | 'dark')}
-            aria-label="Scheme in modifica"
+            aria-label="Scheme in anteprima"
             data={[
               { value: 'light', label: <IconSun size={16} /> },
               { value: 'dark', label: <IconMoon size={16} /> },
@@ -217,32 +249,54 @@ export default function PageThemeEditor(): JSX.Element {
       </Modal>
 
       <div className={classes.body}>
-        <ScrollArea
-          className={classes.center}
-          scrollbars="y"
-          style={{ background: themeConfig[editScheme].pageBg }}
+        {/*
+          Anteprima scopata: il draft vive in questo provider annidato e nelle
+          variabili CSS che Mantine scrive su `.theme-editor-preview-scope`, mai
+          su `:root`. `forceColorScheme` fissa lo scheme in anteprima a quello in
+          modifica (il SegmentedControl in header), indipendente dallo scheme
+          dell'app attorno; `data-mantine-color-scheme` sullo stesso elemento è
+          necessario perché Mantine emette i token per-scheme come
+          `<selettore>[data-mantine-color-scheme="…"]`. `getRootElement` che
+          restituisce `undefined` impedisce a questo provider di scrivere
+          l'attributo su `<html>`, cioè di trascinare l'intera app nello scheme
+          dell'anteprima.
+        */}
+        <MantineProvider
+          theme={previewTheme}
+          cssVariablesResolver={previewCssVariablesResolver}
+          cssVariablesSelector={`.${PREVIEW_SCOPE_CLASS}`}
+          forceColorScheme={editScheme}
+          withGlobalClasses={false}
+          getRootElement={() => undefined}
         >
-          <Stack gap={0} className={classes.centerContent}>
-            {THEME_EDITOR_SECTIONS.map((section, index) => (
-              <div key={section.key} id={section.key} className={classes.section}>
-                <Title order={3} mb={4} style={{ color: themeConfig[editScheme].textPrimary }}>
-                  {section.label}
-                </Title>
-                <Text size="xs" mb="md" style={{ color: themeConfig[editScheme].textSecondary }}>
-                  {section.description}
-                </Text>
-                <ThemeEditorSectionDemo
-                  section={section}
-                  config={themeConfig}
-                  scheme={editScheme}
-                />
-                {index < THEME_EDITOR_SECTIONS.length - 1 && (
-                  <Divider className={classes.sectionDivider} />
-                )}
-              </div>
-            ))}
-          </Stack>
-        </ScrollArea>
+          <ScrollArea
+            className={`${classes.center} ${PREVIEW_SCOPE_CLASS}`}
+            data-mantine-color-scheme={editScheme}
+            scrollbars="y"
+            style={{ background: themeConfig[editScheme].pageBg }}
+          >
+            <Stack gap={0} className={classes.centerContent}>
+              {THEME_EDITOR_SECTIONS.map((section, index) => (
+                <div key={section.key} id={section.key} className={classes.section}>
+                  <Title order={3} mb={4} style={{ color: themeConfig[editScheme].textPrimary }}>
+                    {section.label}
+                  </Title>
+                  <Text size="xs" mb="md" style={{ color: themeConfig[editScheme].textSecondary }}>
+                    {section.description}
+                  </Text>
+                  <ThemeEditorSectionDemo
+                    section={section}
+                    config={themeConfig}
+                    scheme={editScheme}
+                  />
+                  {index < THEME_EDITOR_SECTIONS.length - 1 && (
+                    <Divider className={classes.sectionDivider} />
+                  )}
+                </div>
+              ))}
+            </Stack>
+          </ScrollArea>
+        </MantineProvider>
 
         <ScrollArea className={classes.panel} scrollbars="y">
           {!activeSection && (

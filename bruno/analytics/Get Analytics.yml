@@ -1,0 +1,12 @@
+meta:
+  name: Get Analytics
+  type: http
+  seq: 2
+
+get:
+  url: http://localhost:53000/api/v1/analytics?from=2026-08-01&to=2026-08-28
+  headers: []
+  auth: inherit
+
+docs: |-
+  KPI e serie giornaliere del sito pubblico e dell'app. Richiede JWT Admin+.

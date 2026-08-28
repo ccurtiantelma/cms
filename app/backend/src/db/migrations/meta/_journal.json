@@ -50,6 +50,13 @@
       "when": 1787824806204,
       "tag": "0006_windy_anthem",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787907599433,
+      "tag": "0007_add_public_pageview_daily",
+      "breakpoints": true
     }
   ]
 }

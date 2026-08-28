@@ -43,15 +43,13 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActionIcon, Button, Paper, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { notifications } from '@mantine/notifications';
 import {
   IconEye,
+  IconHistory,
   IconLayoutGrid,
   IconLayoutSidebar,
   IconLayoutSidebarRight,
-  IconWorld,
 } from '@tabler/icons-react';
-import type { AxiosError } from 'axios';
 import {
   DndContext,
   DragOverlay,
@@ -72,16 +70,15 @@ import {
   useIsStructurePanelOpen,
   type EditorViewport,
 } from '../../../hooks/useBlockEditorStore';
-import { DEFAULT_GLOBAL_TOKENS } from '../../../libs/globalTokensCompiler';
-import { getGlobalTokensApi, toGlobalTokens } from '../../../services/settings.service';
 import { BLOCK_TYPES } from '../../../types/blocks.types';
 import type { PageRecord } from '../../../types/pages.types';
 import { blockIcon, defaultPropsFor } from './BlockPalette';
 import EditorSidebar from './sidebar/EditorSidebar';
 import Toolbar from './Toolbar';
-import GlobalTokensDrawer from './GlobalTokensDrawer';
+import HistoryDrawer from './HistoryDrawer';
 import LocaleSwitcher from './LocaleSwitcher';
 import TemplateLibraryModal from './TemplateLibraryModal';
+import { useEditorShortcuts } from './useEditorShortcuts';
 import styles from './FullScreenEditorLayout.module.css';
 
 /** Payload di una zona di rilascio (`EditorBlockWrapper.tsx`): dove inserire il nodo trascinato. */
@@ -209,45 +206,19 @@ export default function FullScreenEditorLayout({
   // controlli della topbar (struttura, anteprima, undo/redo) — sempre `parentId: null`,
   // in coda alla radice.
   const [templateLibraryOpened, setTemplateLibraryOpened] = useState(false);
-  // F07 step 2: Drawer "Impostazioni Sito" (Global Kit) — stato di apertura locale, stesso
-  // principio di `templateLibraryOpened` sopra (nessuno stato equivalente già in
-  // `useBlockEditorStore`, a differenza di viewport/pannello struttura che sono condivisi con
-  // altri consumer).
-  const [globalTokensOpened, { open: openGlobalTokens, close: closeGlobalTokens }] =
-    useDisclosure(false);
+  const [historyOpened, { toggle: toggleHistory, close: closeHistory }] = useDisclosure(false);
 
-  /**
-   * Idratazione una tantum dei Global Design Tokens all'apertura dell'editor (F07 step 2): se
-   * questa sessione di editing non li ha ancora caricati (`globalTokens === null`), li legge
-   * dal server e li applica subito al canvas via `hydrateGlobalTokens` (non annullabile — vedi
-   * il suo commento in `useBlockEditorStore.ts`). Un errore di rete non lascia mai il
-   * picker/canvas senza token: fallback ai default di fabbrica, con notifica esplicita.
+  // Motore delle scorciatoie da tastiera dell'editor (undo/redo/elimina/deseleziona/
+  // duplica): attivo solo quando la scheda "Contenuto" è quella selezionata, stesso
+  // principio del resto del componente (vedi commento di testa su `active`).
+  useEditorShortcuts(active);
+
+  /*
+   * Nessuna idratazione dei Global Design Tokens qui: l'aspetto del Canvas — colori,
+   * tipografia, spaziature — deriva ora dal `ThemeConfig` dell'Editor tema, applicato da
+   * `EditorCanvas.tsx`. È la stessa fonte che veste il sito pubblicato, quindi il Canvas
+   * mostra ciò che il visitatore vedrà invece di un secondo sistema di stile parallelo.
    */
-  useEffect(() => {
-    if (useBlockEditorStore.getState().globalTokens !== null) return undefined;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const dto = await getGlobalTokensApi();
-        if (cancelled) return;
-        useBlockEditorStore.getState().hydrateGlobalTokens(toGlobalTokens(dto));
-      } catch (err) {
-        if (cancelled) return;
-        const error = err as AxiosError<{ message?: string }>;
-        notifications.show({
-          color: 'red',
-          title: 'Impostazioni sito non disponibili',
-          message:
-            error.response?.data?.message ??
-            'Impossibile caricare i Global Design Tokens: uso i valori di fabbrica.',
-        });
-        useBlockEditorStore.getState().hydrateGlobalTokens(DEFAULT_GLOBAL_TOKENS);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   /** Contenitore che scrolla davvero durante il drag (punto 3 del task): `.canvasArea`, non
    * `.canvasRoot` di `EditorCanvas.module.css` (che non ha `overflow` proprio). */
@@ -352,10 +323,7 @@ export default function FullScreenEditorLayout({
   }, [isDragActive]);
 
   return (
-    <div
-      className={styles.root}
-      style={active ? undefined : { display: 'none' }}
-    >
+    <div className={styles.root} style={active ? undefined : { display: 'none' }}>
       <Toolbar
         pageTitle={pageTitle}
         backHref={backHref}
@@ -370,20 +338,56 @@ export default function FullScreenEditorLayout({
         onPublish={onSaveDraft}
         leadingActions={
           <>
-            <ActionIcon variant={isSidebarOpen ? 'filled' : 'default'} size="lg" aria-label="Mostra/Nascondi pannello widget" aria-pressed={isSidebarOpen} onClick={toggleSidebar}>
+            <ActionIcon
+              variant={isSidebarOpen ? 'filled' : 'default'}
+              size="lg"
+              aria-label="Mostra/Nascondi pannello widget"
+              aria-pressed={isSidebarOpen}
+              onClick={toggleSidebar}
+            >
               <IconLayoutSidebar size={18} />
-            </ActionIcon>
-            <ActionIcon variant="default" size="lg" aria-label="Impostazioni Sito" onClick={openGlobalTokens}>
-              <IconWorld size={18} />
             </ActionIcon>
           </>
         }
         centerActions={page ? <LocaleSwitcher page={page} /> : undefined}
         trailingActions={
           <>
-            {onPreview && <Button variant="default" leftSection={<IconEye size={16} />} loading={previewLoading} onClick={onPreview}>Anteprima</Button>}
-            <ActionIcon variant="default" size="lg" aria-label="Libreria sezioni" onClick={() => setTemplateLibraryOpened(true)}><IconLayoutGrid size={18} /></ActionIcon>
-            <ActionIcon variant={isStructurePanelOpen ? 'filled' : 'default'} size="lg" aria-label="Pannello struttura" aria-pressed={isStructurePanelOpen} onClick={toggleStructurePanel}><IconLayoutSidebarRight size={18} /></ActionIcon>
+            {onPreview && (
+              <Button
+                variant="default"
+                leftSection={<IconEye size={16} />}
+                loading={previewLoading}
+                onClick={onPreview}
+              >
+                Anteprima
+              </Button>
+            )}
+            <ActionIcon
+              variant="default"
+              size="lg"
+              aria-label="Libreria sezioni"
+              onClick={() => setTemplateLibraryOpened(true)}
+            >
+              <IconLayoutGrid size={18} />
+            </ActionIcon>
+            <ActionIcon
+              variant={historyOpened ? 'filled' : 'default'}
+              size="lg"
+              aria-label="Cronologia Azioni"
+              aria-pressed={historyOpened}
+              onClick={toggleHistory}
+            >
+              <IconHistory size={18} />
+            </ActionIcon>
+            <ActionIcon
+              variant={isStructurePanelOpen ? 'filled' : 'default'}
+              size="lg"
+              aria-label="Pannello struttura"
+              aria-pressed={isStructurePanelOpen}
+              onClick={toggleStructurePanel}
+            >
+              <IconLayoutSidebarRight size={18} />
+            </ActionIcon>
           </>
         }
       />
@@ -401,8 +405,9 @@ export default function FullScreenEditorLayout({
         onDragEnd={handleDragEnd}
         onDragCancel={() => setDraggedBlock(null)}
       >
-        <div className={styles.workArea}>
-          {/*
+        <div className={styles.canvasShell}>
+          <div className={styles.workArea}>
+            {/*
             Sempre montata (mai `isSidebarOpen && (...)`): smontare `EditorSidebar` ne
             perderebbe lo stato interno (`activeSidebarTab`, scroll) ogni volta che si
             richiude — oltre a impedire la transizione di larghezza sotto, che richiede
@@ -410,31 +415,32 @@ export default function FullScreenEditorLayout({
             colpo. `styles.sidebarCollapsed` porta la larghezza a 0 mantenendo il nodo nel
             DOM.
           */}
-          <aside className={`${styles.sidebar} ${isSidebarOpen ? '' : styles.sidebarCollapsed}`}>
-            <EditorSidebar />
-          </aside>
+            <aside className={`${styles.sidebar} ${isSidebarOpen ? '' : styles.sidebarCollapsed}`}>
+              <EditorSidebar />
+            </aside>
 
-          <div className={styles.canvasArea} ref={canvasAreaRef}>
-            {/*
+            <div className={styles.canvasArea} ref={canvasAreaRef}>
+              {/*
               `data-viewport` non pilota nessuna media query nuova (il sync col rendering
               responsive dei blocchi passa già da `container-type: inline-size` qui sotto,
               letto dalle `@container` di `style-tokens.module.css`, ADR-29 § 2): resta solo
               un aggancio dichiarativo per selettori CSS/E2E futuri sul breakpoint simulato,
               senza introdurre un secondo sistema di breakpoint.
             */}
-            <div
-              className={`${styles.viewportContainer} ${viewportClass[activeViewport]}`}
-              data-viewport={activeViewport}
-            >
-              {children}
+              <div
+                className={`${styles.viewportContainer} ${viewportClass[activeViewport]}`}
+                data-viewport={activeViewport}
+              >
+                {children}
+              </div>
             </div>
-          </div>
 
-          {isStructurePanelOpen && (
-            <aside className={styles.structurePanel} aria-label="Struttura della pagina">
-              {structurePanel}
-            </aside>
-          )}
+            {isStructurePanelOpen && (
+              <aside className={styles.structurePanel} aria-label="Struttura della pagina">
+                {structurePanel}
+              </aside>
+            )}
+          </div>
         </div>
 
         <DragOverlay>
@@ -467,7 +473,7 @@ export default function FullScreenEditorLayout({
         index={rootBlocksCount}
       />
 
-      <GlobalTokensDrawer opened={globalTokensOpened} onClose={closeGlobalTokens} />
+      <HistoryDrawer opened={historyOpened} onClose={closeHistory} />
     </div>
   );
 }

@@ -31,6 +31,8 @@ export interface PropertyTabProps {
   commit: (name: string, value: unknown) => void;
   setAndCommit: (name: string, value: unknown) => void;
   onOpenMediaPicker: (propName: string) => void;
+  nodeType?: string;
+  onSavePreset?: (name: string) => void;
 }
 
 export default function ContentTab({

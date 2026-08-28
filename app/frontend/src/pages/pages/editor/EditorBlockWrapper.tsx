@@ -40,7 +40,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
@@ -52,13 +51,11 @@ import {
   IconArrowDown,
   IconArrowUp,
   IconChevronUp,
-  IconClipboard,
   IconCopy,
   IconGripVertical,
   IconHeading,
   IconIndentDecrease,
   IconIndentIncrease,
-  IconPalette,
   IconTrash,
 } from '@tabler/icons-react';
 import { BLOCK_TYPES } from '../../../types/blocks.types';
@@ -70,7 +67,6 @@ import {
   useNodeById,
   type EditorViewport,
 } from '../../../hooks/useBlockEditorStore';
-import { extractStyleProps, useStyleClipboardStore } from '../../../hooks/useStyleClipboardStore';
 import { findLocation, findNode, type BlockNode } from './block-tree.utils';
 import { canContainType, canDropInto } from './block-registry.utils';
 import {
@@ -87,51 +83,25 @@ import BlockErrorBoundary from '../../../components/blocks/BlockErrorBoundary';
 import Section from '../../../components/blocks/blocks/Section';
 import Container from '../../../components/blocks/blocks/Container';
 import tokenStyles from '../../../components/blocks/style-tokens.module.css';
+import { resolveHideClassName } from '../../../components/blocks/style-tokens';
 import ConfirmModal from '../../../components/ConfirmModal';
 import BlockPalette, { blockIcon } from './BlockPalette';
 import InlineFloatingToolbar from './InlineFloatingToolbar';
+import InlineFormattingToolbar, {
+  type ToolbarAlign,
+  type ToolbarFormat,
+} from './InlineFormattingToolbar';
 import styles from './EditorBlockWrapper.module.css';
 
-/**
- * Intervallo dichiarato dal registro per la prop di larghezza di `container` (E03), o
- * `null` se il registro non la dichiara — che è lo stato attuale: ADR-39 § 2 ha approvato
- * `container` come layout puro, senza prop di stile. Letto una volta sola all'import: il
- * registro è un artefatto generato, costante per l'intera vita del bundle.
- *
- * `null` **spegne la maniglia di ridimensionamento**: nessun elemento renderizzato, nessun
- * gesto possibile, nessun commit. Non è un ripiego difensivo, è l'unico comportamento
- * corretto — il validatore server-side respinge con `BLOCK_PROP_NOT_DECLARED` ogni prop non
- * dichiarata e rifiuta l'intero albero, quindi una maniglia che scrivesse comunque
- * `styleFlexBasis` non renderebbe ridimensionabile il container: renderebbe insalvabile la
- * pagina. Vedi il commento di testa di `container-resize.utils.ts`.
- */
 const CONTAINER_WIDTH_SPEC = resolveContainerWidthSpec();
-
-/**
- * Valori ammessi per `columnRatio` (`section.block.ts`): `enum` chiuso, non responsive —
- * nessun quarto stop, il resizer di colonne (punto 1 del task) snappa solo su questi tre.
- */
 const COLUMN_RATIO_VALUES = ['equal', '33-66', '66-33'] as const;
 type ColumnRatioValue = (typeof COLUMN_RATIO_VALUES)[number];
-
-/** Posizione (percentuale della larghezza) del confine fra le due colonne, per ciascun stop. */
 const COLUMN_RATIO_BOUNDARY_PERCENT: Record<ColumnRatioValue, number> = {
   equal: 50,
   '33-66': 33.333,
   '66-33': 66.667,
 };
 
-/**
- * Componenti di F02 che accettano figli. Non è un secondo renderer: è la stessa
- * implementazione che `BlockRenderer` monta per quel tipo, montata qui direttamente
- * perché l'editor deve interporre la propria chrome fra contenitore e figli. Un tipo
- * contenitore nuovo nel registro senza voce qui ricade su `BlockRenderer` (i figli si
- * vedono, senza toolbar per figlio): un difetto visibile, mai un contenuto divergente.
- *
- * Le props qui sotto sono le stesse che `BlockRenderer.tsx` estrae da `node.props` per
- * `section` (ADR-31): duplicate per firma, non per valore, perché qui il montaggio bypassa
- * `BlockRenderer` (i figli hanno bisogno della chrome, non del dispatcher ricorsivo).
- */
 interface SectionContainerProps {
   children: ReactNode;
   styleSpaceBefore?: unknown;
@@ -145,6 +115,7 @@ interface SectionContainerProps {
   maxWidth?: unknown;
   columnRatio?: unknown;
   styleBackgroundColor?: unknown;
+  styleColor?: unknown;
   stylePaddingTop?: unknown;
   stylePaddingRight?: unknown;
   stylePaddingBottom?: unknown;
@@ -174,6 +145,8 @@ interface ContainerBlockProps {
   alignItems?: unknown;
   wrap?: unknown;
   gap?: unknown;
+  styleBackgroundColor?: unknown;
+  styleColor?: unknown;
   customCssClass?: unknown;
   customElementId?: unknown;
 }
@@ -209,6 +182,8 @@ function resolveContainerComponentProps(
       alignItems: node.props.alignItems,
       wrap: node.props.wrap,
       gap: node.props.gap,
+      styleBackgroundColor: node.props.styleBackgroundColor,
+      styleColor: node.props.styleColor,
       customCssClass: node.props.customCssClass,
       customElementId: node.props.customElementId,
     };
@@ -225,6 +200,7 @@ function resolveContainerComponentProps(
     maxWidth: node.props.maxWidth,
     columnRatio: node.props.columnRatio,
     styleBackgroundColor: node.props.styleBackgroundColor,
+    styleColor: node.props.styleColor,
     stylePaddingTop: node.props.stylePaddingTop,
     stylePaddingRight: node.props.stylePaddingRight,
     stylePaddingBottom: node.props.stylePaddingBottom,
@@ -331,12 +307,6 @@ function dropZoneAttrs(
   return { 'data-over': isOver, 'data-rejected': rejected };
 }
 
-/**
- * Avvolge il rendering di un nodo con la chrome di editing. `memo` sull'id: quando un
- * fratello cambia, questo nodo non si ri-renderizza (le sue props non cambiano e le sue
- * sottoscrizioni allo store restituiscono gli stessi riferimenti — structural sharing di
- * `block-tree.utils.ts`).
- */
 const EditorBlockWrapper = memo(function EditorBlockWrapper({
   id,
 }: EditorBlockWrapperProps): JSX.Element | null {
@@ -348,57 +318,37 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const isSelected = useBlockEditorStore((state) => state.selectedId === id);
   const isInvalid = useContext(InvalidBlockContext) === id;
   const activeViewport = useActiveViewport();
-
-  /**
-   * Tipo del contenitore che ospita questo nodo (`undefined` alla radice): serve alle due
-   * palette di inserimento posizionale, che devono filtrare i tipi ammessi *accanto* a
-   * questo blocco, non dentro di lui.
-   */
   const parentType = useBlockEditorStore((state) => {
     const current = findLocation(state.tree, id);
     return current?.parentId ? findNode(state.tree, current.parentId)?.type : undefined;
   });
-
-  /**
-   * Destinazione di "sposta dentro": il fratello **precedente**, se è un contenitore che il
-   * registro ammette per questo tipo. `null` quando la mossa non è possibile — ed è il
-   * registro a dirlo, non un elenco di tipi scritto qui.
-   */
   const indentTarget = useBlockEditorStore(
     useShallow((state) => {
-      const node = findNode(state.tree, id);
       const current = findLocation(state.tree, id);
-      if (!node || !current || current.index === 0) return null;
-      const siblings =
-        current.parentId === null
-          ? state.tree
-          : (findNode(state.tree, current.parentId)?.children ?? []);
+      if (!current || current.index === 0) return null;
+      const siblings = current.parentId === null
+        ? state.tree
+        : (findNode(state.tree, current.parentId)?.children ?? []);
       const previous = siblings[current.index - 1];
-      if (!previous || !canContainType(previous.type, node.type)) return null;
-      return { parentId: previous.id, index: previous.children.length };
+      return previous && canContainType(previous.type, node?.type ?? '')
+        ? { parentId: previous.id, index: previous.children.length }
+        : null;
     }),
   );
-
-  /**
-   * Destinazione di "porta fuori": il livello del contenitore, subito dopo di lui. `null`
-   * se il nodo è già alla radice o se lì il suo tipo non è ammesso.
-   */
   const outdentTarget = useBlockEditorStore(
     useShallow((state) => {
-      const node = findNode(state.tree, id);
       const current = findLocation(state.tree, id);
-      if (!node || !current || current.parentId === null) return null;
+      if (!current || current.parentId === null) return null;
       const parentLocation = findLocation(state.tree, current.parentId);
-      if (!parentLocation) return null;
-      const grandParentType =
-        parentLocation.parentId === null
-          ? undefined
-          : findNode(state.tree, parentLocation.parentId)?.type;
-      if (!canContainType(grandParentType, node.type)) return null;
-      return { parentId: parentLocation.parentId, index: parentLocation.index + 1 };
+      if (!parentLocation || !node) return null;
+      const grandParentType = parentLocation.parentId === null
+        ? undefined
+        : findNode(state.tree, parentLocation.parentId)?.type;
+      return canContainType(grandParentType, node.type)
+        ? { parentId: parentLocation.parentId, index: parentLocation.index + 1 }
+        : null;
     }),
   );
-
   const selectNode = useBlockEditorStore((state) => state.selectNode);
   const moveBlockAction = useBlockEditorStore((state) => state.moveBlockAction);
   const moveNodeToAction = useBlockEditorStore((state) => state.moveNodeToAction);
@@ -418,17 +368,6 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const [confirmOpened, setConfirmOpened] = useState(false);
   /** Solo il nodo direttamente sotto il puntatore (vedi commento di testa). */
   const [isHovered, setIsHovered] = useState(false);
-  /**
-   * Menu contestuale al tasto destro (punto 3 del task): coordinate del click che lo apre,
-   * `null` quando è chiuso. Un `Menu` Mantine controllato (`opened`/`onClose`) ancorato a un
-   * bersaglio invisibile posizionato su quelle coordinate — Mantine v7 non ha un
-   * `Menu.ContextMenu` dedicato (verificato sul sorgente installato, `node_modules/@mantine/
-   * core@7.17.0`), quindi il posizionamento a coordinate arbitrarie passa da qui.
-   */
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
-  /** Prop di stile copiate da "Copia Stile" su un altro blocco, o `null` se la clipboard è vuota. */
-  const copiedStyleProps = useStyleClipboardStore((state) => state.copiedProps);
-  const copyStyle = useStyleClipboardStore((state) => state.copyStyle);
 
   /**
    * Debounce (punto 1 del task) per `onTextInput`/`onHtmlInput`/`onLabelInput`: il DOM
@@ -536,6 +475,128 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
     updateBlockPropsAction(id, { html: nextHtml });
   }
 
+  /**
+   * Indicatori mostrati da `InlineFormattingToolbar` (T-integrazione-toolbar): a differenza
+   * di `InlineFloatingToolbar` (che legge `document.queryCommandState`, valido solo mentre il
+   * `contentEditable` ha il focus) questa barra è visibile anche **prima** che il blocco
+   * entri in editing (`isSelected && !isEditingText`, vedi il montaggio più sotto) — quando
+   * il nodo non ha il focus `queryCommandState` non è attendibile. Lo stile calcolato del
+   * `contentEditable` resta un'indicazione corretta indipendentemente dal focus: solo un
+   * suggerimento UX (nessuna scrittura, nessun blocco al salvataggio), coerente con
+   * "validazione client solo UX" (CLAUDE.md § dominio CMS) applicato qui allo stato mostrato
+   * invece che a un errore.
+   */
+  const [formattingIndicators, setFormattingIndicators] = useState<{
+    bold: boolean;
+    italic: boolean;
+    align: ToolbarAlign;
+  }>({ bold: false, italic: false, align: 'left' });
+
+  /**
+   * `true` quando l'utente ha chiuso esplicitamente `InlineFormattingToolbar` per questo giro
+   * di selezione (bottone "Chiudi"): resettato ad ogni cambio di nodo/uscita dalla selezione,
+   * mai persistito — riaprire il blocco (nuova selezione) la rimostra sempre.
+   */
+  const [formattingToolbarDismissed, setFormattingToolbarDismissed] = useState(false);
+
+  /** Rilegge grassetto/corsivo/allineamento dallo stile calcolato del `contentEditable` (vedi commento sopra). */
+  function refreshFormattingIndicators(): void {
+    const target = getRichTextTarget();
+    if (!target) return;
+    const computed = window.getComputedStyle(target);
+    const weight = Number.parseInt(computed.fontWeight, 10);
+    const align: ToolbarAlign =
+      computed.textAlign === 'center'
+        ? 'center'
+        : computed.textAlign === 'right' || computed.textAlign === 'end'
+          ? 'right'
+          : 'left';
+    setFormattingIndicators({
+      bold: !Number.isNaN(weight) ? weight >= 600 : computed.fontWeight === 'bold',
+      italic: computed.fontStyle === 'italic',
+      align,
+    });
+  }
+
+  /**
+   * Applica un comando a **tutto** il contenuto del blocco (non a una selezione parziale,
+   * che qui non esiste — la barra è visibile prima dell'editing): seleziona l'intero
+   * `contentEditable`, esegue il comando, e affida l'HTML risultante a `commitHtml` — lo
+   * stesso canale di commit di ogni altro comando di formattazione di questo file (undo/redo
+   * incluso). `execCommand`: stessa scelta tecnica di `InlineFloatingToolbar.tsx` (vedi il
+   * suo commento di testa), non un secondo motore di rich text.
+   */
+  function applyFormattingCommand(command: string, value?: string): void {
+    const target = getRichTextTarget();
+    if (!target) return;
+    target.focus();
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      const range = document.createRange();
+      range.selectNodeContents(target);
+      selection.addRange(range);
+    }
+    document.execCommand(command, false, value);
+    commitHtml(target.innerHTML);
+    refreshFormattingIndicators();
+  }
+
+  /**
+   * Grassetto/Corsivo: comando diretto su tutto il blocco. "Link" non ha qui un modo di
+   * raccogliere l'URL (questa barra non ha un campo di testo, a differenza del popover di
+   * `InlineFloatingToolbar`): si avvisa l'utente di passare dall'editing in-place, dove la
+   * barra ancorata alla selezione offre il campo dedicato — nessun secondo modo di inserire
+   * un link inventato qui.
+   */
+  function handleToggleFormat(format: ToolbarFormat): void {
+    if (format === 'bold') {
+      applyFormattingCommand('bold');
+      return;
+    }
+    if (format === 'italic') {
+      applyFormattingCommand('italic');
+      return;
+    }
+    notifications.show({
+      color: 'blue',
+      message: 'Seleziona del testo nel blocco per inserire un link.',
+    });
+  }
+
+  /** Allineamento: stesso comando `justify*` di `InlineFloatingToolbar.tsx`, applicato a tutto il blocco. */
+  function handleAlignChange(align: ToolbarAlign): void {
+    const command =
+      align === 'center' ? 'justifyCenter' : align === 'right' ? 'justifyRight' : 'justifyLeft';
+    applyFormattingCommand(command);
+  }
+
+  /**
+   * `true` solo su un `richText` selezionato ma non ancora in editing (`isEditingText`,
+   * definito più sotto — click dentro il `contentEditable`): appena l'editing comincia, la
+   * barra ancorata alla selezione viva (`InlineFloatingToolbar`, montata più in basso) prende
+   * il suo posto — mai le due insieme sullo stesso nodo (vedi commento di testa di
+   * `InlineFormattingToolbar.tsx`).
+   */
+  const showFormattingToolbar = Boolean(
+    isSelected && !isEditingText && node?.type === 'richText' && !formattingToolbarDismissed,
+  );
+
+  // Nuova selezione (o nuovo nodo): la chiusura esplicita di un giro precedente non deve
+  // restare appiccicata a un blocco diverso, né sopravvivere a una deselezione/riselezione
+  // dello stesso.
+  useEffect(() => {
+    if (isSelected) setFormattingToolbarDismissed(false);
+  }, [id, isSelected]);
+
+  // Indicatori aggiornati non appena la barra compare (selezione) o rientra da un editing
+  // appena concluso (blur) — mai mentre resta nascosta, per non leggere lo stile calcolato
+  // di un nodo che potrebbe non esistere più.
+  useEffect(() => {
+    if (showFormattingToolbar) refreshFormattingIndicators();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refreshFormattingIndicators legge wrapperRef via getRichTextTarget, identità stabile (useCallback senza dipendenze reattive)
+  }, [showFormattingToolbar]);
+
   // Il timer in sospeso non deve mai sparare contro un nodo deselezionato o smontato: sia
   // il cambio di `id` sia il flip di `isSelected` (l'`editing` passato a `BlockRenderer`
   // diventa `undefined`) rieseguono questo effetto, la cui funzione di cleanup cancella il
@@ -622,46 +683,6 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
     'aria-hidden': true,
   });
 
-  /** Apre il menu contestuale sulle coordinate del click, al posto di quello nativo del browser. */
-  function handleContextMenu(event: ReactMouseEvent): void {
-    event.preventDefault();
-    // Stesso principio del click/hover più sopra: senza stop, l'evento (con bubbling
-    // nativo) risalirebbe al wrapper del contenitore che ospita questo nodo, aprendo un
-    // secondo menu sopra quello del blocco realmente cliccato.
-    event.stopPropagation();
-    selectNode(id);
-    setContextMenu({ x: event.clientX, y: event.clientY });
-  }
-
-  /** "Copia Stile": salva le sole prop di stile (`style*`, registro) del blocco corrente. */
-  function handleCopyStyle(): void {
-    copyStyle(extractStyleProps(currentNode.props));
-    notifications.show({ color: 'blue', message: `Stile del blocco "${label}" copiato.` });
-  }
-
-  /**
-   * "Incolla Stile": applica solo le prop copiate che il registro dichiara per **questo**
-   * tipo di blocco. Un blocco sorgente di tipo diverso può avere prop di stile con nomi
-   * che qui non esistono (es. `styleFontSize` copiato da un Heading su una Section): il
-   * server le respingerebbe con `BLOCK_PROP_NOT_DECLARED` (400) al salvataggio — qui si
-   * filtra invece di scoprirlo dopo, così l'unione resta sempre un albero valido.
-   */
-  function handlePasteStyle(): void {
-    if (!copiedStyleProps) return;
-    const declaredNames = new Set((descriptor?.props ?? []).map((prop) => prop.name));
-    const applicable = Object.fromEntries(
-      Object.entries(copiedStyleProps).filter(([key]) => declaredNames.has(key)),
-    );
-    if (Object.keys(applicable).length === 0) {
-      notifications.show({
-        color: 'yellow',
-        message: `Nessuna proprietà di stile copiata è compatibile con il blocco "${label}".`,
-      });
-      return;
-    }
-    updateBlockPropsAction(id, applicable);
-    notifications.show({ color: 'blue', message: `Stile incollato sul blocco "${label}".` });
-  }
 
   /**
    * Variante Elementor, solo su `section` (T-layout-colonne-section): bordo d'accento
@@ -763,11 +784,11 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const isHiddenForActiveViewport = currentNode.props[VIEWPORT_HIDE_PROP[activeViewport]] === true;
 
   /**
-   * `container` (ADR-39) ha una chrome propria (F08 STEP 3): viola invece del blu/magenta
-   * generico degli altri tipi, per restare distinguibile da `section` a colpo d'occhio
-   * quando i due sono annidati l'uno nell'altro. Solo booleano di tipo, non riusa
-   * `isContainer` più sotto (quello include anche `section`, che mantiene invece il
-   * bordo blu/magenta invariato).
+   * Solo `container` (ADR-39) ha una prop di larghezza dichiarata dal registro
+   * ({@link CONTAINER_WIDTH_SPEC}): questo booleano resta ristretto al tipo esatto, a
+   * differenza di `isContainer` sopra (che include anche `section` e ogni futuro tipo
+   * contenitore) — governa **solo** {@link showContainerResizeHandle} più sotto, mai la
+   * colorazione hover/selezione (vedi `className`/Handle Bar, che usano `isContainer`).
    */
   const isContainerBlockType = node.type === 'container';
 
@@ -881,16 +902,20 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
 
   const className = [
     styles.wrapper,
-    // Overlay hover/selezione (Gap Analysis §2, P0 "differenziazione cromatica"): due stati
-    // distinti, non più un solo bordo ciano condiviso — `.hovered` (blu `#2271b1`, 1px,
-    // "puntamento") e `.selected` (magenta `#93003c`, 2px, "modifica attiva") sono
+    // Overlay hover/selezione: bordo blu per un elemento singolo (`.hovered`/`.selected`),
+    // arancione per un blocco Container/Sezione — qualunque tipo il registro ammetta come
+    // contenitore (`isContainer`, sopra: `childrenAllow === '*'` o non vuoto — copre
+    // `container` e `section`, e ogni futuro tipo contenitore, non solo `container`), non
+    // il blu/magenta generico di un elemento foglia. `.hovered`/`.selected` restano
     // mutuamente esclusivi per costruzione (`isSelected` non implica `isHovered` in questo
-    // array: un nodo selezionato ma non sotto il puntatore prende solo `.selected`). Su
-    // `container` (F08 STEP 3) le varianti viola tratteggiata/solida sostituiscono queste.
-    isHovered && !isSelected ? (isContainerBlockType ? styles.containerHovered : styles.hovered) : '',
-    isSelected ? (isContainerBlockType ? styles.containerSelected : styles.selected) : '',
+    // array: un nodo selezionato ma non sotto il puntatore prende solo `.selected`).
+    isHovered && !isSelected ? (isContainer ? styles.containerHovered : styles.hovered) : '',
+    isSelected ? (isContainer ? styles.containerSelected : styles.selected) : '',
     isInvalid ? styles.invalid : '',
     isDragging ? styles.dragging : '',
+    resolveHideClassName(tokenStyles, 'hideDesktop', currentNode.props.styleHideDesktop),
+    resolveHideClassName(tokenStyles, 'hideTablet', currentNode.props.styleHideTablet),
+    resolveHideClassName(tokenStyles, 'hideMobile', currentNode.props.styleHideMobile),
     isHiddenForActiveViewport ? tokenStyles.previewHidden : '',
     // "Occhio" del navigator (stato UI, mai persistito): a differenza di
     // `previewHidden` sopra, che solo attenua mantenendo il nodo selezionabile,
@@ -967,7 +992,8 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           event.stopPropagation();
           setIsHovered(false);
         }}
-        onContextMenu={handleContextMenu}
+        onMouseEnter={(event) => event.stopPropagation()}
+        onMouseLeave={(event) => event.stopPropagation()}
       >
         {/*
           Zona di rilascio "prima di questo nodo": riordino/spostamento fra fratelli.
@@ -1025,15 +1051,43 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           (`strict mode violation`). La toolbar integrata resta la sorgente del nome
           canonico, invariato, usato da `e2e/tests/helpers/page-editor.ts`.
         */}
+        {/*
+          `InlineFormattingToolbar` (T-integrazione-toolbar): overlay ancorato al bordo
+          superiore del blocco, non un pannello fisso — `position: absolute` dentro
+          `.wrapper` (già `position: relative`), stesso principio geometrico della Handle
+          Bar poco sotto (`.handleBar`), non un secondo calcolo via `getBoundingClientRect`:
+          l'ancoraggio "al bordo superiore di *questo* elemento" è esattamente ciò che il
+          layout CSS relativo/assoluto risolve da solo, senza bisogno di rimisurare il DOM
+          ad ogni render (a differenza di `InlineFloatingToolbar`, che insegue una
+          *selezione di testo* — un bersaglio che si sposta dentro il blocco, quello sì
+          calcolato via `getBoundingClientRect`). Sopra la Handle Bar (riga distinta,
+          `.formattingToolbarAnchor`), mai sullo stesso rigo: eviterebbe la sovrapposizione
+          quando entrambe sono visibili (`isSelected` le mostra entrambe).
+        */}
+        {showFormattingToolbar && (
+          <div className={styles.formattingToolbarAnchor}>
+            <InlineFormattingToolbar
+              isBold={formattingIndicators.bold}
+              isItalic={formattingIndicators.italic}
+              activeAlign={formattingIndicators.align}
+              onToggleFormat={handleToggleFormat}
+              onAlignChange={handleAlignChange}
+              onClose={() => setFormattingToolbarDismissed(true)}
+              blockName={label}
+            />
+          </div>
+        )}
+
         {(isHovered || isSelected) && (
           <Group
             className={[
               styles.handleBar,
-              // Viola su `container` (F08 STEP 3), stesso blu/magenta invariato per ogni
-              // altro tipo — coerente con la variante di bordo scelta sopra.
-              isContainerBlockType ? styles.handleBarContainer : '',
+              // Arancione su ogni blocco Container/Sezione (`isContainer`), blu/magenta
+              // invariato per un elemento singolo — coerente con la variante di bordo
+              // scelta sopra.
+              isContainer ? styles.handleBarContainer : '',
               isSelected
-                ? isContainerBlockType
+                ? isContainer
                   ? styles.handleBarContainerSelected
                   : styles.handleBarSelected
                 : '',
@@ -1506,97 +1560,6 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
               ? `Il blocco e i suoi ${childIds.length} blocchi figli vengono rimossi dalla bozza. L'eliminazione diventa definitiva al salvataggio.`
               : "Il blocco viene rimosso dalla bozza. L'eliminazione diventa definitiva al salvataggio."}
           </ConfirmModal>
-        )}
-
-        {contextMenu && (
-          <Menu
-            opened
-            onClose={() => setContextMenu(null)}
-            position="bottom-start"
-            withinPortal
-            shadow="md"
-            width={200}
-            // Stesso z-index dei `Modal` di questo file: sopra la chrome full-screen
-            // dell'editor (`FullScreenEditorLayout.module.css`, z-index 1000).
-            zIndex={1100}
-          >
-            <Menu.Target>
-              {/*
-                Bersaglio invisibile 1x1 sulle coordinate del click (punto 3 del task):
-                Mantine v7.17 (installato) non ha un `Menu.ContextMenu` dedicato, quindi
-                l'ancoraggio a coordinate arbitrarie passa da qui. `top`/`left` inline per
-                forza (calcolate ad ogni apertura, non esprimibili come classe statica) —
-                stesso idioma già in uso in questo modulo (`EditorStructureNavigator.tsx`,
-                `paddingLeft: depth * 12`), non uno stile invasivo su un componente Mantine.
-              */}
-              <div
-                className={styles.contextMenuAnchor}
-                style={{ top: contextMenu.y, left: contextMenu.x }}
-              />
-            </Menu.Target>
-            <Menu.Dropdown onClick={(event) => event.stopPropagation()}>
-              <Menu.Item
-                leftSection={<IconCopy size={14} />}
-                onClick={() => {
-                  setContextMenu(null);
-                  duplicateNodeAction(id);
-                }}
-              >
-                Duplica
-              </Menu.Item>
-              <Menu.Item
-                leftSection={<IconArrowUp size={14} />}
-                disabled={location.index === 0}
-                onClick={() => {
-                  setContextMenu(null);
-                  moveBlockAction(id, 'up');
-                }}
-              >
-                Sposta su
-              </Menu.Item>
-              <Menu.Item
-                leftSection={<IconArrowDown size={14} />}
-                disabled={location.index === location.siblingsCount - 1}
-                onClick={() => {
-                  setContextMenu(null);
-                  moveBlockAction(id, 'down');
-                }}
-              >
-                Sposta giù
-              </Menu.Item>
-              <Menu.Divider />
-              <Menu.Item
-                leftSection={<IconPalette size={14} />}
-                onClick={() => {
-                  setContextMenu(null);
-                  handleCopyStyle();
-                }}
-              >
-                Copia stile
-              </Menu.Item>
-              <Menu.Item
-                leftSection={<IconClipboard size={14} />}
-                disabled={!copiedStyleProps}
-                onClick={() => {
-                  setContextMenu(null);
-                  handlePasteStyle();
-                }}
-              >
-                Incolla stile
-              </Menu.Item>
-              <Menu.Divider />
-              <Menu.Item
-                color="red"
-                leftSection={<IconTrash size={14} />}
-                onClick={() => {
-                  setContextMenu(null);
-                  setConfirmOpened(true);
-                }}
-              >
-                Elimina
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
         )}
 
         {/*

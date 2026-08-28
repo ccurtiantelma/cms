@@ -18,17 +18,62 @@
  * div resta montato — solo invisibile, senza contenuto proprio — anche ad albero vuoto:
  * la resa visiva "Aggiungi sezione" è ora interamente di `CanvasAddSectionZone`, montata
  * subito sotto, che occupa la stessa funzione sia ad albero vuoto sia pieno.
+ *
+ * Porta anche `GLOBAL_TOKENS_CANVAS_SCOPE_CLASS` (`libs/globalTokensCompiler.ts`): è il
+ * selettore su cui questo componente scopa il CSS compilato dal `ThemeConfig` dell'Editor
+ * tema — la **stessa** fonte che veste il sito pubblicato (`app/public-site`), compilata
+ * dalla stessa funzione (`generateThemeCss`). Il Canvas mostra quindi ciò che il visitatore
+ * vedrà, non l'aspetto della chrome amministrativa attorno, che resta sui default di
+ * fabbrica di Mantine.
+ *
+ * L'applicazione è imperativa, su un `<style>` di `document` scopato a questa radice: le
+ * custom property cambiano a cascata sui discendenti senza ri-renderizzare né questo
+ * componente né l'albero dei blocchi.
  */
+import { useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { Stack } from '@mantine/core';
 import { useDroppable } from '@dnd-kit/core';
 import { useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
-import CanvasAddSectionZone from './CanvasAddSectionZone';
+import { useThemeColorStore } from '../../../hooks/useThemeColor';
+import { GLOBAL_TOKENS_CANVAS_SCOPE_CLASS } from '../../../libs/globalTokensCompiler';
+import { generateThemeCss, THEME_STYLE_TAG_ID } from '../../../utils/theme-css.utils';
+import CanvasContextMenu from './CanvasContextMenu';
+import CanvasSectionInserter from './CanvasSectionInserter';
 import EditorBlockWrapper from './EditorBlockWrapper';
 import styles from './EditorCanvas.module.css';
 
+/**
+ * Tiene aggiornato il `<style>` del documento con il tema compilato, scopato alla radice
+ * del Canvas. Un solo tag riusato (per id) invece di uno per render: montare/smontare un
+ * foglio di stile ad ogni modifica del tema farebbe lampeggiare il Canvas.
+ *
+ * `scheme: 'light'` — non `'auto'`: il Canvas è una superficie di editing, e il suo aspetto
+ * non deve dipendere dalla preferenza chiaro/scuro del sistema operativo di chi sta
+ * lavorando. Lo scheme scuro del tema si verifica dove conta, cioè in anteprima
+ * (`/__preview/`) e sul sito, dove segue la preferenza del visitatore.
+ */
+function useCanvasTheme(): void {
+  const themeConfig = useThemeColorStore((state) => state.themeConfig);
+
+  useEffect(() => {
+    const css = generateThemeCss(themeConfig, {
+      selector: `.${GLOBAL_TOKENS_CANVAS_SCOPE_CLASS}`,
+      scheme: 'light',
+    });
+    let styleTag = document.getElementById(THEME_STYLE_TAG_ID) as HTMLStyleElement | null;
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = THEME_STYLE_TAG_ID;
+      document.head.appendChild(styleTag);
+    }
+    styleTag.textContent = css;
+  }, [themeConfig]);
+}
+
 /** Superficie di editing dell'albero di blocchi della bozza corrente. */
 export default function EditorCanvas(): JSX.Element {
+  useCanvasTheme();
   const rootIds = useBlockEditorStore(useShallow((state) => state.tree.map((node) => node.id)));
   const selectNode = useBlockEditorStore((state) => state.selectNode);
   const { setNodeRef: setEmptyDropRef, isOver: isOverEmpty } = useDroppable({
@@ -37,30 +82,34 @@ export default function EditorCanvas(): JSX.Element {
   });
 
   return (
-    <div
-      className={styles.canvasRoot}
-      // Un click sullo sfondo deseleziona: senza, non ci sarebbe modo di tornare
-      // a "nessun blocco selezionato" una volta scelto un nodo.
-      onClick={() => selectNode(null)}
-    >
-      <Stack gap="sm">
-        {rootIds.length === 0 ? (
-          // Nessun contenuto visivo proprio (scelta di giudizio, vedi il commento di testa):
-          // la resa "Aggiungi sezione" è ora interamente di `CanvasAddSectionZone`, montata
-          // subito sotto anche in questo ramo. Il div resta solo come bersaglio
-          // `useDroppable` per il primo blocco trascinato — a riposo è una striscia quasi
-          // invisibile (`EditorCanvas.module.css`), che si allarga ed evidenzia in magenta
-          // solo durante un trascinamento sopra di lei (`data-over`).
-          <div ref={setEmptyDropRef} className={styles.emptyDropzone} data-over={isOverEmpty} />
-        ) : (
-          rootIds.map((id) => <EditorBlockWrapper key={id} id={id} />)
-        )}
-
-        {/* Zona "Aggiungi sezione" (sostituisce il vecchio popover `BlockPalette` di
-            "Aggiungi blocco in fondo"), sempre montata in coda: sia ad albero vuoto sia
-            pieno, un solo punto di ingresso invece di due meccaniche separate. */}
-        <CanvasAddSectionZone parentId={null} index={rootIds.length} />
-      </Stack>
-    </div>
+    <CanvasContextMenu>
+      <div
+        // `GLOBAL_TOKENS_CANVAS_SCOPE_CLASS` è il selettore su cui `useCanvasTheme` scopa
+        // il CSS del tema: mai `:root`, per non far trapelare le variabili del sito nella
+        // chrome amministrativa (sidebar, toolbar) che circonda questo canvas.
+        className={`${styles.canvasRoot} ${GLOBAL_TOKENS_CANVAS_SCOPE_CLASS}`}
+        // Un click sullo sfondo deseleziona: senza, non ci sarebbe modo di tornare
+        // a "nessun blocco selezionato" una volta scelto un nodo.
+        onClick={() => selectNode(null)}
+      >
+        <Stack gap="sm">
+          <CanvasSectionInserter index={0} empty={rootIds.length === 0} />
+          {rootIds.length === 0 ? (
+            // Nessun contenuto visivo proprio (scelta di giudizio, vedi il commento di testa):
+            // la resa "Aggiungi sezione" è ora interamente di `CanvasAddSectionZone`, montata
+            // subito sotto anche in questo ramo. Il div resta solo come bersaglio
+            // `useDroppable` per il primo blocco trascinato — a riposo è una striscia quasi
+            // invisibile (`EditorCanvas.module.css`), che si allarga ed evidenzia in magenta
+            // solo durante un trascinamento sopra di lei (`data-over`).
+            <div ref={setEmptyDropRef} className={styles.emptyDropzone} data-over={isOverEmpty} />
+          ) : (
+            rootIds.flatMap((id, index) => [
+              <EditorBlockWrapper key={id} id={id} />,
+              <CanvasSectionInserter key={`inserter-${index + 1}`} index={index + 1} />,
+            ])
+          )}
+        </Stack>
+      </div>
+    </CanvasContextMenu>
   );
 }

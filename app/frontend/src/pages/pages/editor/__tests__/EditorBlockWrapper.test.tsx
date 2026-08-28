@@ -10,7 +10,8 @@
  * (`{ default, tablet?, mobile? }`, ADR-29): qui si valorizza solo `default`, il
  * viewport attivo di default è `desktop` (`useActiveViewport`, store).
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { screen, fireEvent, createEvent } from '@testing-library/react';
 import { renderWithProviders } from '../../../../test/utils';
 import type { BlockNode } from '../block-tree.utils';
 
@@ -86,5 +87,117 @@ describe('EditorBlockWrapper — segnaposto colonne vuote (bug collasso griglia)
     expect(container.querySelectorAll(`.${styles.emptyContainer}`)).toHaveLength(0);
     // I figli veri restano grid item diretti di `.childrenArea` (`display: contents`).
     expect(container.querySelector('[data-block-id="h-1"]')).toBeInTheDocument();
+  });
+});
+
+/**
+ * `InlineFormattingToolbar` (T-integrazione-toolbar): ancorata al bordo superiore del
+ * blocco `richText` selezionato, mutuamente esclusiva con `InlineFloatingToolbar` (che
+ * prende il posto solo una volta iniziato l'editing, `isEditingText`). Vedi il commento di
+ * testa di `InlineFormattingToolbar.tsx` e il montaggio in `EditorBlockWrapper.tsx`.
+ */
+describe('EditorBlockWrapper — InlineFormattingToolbar (T-integrazione-toolbar)', () => {
+  beforeEach(() => {
+    useBlockEditorStore.getState().initTree([]);
+    useBlockEditorStore.getState().setActiveViewport('desktop');
+    useBlockEditorStore.getState().selectNode(null);
+    // jsdom non implementa `execCommand`/`queryCommandState` (usati da `RichText.tsx` on
+    // focus e da `applyFormattingCommand`/`InlineFloatingToolbar.tsx` sui comandi di
+    // formattazione): mock locale a questo describe, nessun impatto sul resto della suite.
+    document.execCommand = vi.fn().mockReturnValue(true);
+    document.queryCommandState = vi.fn().mockReturnValue(false);
+  });
+
+  it('richText selezionato ma non in editing: la toolbar ancorata compare', () => {
+    const richText = node('rt-1', 'richText', { html: '<p>Ciao</p>' });
+    useBlockEditorStore.getState().initTree([richText]);
+    useBlockEditorStore.getState().selectNode('rt-1');
+
+    renderWithProviders(<EditorBlockWrapper id="rt-1" />);
+
+    expect(screen.getByRole('toolbar', { name: 'Formattazione del blocco' })).toBeInTheDocument();
+  });
+
+  it('heading selezionato: la toolbar di formattazione non compare mai (solo richText)', () => {
+    const heading = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
+    useBlockEditorStore.getState().initTree([heading]);
+    useBlockEditorStore.getState().selectNode('h-1');
+
+    renderWithProviders(<EditorBlockWrapper id="h-1" />);
+
+    expect(
+      screen.queryByRole('toolbar', { name: 'Formattazione del blocco' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('richText non selezionato: nessuna toolbar di formattazione', () => {
+    const richText = node('rt-1', 'richText', { html: '<p>Ciao</p>' });
+    useBlockEditorStore.getState().initTree([richText]);
+
+    renderWithProviders(<EditorBlockWrapper id="rt-1" />);
+
+    expect(
+      screen.queryByRole('toolbar', { name: 'Formattazione del blocco' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("appena inizia l'editing (focus sul contentEditable) la toolbar ancorata lascia il posto a quella di selezione", () => {
+    const richText = node('rt-1', 'richText', { html: '<p>Ciao</p>' });
+    useBlockEditorStore.getState().initTree([richText]);
+    useBlockEditorStore.getState().selectNode('rt-1');
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="rt-1" />);
+
+    expect(screen.getByRole('toolbar', { name: 'Formattazione del blocco' })).toBeInTheDocument();
+
+    const editable = container.querySelector('[contenteditable="true"]');
+    if (!editable) throw new Error('contentEditable non trovato');
+    // jsdom non implementa `isContentEditable` (resta sempre `undefined`, verificato sulla
+    // versione installata): il gestore `onFocus` del wrapper lo legge per decidere se il
+    // focus è entrato in un discendente in editing — si simula qui il comportamento reale
+    // del browser, altrimenti `isEditingText` non scatterebbe mai in questo ambiente di
+    // test, indipendentemente dal codice sotto test.
+    Object.defineProperty(editable, 'isContentEditable', { value: true, configurable: true });
+    // React 17+ ascolta `focusin` (bubbling) per il proprio `onFocus` sintetico: un
+    // `fireEvent.focus` nudo (nativamente non-bubbling) non attraverserebbe la delega di
+    // React fino al gestore sul wrapper — occorre l'evento che bolle davvero.
+    fireEvent.focusIn(editable);
+
+    expect(
+      screen.queryByRole('toolbar', { name: 'Formattazione del blocco' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('click su Grassetto non fa perdere la selezione del blocco (mousedown con preventDefault)', () => {
+    const richText = node('rt-1', 'richText', { html: '<p>Ciao</p>' });
+    useBlockEditorStore.getState().initTree([richText]);
+    useBlockEditorStore.getState().selectNode('rt-1');
+
+    renderWithProviders(<EditorBlockWrapper id="rt-1" />);
+
+    const boldButton = screen.getByRole('button', { name: 'Grassetto' });
+    const mouseDownEvent = createEvent.mouseDown(boldButton);
+    fireEvent(boldButton, mouseDownEvent);
+    expect(mouseDownEvent.defaultPrevented).toBe(true);
+
+    fireEvent.click(boldButton);
+    // Il blocco resta selezionato: il click sulla toolbar non deve deselezionarlo né farlo
+    // "perdere" (nessun blur/riselezione indesiderata verso un antenato).
+    expect(useBlockEditorStore.getState().selectedId).toBe('rt-1');
+  });
+
+  it('"Chiudi" nasconde la toolbar senza deselezionare il blocco', () => {
+    const richText = node('rt-1', 'richText', { html: '<p>Ciao</p>' });
+    useBlockEditorStore.getState().initTree([richText]);
+    useBlockEditorStore.getState().selectNode('rt-1');
+
+    renderWithProviders(<EditorBlockWrapper id="rt-1" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Chiudi toolbar' }));
+
+    expect(
+      screen.queryByRole('toolbar', { name: 'Formattazione del blocco' }),
+    ).not.toBeInTheDocument();
+    expect(useBlockEditorStore.getState().selectedId).toBe('rt-1');
   });
 });

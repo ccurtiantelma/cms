@@ -69,7 +69,14 @@ export default function Toolbar({
 
       <div className={styles.centerActions}>
         {centerActions}
-        <ViewportSelector value={viewport} onChange={onViewportChange} />
+        <ViewportSelector
+          value={viewport}
+          onViewportChange={(width) => {
+            const nextViewport: EditorViewport =
+              width === '768px' ? 'tablet' : width === '375px' ? 'mobile' : 'desktop';
+            onViewportChange(nextViewport);
+          }}
+        />
       </div>
 
       <div className={`${styles.section} ${styles.actions}`}>

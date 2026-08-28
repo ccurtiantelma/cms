@@ -19,7 +19,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../../test/utils';
 import type { BlockNode } from './block-tree.utils';
-import { DEFAULT_GLOBAL_TOKENS } from '../../../libs/globalTokensCompiler';
+import { DEFAULT_THEME_CONFIG } from '../../../theme';
 
 /**
  * Tipo sintetico che copre i sette `kind` in un blocco solo, aggiunto **in coda** ai
@@ -405,31 +405,24 @@ describe('PropertyInspector — i sette kind del registro', () => {
     expect(typeof propsInStore('k-1').quantita).toBe('number');
   });
 
-  it('color senza Global Design Token idratati → token picker disabilitato, mai un crash', async () => {
+  it('color → il picker scrive l\'hex risolto del colore di tema, mai un riferimento "var(...)"', async () => {
     const user = userEvent.setup();
     renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
     await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
-    const tokenPicker = screen.getByRole('button', { name: 'Colori globali' });
-    expect(tokenPicker).toBeDisabled();
-  });
-
-  it('color con Global Design Token idratati → il picker scrive l\'hex risolto del token, mai un riferimento "var(...)"', async () => {
-    const user = userEvent.setup();
-    useBlockEditorStore.getState().hydrateGlobalTokens(DEFAULT_GLOBAL_TOKENS);
-    renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
-    await user.click(screen.getByRole('tab', { name: 'Stile' }));
-
-    const tokenPicker = screen.getByRole('button', { name: 'Colori globali' });
+    const tokenPicker = screen.getByRole('button', { name: 'Colori del tema' });
     expect(tokenPicker).toBeEnabled();
     await user.click(tokenPicker);
 
-    const primaryOption = screen.getByText(
-      `Primario · ${DEFAULT_GLOBAL_TOKENS.palette.primary}`,
+    // `findByText`, non `getByText`: il dropdown del Popover entra con la transizione
+    // Mantine (150ms), quindi non è ancora nel DOM nel tick del click. È il motivo per cui
+    // la versione precedente di questo test era rossa.
+    const primaryOption = await screen.findByText(
+      `Primario · ${DEFAULT_THEME_CONFIG.colors.primary}`,
     );
     await user.click(primaryOption);
 
-    expect(propsInStore('h-1').styleTextColorCustom).toBe(DEFAULT_GLOBAL_TOKENS.palette.primary);
+    expect(propsInStore('h-1').styleTextColorCustom).toBe(DEFAULT_THEME_CONFIG.colors.primary);
   });
 });
 

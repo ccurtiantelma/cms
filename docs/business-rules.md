@@ -477,7 +477,11 @@ Ogni utente autenticato accede a `/profile` con:
   `ColorSchemeScript` in `index.html` per evitare flash del tema sbagliato al caricamento
 - Ogni colore custom aggiunto in `theme.ts` deve essere verificato in entrambe le modalità
 - Il Global Theme Customizer (token semantici persistiti in `app_settings`) è descritto in
-  `docs/ai/adr/ADR-4-global-theme-customizer.md`
+  `docs/ai/adr/ADR-4-global-theme-customizer.md`. Il tema che vi si salva governa l'aspetto
+  del **sito pubblicato**, non quello delle pagine di amministrazione, che restano sui
+  default di fabbrica (ADR-42): sul sito i token `light` sono la base e quelli `dark`
+  intervengono su `prefers-color-scheme: dark`, cioè sulla preferenza di sistema del
+  visitatore, che non ha un selettore chiaro/scuro
 
 ---
 

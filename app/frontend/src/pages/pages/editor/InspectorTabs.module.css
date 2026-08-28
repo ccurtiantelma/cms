@@ -1,0 +1,9 @@
+/*
+  Solo il contenitore: la chrome delle schede (bordi, stato attivo, focus) è quella nativa
+  di Mantine `Tabs` (`color="blue"`) — nessuno stile custom sopra un componente Mantine
+  (CLAUDE.md § divieti, "wrapper custom su Mantine").
+*/
+.root {
+  width: 100%;
+  min-width: 0;
+}

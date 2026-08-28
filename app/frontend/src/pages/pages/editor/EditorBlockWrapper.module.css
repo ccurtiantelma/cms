@@ -91,6 +91,12 @@
   visibility: visible;
 }
 
+/* Un figlio sotto il cursore ha precedenza anche se il contenitore resta selezionato. */
+.selected:has(.hovered) > .handleBar {
+  opacity: 0;
+  visibility: hidden;
+}
+
 /*
   Contenitore senza figli (F08 STEP 3): segnaposto interattivo, non solo un testo — bordo
   tratteggiato neutro, sfondo leggermente opaco (distinto da `.canvasArea` sotto), pulsante
@@ -208,6 +214,23 @@
   implicito (nessuno dei due wrapper dichiara un proprio `z-index`), e l'ordine del DOM
   mette quella del figlio dopo quella del padre.
 */
+/*
+  Ancoraggio di `InlineFormattingToolbar` (T-integrazione-toolbar): riga distinta sopra la
+  Handle Bar (`top: -54px` = -22px della Handle Bar - 2px di respiro - 30px di altezza
+  minima della barra, EditorBlockWrapper.module.css/InlineFormattingToolbar.module.css),
+  mai sulla stessa riga — le due possono comparire insieme (`isSelected` mostra entrambe,
+  vedi il commento nel JSX) e non devono sovrapporsi. `z-index` sopra la Handle Bar: in caso
+  di blocco molto stretto, dove le due righe potessero toccarsi, la barra di formattazione
+  (azione attiva, in editing) resta sopra il badge passivo del tipo.
+*/
+.formattingToolbarAnchor {
+  position: absolute;
+  top: -54px;
+  left: 0;
+  z-index: 4;
+  pointer-events: auto;
+}
+
 .handleBar {
   position: absolute;
   top: -22px;
@@ -230,35 +253,39 @@
 }
 
 /*
-  Chrome differenziata per il blocco `container` (ADR-39, F08 STEP 3): viola invece del
-  blu/magenta generico di `.hovered`/`.selected`/`.handleBar(Selected)` sopra, per
-  distinguerlo a colpo d'occhio da `section` e dagli altri contenitori — stesso viola
-  `#a333c8` già usato altrove in questo file come accento "contenitore/drag&drop"
-  (`.containerDropZone[data-over]`, `.dropZone[data-over]`), riuso dello stesso colore
-  invece di introdurne un quarto. Tratteggiato e semi-opaco su hover ("puntamento"),
-  solido su selezione ("modifica attiva") — stessa distinzione di peso/stile di
-  `.hovered`/`.selected`.
+  Chrome differenziata per un blocco Container/Sezione (qualunque tipo il registro ammetta
+  come contenitore — `isContainer` in `EditorBlockWrapper.tsx`, non solo `container`):
+  bordo arancione invece del blu/magenta generico di `.hovered`/`.selected`/
+  `.handleBar(Selected)` sopra, per restare distinguibile a colpo d'occhio da un elemento
+  singolo (richiesta esplicita del task: "bordo blu per elementi singoli, arancione per
+  Container/Sezioni"). Arancione Mantine (`orange-7`, `#f76707`) — un colore diverso sia dal
+  blu/magenta di hover/selezione sia dal viola `#a333c8` usato altrove in questo file come
+  accento "drag & drop" (`.containerDropZone[data-over]`, `.dropZone[data-over]`,
+  `.columnResizer`), che resta invariato: overlay di puntamento/selezione e indicatore di
+  destinazione del trascinamento sono due segnali distinti, non lo stesso colore riusato.
+  Tratteggiato e semi-opaco su hover ("puntamento"), solido su selezione ("modifica attiva")
+  — stessa distinzione di peso/stile di `.hovered`/`.selected`.
 */
 .containerHovered {
   border-width: 1px;
   border-style: dashed;
-  border-color: rgba(163, 51, 200, 0.6);
+  border-color: rgba(247, 103, 7, 0.6);
 }
 
 .containerSelected,
 .containerSelected:hover {
   border-width: 2px;
   border-style: solid;
-  border-color: #a333c8;
+  border-color: #f76707;
   padding: 3px;
 }
 
 .handleBarContainer {
-  background: rgba(163, 51, 200, 0.85);
+  background: rgba(247, 103, 7, 0.85);
 }
 
 .handleBarContainerSelected {
-  background: #a333c8;
+  background: #f76707;
 }
 
 /* Nome del tipo di blocco dentro la Handle Bar: stesso colore/assenza di wrap del badge che sostituisce. */

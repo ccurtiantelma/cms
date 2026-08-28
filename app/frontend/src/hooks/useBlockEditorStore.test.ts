@@ -487,6 +487,84 @@ describe('useBlockEditorStore — moveNodeToAction: rispetta il registro (canCon
     state().undo();
     expect(state().redoStack).toHaveLength(1);
   });
+
+  it('rifiuta lo spostamento di una section dentro un’altra section: no-op e avviso dedicato', () => {
+    // Regressione: nesting `section` dentro `section`, respinto server-side con
+    // `BLOCK_NESTING_NOT_ALLOWED` — qui si copre che il client non lasci nemmeno tentare
+    // il salvataggio.
+    const treeWithTwoSections: BlockNode[] = [
+      node('sec-outer', 'section', {}, [
+        node('head-1', 'heading', { level: 'h2', text: 'Primo' }),
+      ]),
+      node('sec-inner', 'section', {}, []),
+    ];
+    useBlockEditorStore.getState().initTree(treeWithTwoSections);
+    vi.mocked(notifications.show).mockClear();
+    const treeBefore = state().tree;
+
+    state().moveNodeToAction('sec-inner', 'sec-outer', 0);
+
+    expect(state().tree).toBe(treeBefore);
+    expect(state().undoStack).toHaveLength(0);
+    expect(notifications.show).toHaveBeenCalledTimes(1);
+    expect(notifications.show).toHaveBeenCalledWith(
+      expect.objectContaining({
+        color: 'red',
+        message: 'Impossibile inserire una Sezione all\'interno di un\'altra Sezione.',
+      }),
+    );
+  });
+});
+
+/**
+ * `addBlockAction` (regressione: fino a qui l'unica azione di inserimento senza il guard
+ * `canContainType` già presente in `insertSubtreeAction`/`moveNodeToAction` — un nesting
+ * non ammesso dal registro, tipicamente `section` dentro `section`, arrivava al salvataggio
+ * e veniva respinto server-side con `BLOCK_NESTING_NOT_ALLOWED`).
+ */
+describe('useBlockEditorStore — addBlockAction: rispetta il registro (canContainType)', () => {
+  beforeEach(() => {
+    useBlockEditorStore.getState().initTree(initialTree());
+    vi.mocked(notifications.show).mockClear();
+  });
+
+  it('rifiuta l’aggiunta di una section dentro un’altra section: no-op, nessuna history, avviso dedicato', () => {
+    const treeBefore = state().tree;
+
+    state().addBlockAction('sec-1', 'section', 0, {});
+
+    expect(state().tree).toBe(treeBefore);
+    expect(state().undoStack).toHaveLength(0);
+    expect(notifications.show).toHaveBeenCalledTimes(1);
+    expect(notifications.show).toHaveBeenCalledWith(
+      expect.objectContaining({
+        color: 'red',
+        message: 'Impossibile inserire una Sezione all\'interno di un\'altra Sezione.',
+      }),
+    );
+  });
+
+  it('rifiuta l’aggiunta di un tipo non ammesso dal contenitore (caso generico, non section-in-section)', () => {
+    // `head-1` è un heading; il registro dichiara `heading.childrenAllow: []`.
+    const treeBefore = state().tree;
+
+    state().addBlockAction('head-1', 'heading', 0, { level: 'h2', text: '' });
+
+    expect(state().tree).toBe(treeBefore);
+    expect(state().undoStack).toHaveLength(0);
+    expect(notifications.show).toHaveBeenCalledTimes(1);
+    expect(notifications.show).toHaveBeenCalledWith(
+      expect.objectContaining({ color: 'red', title: 'Inserimento non eseguito' }),
+    );
+  });
+
+  it('controllo positivo: continua ad aggiungere un tipo ammesso, senza alcun avviso', () => {
+    state().addBlockAction('sec-1', 'button', 2, { label: 'X', href: '' });
+
+    expect(state().tree[0].children.map((n) => n.type)).toEqual(['heading', 'richText', 'button']);
+    expect(state().undoStack).toHaveLength(1);
+    expect(notifications.show).not.toHaveBeenCalled();
+  });
 });
 
 /**

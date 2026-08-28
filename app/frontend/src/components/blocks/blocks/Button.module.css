@@ -2,17 +2,22 @@
  * Chrome di base del blocco `button` (gap non coperto da ADR-29/ADR-21, SPEC-F02-blocchi.md
  * § 3.6: "variant"/"size" sono rendering, fuori schema — nessuna prop nuova, solo un default
  * statico). Prima di questa regola l'elemento (un `<a>`, che non ha chrome nativo come
- * `<button>`) era un link nudo indistinguibile dal testo circostante. Colori fissi, non
- * token — non esiste ancora un vocabolario di token "sfondo pulsante" in style-tokens.module.css,
- * e introdurne uno andrebbe oltre lo scope di questo fix. `styleTextColor`/`styleFontSize`/ecc.
- * (già applicati da Button.tsx) restano liberi di sovrascrivere in cascata: dichiarati dopo
- * questa classe nell'ordine delle classi risolte da Button.tsx.
+ * `<button>`) era un link nudo indistinguibile dal testo circostante.
+ *
+ * Sfondo e raggio derivano dal tema dell'Editor tema (`utils/theme-css.utils.ts`):
+ * `--cms-button-bg` porta il colore **primario** — il pulsante è il punto in cui il primario
+ * di un sito si vede, e senza questo aggancio la voce "Primario" dell'Editor tema non
+ * avrebbe alcun effetto visibile sul contenuto. Entrambe le `var()` conservano il fallback
+ * statico precedente, quindi un documento servito senza tema (backend irraggiungibile) resta
+ * identico a prima. `styleTextColor`/`styleFontSize`/ecc. (già applicati da Button.tsx)
+ * restano liberi di sovrascrivere in cascata: dichiarati dopo questa classe nell'ordine
+ * delle classi risolte da Button.tsx.
  */
 .button {
   display: inline-block;
   padding: 0.625rem 1.5rem;
-  border-radius: 4px;
-  background-color: var(--cms-text-color-accent);
+  border-radius: var(--cms-radius-sm, 4px);
+  background-color: var(--cms-button-bg, var(--cms-text-color-accent));
   color: var(--cms-text-color-inverse);
   text-decoration: none;
   font-weight: var(--cms-font-weight-medium);

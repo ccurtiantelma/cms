@@ -13,7 +13,16 @@
  * sanitizzazione lato client: resta autorità esclusiva del server pre-persistenza,
  * invariata — questo componente non fa altro che proporre l'HTML digitato al chiamante,
  * che lo affiderà a `updateBlockPropsAction` e infine al salvataggio server-side.
+ *
+ * Sincronizzazione DOM ↔ `html` (Canvas Sync, editing in-place): stesso principio di
+ * `Heading.tsx` — un `useLayoutEffect` scrive `innerHTML` sul nodo referenziato solo se
+ * differisce da quanto già presente, cosicché il giro di ritorno del debounce
+ * (`onHtmlInput` → store → prop `html` aggiornata → re-render) non riscriva mai un
+ * contenuto identico a quello appena digitato, che sposterebbe il cursore. Un cambio
+ * genuino dall'esterno (undo/redo, cambio pagina, HTML ri-sanitizzato dal server) resta
+ * scritto normalmente.
  */
+import { useLayoutEffect, useRef } from 'react';
 import styles from './RichText.module.css';
 import tokenStyles from '../style-tokens.module.css';
 import {
@@ -58,6 +67,20 @@ export default function RichText({
   onHtmlChange,
   onHtmlInput,
 }: RichTextProps) {
+  /** Nodo DOM del blocco in editing — vedi il commento di testa del file. */
+  const elementRef = useRef<HTMLDivElement | null>(null);
+
+  // Scrive `html` nel DOM solo quando differisce da ciò che c'è già: mount iniziale (il
+  // `div` in editing parte senza `dangerouslySetInnerHTML`, vedi sotto) e cambi genuini
+  // dall'esterno, mai il giro di ritorno del proprio debounce (vedi commento di testa).
+  useLayoutEffect(() => {
+    if (!editable) return;
+    const element = elementRef.current;
+    if (element && element.innerHTML !== html) {
+      element.innerHTML = html;
+    }
+  }, [editable, html]);
+
   const className = [
     styles.richText,
     editable ? styles.editable : '',
@@ -96,12 +119,15 @@ export default function RichText({
   // l'`onBlur` sotto committa quindi il valore appena ripristinato, cancellando anche un
   // eventuale aggiornamento debounced ancora in sospeso lato chiamante
   // (`EditorBlockWrapper.tsx`, che cancella il timer prima di ogni `onHtmlChange`).
+  // Nessun `dangerouslySetInnerHTML` qui (a differenza del ramo sola lettura sopra): il
+  // contenuto iniziale è scritto dal `useLayoutEffect` di testa, e da lì in poi il DOM
+  // resta l'unica fonte di verità — mai un `html` riconciliato da React ad ogni render.
   return (
     <div
+      ref={elementRef}
       className={className}
       contentEditable
       suppressContentEditableWarning
-      dangerouslySetInnerHTML={{ __html: html }}
       onFocus={() => document.execCommand('defaultParagraphSeparator', false, 'p')}
       onInput={(event) => onHtmlInput?.(event.currentTarget.innerHTML)}
       onBlur={(event) => onHtmlChange?.(event.currentTarget.innerHTML)}

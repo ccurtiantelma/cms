@@ -40,7 +40,8 @@ import {
   type Icon,
 } from '@tabler/icons-react';
 import type { BlockPropDescriptor } from '../../../../types/blocks.types';
-import { useGlobalTokens, type EditorViewport } from '../../../../hooks/useBlockEditorStore';
+import { type EditorViewport } from '../../../../hooks/useBlockEditorStore';
+import { useThemeColorStore } from '../../../../hooks/useThemeColor';
 import { resolveMediaSrc } from '../../../../components/blocks/media-url';
 import RichTextFieldEditor from '../RichTextFieldEditor';
 import {
@@ -109,9 +110,9 @@ export default function PropField({
   onOpenMediaPicker,
 }: PropFieldProps): JSX.Element {
   // Letto qui in cima (regola degli hook: mai dentro un ramo dello `switch` sotto), usato solo
-  // da `case 'color'` — F07 step 2, token picker. `null` finché l'editor non ha idratato i
-  // Global Design Tokens in questa sessione (`FullScreenEditorLayout.tsx`).
-  const globalTokens = useGlobalTokens();
+  // da `case 'color'` — token picker sui colori del tema dell'installazione (Editor tema,
+  // ADR-4), la stessa fonte che veste il sito pubblicato.
+  const themeConfig = useThemeColorStore((state) => state.themeConfig);
   const [colorTokensOpened, { toggle: toggleColorTokens, close: closeColorTokens }] =
     useDisclosure(false);
   const label = propLabel(prop, propsMeta);
@@ -354,20 +355,21 @@ export default function PropField({
       // dallo stesso `value`) — la validazione qui è solo UX (`uxError` sopra), il
       // vincolo autorevole resta il pattern esadecimale validato server-side.
       //
-      // F07 step 2: accanto al campo, un token picker sui Global Design Tokens (palette di
-      // sito). Scrive **l'hex risolto corrente** del token scelto — mai `var(...)`: il
-      // validator server-side di `kind: 'color'` accetta solo hex `#rgb`/`#rrggbb` (ADR-33 §
-      // 3), una stringa `var(...)` farebbe fallire il salvataggio con 400. La selezione è
-      // quindi uno snapshot statico del token al momento del click, non un riferimento
-      // dinamico che segue future modifiche del Global Kit.
-      const paletteTokens: ReadonlyArray<[string, string]> = globalTokens
-        ? [
-            ['Primario', globalTokens.palette.primary],
-            ['Secondario', globalTokens.palette.secondary],
-            ['Testo', globalTokens.palette.text],
-            ['Accento', globalTokens.palette.accent],
-          ]
-        : [];
+      // Accanto al campo, un token picker sui colori del tema dell'installazione: le stesse
+      // voci che l'Editor tema espone e che vestono il sito pubblicato, così un colore
+      // scelto a mano su un blocco parte dalla tavolozza del sito invece che dal nulla.
+      // Scrive **l'hex risolto corrente** del token scelto — mai `var(...)`: il validator
+      // server-side di `kind: 'color'` accetta solo hex `#rgb`/`#rrggbb` (ADR-33 § 3), una
+      // stringa `var(...)` farebbe fallire il salvataggio con 400. La selezione è quindi uno
+      // snapshot statico del token al momento del click, non un riferimento dinamico che
+      // segue future modifiche del tema.
+      const paletteTokens: ReadonlyArray<[string, string]> = [
+        ['Primario', themeConfig.colors.primary],
+        ['Secondario', themeConfig.colors.secondary],
+        ['Accento', themeConfig.colors.accent],
+        ['Testo', themeConfig.light.textPrimary],
+        ['Testo secondario', themeConfig.light.textSecondary],
+      ];
       return (
         <Group gap="xs" align="flex-end" wrap="nowrap">
           <ColorInput
@@ -388,15 +390,11 @@ export default function PropField({
             withinPortal
           >
             <Popover.Target>
-              <Tooltip
-                label={globalTokens ? 'Colori globali' : 'Nessun token globale disponibile'}
-                withArrow
-              >
+              <Tooltip label="Colori del tema" withArrow>
                 <ActionIcon
                   variant="default"
                   size="lg"
-                  disabled={!globalTokens}
-                  aria-label="Colori globali"
+                  aria-label="Colori del tema"
                   onClick={toggleColorTokens}
                 >
                   <IconWorld size={16} />

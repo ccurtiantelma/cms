@@ -1,5 +1,8 @@
 .richText {
-  line-height: 1.6;
+  /* Interlinea di base del tema (`--theme-line-height-md` → `--cms-line-height`,
+     utils/theme-css.utils.ts), col valore statico precedente come fallback quando
+     nessun tema è applicato. */
+  line-height: var(--cms-line-height, 1.6);
   /*
    * Preserva gli a capo del contenuto salvato: senza questa regola, un `\n` letterale nel
    * testo (non un tag `<br>`, che forza comunque l'interruzione indipendentemente da

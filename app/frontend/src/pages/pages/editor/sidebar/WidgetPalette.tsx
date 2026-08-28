@@ -31,6 +31,7 @@ import {
   useSelectedId,
 } from '../../../../hooks/useBlockEditorStore';
 import styles from './WidgetPalette.module.css';
+import WidgetPaletteGrid from '../WidgetPaletteGrid';
 
 const CATEGORY_ORDER = ['Layout', 'Base'] as const;
 const CATEGORY_BY_TYPE: Record<string, string> = {
@@ -172,6 +173,8 @@ export default function WidgetPalette(): JSX.Element {
     addBlockAction(target.parentId, descriptor.type, target.index, defaultPropsFor(descriptor));
   }
 
+  const presetTarget = clickInsertionTarget(selectedNode);
+
   return (
     <div className={styles.root}>
       <TextInput
@@ -180,6 +183,11 @@ export default function WidgetPalette(): JSX.Element {
         value={query}
         onChange={(event) => setQuery(event.currentTarget.value)}
         className={styles.search}
+      />
+      <WidgetPaletteGrid
+        presetsOnly
+        parentId={presetTarget.parentId}
+        index={presetTarget.index}
       />
 
       {groups.length === 0 ? (

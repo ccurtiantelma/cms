@@ -1,15 +1,16 @@
-import { GLOBAL_TOKENS_STYLE_TAG_ID } from '../../frontend/src/libs/globalTokensCompiler';
+import type { ThemeConfigDto } from '../../frontend/src/utils/theme-css.utils';
+import ThemeStyleTag from './ThemeStyleTag';
 
 interface ErrorDocumentProps {
   status: number;
   message: string;
   cssHref: string;
-  /** Blocco `:root { ... }` compilato dai Global Design Tokens, vedi `App.tsx`. */
-  globalTokensCss: string;
+  /** Tema dell'installazione, `null` se il backend non ha risposto (vedi `ThemeStyleTag`). */
+  themeConfig: ThemeConfigDto | null;
 }
 
 /** Documento minimale per `404`/`500` (ADR-24 § 3: `404` uniforme, nessuna informazione sul motivo). */
-export default function ErrorDocument({ status, message, cssHref, globalTokensCss }: ErrorDocumentProps) {
+export default function ErrorDocument({ status, message, cssHref, themeConfig }: ErrorDocumentProps) {
   return (
     <html lang="it">
       <head>
@@ -17,9 +18,7 @@ export default function ErrorDocument({ status, message, cssHref, globalTokensCs
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{`${status} — ${message}`}</title>
         <link rel="stylesheet" href={cssHref} />
-        {globalTokensCss && (
-          <style id={GLOBAL_TOKENS_STYLE_TAG_ID} dangerouslySetInnerHTML={{ __html: globalTokensCss }} />
-        )}
+        <ThemeStyleTag themeConfig={themeConfig} />
       </head>
       <body>
         <main>

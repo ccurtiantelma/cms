@@ -50,8 +50,11 @@ import {
 } from '../../../hooks/useBlockEditorStore';
 import { BLOCK_TYPES } from '../../../types/blocks.types';
 import { findLocation, findNode, type BlockNode } from './block-tree.utils';
+import { canDropInto } from './block-registry.utils';
 import { blockIcon } from './BlockPalette';
 import ConfirmModal from '../../../components/ConfirmModal';
+import CanvasContextMenu from './CanvasContextMenu';
+import styles from './EditorStructureNavigator.module.css';
 
 /** Lunghezza massima dell'etichetta derivata dal contenuto reale di un nodo (troncata oltre). */
 const MAX_DERIVED_LABEL_LENGTH = 40;
@@ -123,6 +126,7 @@ function flattenIds(nodes: readonly BlockNode[]): string[] {
 interface StructureNodeProps {
   node: BlockNode;
   depth: number;
+  roots: readonly BlockNode[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onRequestDelete: (id: string) => void;
@@ -139,6 +143,7 @@ interface StructureNodeProps {
 function StructureNode({
   node,
   depth,
+  roots,
   selectedId,
   onSelect,
   onRequestDelete,
@@ -148,18 +153,34 @@ function StructureNode({
   const isHiddenInCanvas = useIsHiddenInCanvas(node.id);
   const toggleHiddenInCanvas = useBlockEditorStore((state) => state.toggleHiddenInCanvas);
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: node.id,
-  });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver, active } =
+    useSortable({ id: node.id });
   const dragStyle: CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
 
+  // Anteprima di rifiuto durante l'hover (stesso principio di `dropZoneAttrs` nel canvas,
+  // `EditorBlockWrapper.tsx`): `handleDragEnd` rilascia il nodo trascinato fra i figli del
+  // *genitore* del nodo sorvolato, non dentro di lui — quindi l'ammissibilità va verificata
+  // contro il tipo di quel genitore (`overLocation.parentId`), non contro `node.type`.
+  const isRejected = useMemo(() => {
+    if (!isOver || !active || active.id === node.id) return false;
+    const overLocation = findLocation(roots, node.id);
+    if (!overLocation) return false;
+    return !canDropInto(roots, String(active.id), overLocation.parentId);
+  }, [isOver, active, roots, node.id]);
+
   return (
     <div ref={setNodeRef} style={dragStyle}>
-      <Group gap={4} wrap="nowrap" style={{ paddingLeft: depth * 12 }}>
+      <Group
+        gap={4}
+        wrap="nowrap"
+        className={styles.row}
+        data-rejected={isRejected}
+        style={{ paddingLeft: depth * 12 }}
+      >
         <Tooltip label="Trascina per riordinare" withArrow>
           <ActionIcon
             variant="subtle"
@@ -222,6 +243,7 @@ function StructureNode({
           key={child.id}
           node={child}
           depth={depth + 1}
+          roots={roots}
           selectedId={selectedId}
           onSelect={onSelect}
           onRequestDelete={onRequestDelete}
@@ -273,26 +295,29 @@ export default function EditorStructureNavigator(): JSX.Element {
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <ScrollArea.Autosize mah="100%" p="sm">
-        {roots.length === 0 ? (
-          <Text size="sm" c="dimmed" p="sm">
-            Nessun blocco nella bozza.
-          </Text>
-        ) : (
-          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-            {roots.map((node) => (
-              <StructureNode
-                key={node.id}
-                node={node}
-                depth={0}
-                selectedId={selectedId}
-                onSelect={handleSelect}
-                onRequestDelete={setPendingDeleteId}
-              />
-            ))}
-          </SortableContext>
-        )}
-      </ScrollArea.Autosize>
+      <CanvasContextMenu>
+        <ScrollArea.Autosize mah="100%" p="sm">
+          {roots.length === 0 ? (
+            <Text size="sm" c="dimmed" p="sm">
+              Nessun blocco nella bozza.
+            </Text>
+          ) : (
+            <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+              {roots.map((node) => (
+                <StructureNode
+                  key={node.id}
+                  node={node}
+                  depth={0}
+                  roots={roots}
+                  selectedId={selectedId}
+                  onSelect={handleSelect}
+                  onRequestDelete={setPendingDeleteId}
+                />
+              ))}
+            </SortableContext>
+          )}
+        </ScrollArea.Autosize>
+      </CanvasContextMenu>
 
       {pendingDeleteId && pendingDeleteNode && (
         <ConfirmModal

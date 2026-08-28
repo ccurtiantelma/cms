@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PublicSiteConfig } from './config';
-import { resolvePublicPage } from './public-api-client';
+import { ingestPageview, resolvePublicPage } from './public-api-client';
 import { resolvePreviewPage } from './preview-api-client';
 import { renderErrorDocument, renderPageDocument, renderPreviewDocument } from './entry-server';
 
@@ -82,6 +82,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       const html = isHead ? undefined : await renderPageDocument(resolution.page, css.href);
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(html);
+      if (!isHead) ingestPageview(url.pathname);
       return;
     }
     case 'redirect': {

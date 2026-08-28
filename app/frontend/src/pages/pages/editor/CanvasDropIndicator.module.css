@@ -1,0 +1,11 @@
+.indicator {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 2px;
+  transform: translateY(-50%);
+  background: var(--mantine-primary-color-filled);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--mantine-primary-color-filled) 65%, transparent);
+  pointer-events: none;
+}

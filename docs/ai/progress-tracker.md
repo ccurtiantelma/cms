@@ -37,6 +37,7 @@
 | Pagina Profilo Utente (password, MFA, tema) | business-rules: Pagina Profilo Utente | ✅ Done | — |
 | Tema chiaro/scuro | business-rules: Tema chiaro/scuro | ✅ Done | — |
 | Global Theme Customizer | ADR-4-global-theme-customizer.md | ✅ Done | 2026-07-26 |
+| Il tema veste il sito pubblicato, non la chrome admin | ADR-42-tema-veste-il-sito-non-la-chrome-admin.md | ✅ Done | 2026-08-28 |
 | Tour guidato e help contestuale | business-rules: Tour guidato | ✅ Done | — |
 | Seed/reset dati demo | business-rules: Funzioni di sistema | ✅ Done | — |
 | Collezioni Bruno (auth + admin) | bruno/auth, bruno/admin | ✅ Done | — |
@@ -489,3 +490,32 @@ come prop separata da `columns` — non ridefinisce l'insieme chiuso di ADR-31.
 (`static-section-presets.json`), nessuna chiamata di rete, nessuna tabella nuova; ogni preset
 composto solo da tipi/prop già nel registro (ADR-21) — zero nuovi tipi di blocco, zero nuovi
 `kind`.
+
+---
+
+## Tema di installazione → sito pubblicato (2026-08-28)
+
+**ADR-42 — il tema veste il sito, non il pannello di gestione.** Prima di questo round il
+`ThemeConfig` alimentava soltanto il `MantineProvider` della chrome amministrativa: l'admin
+cambiava un colore e cambiava l'aspetto del *programma*, mai quello del sito servito su
+`app/public-site`. L'endpoint pubblico `GET public/settings/theme` e la prop `themeConfig`
+di `App.tsx` esistevano già, ma nessuno passava l'uno all'altra: il cablaggio era a metà.
+
+- `utils/theme-css.utils.ts` compila il `ThemeConfig` in variabili CSS (`--theme-*`), riemette
+  il vocabolario dei blocchi (`--cms-*`) coi valori del tema — il ponte senza il quale una
+  modifica resterebbe invisibile sul contenuto salvato — e dichiara i default `h1`–`h6` dentro
+  `:where()`, a specificità zero, così una scelta esplicita sul blocco vince sempre.
+- `ThemeStyleTag.tsx` inietta quel blocco in Pagina, anteprima di bozza e pagine di errore,
+  **dopo** il `<link>` del foglio dei blocchi (è l'ordine che gli fa vincere la cascata).
+- La chrome admin passa ai default di fabbrica; l'anteprima dal vivo dell'Editor tema è ora
+  un `MantineProvider` annidato scopato alla sola colonna delle demo.
+- Il Canvas dell'editor dipinge col medesimo compilatore: mostra ciò che il visitatore vedrà.
+- I Global Design Tokens cessano di essere un secondo sistema di stile concorrente (drawer
+  "Impostazioni Sito" ritirato dalla toolbar; endpoint e riga `app_settings` lasciati in piedi).
+
+**Due difetti preesistenti sanati per necessità**: il bundle SSR del sito pubblico importava
+`DEFAULT_THEME` da `@mantine/core` (violazione di ADR-22 § 5, ora a zero occorrenze grazie alla
+foglia `theme-tokens.ts` priva di Mantine); e `reconcileThemeFromServer()`, dichiarata da ADR-4
+§ 4, non era invocata da nessuno — l'Editor tema si apriva sui default su un browser nuovo.
+
+Suite verde: frontend 31/31 suite (348 test), public-site 6/6 suite (20 test).

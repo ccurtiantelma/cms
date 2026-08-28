@@ -48,7 +48,40 @@ export async function loginAsSuperAdmin(page: Page): Promise<void> {
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
+  const loginResponsePromise = page.waitForResponse(
+    (response) => {
+      const url = new URL(response.url());
+      return response.request().method() === 'POST' && url.pathname.endsWith('/api/v1/auth/login');
+    },
+    { timeout: 10_000 },
+  );
+  const loginRequestFailedPromise = page.waitForEvent('requestfailed', {
+    predicate: (request) =>
+      request.method() === 'POST' && request.url().includes('/api/v1/auth/login'),
+    timeout: 10_000,
+  });
   await page.getByRole('button', { name: 'Accedi' }).click();
+  const loginResponse = await Promise.race([
+    loginResponsePromise,
+    loginRequestFailedPromise.then((request) => {
+      throw new Error(
+        `loginAsSuperAdmin: richiesta API auth/login fallita: ${request.failure()?.errorText ?? 'errore di rete'}`,
+      );
+    }),
+  ]);
+
+  if (loginResponse.status() === 401 || loginResponse.status() === 500) {
+    // eslint-disable-next-line no-console -- diagnostica del setup E2E
+    console.error(
+      `[admin-session] login SuperAdmin fallito (HTTP ${loginResponse.status()}) ` +
+        `per ${email}: ${await loginResponse.text()}`,
+    );
+  }
+  if (!loginResponse.ok()) {
+    throw new Error(
+      `loginAsSuperAdmin: API auth/login fallita (HTTP ${loginResponse.status()})`,
+    );
+  }
 
   if (
     await page

@@ -19,4 +19,6 @@ export const PublicSiteConfig = {
   port: port('PORT', 55000),
   /** Origine dell'API backend (`api/v1/public/pages`), senza path finale. */
   apiBaseUrl: str('PUBLIC_API_BASE_URL', 'http://localhost:53000'),
+  /** Secret server-to-server per l'ingest delle pageview del consumer SSR. */
+  analyticsIngestSecret: str('ANALYTICS_INGEST_SECRET', ''),
 };

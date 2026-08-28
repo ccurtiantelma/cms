@@ -556,7 +556,10 @@ export default function PagePageDetail(): JSX.Element {
             flusso del documento, quota 0) resta coperto e non riceve più click — l'unico modo
             di pubblicare da dentro l'editor sparisce.
           */}
-          <Group gap="sm" style={{ position: 'relative', zIndex: 1100 }}>
+          <Group
+            gap="sm"
+            style={{ position: 'relative', zIndex: activeTab === 'content' ? 0 : 1100 }}
+          >
             {/*
               Tendina di stato: le voci sono le sole transizioni ammesse dallo stato
               corrente, non l'elenco completo degli stati — un menu con tutti gli stati

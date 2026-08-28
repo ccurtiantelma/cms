@@ -82,6 +82,7 @@ function renderNode(node: RenderableBlockNode, editing: BlockEditingProps | unde
           maxWidth={node.props.maxWidth}
           columnRatio={node.props.columnRatio}
           styleBackgroundColor={node.props.styleBackgroundColor}
+          styleColor={node.props.styleColor}
           stylePaddingTop={node.props.stylePaddingTop}
           stylePaddingRight={node.props.stylePaddingRight}
           stylePaddingBottom={node.props.stylePaddingBottom}
@@ -110,6 +111,8 @@ function renderNode(node: RenderableBlockNode, editing: BlockEditingProps | unde
           wrap={node.props.wrap}
           gap={node.props.gap}
           styleFlexBasis={node.props.styleFlexBasis}
+          styleBackgroundColor={node.props.styleBackgroundColor}
+          styleColor={node.props.styleColor}
           customCssClass={node.props.customCssClass}
           customElementId={node.props.customElementId}
         >

@@ -1,0 +1,33 @@
+.node {
+  position: relative;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+
+.node.dragging {
+  opacity: 0.45;
+}
+
+.node.dropBefore::before,
+.node.dropAfter::after {
+  position: absolute;
+  right: 4px;
+  left: 4px;
+  height: 2px;
+  background: var(--mantine-color-blue-6);
+  content: '';
+  pointer-events: none;
+}
+
+.node.dropBefore::before {
+  top: -1px;
+}
+
+.node.dropAfter::after {
+  bottom: -1px;
+}
+
+.node.dropContainer {
+  border-color: var(--mantine-color-blue-5);
+  background: var(--mantine-color-blue-light);
+}

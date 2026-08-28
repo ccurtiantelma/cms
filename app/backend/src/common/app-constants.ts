@@ -101,6 +101,8 @@ export class AppConstants {
    * `pages`, non qui.
    */
   static readonly pagePreviewTokenSecret = str('PAGE_PREVIEW_TOKEN_SECRET');
+  /** Secret server-to-server usato dal consumer SSR per inviare pageview validate. */
+  static readonly analyticsIngestSecret = str('ANALYTICS_INGEST_SECRET');
 
   static readonly frontendUrl = str('FRONTEND_URL', 'http://localhost:55173');
   /**

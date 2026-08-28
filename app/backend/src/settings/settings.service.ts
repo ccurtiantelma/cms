@@ -474,6 +474,11 @@ export class SettingsService {
     return this.normalizeStoredTheme(row.value);
   }
 
+  /** Alias semantico per i consumer che espongono la configurazione del tema. */
+  async getThemeConfig(): Promise<ThemeConfigDto> {
+    return this.getTheme();
+  }
+
   /**
    * Salva (upsert sulla chiave univoca) il tema globale dell'installazione e
    * registra l'operazione su audit log. SuperAdmin only (guard sul controller).

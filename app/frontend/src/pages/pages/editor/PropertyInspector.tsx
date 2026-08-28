@@ -19,32 +19,20 @@
  *
  * Le schede "Contenuto", "Stile" e "Avanzato" (ADR-30 § 1, ADR-37 § 5) sono un
  * raggruppamento dei descrittori *prima* del dispaccio per `kind`: non una seconda via di
- * dispaccio per tipo di blocco. Una scheda senza props dichiarate non compare — mai una
- * scheda vuota, e con una sola scheda popolata non compaiono nemmeno i `Tabs`. Le etichette
- * vengono **solo** da `meta.props[nome].label`: il nome tecnico resta un fallback per un
- * difetto del registro, mai atteso sui tipi reali (T3 li ha già compilati tutti).
+ * dispaccio per tipo di blocco. La chrome a schede è `InspectorTabs.tsx` (estratta da qui,
+ * T-integrazione-toolbar): una scheda senza props dichiarate non compare — mai una scheda
+ * vuota, e con una sola scheda popolata non compaiono nemmeno i `Tabs`. Le etichette vengono
+ * **solo** da `meta.props[nome].label`: il nome tecnico resta un fallback per un difetto del
+ * registro, mai atteso sui tipi reali (T3 li ha già compilati tutti).
  *
  * La validazione mostrata qui è **solo UX**: l'autorità resta il `400` del server, che
  * `PagePageDetail` traduce nel blocco colpevole. Nessun controllo di questo file blocca il
  * salvataggio — coerente con CLAUDE.md § Frontend ("validazione client solo UX").
  */
 import { useState } from 'react';
-import {
-  ActionIcon,
-  Alert,
-  Badge,
-  Group,
-  Paper,
-  Stack,
-  Tabs,
-  Text,
-  Tooltip,
-} from '@mantine/core';
+import { ActionIcon, Alert, Badge, Group, Paper, Stack, Text, Tooltip } from '@mantine/core';
 import { IconArrowLeft, IconInfoCircle } from '@tabler/icons-react';
-import {
-  BLOCK_TYPES,
-  type BlockTypeDescriptor,
-} from '../../../types/blocks.types';
+import { BLOCK_TYPES, type BlockTypeDescriptor } from '../../../types/blocks.types';
 import {
   useActiveViewport,
   useBlockEditorStore,
@@ -58,6 +46,8 @@ import ContentTab from './inspector/ContentTab';
 import StyleTab from './inspector/StyleTab';
 import AdvancedTab from './inspector/AdvancedTab';
 import { MEDIA_MODAL_Z_INDEX, asString, groupPropsByTab } from './inspector/inspector.utils';
+import InspectorTabs from './InspectorTabs';
+import { usePresetStore } from './usePresetStore';
 
 // Riesportate: `VisualBoxModelInspector.tsx` le riusa (invariante protetto, vedi il suo
 // commento di testa) e non tutti i chiamanti storici sono stati aggiornati a importare
@@ -96,6 +86,7 @@ interface PropertyFormProps {
  */
 function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
   const updateBlockPropsAction = useBlockEditorStore((state) => state.updateBlockPropsAction);
+  const savePreset = usePresetStore((state) => state.savePreset);
   const activeViewport = useActiveViewport();
   const [draft, setDraft] = useState<Record<string, unknown>>(() => ({ ...node.props }));
   /**
@@ -156,6 +147,8 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
     commit,
     setAndCommit,
     onOpenMediaPicker: setMediaPickerProp,
+    nodeType: node.type,
+    onSavePreset: (name: string) => savePreset(name, node),
   };
 
   /**
@@ -173,42 +166,17 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
     />
   ) : null;
 
-  // Una scheda senza props non compare — mai una scheda vuota (ADR-30 § 1, ADR-37 § 5).
-  // Con una sola scheda popolata non c'è scelta da offrire: si monta direttamente il
-  // contenuto, senza `Tabs` attorno.
-  const availableTabs = [
-    { value: 'content', label: 'Contenuto', fields: content, Panel: ContentTab },
-    { value: 'style', label: 'Stile', fields: style, Panel: StyleTab },
-    { value: 'advanced', label: 'Avanzato', fields: advanced, Panel: AdvancedTab },
-  ].filter((tab) => tab.fields.length > 0);
-
-  if (availableTabs.length <= 1) {
-    const only = availableTabs[0];
-    const Panel = only?.Panel ?? ContentTab;
-    return (
-      <>
-        <Panel fields={only?.fields ?? content} {...tabProps} />
-        {mediaPicker}
-      </>
-    );
-  }
-
+  // Una scheda senza props non compare — mai una scheda vuota (ADR-30 § 1, ADR-37 § 5):
+  // si passa `undefined` a `InspectorTabs`, mai un nodo per una sezione priva di campi.
+  // Con una sola scheda popolata `InspectorTabs` monta direttamente il contenuto, senza
+  // `Tabs` attorno (stesso invariante di prima dell'estrazione, vedi il suo commento di testa).
   return (
     <>
-      <Tabs defaultValue={availableTabs[0].value} keepMounted={false} color="blue">
-        <Tabs.List grow>
-          {availableTabs.map((tab) => (
-            <Tabs.Tab key={tab.value} value={tab.value}>
-              {tab.label}
-            </Tabs.Tab>
-          ))}
-        </Tabs.List>
-        {availableTabs.map((tab) => (
-          <Tabs.Panel key={tab.value} value={tab.value} pt="md">
-            <tab.Panel fields={tab.fields} {...tabProps} />
-          </Tabs.Panel>
-        ))}
-      </Tabs>
+      <InspectorTabs
+        content={content.length > 0 ? <ContentTab fields={content} {...tabProps} /> : undefined}
+        style={style.length > 0 ? <StyleTab fields={style} {...tabProps} /> : undefined}
+        advanced={advanced.length > 0 ? <AdvancedTab fields={advanced} {...tabProps} /> : undefined}
+      />
       {mediaPicker}
     </>
   );
@@ -232,7 +200,13 @@ export default function PropertyInspector(): JSX.Element {
   }
 
   return (
-    <Paper withBorder p="md" radius="md">
+    <Paper
+      withBorder
+      p="md"
+      radius="md"
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
       <Stack gap="sm">
         <Group justify="space-between" wrap="nowrap">
           <Group gap="xs" wrap="nowrap">

@@ -4,7 +4,11 @@ import { BlockRegistry, DEFAULT_BLOCK_REGISTRY } from '../../blocks/block-regist
 import { PropSpec } from '../../blocks/prop-spec.types';
 import { ValidatableBlockNode } from '../../blocks/validator/validatable-node.types';
 import { BlockValidationError } from '../../blocks/validator/validation-result.types';
-import { BASIC_SANITIZE_OPTIONS, INLINE_SANITIZE_OPTIONS } from './block-sanitize-profiles.config';
+import {
+  BASIC_SANITIZE_OPTIONS,
+  BLOCK_COLOR_PROP_NAMES,
+  INLINE_SANITIZE_OPTIONS,
+} from './block-sanitize-profiles.config';
 
 /**
  * Vero per un carattere di controllo C0 o DEL (code point 0x7f), esclusi tab
@@ -89,7 +93,12 @@ export class BlockPropSanitizerService {
     if (definition) {
       for (const [propName, value] of Object.entries(node.props)) {
         const spec = definition.props[propName];
-        if (!spec) continue; // Prop non dichiarata: già segnalata dal validator, non è compito di questo stadio.
+        if (!spec) {
+          if (BLOCK_COLOR_PROP_NAMES.includes(propName as (typeof BLOCK_COLOR_PROP_NAMES)[number])) {
+            props[propName] = value;
+          }
+          continue;
+        }
         props[propName] = this.sanitizeProp(
           value,
           spec,

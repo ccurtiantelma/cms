@@ -9,7 +9,9 @@ import { BlockDefinition } from '../block-definition.types';
  * `grid` produrrebbe solo una griglia auto-flow a una colonna implicita, non
  * un layout Grid reale. Nessuna prop di stile (`styleBorder`/`styleShadow`/
  * `styleSpaceBefore`/`styleSpaceAfter`) in questo round — layout puro
- * (ADR-39 § 2, "Alternative scartate").
+ * (ADR-39 § 2, "Alternative scartate"). Spaziatura per lato (padding/margin)
+ * aggiunta da ADR-41, il "secondo step" che ADR-39 § 2 aveva rimandato
+ * esplicitamente — stessa forma di `section` (ADR-33 § 4).
  */
 export const containerBlock: BlockDefinition = {
   type: 'container',
@@ -63,6 +65,66 @@ export const containerBlock: BlockDefinition = {
       min: 0,
       max: 100,
     },
+    styleBackgroundColor: { kind: 'color', required: false },
+    styleColor: { kind: 'color', required: false },
+    backgroundColor: { kind: 'color', required: false },
+    color: { kind: 'color', required: false },
+    stylePaddingTop: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+      default: { default: '0' },
+    },
+    stylePaddingRight: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+      default: { default: '0' },
+    },
+    stylePaddingBottom: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+      default: { default: '0' },
+    },
+    stylePaddingLeft: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+      default: { default: '0' },
+    },
+    styleMarginTop: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+      default: { default: '0' },
+    },
+    styleMarginRight: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+      default: { default: '0' },
+    },
+    styleMarginBottom: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+      default: { default: '0' },
+    },
+    styleMarginLeft: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+      default: { default: '0' },
+    },
     customCssClass: {
       kind: 'cssClassName',
       required: false,
@@ -87,16 +149,28 @@ export const containerBlock: BlockDefinition = {
       wrap: { label: 'A capo', tab: 'style', order: 5 },
       gap: { label: 'Spaziatura', tab: 'style', order: 6 },
       styleFlexBasis: { label: 'Larghezza', tab: 'style', order: 7 },
+      styleBackgroundColor: { label: 'Colore di sfondo', tab: 'style', order: 12 },
+      styleColor: { label: 'Colore testo', tab: 'style', order: 13 },
+      backgroundColor: { label: 'Colore di sfondo (fallback)', tab: 'style', order: 14 },
+      color: { label: 'Colore testo (fallback)', tab: 'style', order: 15 },
+      stylePaddingTop: { label: 'Padding superiore', tab: 'style', order: 8 },
+      stylePaddingRight: { label: 'Padding destro', tab: 'style', order: 9 },
+      stylePaddingBottom: { label: 'Padding inferiore', tab: 'style', order: 10 },
+      stylePaddingLeft: { label: 'Padding sinistro', tab: 'style', order: 11 },
+      styleMarginTop: { label: 'Margine superiore', tab: 'style', order: 12 },
+      styleMarginRight: { label: 'Margine destro', tab: 'style', order: 13 },
+      styleMarginBottom: { label: 'Margine inferiore', tab: 'style', order: 14 },
+      styleMarginLeft: { label: 'Margine sinistro', tab: 'style', order: 15 },
       customCssClass: {
         label: 'Classe CSS personalizzata',
         tab: 'advanced',
-        order: 8,
+        order: 16,
         help: 'Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore.',
       },
       customElementId: {
         label: 'ID elemento personalizzato',
         tab: 'advanced',
-        order: 9,
+        order: 17,
         help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
       },
     },

@@ -82,6 +82,10 @@ export const richTextBlock: BlockDefinition = {
       kind: 'color',
       required: false,
     },
+    styleBackgroundColor: { kind: 'color', required: false },
+    styleColor: { kind: 'color', required: false },
+    backgroundColor: { kind: 'color', required: false },
+    color: { kind: 'color', required: false },
     styleFontSizeCustom: {
       kind: 'unitValue',
       required: false,
@@ -131,6 +135,10 @@ export const richTextBlock: BlockDefinition = {
         order: 13,
         help: 'Colore libero (esadecimale). Ha priorità su "Colore testo" se impostato.',
       },
+      styleBackgroundColor: { label: 'Colore di sfondo', tab: 'style', order: 19 },
+      styleColor: { label: 'Colore testo', tab: 'style', order: 20 },
+      backgroundColor: { label: 'Colore di sfondo (fallback)', tab: 'style', order: 21 },
+      color: { label: 'Colore testo (fallback)', tab: 'style', order: 22 },
       styleFontSizeCustom: {
         label: 'Dimensione testo personalizzata',
         tab: 'style',

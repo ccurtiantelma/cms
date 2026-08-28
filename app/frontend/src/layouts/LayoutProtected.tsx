@@ -2,7 +2,7 @@
  * Layout protetto con AppShell Mantine.
  *
  * Sidebar laterale collassabile (sfondo bianco) con due stati (compatta ~70px solo
- * icone / estesa a `themeConfig.navbarWidth`, personalizzabile dall'Editor
+ * icone / estesa a una larghezza statica
  * tema), branding testuale
  * "CMS" (nessun logo immagine — personalizzabile via
  * `brandName`/`logoBox`), voce attiva su sfondo blu
@@ -10,7 +10,7 @@
  * Area contenuto grigio chiaro con card bianca arrotondata che si
  * ridimensiona al toggle della sidebar.
  */
-import { useEffect, useRef, type CSSProperties } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   AppShell,
   ScrollArea,
@@ -19,7 +19,6 @@ import {
   Tooltip,
   Avatar,
   UnstyledButton,
-  useComputedColorScheme,
 } from '@mantine/core';
 import { useDisclosure, useMediaQuery } from '@mantine/hooks';
 import {
@@ -34,7 +33,6 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../hooks/useAuth';
 import { useThemeColorStore } from '../hooks/useThemeColor';
 import { useNotificationsInit } from '../hooks/useNotifications';
-import { formatNavbarWidth } from '../theme';
 import ImpersonationBanner from '../components/ImpersonationBanner';
 import MfaPromptModal from '../components/MfaPromptModal';
 import NotificationBell from '../components/NotificationBell';
@@ -47,6 +45,7 @@ import classes from './LayoutProtected.module.css';
 
 /** Larghezza sidebar nello stato compatto (solo icone), in px — non personalizzabile. */
 const NAV_WIDTH_COLLAPSED = 70;
+const NAV_WIDTH_EXPANDED = 240;
 
 /** Rotta dell'Editor tema (placeholder, ADR-4): sulla sidebar sostituisce le
  * voci di navigazione con le ancore alle sezioni di `THEME_EDITOR_SECTIONS`. */
@@ -57,15 +56,9 @@ const THEME_EDITOR_PATH = '/theme-editor';
  * Sidebar collassabile a sinistra + area contenuto con card bianca.
  */
 export default function LayoutProtected(): JSX.Element {
-  const reconcileThemeFromServer = useThemeColorStore((state) => state.reconcileThemeFromServer);
-  const themeConfig = useThemeColorStore((state) => state.themeConfig);
   // Stato espansione sidebar (desktop) e apertura drawer (mobile). Il default
-  // segue `navbarDefaultCollapsed` del tema (anti-FOUC: valore già disponibile
-  // sincronicamente da cache/default, vedi ThemeColorProvider) — da qui in poi
-  // è solo l'utente a controllarlo con il toggle in fondo alla sidebar.
-  const [collapsed, { toggle: toggleCollapsed }] = useDisclosure(
-    themeConfig.navbarDefaultCollapsed,
-  );
+  // è statico per mantenere la chrome amministrativa indipendente dal tema pubblico.
+  const [collapsed, { toggle: toggleCollapsed }] = useDisclosure(false);
   const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] = useDisclosure(false);
   const isMobile = useMediaQuery('(max-width: 48em)');
 
@@ -76,16 +69,19 @@ export default function LayoutProtected(): JSX.Element {
   const logout = useAuthStore((state) => state.logout);
   const isMfaEnabled = useAuthStore((state) => state.isMfaEnabled);
   const location = useLocation();
-  const colorScheme = useComputedColorScheme('light');
-
   // Connette il canale notifiche (REST + Socket.io) solo per utenti autenticati:
   // questo layout è l'unico punto dell'app dove monta (sostituisce il vecchio
   // <NotificationsProvider>).
   useNotificationsInit();
 
-  // Riconciliazione tema post-login (ADR-4 §4): questo layout monta solo ad
-  // utente autenticato — la cache anti-FOUC già applicata viene riallineata
-  // con il server, unica fonte di verità del tema di installazione.
+  // Riallinea col server il `ThemeConfig` dell'installazione (ADR-4): questo layout monta
+  // solo a login avvenuto, ed è l'unico punto in cui la rotta admin `GET
+  // app/settings/theme` è chiamabile. Non serve alla chrome — che resta sui default di
+  // fabbrica — ma all'Editor tema, che deve aprirsi sui valori reali, e al Canvas
+  // dell'editor, che dipinge il contenuto col tema del sito (`EditorCanvas.tsx`): senza
+  // questa riconciliazione entrambi resterebbero sull'ultima cache locale, o sui default
+  // su un browser nuovo.
+  const reconcileThemeFromServer = useThemeColorStore((state) => state.reconcileThemeFromServer);
   useEffect(() => {
     void reconcileThemeFromServer();
   }, [reconcileThemeFromServer]);
@@ -95,19 +91,7 @@ export default function LayoutProtected(): JSX.Element {
 
   // Su mobile la sidebar è sempre estesa (off-canvas); il collasso vale solo su desktop.
   const isCollapsed = !isMobile && collapsed;
-  // `formatNavbarWidth` rispetta l'unità scelta nell'Editor tema (px/em/rem/%, ADR-4 v7);
-  // lo stato compatto resta un numero fisso in px, non personalizzabile.
-  const navWidth = isCollapsed ? NAV_WIDTH_COLLAPSED : formatNavbarWidth(themeConfig);
-
-  // Stile del bordo destro della sidebar (ADR-4 v5, personalizzabile dall'Editor
-  // tema): bordo sottile oppure ombra proiettata di intensità regolabile.
-  // Applicato inline perché, a differenza
-  // dei token colore, è un valore strutturale mutuamente esclusivo — stessa
-  // scelta già fatta per `navWidth` sopra.
-  const navEdgeStyle: CSSProperties =
-    themeConfig.navbarEdgeStyle === 'shadow'
-      ? { boxShadow: `2px 0 8px rgba(0, 0, 0, ${themeConfig.navbarEdgeShadowIntensity})` }
-      : { borderRight: '1px solid var(--mantine-color-gray-3)' };
+  const navWidth = isCollapsed ? NAV_WIDTH_COLLAPSED : NAV_WIDTH_EXPANDED;
 
   /** Naviga a una voce e chiude il drawer mobile. */
   const goTo = (path: string): void => {
@@ -150,7 +134,7 @@ export default function LayoutProtected(): JSX.Element {
 
   return (
     <>
-      <div className={classes.appBg} data-mantine-color-scheme={colorScheme}>
+      <div className={classes.appBg}>
         {isMfaEnabled !== null && <MfaPromptModal isMfaEnabled={isMfaEnabled} />}
         <AppTour ref={tourRef} />
         <ImpersonationBanner />
@@ -178,7 +162,6 @@ export default function LayoutProtected(): JSX.Element {
           <AppShell.Navbar
             data-tour="sidebar-nav"
             className={classes.navbarSurface}
-            style={navEdgeStyle}
           >
             {/* Branding — placeholder testuale, nessun logo immagine (vedi CLAUDE.md). */}
             <div className={`${classes.brand} ${isCollapsed ? classes.brandCollapsed : ''}`}>
@@ -353,12 +336,12 @@ export default function LayoutProtected(): JSX.Element {
                     {collapsed ? (
                       <IconLayoutSidebarLeftExpand
                         size={18}
-                        color="var(--mantine-color-text)"
+                        color="#242424"
                       />
                     ) : (
                       <IconLayoutSidebarLeftCollapse
                         size={18}
-                        color="var(--mantine-color-text)"
+                        color="#242424"
                       />
                     )}
                   </ActionIcon>
@@ -372,7 +355,7 @@ export default function LayoutProtected(): JSX.Element {
                   >
                     <IconLogout
                       size={18}
-                      color="var(--mantine-color-text)"
+                      color="#242424"
                     />
                   </ActionIcon>
                 </Tooltip>

@@ -1686,6 +1686,174 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "max": 100
       },
       {
+        "name": "stylePaddingTop",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "0"
+        },
+        "values": [
+          "0",
+          "4",
+          "8",
+          "12",
+          "16",
+          "24",
+          "32",
+          "48",
+          "64",
+          "96"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "stylePaddingRight",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "0"
+        },
+        "values": [
+          "0",
+          "4",
+          "8",
+          "12",
+          "16",
+          "24",
+          "32",
+          "48",
+          "64",
+          "96"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "stylePaddingBottom",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "0"
+        },
+        "values": [
+          "0",
+          "4",
+          "8",
+          "12",
+          "16",
+          "24",
+          "32",
+          "48",
+          "64",
+          "96"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "stylePaddingLeft",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "0"
+        },
+        "values": [
+          "0",
+          "4",
+          "8",
+          "12",
+          "16",
+          "24",
+          "32",
+          "48",
+          "64",
+          "96"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleMarginTop",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "0"
+        },
+        "values": [
+          "0",
+          "4",
+          "8",
+          "12",
+          "16",
+          "24",
+          "32",
+          "48",
+          "64",
+          "96"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleMarginRight",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "0"
+        },
+        "values": [
+          "0",
+          "4",
+          "8",
+          "12",
+          "16",
+          "24",
+          "32",
+          "48",
+          "64",
+          "96"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleMarginBottom",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "0"
+        },
+        "values": [
+          "0",
+          "4",
+          "8",
+          "12",
+          "16",
+          "24",
+          "32",
+          "48",
+          "64",
+          "96"
+        ],
+        "responsive": true
+      },
+      {
+        "name": "styleMarginLeft",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "0"
+        },
+        "values": [
+          "0",
+          "4",
+          "8",
+          "12",
+          "16",
+          "24",
+          "32",
+          "48",
+          "64",
+          "96"
+        ],
+        "responsive": true
+      },
+      {
         "name": "customCssClass",
         "kind": "cssClassName",
         "required": false
@@ -1736,16 +1904,56 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "tab": "style",
           "order": 7
         },
+        "stylePaddingTop": {
+          "label": "Padding superiore",
+          "tab": "style",
+          "order": 8
+        },
+        "stylePaddingRight": {
+          "label": "Padding destro",
+          "tab": "style",
+          "order": 9
+        },
+        "stylePaddingBottom": {
+          "label": "Padding inferiore",
+          "tab": "style",
+          "order": 10
+        },
+        "stylePaddingLeft": {
+          "label": "Padding sinistro",
+          "tab": "style",
+          "order": 11
+        },
+        "styleMarginTop": {
+          "label": "Margine superiore",
+          "tab": "style",
+          "order": 12
+        },
+        "styleMarginRight": {
+          "label": "Margine destro",
+          "tab": "style",
+          "order": 13
+        },
+        "styleMarginBottom": {
+          "label": "Margine inferiore",
+          "tab": "style",
+          "order": 14
+        },
+        "styleMarginLeft": {
+          "label": "Margine sinistro",
+          "tab": "style",
+          "order": 15
+        },
         "customCssClass": {
           "label": "Classe CSS personalizzata",
           "tab": "advanced",
-          "order": 8,
+          "order": 16,
           "help": "Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore."
         },
         "customElementId": {
           "label": "ID elemento personalizzato",
           "tab": "advanced",
-          "order": 9,
+          "order": 17,
           "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
         }
       }

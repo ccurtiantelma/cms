@@ -1,6 +1,6 @@
 import type { components } from '@api-types';
 import { PublicSiteConfig } from './config';
-import { DEFAULT_GLOBAL_TOKENS, type GlobalTokens } from '../../frontend/src/libs/globalTokensCompiler';
+import type { ThemeConfigDto } from '../../frontend/src/utils/theme-css.utils';
 
 type PublicPageDto = components['schemas']['PublicPageDto'];
 type PublicActiveGlobalSectionsDto = components['schemas']['PublicActiveGlobalSectionsDto'];
@@ -10,6 +10,23 @@ export type PublicPageResolution =
   | { kind: 'redirect'; location: string }
   | { kind: 'not-found' }
   | { kind: 'error' };
+
+/** Invia una pageview validata senza propagare errori al consumer HTML. */
+export function ingestPageview(path: string): void {
+  if (!PublicSiteConfig.analyticsIngestSecret) return;
+
+  const url = `${PublicSiteConfig.apiBaseUrl}/api/v1/analytics/ingest/pageview`;
+  void fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Analytics-Secret': PublicSiteConfig.analyticsIngestSecret,
+    },
+    body: JSON.stringify({ path }),
+  }).catch((error: unknown) => {
+    console.error('public-site: ingest analytics non riuscito', error);
+  });
+}
 
 /**
  * Estrae il valore di `?path=` dalla `Location` del `308` del backend
@@ -58,32 +75,35 @@ export async function resolvePublicPage(pathname: string): Promise<PublicPageRes
 }
 
 /**
- * Recupera i Global Design Tokens (palette/tipografia/spaziatura di brand)
- * da iniettare come custom property CSS nell'head del documento SSR.
+ * Recupera il `ThemeConfig` dell'installazione — l'oggetto salvato dall'Editor
+ * tema (ADR-4) — da compilare in variabili CSS nell'head del documento SSR.
  *
- * Chiama `GET /api/v1/public/settings/global-tokens` (`public-pages.controller.ts`),
- * superficie pubblica anonima che riusa `SettingsService.getGlobalTokens()`
- * (fallback ai default di fabbrica lato backend se non è mai stata salvata
- * alcuna riga `app_settings` con chiave `global_tokens`).
+ * Chiama `GET /api/v1/public/settings/theme` (`public-pages.controller.ts`),
+ * superficie pubblica anonima che riusa `SettingsService.getThemeConfig()`
+ * (fallback ai default di fabbrica lato backend se non e' mai stata salvata
+ * alcuna riga `app_settings` con chiave `theme`).
  *
  * Tollerante ai guasti per costruzione, come `resolvePublicPage`: nessuna
- * eccezione esce da questa funzione, né per errore di rete/timeout né per
- * risposta non `200` (server down/errore) — sempre un `GlobalTokens` valido
- * (quello ricevuto o i default di fabbrica).
+ * eccezione esce da questa funzione, ne' per errore di rete/timeout ne' per
+ * risposta non `200`. In quel caso restituisce `null` e il documento viene
+ * servito **senza** il blocco di variabili del tema: i componenti dei blocchi
+ * ricadono sui valori statici gia' dichiarati in `style-tokens.module.css`
+ * (ogni `var()` li' ha un fallback), quindi la pagina resta leggibile e
+ * completa - degradata nell'identita' visiva, mai mutilata nel contenuto.
  */
-export async function fetchThemeSettings(): Promise<GlobalTokens> {
-  const url = `${PublicSiteConfig.apiBaseUrl}/api/v1/public/settings/global-tokens`;
+export async function fetchThemeConfig(): Promise<ThemeConfigDto | null> {
+  const url = `${PublicSiteConfig.apiBaseUrl}/api/v1/public/settings/theme`;
 
   try {
     const res = await fetch(url);
     if (!res.ok) {
-      console.error(`public-site: global-tokens non disponibile (status ${res.status}), uso i default`);
-      return DEFAULT_GLOBAL_TOKENS;
+      console.error(`public-site: theme non disponibile (status ${res.status}), nessun tema applicato`);
+      return null;
     }
-    return (await res.json()) as GlobalTokens;
+    return (await res.json()) as ThemeConfigDto;
   } catch (error: unknown) {
-    console.error('public-site: errore di rete su global-tokens, uso i default', error);
-    return DEFAULT_GLOBAL_TOKENS;
+    console.error('public-site: errore di rete su theme, nessun tema applicato', error);
+    return null;
   }
 }
 
@@ -105,7 +125,7 @@ const NO_GLOBAL_SECTIONS: PublicActiveGlobalSectionsDto = { header: null, footer
  * migrato/validato/sanitizzato in scrittura: nessuna rielaborazione qui, stessa
  * fiducia nel server che `resolvePublicPage` già applica all'albero di Pagina.
  *
- * Tollerante ai guasti per costruzione, come `fetchThemeSettings`: nessuna
+ * Tollerante ai guasti per costruzione, come `fetchThemeConfig`: nessuna
  * eccezione esce da questa funzione, né per errore di rete/timeout né per
  * risposta non `200`. Header e footer sono cromatura del layout, non il
  * contenuto: la loro indisponibilità degrada la pagina, non la abbatte —

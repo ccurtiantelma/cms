@@ -13,6 +13,7 @@
  * non importa Mantine né lo store dell'editor (CLAUDE.md § confine Mantine/blocchi):
  * l'unica concessione è `contentEditable` nativo, nessuna dipendenza nuova.
  */
+import { useLayoutEffect, useRef } from 'react';
 import styles from './Button.module.css';
 import tokenStyles from '../style-tokens.module.css';
 import {
@@ -59,6 +60,17 @@ export default function Button({
   onLabelChange,
   onLabelInput,
 }: ButtonProps) {
+  /** Nodo DOM dell'etichetta in editing. */
+  const elementRef = useRef<HTMLAnchorElement | null>(null);
+
+  useLayoutEffect(() => {
+    if (!editable) return;
+    const element = elementRef.current;
+    if (element && element.textContent !== label) {
+      element.textContent = label;
+    }
+  }, [editable, label]);
+
   const className = [
     styles.button,
     resolveResponsiveClassNames(tokenStyles, 'spaceBefore', styleSpaceBefore),
@@ -89,6 +101,7 @@ export default function Button({
   // l'etichetta nel canvas dell'editor.
   return (
     <a
+      ref={elementRef}
       className={className}
       href={href}
       contentEditable
@@ -98,8 +111,6 @@ export default function Button({
       }}
       onInput={(event) => onLabelInput?.(event.currentTarget.textContent ?? '')}
       onBlur={(event) => onLabelChange?.(event.currentTarget.textContent ?? '')}
-    >
-      {label}
-    </a>
+    />
   );
 }

@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { components } from '@api-types';
-import { compileTokensToCss } from '../../frontend/src/libs/globalTokensCompiler';
-import { fetchActiveGlobalSections, fetchThemeSettings } from './public-api-client';
+import type { ThemeConfigDto } from '../../frontend/src/utils/theme-css.utils';
+import { fetchActiveGlobalSections, fetchThemeConfig } from './public-api-client';
 import App from './App';
 import ErrorDocument from './ErrorDocument';
 import PreviewDocument from './PreviewDocument';
@@ -13,36 +13,25 @@ type PublicActiveGlobalSectionsDto = components['schemas']['PublicActiveGlobalSe
 const DOCTYPE = '<!DOCTYPE html>';
 
 /**
- * Recupera i Global Design Tokens correnti (default di fabbrica in caso di
- * guasto, mai un'eccezione — vedi `fetchThemeSettings`) e li compila nel
- * blocco `:root { ... }` da iniettare nell'head del documento. Punto unico
- * di questa pipeline: ogni funzione `render*Document` qui sotto lo richiama.
- */
-async function buildGlobalTokensCss(): Promise<string> {
-  const tokens = await fetchThemeSettings();
-  return compileTokensToCss(tokens);
-}
-
-/**
- * Le due letture di layout che ogni documento richiede — tokens di brand e
- * Sezioni Globali degli slot (ADR-40) — risolte **in parallelo**: sono
- * indipendenti fra loro, e serializzarle raddoppierebbe la latenza di ogni
- * risposta SSR per nessun motivo.
+ * Le due letture di layout che ogni documento richiede — il tema
+ * dell'installazione (Editor tema, ADR-4) e le Sezioni Globali degli slot
+ * (ADR-40) — risolte **in parallelo**: sono indipendenti fra loro, e
+ * serializzarle raddoppierebbe la latenza di ogni risposta SSR per nessun
+ * motivo.
  *
  * Entrambe le funzioni sottostanti sono tolleranti ai guasti per costruzione e
  * non lanciano mai: qui non serve alcun `try`, e un backend irraggiungibile
- * produce un documento con i tokens di fabbrica e nessun header/footer, non un
- * `500`.
+ * produce un documento senza tema e senza header/footer, non un `500`.
  */
 async function buildLayoutContext(): Promise<{
-  globalTokensCss: string;
+  themeConfig: ThemeConfigDto | null;
   globalSections: PublicActiveGlobalSectionsDto;
 }> {
-  const [globalTokensCss, globalSections] = await Promise.all([
-    buildGlobalTokensCss(),
+  const [themeConfig, globalSections] = await Promise.all([
+    fetchThemeConfig(),
     fetchActiveGlobalSections(),
   ]);
-  return { globalTokensCss, globalSections };
+  return { themeConfig, globalSections };
 }
 
 /**
@@ -52,14 +41,14 @@ async function buildLayoutContext(): Promise<{
  * Error Boundary gira in SSR, l'albero non servibile è già respinto a monte.
  */
 export async function renderPageDocument(page: PublicPageDto, cssHref: string): Promise<string> {
-  const { globalTokensCss, globalSections } = await buildLayoutContext();
+  const { themeConfig, globalSections } = await buildLayoutContext();
   return (
     DOCTYPE +
     renderToStaticMarkup(
       <App
         page={page}
         cssHref={cssHref}
-        globalTokensCss={globalTokensCss}
+        themeConfig={themeConfig}
         globalSections={globalSections}
       />,
     )
@@ -68,11 +57,11 @@ export async function renderPageDocument(page: PublicPageDto, cssHref: string): 
 
 /** Stesso documento minimale per le pagine `404`/`500`. */
 export async function renderErrorDocument(status: number, message: string, cssHref: string): Promise<string> {
-  const globalTokensCss = await buildGlobalTokensCss();
+  const themeConfig = await fetchThemeConfig();
   return (
     DOCTYPE +
     renderToStaticMarkup(
-      <ErrorDocument status={status} message={message} cssHref={cssHref} globalTokensCss={globalTokensCss} />,
+      <ErrorDocument status={status} message={message} cssHref={cssHref} themeConfig={themeConfig} />,
     )
   );
 }
@@ -84,14 +73,14 @@ export async function renderErrorDocument(status: number, message: string, cssHr
  * garanzia di `renderPageDocument`.
  */
 export async function renderPreviewDocument(page: PagePreviewContentDto, cssHref: string): Promise<string> {
-  const { globalTokensCss, globalSections } = await buildLayoutContext();
+  const { themeConfig, globalSections } = await buildLayoutContext();
   return (
     DOCTYPE +
     renderToStaticMarkup(
       <PreviewDocument
         page={page}
         cssHref={cssHref}
-        globalTokensCss={globalTokensCss}
+        themeConfig={themeConfig}
         globalSections={globalSections}
       />,
     )

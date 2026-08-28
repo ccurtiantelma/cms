@@ -131,6 +131,22 @@ export function canDropInto(
 }
 
 /**
+ * Messaggio da mostrare (`notifications.show`) quando il registro rifiuta l'inserimento o
+ * lo spostamento di un nodo di tipo `type` dentro un contenitore di tipo `parentType`
+ * (`undefined` = radice). Caso nominato a parte — sezione dentro sezione, l'errore più
+ * frequente perché visivamente non distinguibile nel canvas dal semplice annidamento di un
+ * `container` — messaggio generico per ogni altro rifiuto del registro. Condiviso fra
+ * `addBlockAction` e `moveNodeToAction` (`useBlockEditorStore.ts`): stessa domanda di
+ * ammissibilità, stessa voce all'utente.
+ */
+export function nestingRejectionMessage(parentType: string | undefined, type: string): string {
+  if (parentType === 'section' && type === 'section') {
+    return 'Impossibile inserire una Sezione all\'interno di un\'altra Sezione.';
+  }
+  return `Il blocco "${type}" non è ammesso in questo contenitore.`;
+}
+
+/**
  * Forma di un nodo dentro `static-section-presets.json` (ADR-34 § 1): stessa struttura
  * ricorsiva di `BlockNode`, dichiarata a parte perché il file statico porta solo le prop
  * *significative* del preset (mai tutte quelle del descrittore) e un id placeholder — non

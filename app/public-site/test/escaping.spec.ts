@@ -123,20 +123,20 @@ describe('unicità di dangerouslySetInnerHTML (ADR-22 § 7)', () => {
     expect(hits.map((file) => relative(blocksDir, file))).toEqual([join('blocks', 'RichText.tsx')]);
   });
 
-  // Eccezione nota: l'iniezione del blocco `:root { ... }` dei Global Design
-  // Tokens (`<style id="eaidos-global-tokens">`) in App.tsx, ErrorDocument.tsx
-  // e PreviewDocument.tsx. Non è input utente non fidato: `globalTokensCss` è
-  // compilato server-side da `compileTokensToCss` a partire da valori già
-  // vincolati (hex/whitelist/numero+unità), stesso principio di richText già
-  // sanitizzato server-side.
-  it('non compare in app/public-site salvo l\'iniezione nota dei Global Design Tokens', () => {
+  // Eccezione nota e **unica**: l'iniezione del blocco `:root { ... }` del tema
+  // dell'installazione (`<style id="eaidos-theme-vars">`) in `ThemeStyleTag.tsx`.
+  // Non è input utente non fidato: il CSS è compilato da `generateThemeCss`, che
+  // ricontrolla ogni valore prima di emetterlo (colori sulla regex `#rrggbb`,
+  // unità e pesi su whitelist, numeri su `Number.isFinite`) — stesso principio
+  // del richText già sanitizzato server-side.
+  //
+  // Un solo file, non tre: il tag è un componente condiviso da Pagina, anteprima
+  // e pagine di errore, quindi questa asserzione fallisce anche se un quarto
+  // documento tornasse a iniettare CSS per conto proprio.
+  it("non compare in app/public-site salvo l'iniezione nota del tema", () => {
     const files = listSourceFiles(publicSiteSrcDir);
     const hits = files.filter((file) => USAGE_PATTERN.test(readFileSync(file, 'utf-8')));
 
-    const allowedHits = ['App.tsx', 'ErrorDocument.tsx', 'PreviewDocument.tsx']
-      .map((name) => join(publicSiteSrcDir, name))
-      .sort();
-
-    expect(hits.sort()).toEqual(allowedHits);
+    expect(hits.sort()).toEqual([join(publicSiteSrcDir, 'ThemeStyleTag.tsx')]);
   });
 });

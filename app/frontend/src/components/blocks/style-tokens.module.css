@@ -5,12 +5,20 @@
  * componente di `components/blocks/blocks/` che dichiara props `styleXxx`/`columns`/`gap`/
  * `alignItems` — mai duplicato, mai `style` inline.
  *
+ * I valori dichiarati nel blocco `:root` qui sotto sono i **default di fabbrica**, non la
+ * parola finale: il tema dell'installazione (Editor tema, ADR-4) li sovrascrive in blocco
+ * via `utils/theme-css.utils.ts`, che emette gli stessi nomi `--cms-*` in un `<style>`
+ * dichiarato dopo questo foglio (sito pubblico) o su una classe di scope (Canvas
+ * dell'editor). È il modo in cui una modifica del tema si vede sul contenuto già salvato
+ * senza toccarlo. Restano validi come fallback quando nessun tema è applicato — backend
+ * irraggiungibile in SSR, test di componente isolati.
+ *
  * Struttura in tre parti, in quest'ordine (l'ordine è la cascata: ADR-29 § 2
  * "mobile assente ricade su tablet, tablet assente ricade su default", una
  * sola direzione, implementata **solo** qui via ordine di dichiarazione +
  * media query `max-width`):
- *   1. Variabili CSS dei token (`:root`) — il solo punto che il tema di F09
- *      potrà riscrivere senza toccare il contenuto salvato.
+ *   1. Variabili CSS dei token (`:root`) — il solo punto che il tema
+ *      riscrive senza toccare il contenuto salvato.
  *   2. Le tre soglie di breakpoint — non esistono altrove nel repository
  *      (RFC-F04c-editor-maturo.md § A.4): tablet ≤ 768px, mobile ≤ 480px.
  *   3. Una classe per ogni combinazione (prop, breakpoint, token): il
@@ -24,26 +32,43 @@
  */
 
 :root {
+  /*
+   * Spaziatura e padding derivano da `--eaidos-global-spacing-unit` (globalTokensCompiler.ts,
+   * "una singola unità di base da cui i blocchi derivano i propri multipli" — commento di
+   * testa del compilatore): stessi moltiplicatori dei valori statici precedenti, che restano
+   * come fallback di `var()` quando i Global Design Tokens non sono applicati (nessuna
+   * regressione fuori dal canvas/sito pubblico con tema attivo).
+   */
   --cms-space-none: 0;
-  --cms-space-xs: 0.5rem;
-  --cms-space-sm: 1rem;
-  --cms-space-md: 1.75rem;
-  --cms-space-lg: 3rem;
-  --cms-space-xl: 5rem;
+  --cms-space-xs: calc(var(--eaidos-global-spacing-unit, 0.5rem) * 1);
+  --cms-space-sm: calc(var(--eaidos-global-spacing-unit, 0.5rem) * 2);
+  --cms-space-md: calc(var(--eaidos-global-spacing-unit, 0.5rem) * 3.5);
+  --cms-space-lg: calc(var(--eaidos-global-spacing-unit, 0.5rem) * 6);
+  --cms-space-xl: calc(var(--eaidos-global-spacing-unit, 0.5rem) * 10);
 
   --cms-padding-none: 0;
-  --cms-padding-sm: 1rem;
-  --cms-padding-md: 1.75rem;
-  --cms-padding-lg: 3rem;
+  --cms-padding-sm: calc(var(--eaidos-global-spacing-unit, 0.5rem) * 2);
+  --cms-padding-md: calc(var(--eaidos-global-spacing-unit, 0.5rem) * 3.5);
+  --cms-padding-lg: calc(var(--eaidos-global-spacing-unit, 0.5rem) * 6);
 
+  /*
+   * Nessun equivalente in `GlobalTokensPalette` (solo primary/secondary/text/accent, nessun
+   * token "sfondo"): restano valori statici, non si inventa una formula di derivazione non
+   * specificata altrove.
+   */
   --cms-bg-none: transparent;
   --cms-bg-subtle: #f4f4f5;
   --cms-bg-accent: #eef2ff;
   --cms-bg-inverse: #18181b;
 
-  --cms-text-color-default: inherit;
+  /*
+   * `default`/`accent` hanno un equivalente diretto in `GlobalTokensPalette` (`text`/`accent`
+   * — globalTokensCompiler.ts) e vengono cablati con fallback al valore statico precedente.
+   * `muted`/`inverse` non hanno un token di palette corrispondente e restano fissi.
+   */
+  --cms-text-color-default: var(--eaidos-global-color-text, inherit);
   --cms-text-color-muted: #6b7280;
-  --cms-text-color-accent: #4338ca;
+  --cms-text-color-accent: var(--eaidos-global-color-accent, #4338ca);
   --cms-text-color-inverse: #ffffff;
 
   --cms-font-size-sm: 0.875rem;
@@ -55,7 +80,13 @@
   --cms-font-weight-medium: 500;
   --cms-font-weight-bold: 700;
 
-  --cms-font-family-default: inherit;
+  /*
+   * `default` (nessuna scelta esplicita di font da parte del blocco) adotta il font di brand
+   * via `--eaidos-global-font-main`, con fallback a `inherit` quando i Global Design Tokens
+   * non sono applicati. Le famiglie esplicite sotto (`inter`/`roboto`/ecc.) sono una scelta
+   * deliberata dell'autore del blocco, indipendente dal font di brand: restano fisse.
+   */
+  --cms-font-family-default: var(--eaidos-global-font-main, inherit);
   --cms-font-family-inter: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     Helvetica, Arial, sans-serif;
   --cms-font-family-roboto: Roboto, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica,
@@ -264,13 +295,6 @@
 .marginLeft_default_48 { margin-left: 48px; }
 .marginLeft_default_64 { margin-left: 64px; }
 .marginLeft_default_96 { margin-left: 96px; }
-
-/* ─── styleBackgroundColor (ADR-33 § 3/§ 6) — solo section, non responsive
-   Unica eccezione a "sempre classi da token" (ADR-29 § 6, ADR-31 § 7): un
-   colore libero validato da pattern esadecimale, non un insieme chiuso di
-   valori enumerabili. Questa regola statica consuma l'unica custom property
-   CSS inline ammessa (`Section.tsx`, `style={{ '--section-bg': value }}`). */
-.backgroundColor_custom { background-color: var(--section-bg); }
 
 /* ─── Tablet (≤ 768px) — unica soglia dichiarata qui, in tutto il repo ──── */
 
@@ -643,6 +667,15 @@
 .previewHidden .hideDesktop,
 .previewHidden .hideTablet,
 .previewHidden .hideMobile {
+  display: revert !important;
+  opacity: 0.4;
+}
+
+/* Il wrapper dell'editor porta la classe di visibilita sullo stesso elemento di
+   `previewHidden`, mentre i renderer pubblici la applicano al contenuto discendente. */
+.previewHidden.hideDesktop,
+.previewHidden.hideTablet,
+.previewHidden.hideMobile {
   display: revert !important;
   opacity: 0.4;
 }

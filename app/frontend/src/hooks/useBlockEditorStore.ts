@@ -31,13 +31,21 @@ import {
   updateBlockProps,
   type BlockNode,
 } from '../pages/pages/editor/block-tree.utils';
-import { canContainType } from '../pages/pages/editor/block-registry.utils';
+import { canContainType, nestingRejectionMessage } from '../pages/pages/editor/block-registry.utils';
 import {
   CONTAINER_WIDTH_PROP,
   toContainerWidthValue,
 } from '../pages/pages/editor/container-resize.utils';
-import { CONTENT_TREE_LIMITS } from '../types/blocks.types';
-import { compileTokensToCss, GLOBAL_TOKENS_STYLE_TAG_ID, type GlobalTokens } from '../libs/globalTokensCompiler';
+import { BLOCK_TYPES, CONTENT_TREE_LIMITS } from '../types/blocks.types';
+import {
+  compileTokensToCss,
+  GLOBAL_TOKENS_CANVAS_SCOPE_CLASS,
+  GLOBAL_TOKENS_STYLE_TAG_ID,
+  type GlobalTokens,
+} from '../libs/globalTokensCompiler';
+
+/** Selettore CSS su cui i Global Design Tokens vengono scopati — mai `:root` (vedi {@link GLOBAL_TOKENS_CANVAS_SCOPE_CLASS}). */
+const GLOBAL_TOKENS_SCOPE_SELECTOR = `.${GLOBAL_TOKENS_CANVAS_SCOPE_CLASS}`;
 
 /** Direzione opposta, usata per costruire l'inverso di un comando `move`. */
 function oppositeDirection(direction: 'up' | 'down'): 'up' | 'down' {
@@ -91,6 +99,12 @@ export interface SavePoint {
   top: EditorCommand | null;
 }
 
+/** Stato dell'albero dopo un'azione, mostrato dalla cronologia visuale dell'editor. */
+export interface HistoryEntry {
+  label: string;
+  tree: BlockNode[];
+}
+
 /**
  * `true` se l'albero in editing diverge da ciò che è stato salvato per ultimo.
  * Costo O(1): nessun confronto dell'albero, solo lunghezza della pila e identità del
@@ -118,6 +132,13 @@ export interface ContainerResizeState {
   id: string;
   /** Percentuale della larghezza del contenitore padre, gia clampata nell'intervallo del registro. */
   percent: number;
+}
+
+/** Prop di stile copiate temporaneamente durante la sessione dell'editor. */
+export type StyleClipboard = Record<string, unknown>;
+
+function extractStyleProps(props: Record<string, unknown>): StyleClipboard {
+  return Object.fromEntries(Object.entries(props).filter(([key]) => key.startsWith('style')));
 }
 
 interface BlockEditorState {
@@ -158,6 +179,10 @@ interface BlockEditorState {
   undoStack: EditorCommand[];
   /** Pila dei comandi disfatti, disponibili per `redo()`. */
   redoStack: EditorCommand[];
+  /** Cronologia visuale degli stati del tree, parallela alla history dei comandi. */
+  history: HistoryEntry[];
+  /** Indice dello stato corrente nella cronologia, `-1` per l'albero iniziale. */
+  historyIndex: number;
   /** Punto della history corrispondente all'ultimo contenuto salvato (vedi {@link SavePoint}). */
   savePoint: SavePoint;
   /**
@@ -189,6 +214,7 @@ interface BlockEditorState {
    * il trascinamento di un container non ri-renderizza i wrapper degli altri.
    */
   containerResize: ContainerResizeState | null;
+  styleClipboard: StyleClipboard | null;
 
   /** Inizializza l'albero da `draftContent.blocks` esistente (nessun riordino spurio: ordine e struttura conservati com'è). Azzera history e selezione. */
   initTree: (blocks: BlockNode[]) => void;
@@ -241,6 +267,8 @@ interface BlockEditorState {
    * selezionato.
    */
   duplicateNodeAction: (id: string) => void;
+  copyStyleAction: (id: string) => void;
+  pasteStyleAction: (id: string) => void;
   /** Merge delle `props` fornite sul nodo `id`. */
   updateBlockPropsAction: (id: string, props: Record<string, unknown>) => void;
   /**
@@ -254,6 +282,8 @@ interface BlockEditorState {
   undo: () => void;
   /** Rifà l'ultimo comando disfatto, se presente. */
   redo: () => void;
+  /** Ripristina uno stato della cronologia visuale e conserva il ramo successivo come redo. */
+  restoreHistory: (index: number) => void;
   /** Fotografa il punto di history corrispondente all'albero che si sta per inviare al server. */
   currentSavePoint: () => SavePoint;
   /**
@@ -266,18 +296,22 @@ interface BlockEditorState {
    * Sostituisce i Global Design Tokens correnti, registra un comando invertibile sulla
    * stessa history undo/redo dell'albero (vedi {@link GlobalTokensCommand}) e aggiorna
    * subito il tag `<style id="eaidos-global-tokens">` del `document` principale
-   * (`applyGlobalTokensToDocument`) con il CSS ricompilato. Nessuna persistenza verso il
-   * server: quel passaggio (e l'eventuale applicazione al `contentDocument` di un
-   * canvas in iframe, oggi inesistente) restano fuori da questo step.
+   * (`applyGlobalTokensToDocument`), scopato su `.eaidos-canvas-theme-scope`
+   * (`GLOBAL_TOKENS_CANVAS_SCOPE_CLASS`) — la classe stabile della radice di
+   * `EditorCanvas.tsx` — mai su `:root`: il tag vive nello `head` del documento
+   * principale (non c'è un `contentDocument` di un canvas in iframe, oggi inesistente),
+   * ma lo scope del selettore impedisce che le variabili raggiungano la chrome
+   * amministrativa attorno al canvas. Nessuna persistenza verso il server: quel
+   * passaggio resta fuori da questo step.
    */
   setGlobalTokens: (tokens: GlobalTokens) => void;
   /**
    * Idrata i Global Design Tokens da una fonte non annullabile (F07 step 2: la lettura
    * iniziale di `GET app/settings/global-tokens` all'apertura dell'editor,
-   * `FullScreenEditorLayout.tsx`) e applica subito il CSS al `document` principale — stesso
-   * meccanismo di `setGlobalTokens`, ma **senza** spingere un `GlobalTokensCommand` sulla
-   * history undo/redo: è un caricamento di stato dal server, non un'azione dell'utente da
-   * poter annullare con Ctrl+Z (stesso principio di `initTree` rispetto ad `addBlockAction`).
+   * `FullScreenEditorLayout.tsx`) e applica subito il CSS, scopato allo stesso modo di
+   * `setGlobalTokens` — **senza** spingere un `GlobalTokensCommand` sulla history
+   * undo/redo: è un caricamento di stato dal server, non un'azione dell'utente da poter
+   * annullare con Ctrl+Z (stesso principio di `initTree` rispetto ad `addBlockAction`).
    */
   hydrateGlobalTokens: (tokens: GlobalTokens) => void;
   /**
@@ -304,7 +338,11 @@ interface BlockEditorState {
  * comando `kind: 'globalTokens'` direttamente, perché non c'è un albero da confrontare
  * per rilevare un no-op.
  */
-function pushCommand(state: BlockEditorState, command: TreeCommand): Partial<BlockEditorState> {
+function pushCommand(
+  state: BlockEditorState,
+  command: TreeCommand,
+  label: string,
+): Partial<BlockEditorState> {
   const nextTree = command.apply(state.tree);
   if (nextTree === state.tree) {
     // No-op (es. move ai bordi): nessuna mutazione, nessuna voce di history.
@@ -314,6 +352,11 @@ function pushCommand(state: BlockEditorState, command: TreeCommand): Partial<Blo
     tree: nextTree,
     undoStack: [...state.undoStack, command],
     redoStack: [],
+    history: [
+      ...state.history.slice(0, state.historyIndex + 1),
+      { label, tree: cloneTree(nextTree) },
+    ],
+    historyIndex: state.historyIndex + 1,
   };
 }
 
@@ -347,7 +390,7 @@ export function applyGlobalTokensToDocument(css: string, doc: Document): void {
  * annulla fino a lì, il canvas torna esattamente come prima di ogni impostazione).
  */
 function compileOrEmpty(tokens: GlobalTokens | null): string {
-  return tokens ? compileTokensToCss(tokens) : '';
+  return tokens ? compileTokensToCss(tokens, GLOBAL_TOKENS_SCOPE_SELECTOR) : '';
 }
 
 const CLEAN_SAVE_POINT: SavePoint = { depth: 0, top: null };
@@ -362,10 +405,13 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   generation: 0,
   undoStack: [],
   redoStack: [],
+  history: [],
+  historyIndex: -1,
   savePoint: CLEAN_SAVE_POINT,
   hiddenInCanvasIds: new Set(),
   globalTokens: null,
   containerResize: null,
+  styleClipboard: null,
 
   initTree: (blocks) => {
     set((state) => ({
@@ -374,6 +420,8 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       generation: state.generation + 1,
       undoStack: [],
       redoStack: [],
+      history: [],
+      historyIndex: -1,
       savePoint: CLEAN_SAVE_POINT,
       // Stato UI del canvas legato alla sessione di editing precedente: un nodo
       // "nascosto" nella bozza appena sostituita non ha più motivo di restarlo qui.
@@ -381,6 +429,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       // Stesso principio per un ridimensionamento eventualmente rimasto aperto: l'albero
       // sotto di lui non esiste più.
       containerResize: null,
+      styleClipboard: null,
     }));
   },
 
@@ -402,6 +451,21 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
 
   addBlockAction: (parentId, type, index, defaultProps) => {
     set((state) => {
+      // Il tipo del contenitore di destinazione decide l'ammissibilità (stesso principio di
+      // `insertSubtreeAction`/`moveNodeToAction`): `undefined` alla radice, dove vale
+      // `ROOT_ALLOWED`. Un `parentId` che non esiste più non è un errore da segnalare, è
+      // un'azione senza bersaglio.
+      const parentNode = parentId === null ? undefined : findNode(state.tree, parentId);
+      if (parentId !== null && !parentNode) return {};
+      if (!canContainType(parentNode?.type, type)) {
+        notifications.show({
+          color: 'red',
+          title: 'Inserimento non eseguito',
+          message: nestingRejectionMessage(parentNode?.type, type),
+        });
+        return {};
+      }
+
       const provisionalTree = addBlock(state.tree, parentId, type, index, defaultProps);
       if (provisionalTree === state.tree) return {};
 
@@ -424,6 +488,11 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
         tree: provisionalTree,
         undoStack: [...state.undoStack, command],
         redoStack: [],
+        history: [
+          ...state.history.slice(0, state.historyIndex + 1),
+          { label: `Aggiunto blocco ${type}`, tree: cloneTree(provisionalTree) },
+        ],
+        historyIndex: state.historyIndex + 1,
       };
     });
   },
@@ -434,7 +503,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       apply: (tree) => moveBlock(tree, id, direction),
       invert: (tree) => moveBlock(tree, id, oppositeDirection(direction)),
     };
-    set((state) => pushCommand(state, command));
+    set((state) => pushCommand(state, command, `Spostato nodo ${id}`));
   },
 
   moveNodeToAction: (id, targetParentId, index) => {
@@ -449,14 +518,21 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       const targetParent =
         targetParentId === null ? undefined : findNode(state.tree, targetParentId);
       if (targetParentId !== null && !targetParent) return {};
-      if (!canContainType(targetParent?.type, node.type)) return {};
+      if (!canContainType(targetParent?.type, node.type)) {
+        notifications.show({
+          color: 'red',
+          title: 'Spostamento non eseguito',
+          message: nestingRejectionMessage(targetParent?.type, node.type),
+        });
+        return {};
+      }
 
       const command: TreeCommand = {
         kind: 'tree',
         apply: (tree) => moveNodeTo(tree, id, targetParentId, index),
         invert: (tree) => moveNodeTo(tree, id, origin.parentId, origin.index),
       };
-      return pushCommand(state, command);
+      return pushCommand(state, command, `Spostato nodo ${id}`);
     });
   },
 
@@ -470,7 +546,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
         apply: (tree) => removeBlock(tree, id),
         invert: (tree) => addBlockAtExact(tree, location.parentId, location.index, removedNode),
       };
-      const patch = pushCommand(state, command);
+      const patch = pushCommand(state, command, `Eliminato blocco ${id}`);
       if (!patch.tree) return patch;
       return {
         ...patch,
@@ -504,9 +580,37 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
         apply: (tree) => addBlockAtExact(tree, location.parentId, location.index + 1, copy),
         invert: (tree) => removeBlock(tree, copy.id),
       };
-      const patch = pushCommand(state, command);
+      const patch = pushCommand(state, command, `Duplicato blocco ${id}`);
       if (!patch.tree) return patch;
       return { ...patch, selectedId: copy.id };
+    });
+  },
+
+  copyStyleAction: (id) => {
+    set((state) => {
+      const node = findNode(state.tree, id);
+      return node ? { styleClipboard: extractStyleProps(node.props) } : {};
+    });
+  },
+
+  pasteStyleAction: (id) => {
+    set((state) => {
+      const node = findNode(state.tree, id);
+      if (!node || !state.styleClipboard) return {};
+      const descriptor = BLOCK_TYPES.find((entry) => entry.type === node.type);
+      const declaredNames = new Set((descriptor?.props ?? []).map((prop) => prop.name));
+      const applicable = Object.fromEntries(
+        Object.entries(state.styleClipboard).filter(([key]) => declaredNames.has(key)),
+      );
+      if (Object.keys(applicable).length === 0) return {};
+      const command: TreeCommand = {
+        kind: 'tree',
+        apply: (tree) => updateBlockProps(tree, id, applicable),
+        invert: (tree) => updateBlockProps(tree, id, Object.fromEntries(
+          Object.keys(applicable).map((key) => [key, node.props[key]]),
+        )),
+      };
+      return pushCommand(state, command, `Modificato stile ${id}`);
     });
   },
 
@@ -548,7 +652,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
         apply: (tree) => addBlockAtExact(tree, parentId, index, copy),
         invert: (tree) => removeBlock(tree, copy.id),
       };
-      const patch = pushCommand(state, command);
+      const patch = pushCommand(state, command, `Aggiunto blocco ${subtree.type}`);
       if (!patch.tree) return patch;
       return { ...patch, selectedId: copy.id };
     });
@@ -568,7 +672,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
         apply: (tree) => updateBlockProps(tree, id, props),
         invert: (tree) => updateBlockProps(tree, id, previousProps),
       };
-      return pushCommand(state, command);
+      return pushCommand(state, command, `Modificate proprietà ${id}`);
     });
   },
 
@@ -589,6 +693,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
           tree: command.invert(state.tree),
           undoStack: state.undoStack.slice(0, -1),
           redoStack: [...state.redoStack, command],
+          historyIndex: state.historyIndex - 1,
         };
       }
       // `kind === 'globalTokens'`: il tag <style> del documento principale va
@@ -600,6 +705,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
         globalTokens: nextTokens,
         undoStack: state.undoStack.slice(0, -1),
         redoStack: [...state.redoStack, command],
+        historyIndex: state.historyIndex - 1,
       };
     });
   },
@@ -613,6 +719,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
           tree: command.apply(state.tree),
           redoStack: state.redoStack.slice(0, -1),
           undoStack: [...state.undoStack, command],
+          historyIndex: state.historyIndex + 1,
         };
       }
       const nextTokens = command.apply(state.globalTokens);
@@ -621,6 +728,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
         globalTokens: nextTokens,
         redoStack: state.redoStack.slice(0, -1),
         undoStack: [...state.undoStack, command],
+        historyIndex: state.historyIndex + 1,
       };
     });
   },
@@ -631,6 +739,19 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   },
 
   markSaved: (point) => set({ savePoint: point }),
+
+  restoreHistory: (index) => {
+    set((state) => {
+      const entry = state.history[index];
+      if (!entry) return {};
+      return {
+        tree: cloneTree(entry.tree),
+        undoStack: state.undoStack.slice(0, index + 1),
+        redoStack: state.undoStack.slice(index + 1).reverse(),
+        historyIndex: index,
+      };
+    });
+  },
 
   setGlobalTokens: (tokens) => {
     set((state) => {
@@ -644,7 +765,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       // oggi in un iframe (nessun `contentDocument` da aggiornare in parallelo — vedi il
       // commento di `applyGlobalTokensToDocument`), quindi questo è l'unico documento da
       // sincronizzare finché non esisterà un componente canvas con un riferimento proprio.
-      applyGlobalTokensToDocument(compileTokensToCss(tokens), document);
+      applyGlobalTokensToDocument(compileTokensToCss(tokens, GLOBAL_TOKENS_SCOPE_SELECTOR), document);
       return {
         globalTokens: tokens,
         undoStack: [...state.undoStack, command],
@@ -654,7 +775,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   },
 
   hydrateGlobalTokens: (tokens) => {
-    applyGlobalTokensToDocument(compileTokensToCss(tokens), document);
+    applyGlobalTokensToDocument(compileTokensToCss(tokens, GLOBAL_TOKENS_SCOPE_SELECTOR), document);
     set({ globalTokens: tokens });
   },
 
@@ -688,7 +809,10 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
         apply: (tree) => updateBlockProps(tree, id, { [CONTAINER_WIDTH_PROP]: nextValue }),
         invert: (tree) => updateBlockProps(tree, id, { [CONTAINER_WIDTH_PROP]: previousValue }),
       };
-      return { ...pushCommand(state, command), containerResize: null };
+      return {
+        ...pushCommand(state, command, `Modificata larghezza ${id}`),
+        containerResize: null,
+      };
     });
   },
 }));

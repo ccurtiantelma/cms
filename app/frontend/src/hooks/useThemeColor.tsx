@@ -1,26 +1,31 @@
 /**
- * Store Zustand del tema dell'app (ADR-4) + Provider che applica il
- * `ThemeConfig` v2 corrente (primario/palette custom, tipografia, scale,
- * ombre, component defaults, 11 token light/dark) a Mantine tramite
- * `buildAppTheme()` + `cssVariablesResolver` — nessuna iniezione manuale di
- * stili. `ThemeColorProvider` sostituisce `<MantineProvider theme={theme}>`
- * in `main.tsx` ed è l'unico punto dell'app che monta `MantineProvider`.
+ * Store Zustand del `ThemeConfig` dell'installazione (ADR-4) + Provider che
+ * monta `MantineProvider` per la chrome amministrativa.
  *
- * A differenza del precedente `ThemeColorContext`, il `ThemeConfig` vive in
- * uno store Zustand (`useThemeColorStore`): ogni consumer (`LayoutProtected`,
- * `PageThemeEditor`) legge/scrive solo i campi che gli servono, senza dover
- * passare per un `<Provider>` dedicato.
+ * **Il tema salvato non veste più la chrome amministrativa.** L'Editor tema
+ * governa l'aspetto del **sito pubblicato** (`app/public-site`, porta 55000) e
+ * l'anteprima del Canvas dell'editor — non le pagine di amministrazione, che
+ * restano sui default di fabbrica (`DEFAULT_THEME_CONFIG`). È lo stesso
+ * rapporto che WordPress ha col proprio customizer: il tema veste il sito, non
+ * il pannello di gestione. Il canale con cui il tema raggiunge il sito è
+ * `utils/theme-css.utils.ts` (variabili CSS), non Mantine — che sul sito
+ * pubblico non esiste (ADR-22 § 5).
  *
- * Bootstrap anti-FOUC (ADR-4 §4): al mount applica sincronicamente l'ultimo
- * `ThemeConfig` valido ricevuto dal server e cachato in localStorage (o i
- * default di fabbrica); quando l'utente è autenticato,
- * `reconcileThemeFromServer()` riallinea con `GET /app/settings/theme`
- * (server = fonte di verità) — invocata da `LayoutProtected`, che monta solo
- * a login avvenuto. Le pagine pubbliche (`/login`, ecc.) restano su
- * cache/default. La chiave storica per-browser `theme_primary_color` è
- * deprecata: viene rimossa al mount, il primario vive solo nel config globale.
+ * Lo store resta la fonte di verità del `ThemeConfig` **per chi lo modifica**:
+ * `PageThemeEditor` legge il config corrente, scrive il draft e lo salva; la
+ * sua anteprima dal vivo è un `MantineProvider` annidato, scopato alla sola
+ * colonna delle demo, così una modifica non ridipinge l'app attorno.
+ *
+ * Bootstrap (ADR-4 §4): al mount lo store parte dall'ultimo `ThemeConfig`
+ * valido cachato in localStorage (o dai default di fabbrica) e
+ * `reconcileThemeFromServer()` lo riallinea con `GET /app/settings/theme`
+ * (server = fonte di verità) — invocata da `LayoutProtected`, che monta solo a
+ * login avvenuto. La cache non è più anti-FOUC per l'app (la chrome non
+ * dipende più dal config): serve a far aprire l'Editor tema già sui valori
+ * giusti invece che sui default. La chiave storica per-browser
+ * `theme_primary_color` è deprecata: viene rimossa al mount.
  */
-import { useDeferredValue, useEffect, useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { create } from 'zustand';
 import { MantineProvider } from '@mantine/core';
 import {
@@ -57,18 +62,18 @@ function readCachedConfig(): ThemeConfig | null {
 }
 
 interface ThemeColorStoreState {
-  /** Configurazione tema correntemente applicata all'app (salvata o draft). */
+  /** Configurazione tema del sito: salvata sul server o draft in corso di modifica. */
   themeConfig: ThemeConfig;
-  /** Applica un draft (anteprima live del Drawer): NON tocca la cache locale. */
+  /** Applica un draft (anteprima live dell'Editor tema): NON tocca la cache locale. */
   setThemeConfig: (config: ThemeConfig) => void;
-  /** Applica una config confermata dal server (GET/PUT) e aggiorna la cache anti-FOUC. */
+  /** Applica una config confermata dal server (GET/PUT) e aggiorna la cache locale. */
   applyServerConfig: (config: ThemeConfig) => void;
   /** Riallinea il tema col server; da invocare quando l'utente è autenticato. */
   reconcileThemeFromServer: () => Promise<void>;
 }
 
 export const useThemeColorStore = create<ThemeColorStoreState>((set, get) => ({
-  // Anti-FOUC: la cache valida è applicata sincronicamente al primo render.
+  // La cache evita che l'Editor tema si apra sui default mentre il GET è in volo.
   themeConfig: readCachedConfig() ?? DEFAULT_THEME_CONFIG,
 
   setThemeConfig: (config) => set({ themeConfig: config }),
@@ -94,31 +99,24 @@ export const useThemeColorStore = create<ThemeColorStoreState>((set, get) => ({
 }));
 
 /**
- * Wrappa `MantineProvider` applicando il `ThemeConfig` attivo dello store:
- * ogni modifica rimemoizza tema e resolver e si riflette live su tutta l'app.
+ * Monta l'unico `MantineProvider` di livello applicativo, sui **default di
+ * fabbrica**: la chrome amministrativa non riflette il `ThemeConfig` salvato,
+ * che governa il sito pubblicato (vedi il commento di testa di questo file).
+ *
+ * Tema e resolver sono costanti — `DEFAULT_THEME_CONFIG` non cambia mai a
+ * runtime — quindi `useMemo` senza dipendenze li calcola una volta sola: non
+ * c'è più alcun ricalcolo del tema Mantine agganciato al drag dei controlli
+ * dell'Editor tema, e con esso è sparita la ragione del `useDeferredValue` che
+ * questo componente usava per attutirlo.
  */
 export function ThemeColorProvider({ children }: { children: ReactNode }): JSX.Element {
-  const themeConfig = useThemeColorStore((state) => state.themeConfig);
-
   useEffect(() => {
     // Migrazione ADR-4 §4: la scelta per-browser del solo primario non esiste più.
     localStorage.removeItem(LEGACY_PRIMARY_COLOR_KEY);
   }, []);
 
-  // L'Editor tema propaga ogni pixel di drag di Slider/ColorPicker qui dentro
-  // (decine di eventi/sec): `themeConfig` resta sincrono per i controlli
-  // controllati (nessun lag su value/label), ma il ricalcolo del tema Mantine
-  // — costoso e che fa da context change per l'intera app — si deferisce a
-  // bassa priorità, così React scarta i valori intermedi durante un drag
-  // continuo invece di ricalcolare e ri-renderizzare ad ogni frame.
-  const deferredThemeConfig = useDeferredValue(themeConfig);
-
-  const theme = useMemo(() => buildAppTheme(deferredThemeConfig), [deferredThemeConfig]);
-
-  const cssVariablesResolver = useMemo(
-    () => buildCssVariablesResolver(deferredThemeConfig),
-    [deferredThemeConfig],
-  );
+  const theme = useMemo(() => buildAppTheme(DEFAULT_THEME_CONFIG), []);
+  const cssVariablesResolver = useMemo(() => buildCssVariablesResolver(DEFAULT_THEME_CONFIG), []);
 
   return (
     <MantineProvider

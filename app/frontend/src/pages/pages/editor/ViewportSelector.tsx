@@ -1,15 +1,11 @@
 import { ActionIcon, Tooltip } from '@mantine/core';
-import {
-  IconDeviceDesktop,
-  IconDeviceMobile,
-  IconDeviceTablet,
-} from '@tabler/icons-react';
+import { IconDeviceDesktop, IconDeviceMobile, IconDeviceTablet } from '@tabler/icons-react';
 import type { EditorViewport } from '../../../hooks/useBlockEditorStore';
 import styles from './ViewportSelector.module.css';
 
 export interface ViewportSelectorProps {
   value: EditorViewport;
-  onChange: (viewport: EditorViewport) => void;
+  onViewportChange: (width: string) => void;
 }
 
 interface ViewportOption {
@@ -25,7 +21,10 @@ const VIEWPORT_OPTIONS: ViewportOption[] = [
   { value: 'mobile', label: 'Mobile', width: '375px', icon: IconDeviceMobile },
 ];
 
-export default function ViewportSelector({ value, onChange }: ViewportSelectorProps): JSX.Element {
+export default function ViewportSelector({
+  value,
+  onViewportChange,
+}: ViewportSelectorProps): JSX.Element {
   return (
     <div className={styles.root} role="group" aria-label="Viewport di anteprima">
       {VIEWPORT_OPTIONS.map((option) => {
@@ -37,7 +36,7 @@ export default function ViewportSelector({ value, onChange }: ViewportSelectorPr
               size="lg"
               aria-label={`Viewport ${option.label}, ${option.width}`}
               aria-pressed={value === option.value}
-              onClick={() => onChange(option.value)}
+              onClick={() => onViewportChange(option.width)}
             >
               <Icon size={18} />
             </ActionIcon>

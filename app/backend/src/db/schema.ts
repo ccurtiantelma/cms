@@ -15,6 +15,7 @@ import {
   integer,
   boolean,
   timestamp,
+  date,
   char,
   index,
   jsonb,
@@ -392,12 +393,48 @@ export const globalSectionEntity = pgTable(
   },
   (t) => [
     uniqueIndex('global_sections_guid_idx').on(t.guid),
-    uniqueIndex('global_sections_slug_uq').on(t.slug).where(sql`${t.isActive}`),
+    uniqueIndex('global_sections_slug_uq')
+      .on(t.slug)
+      .where(sql`${t.isActive}`),
     /** Al massimo una Sezione attiva per slot diverso da `none` (ADR-40 § Decisione). */
     uniqueIndex('global_sections_layout_slot_uq')
       .on(t.layoutSlot)
       .where(sql`${t.layoutSlot} != 'none' and ${t.isActive}`),
     index('global_sections_layout_slot_idx').on(t.layoutSlot),
+  ],
+);
+
+// ─── PUBLIC PAGEVIEW DAILY ───────────────────────────────────────────────────
+// Aggregato anonimo prodotto dal consumer SSR: nessun IP, cookie, user-agent o
+// identificatore personale. Le righe oltre 24 mesi vengono soft-deleted.
+export const publicPageviewDailyEntity = pgTable(
+  'public_pageview_daily',
+  {
+    id: serial().notNull().primaryKey(),
+    guid: char('guid', { length: 16 })
+      .notNull()
+      .$defaultFn(() => Utils.randomString(16)),
+    eventDate: date('event_date', { mode: 'string' }).notNull(),
+    pagePath: varchar('page_path', { length: 2048 }).notNull(),
+    visits: integer('visits').notNull().default(0),
+    version: integer('version').notNull().default(1),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: integer('created_by').references(() => userEntity.id, {
+      onDelete: 'restrict',
+      onUpdate: 'restrict',
+    }),
+    updatedBy: integer('updated_by').references(() => userEntity.id, {
+      onDelete: 'restrict',
+      onUpdate: 'restrict',
+    }),
+  },
+  (t) => [
+    uniqueIndex('public_pageview_daily_guid_idx').on(t.guid),
+    uniqueIndex('public_pageview_daily_date_path_uq').on(t.eventDate, t.pagePath),
+    index('public_pageview_daily_date_idx').on(t.eventDate, t.isActive),
+    index('public_pageview_daily_path_idx').on(t.pagePath),
   ],
 );
 
@@ -492,6 +529,17 @@ export const globalSectionsRelations = relations(globalSectionEntity, ({ one }) 
   }),
   updatedByUser: one(userEntity, {
     fields: [globalSectionEntity.updatedBy],
+    references: [userEntity.id],
+  }),
+}));
+
+export const publicPageviewDailyRelations = relations(publicPageviewDailyEntity, ({ one }) => ({
+  createdByUser: one(userEntity, {
+    fields: [publicPageviewDailyEntity.createdBy],
+    references: [userEntity.id],
+  }),
+  updatedByUser: one(userEntity, {
+    fields: [publicPageviewDailyEntity.updatedBy],
     references: [userEntity.id],
   }),
 }));

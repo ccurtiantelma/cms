@@ -1,0 +1,16 @@
+/*
+ * Feedback visivo preventivo del drop nel pannello "Struttura/Navigator"
+ * (`EditorStructureNavigator.tsx`): stesso principio del canvas (`.dropZone[data-rejected]`,
+ * `EditorBlockWrapper.module.css`), qui applicato alla riga sorvolata durante il
+ * trascinamento invece che a una vera drop-zone col proprio elemento — il navigator non ha
+ * spazi vuoti fra i nodi, solo righe, quindi l'unico bersaglio disegnabile è la riga stessa.
+ * La fonte di verità sull'ammissibilità resta lo store (`moveNodeToAction`, `canContainType`):
+ * questo stile segnala solo "rilasciare qui verrebbe rifiutato", non impedisce nulla da solo.
+ */
+.row[data-rejected='true'] {
+  outline: 2px solid var(--mantine-color-red-6);
+  outline-offset: -2px;
+  background-color: var(--mantine-color-red-light);
+  border-radius: 4px;
+  cursor: not-allowed;
+}

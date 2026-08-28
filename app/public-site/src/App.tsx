@@ -1,20 +1,16 @@
 import type { components } from '@api-types';
-import { GLOBAL_TOKENS_STYLE_TAG_ID } from '../../frontend/src/libs/globalTokensCompiler';
+import type { ThemeConfigDto } from '../../frontend/src/utils/theme-css.utils';
 import PageView from './PageView';
+import ThemeStyleTag from './ThemeStyleTag';
 
 type PublicPageDto = components['schemas']['PublicPageDto'];
 type PublicActiveGlobalSectionsDto = components['schemas']['PublicActiveGlobalSectionsDto'];
 
 interface AppProps {
   page: PublicPageDto;
+  /** Tema dell'installazione, `null` se il backend non ha risposto (vedi `ThemeStyleTag`). */
+  themeConfig: ThemeConfigDto | null;
   cssHref: string;
-  /**
-   * Blocco `:root { ... }` già compilato da `compileTokensToCss` (o
-   * stringa vuota se non disponibile). Nessuna stringa utente non fidata:
-   * i valori vengono dai Global Design Tokens di backend, già vincolati a
-   * hex/whitelist/numero+unità (vedi `globalTokensCompiler.ts`).
-   */
-  globalTokensCss: string;
   /**
    * Sezioni Globali assegnate a `header`/`footer` (ADR-40), risolte da
    * `entry-server.tsx`. Assenti o con slot `null` ⇒ il documento contiene i soli
@@ -27,8 +23,13 @@ interface AppProps {
  * Documento HTML completo di una Pagina pubblicata. Solo `title`, `slug`,
  * `locale` e `content` sono usati: `seo` è il contratto di F07/F08, fuori dal
  * perimetro di F03 (PLAN-F03 § "Il percorso che F03 deve chiudere").
+ *
+ * Il `<style>` del tema è dichiarato **dopo** il `<link>` del foglio dei
+ * blocchi: a parità di specificità (il suo `:root` contro il `:root` di
+ * `style-tokens.module.css`) vince l'ultima regola dichiarata, quindi il tema
+ * dell'Editor sovrascrive i valori statici di fabbrica dei token `--cms-*`.
  */
-export default function App({ page, cssHref, globalTokensCss, globalSections }: AppProps) {
+export default function App({ page, themeConfig, cssHref, globalSections }: AppProps) {
   return (
     <html lang={page.locale}>
       <head>
@@ -36,9 +37,7 @@ export default function App({ page, cssHref, globalTokensCss, globalSections }: 
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{page.title}</title>
         <link rel="stylesheet" href={cssHref} />
-        {globalTokensCss && (
-          <style id={GLOBAL_TOKENS_STYLE_TAG_ID} dangerouslySetInnerHTML={{ __html: globalTokensCss }} />
-        )}
+        <ThemeStyleTag themeConfig={themeConfig} />
       </head>
       <body>
         <PageView content={page.content} globalSections={globalSections} />

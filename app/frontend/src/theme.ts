@@ -2,6 +2,16 @@
  * Tema Mantine del CMS + modello dati del Global Theme Customizer
  * (ADR-4, esteso a versione 7).
  *
+ * **Dove finisce questo tema.** Il `ThemeConfig` salvato veste il **sito
+ * pubblicato** (`app/public-site`) e l'anteprima del Canvas dell'editor, per la
+ * via delle variabili CSS compilate da `utils/theme-css.utils.ts` — non Mantine,
+ * che sul sito pubblico non esiste (ADR-22 § 5). La chrome amministrativa monta
+ * `buildAppTheme`/`buildCssVariablesResolver` sui **default di fabbrica**
+ * (`hooks/useThemeColor.tsx`) e non riflette il tema salvato: stesso rapporto
+ * che WordPress ha col proprio customizer. I due builder qui sotto restano
+ * quindi in uso per la chrome (coi default) e per l'anteprima scopata
+ * dell'Editor tema (col draft), mai per vestire l'app col tema del sito.
+ *
  * Il tema personalizzabile è un singolo oggetto `ThemeConfig` versionato
  * (`version: 7`) che copre l'intera superficie del theme object Mantine usata
  * dal progetto: 9 colori semantici (Primary/Secondary/Accent/Success/Warning/
@@ -50,6 +60,50 @@ import {
   type MantineColorsTuple,
   type MantineThemeOverride,
 } from '@mantine/core';
+
+import {
+  THEME_FONT_FAMILIES,
+  THEME_FONT_WEIGHTS,
+  THEME_HEADING_LEVELS,
+  THEME_LENGTH_UNITS,
+  THEME_MONO_FONT_FAMILIES,
+  THEME_SIZE_VALUES,
+  THEME_UNITS,
+  type ThemeFontFamilyId,
+  type ThemeFontWeight,
+  type ThemeHeadingLevel,
+  type ThemeLengthUnit,
+  type ThemeMonoFontFamilyId,
+  type ThemeSizeValue,
+  type ThemeUnit,
+} from './theme-tokens';
+
+/**
+ * Vocabolario puro del tema (whitelist font, size token, unità CSS, livelli di
+ * titolo): vive in `theme-tokens.ts`, che non importa Mantine ed è quindi
+ * condivisibile col sito pubblico (ADR-22 § 5). Ri-esportato qui perché
+ * `theme.ts` resta il punto di import unico per la chrome admin.
+ */
+export {
+  THEME_FONT_FAMILIES,
+  THEME_FONT_WEIGHTS,
+  THEME_HEADING_LEVELS,
+  THEME_LENGTH_UNITS,
+  THEME_MONO_FONT_FAMILIES,
+  THEME_SIZE_VALUES,
+  THEME_UNITS,
+  resolveFontStack,
+  resolveMonoFontStack,
+} from './theme-tokens';
+export type {
+  ThemeFontFamilyId,
+  ThemeFontWeight,
+  ThemeHeadingLevel,
+  ThemeLengthUnit,
+  ThemeMonoFontFamilyId,
+  ThemeSizeValue,
+  ThemeUnit,
+} from './theme-tokens';
 
 /** Le 14 palette native incluse in Mantine v7 (nessuna palette custom). */
 export const MANTINE_PRIMARY_COLORS = [
@@ -107,11 +161,6 @@ export type ThemeSemanticColorName = (typeof THEME_SEMANTIC_COLOR_NAMES)[number]
 /** Un hex `#rrggbb` base per ciascuna delle 9 voci semantiche. */
 export type ThemeColors = Record<ThemeSemanticColorName, string>;
 
-/** I 5 size token nativi Mantine, usati da tutte le scale (`xs`–`xl`). */
-export const THEME_SIZE_VALUES = ['xs', 'sm', 'md', 'lg', 'xl'] as const;
-
-export type ThemeSizeValue = (typeof THEME_SIZE_VALUES)[number];
-
 /** Valori `radius` nativi Mantine ammessi come `defaultRadius` (ADR-4 §1). */
 export const THEME_RADIUS_VALUES = THEME_SIZE_VALUES;
 
@@ -122,72 +171,6 @@ export const DEFAULT_RADIUS: ThemeRadiusValue = 'md';
 
 /** Indici shade validi di una palette Mantine (0 = più chiaro, 9 = più scuro). */
 export const THEME_SHADE_INDEXES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
-
-/**
- * Whitelist dei font stack selezionabili per testo e titoli. Nel `ThemeConfig`
- * viaggia SOLO l'ID (validato anche server-side): lo stack CSS corrispondente
- * vive esclusivamente in questa mappa, quindi nessuna stringa font arbitraria
- * può raggiungere il theme object. Tutti gli stack usano font di sistema
- * (nessun caricamento di webfont esterni).
- */
-export const THEME_FONT_FAMILIES = {
-  inter: {
-    label: 'Inter (default)',
-    stack: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-  },
-  system: {
-    label: 'Sistema (system-ui)',
-    stack: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  },
-  humanist: {
-    label: 'Humanist (Segoe UI / Helvetica)',
-    stack: '"Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif',
-  },
-  geometric: {
-    label: 'Geometrico (Century Gothic / Futura)',
-    stack: '"Century Gothic", CenturyGothic, Futura, "Trebuchet MS", Arial, sans-serif',
-  },
-  rounded: {
-    label: 'Arrotondato (ui-rounded)',
-    stack:
-      'ui-rounded, "Hiragino Maru Gothic ProN", Quicksand, Comfortaa, "Arial Rounded MT Bold", Calibri, sans-serif',
-  },
-  serif: {
-    label: 'Serif (Georgia)',
-    stack: 'Georgia, Cambria, "Times New Roman", Times, serif',
-  },
-  slab: {
-    label: 'Slab serif (Rockwell / Roboto Slab)',
-    stack: 'Rockwell, "Roboto Slab", "Courier Bold", Georgia, serif',
-  },
-} as const;
-
-export type ThemeFontFamilyId = keyof typeof THEME_FONT_FAMILIES;
-
-/** Whitelist degli stack monospace (stesso principio di `THEME_FONT_FAMILIES`). */
-export const THEME_MONO_FONT_FAMILIES = {
-  'system-mono': {
-    label: 'Mono di sistema',
-    stack:
-      'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-  },
-  courier: {
-    label: 'Courier',
-    stack: '"Courier New", Courier, monospace',
-  },
-} as const;
-
-export type ThemeMonoFontFamilyId = keyof typeof THEME_MONO_FONT_FAMILIES;
-
-/** Pesi font ammessi per i titoli (stringhe, come richiesto da `theme.headings`). */
-export const THEME_FONT_WEIGHTS = ['300', '400', '500', '600', '700', '800', '900'] as const;
-
-export type ThemeFontWeight = (typeof THEME_FONT_WEIGHTS)[number];
-
-/** Livelli di titolo configurabili singolarmente. */
-export const THEME_HEADING_LEVELS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const;
-
-export type ThemeHeadingLevel = (typeof THEME_HEADING_LEVELS)[number];
 
 /** Opzioni `focusRing` native Mantine. */
 export const THEME_FOCUS_RING_VALUES = ['auto', 'always', 'never'] as const;
@@ -316,20 +299,6 @@ export interface ThemeSchemeTokens {
 }
 
 export type ThemeTokenName = keyof ThemeSchemeTokens;
-
-/**
- * Unità CSS selezionabili per i campi dimensionali del tema (ADR-4 v6).
- * `%` è escluso dove il CSS non lo ammette — vedi `THEME_LENGTH_UNITS`, usato
- * dalle ombre: `box-shadow` accetta solo `<length>`, mai percentuali.
- */
-export const THEME_UNITS = ['px', 'em', 'rem', '%'] as const;
-
-export type ThemeUnit = (typeof THEME_UNITS)[number];
-
-/** Unità di lunghezza pure (senza `%`), per i campi dove il CSS vieta le percentuali. */
-export const THEME_LENGTH_UNITS = ['px', 'em', 'rem'] as const;
-
-export type ThemeLengthUnit = (typeof THEME_LENGTH_UNITS)[number];
 
 /** Step del `NumberInput` per unità: px/`%` interi, em/rem con due decimali. */
 export const THEME_UNIT_STEP: Record<ThemeUnit, number> = { px: 1, em: 0.05, rem: 0.05, '%': 1 };

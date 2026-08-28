@@ -23,6 +23,7 @@ import { MetricsModule } from './metrics/metrics.module';
 import { PagesModule } from './pages/pages.module';
 import { PreviewPagesModule } from './preview-pages/preview-pages.module';
 import { GlobalSectionsModule } from './global-sections/global-sections.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { GlobalSectionsModule } from './global-sections/global-sections.module';
         // Segreto dedicato del JWT di anteprima di una bozza (ADR-25 § 1),
         // volutamente distinto da SECURITY_KEY (access/refresh).
         PAGE_PREVIEW_TOKEN_SECRET: Joi.string().required(),
+        ANALYTICS_INGEST_SECRET: Joi.string().allow('').optional(),
         COOKIE_SECRET: Joi.string().default('change_me_cookie_secret'),
         COOKIE_DOMAIN: Joi.string().default('localhost'),
         // Allineato ad AppConstants.jwtExpiration (fix: entrambi i default devono coincidere).
@@ -125,6 +127,7 @@ import { GlobalSectionsModule } from './global-sections/global-sections.module';
     PagesModule,
     PreviewPagesModule,
     GlobalSectionsModule,
+    AnalyticsModule,
     // TODO: aggiungere qui i moduli applicativi del CMS man mano che vengono creati.
   ],
   controllers: [],
@@ -149,6 +152,7 @@ export class AppModule {
         // costruzione, il token stesso è la prova di accesso — non un JWT
         // di sessione, quindi mai dietro `AuthMiddleware`.
         { path: 'preview/*path', method: RequestMethod.ALL },
+        { path: 'analytics/ingest/pageview', method: RequestMethod.POST },
         // `/metrics` (ADR-15) NON va escluso qui: essendo montato fuori dal
         // prefisso globale `api/v1` (vedi main.ts), questo `.exclude()` finirebbe
         // per confrontarsi con `api/v1/metrics` (mai servito) e non con il path

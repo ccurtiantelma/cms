@@ -81,8 +81,8 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  color: #8ab4ff;
-  background: rgba(96, 165, 250, 0.08);
+  color: inherit;
+  background: transparent;
 }
 
 .tileLabel {
@@ -98,15 +98,25 @@
 }
 
 [data-mantine-color-scheme='light'] .groupItem {
-  background: rgba(15, 23, 42, 0.04);
+  background: var(--mantine-color-gray-1);
 }
 
 [data-mantine-color-scheme='light'] .groupControl {
-  background: rgba(15, 23, 42, 0.03);
+  background: var(--mantine-color-gray-2);
 }
 
 [data-mantine-color-scheme='light'] .groupPanel {
-  background: rgba(15, 23, 42, 0.02);
+  background: var(--mantine-color-gray-1);
+}
+
+[data-mantine-color-scheme='light'] .tile {
+  border-color: var(--mantine-color-gray-3);
+  background: var(--mantine-color-gray-2);
+}
+
+[data-mantine-color-scheme='light'] .tileIcon {
+  color: inherit;
+  background: transparent;
 }
 
 [data-mantine-color-scheme='dark'] .groupItem {

@@ -7,8 +7,8 @@ import { BrowserRouter } from 'react-router-dom';
 import { ColorSchemeScript } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import App from './App';
-import { ThemeColorProvider } from './hooks/useThemeColor';
 import { initSentry } from './libs/sentry';
+import { ThemeColorProvider } from './hooks/useThemeColor';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
 import '@mantine/notifications/styles.css';
@@ -23,6 +23,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ColorSchemeScript defaultColorScheme="auto" />
     <ThemeColorProvider>
+      <>
       {/*
         `zIndex={1100}`: stesso valore/stesso motivo di ogni altro `zIndex` esplicito
         introdotto per la chrome full-screen dell'editor (`FullScreenEditorLayout.tsx`,
@@ -38,6 +39,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <App />
       </BrowserRouter>
+      </>
     </ThemeColorProvider>
   </React.StrictMode>,
 );

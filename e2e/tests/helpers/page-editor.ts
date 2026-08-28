@@ -46,7 +46,17 @@ export async function createPageFromUi(
   page: Page,
   { title, slug, parentGuid }: { title: string; slug: string; parentGuid?: string },
 ): Promise<string> {
-  await page.goto('/pages');
+  try {
+    await page.goto('/pages');
+  } catch (error: unknown) {
+    if (error instanceof Error && /invalid url/i.test(error.message)) {
+      throw new Error(
+        'createPageFromUi: impossibile navigare verso /pages; configura Playwright use.baseURL (E2E_BASE_URL).',
+        { cause: error },
+      );
+    }
+    throw error;
+  }
   await page.getByRole('button', { name: 'Nuova Pagina' }).click();
 
   const drawer = page.getByRole('dialog');

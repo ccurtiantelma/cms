@@ -1,0 +1,22 @@
+meta:
+  name: Ingest Pageview
+  type: http
+  seq: 1
+
+post:
+  url: http://localhost:53000/api/v1/analytics/ingest/pageview
+  body:
+    type: json
+    data: |-
+      {
+        "path": "/"
+      }
+  headers:
+    - name: X-Analytics-Secret
+      value: '{{analyticsIngestSecret}}'
+    - name: Content-Type
+      value: application/json
+  auth: inherit
+
+docs: |-
+  Ingest server-to-server del consumer SSR. Inviare solo dopo una risposta HTML GET 200 di una pagina pubblicata.

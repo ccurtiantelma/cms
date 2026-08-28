@@ -68,6 +68,18 @@ export interface GlobalTokens {
 /** Id dell'elemento `<style>` che ospita le variabili compilate (documento principale e/o canvas). */
 export const GLOBAL_TOKENS_STYLE_TAG_ID = 'eaidos-global-tokens';
 
+/**
+ * Classe stabile (non un hash di CSS Module) che marca l'elemento radice del Canvas
+ * dell'editor (`EditorCanvas.tsx`). È il selettore su cui `compileTokensToCss` scopa le
+ * custom property: mai `:root`, altrimenti i Global Design Tokens (pensati per
+ * l'anteprima del contenuto) trapelerebbero nella chrome amministrativa che circonda il
+ * canvas (sidebar, toolbar, pannelli), che ha una propria fonte di verità cromatica —
+ * il Global Theme Customizer (ADR-4, `theme.ts`/`useThemeColor.tsx`). Una singola
+ * costante condivisa fra `EditorCanvas.tsx` (className) e questo modulo (selettore)
+ * evita che le due stringhe divergano in silenzio.
+ */
+export const GLOBAL_TOKENS_CANVAS_SCOPE_CLASS = 'eaidos-canvas-theme-scope';
+
 /** Emette `value + unit` per un valore dimensionale già tipizzato — mai una stringa libera. */
 function formatDimension(dimension: GlobalTokensDimension): string {
   return `${dimension.value}${dimension.unit}`;
@@ -84,22 +96,38 @@ function resolveFontStack(fontId: ThemeFontFamilyId): string {
 }
 
 /**
- * Compila i Global Design Tokens in un blocco CSS `:root { ... }` con le custom
- * property consumate dal canvas dell'editor e, in futuro, dal rendering pubblico
- * dei blocchi. Funzione pura: nessun accesso al DOM, nessun side effect — la
- * stringa risultante va applicata da chi possiede il riferimento al documento
- * (vedi `applyGlobalTokensToDocument` in `useBlockEditorStore.ts`).
+ * Compila i Global Design Tokens in un blocco CSS con le custom property consumate dal
+ * canvas dell'editor e dal rendering pubblico dei blocchi. Funzione pura:
+ * nessun accesso al DOM, nessun side effect — la stringa risultante va applicata da chi
+ * possiede il riferimento al documento (vedi `applyGlobalTokensToDocument` in
+ * `useBlockEditorStore.ts`).
+ *
+ * Oltre alle custom property, il blocco dipinge `color`/`font-family` come proprietà
+ * reali sul selettore: senza questo, le variabili restano disponibili ma inapplicate — un
+ * blocco che non seleziona esplicitamente "default" nel proprio `styleTextColor` erediterebbe
+ * il nero di default del browser invece del colore di brand. Ereditate per cascata da ogni
+ * discendente, e sovrascritte senza conflitto da qualunque classe dei blocchi che imposta
+ * `color` esplicitamente (`style-tokens.module.css`, es. `styleTextColor: 'accent'`).
+ *
+ * `selector` è obbligatorio e non ha un default `:root`: la scelta dello scope è
+ * responsabilità esplicita del chiamante, non un'assunzione di questa funzione — un
+ * `:root` implicito qui è esattamente il modo in cui i token del contenuto finirebbero
+ * per governare anche la chrome amministrativa attorno al canvas.
  * @param tokens Configurazione corrente dei Global Design Tokens.
+ * @param selector Selettore CSS su cui scopare le custom property (es.
+ *   `.${GLOBAL_TOKENS_CANVAS_SCOPE_CLASS}` per il canvas dell'editor).
  */
-export function compileTokensToCss(tokens: GlobalTokens): string {
+export function compileTokensToCss(tokens: GlobalTokens, selector: string): string {
   const { palette, typography, spacing } = tokens;
-  return `:root {
+  return `${selector} {
   --eaidos-global-color-primary: ${palette.primary};
   --eaidos-global-color-secondary: ${palette.secondary};
   --eaidos-global-color-text: ${palette.text};
   --eaidos-global-color-accent: ${palette.accent};
   --eaidos-global-font-main: ${resolveFontStack(typography.mainFont)};
   --eaidos-global-spacing-unit: ${formatDimension(spacing.baseUnit)};
+  color: var(--eaidos-global-color-text);
+  font-family: var(--eaidos-global-font-main);
 }`;
 }
 
