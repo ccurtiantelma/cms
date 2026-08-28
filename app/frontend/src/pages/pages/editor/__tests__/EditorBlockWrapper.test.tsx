@@ -88,6 +88,16 @@ describe('EditorBlockWrapper — segnaposto colonne vuote (bug collasso griglia)
     // I figli veri restano grid item diretti di `.childrenArea` (`display: contents`).
     expect(container.querySelector('[data-block-id="h-1"]')).toBeInTheDocument();
   });
+
+  it('section con figli presenti: mantiene un drop target distinto per ogni colonna', () => {
+    const child = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
+    const section = node('sec-with-targets', 'section', { columns: { default: '3' } }, [child]);
+    useBlockEditorStore.getState().initTree([section]);
+
+    renderWithProviders(<EditorBlockWrapper id="sec-with-targets" />);
+
+    expect(screen.getAllByLabelText(/^Drop target Colonna /)).toHaveLength(3);
+  });
 });
 
 /**

@@ -166,6 +166,8 @@ describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
     expect(screen.getByText('Spazio dopo')).toBeInTheDocument();
     expect(screen.getByText('Spaziatura interna')).toBeInTheDocument();
     expect(screen.getByText('Sfondo')).toBeInTheDocument();
+    expect(screen.getByText('Allineamento verticale')).toBeInTheDocument();
+    expect(screen.getByText('Colore di sfondo')).toBeInTheDocument();
     expect(screen.queryByText('styleSpaceBefore')).not.toBeInTheDocument();
   });
 

@@ -14,7 +14,6 @@
 import {
   ActionIcon,
   Button,
-  ColorInput,
   Group,
   NumberInput,
   Popover,
@@ -44,6 +43,7 @@ import { type EditorViewport } from '../../../../hooks/useBlockEditorStore';
 import { useThemeColorStore } from '../../../../hooks/useThemeColor';
 import { resolveMediaSrc } from '../../../../components/blocks/media-url';
 import RichTextFieldEditor from '../RichTextFieldEditor';
+import { ThemeEditorColorPicker } from '../../../../components/theme-editor/ThemeEditorColorPicker';
 import {
   BORDER_RADIUS_RANGE,
   BORDER_STYLE_OPTIONS,
@@ -372,15 +372,11 @@ export default function PropField({
       ];
       return (
         <Group gap="xs" align="flex-end" wrap="nowrap">
-          <ColorInput
-            style={{ flex: 1 }}
+          <ThemeEditorColorPicker
             label={label}
-            withAsterisk={required}
-            format="hex"
-            placeholder="#RRGGBB"
-            value={asString(value)}
-            error={error}
-            onChange={(next) => onSetAndCommit(next)}
+            value={asString(value) || '#000000'}
+            aria-label={label}
+            onChange={onSetAndCommit}
           />
           <Popover
             opened={colorTokensOpened}
@@ -542,11 +538,10 @@ export default function PropField({
               value={currentStyle}
               onChange={(next) => write({ style: next ?? currentStyle })}
             />
-            <ColorInput
+            <ThemeEditorColorPicker
               label={`${label} — Colore`}
-              format="hex"
-              placeholder="#RRGGBB"
               value={currentColor}
+              aria-label={`${label} — Colore`}
               onChange={(next) => write({ color: next })}
             />
           </Group>
@@ -628,11 +623,10 @@ export default function PropField({
               </Text>
             )}
           </Text>
-          <ColorInput
+          <ThemeEditorColorPicker
             label={`${label} — Colore`}
-            format="hex"
-            placeholder="#RRGGBB"
             value={currentColor}
+            aria-label={`${label} — Colore`}
             onChange={(next) => write({ color: next })}
           />
           <Group grow>

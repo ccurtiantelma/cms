@@ -159,6 +159,35 @@
   display: contents;
 }
 
+/* Overlay per colonna: resta fuori dal flusso CSS Grid, ma rende ogni traccia un target. */
+.columnDropTarget {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 0;
+  min-height: 48px;
+  border: 1px dashed var(--mantine-color-gray-4);
+  border-radius: 4px;
+  background: rgba(134, 142, 150, 0.04);
+  pointer-events: none;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.columnDropTarget[data-over='true'] {
+  border-color: #a333c8;
+  background: rgba(163, 51, 200, 0.1);
+  box-shadow: inset 0 0 8px 0 rgba(163, 51, 200, 0.35);
+}
+
+.columnDropTarget[data-over='true'][data-rejected='true'] {
+  border-color: var(--mantine-color-red-6);
+  background: var(--mantine-color-red-light);
+  box-shadow: none;
+}
+
 /* Blocco attualmente trascinato (dnd-kit T7): resta al suo posto, solo attenuato — il
    feedback visivo del trascinamento vive nel DragOverlay, non in un transform su questo
    nodo (nessuno style inline). */

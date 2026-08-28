@@ -307,6 +307,38 @@ function dropZoneAttrs(
   return { 'data-over': isOver, 'data-rejected': rejected };
 }
 
+interface ColumnDropTargetProps {
+  parentId: string;
+  columnIndex: number;
+  columnCount: number;
+  activeDragId: string | null;
+  activeDragType: string | undefined;
+}
+
+/** Bersaglio visibile per inserire un blocco nella singola colonna di una Section. */
+function ColumnDropTarget({
+  parentId,
+  columnIndex,
+  columnCount,
+  activeDragId,
+  activeDragType,
+}: ColumnDropTargetProps): JSX.Element {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `section-column:${parentId}:${columnIndex}`,
+    data: { parentId, index: columnIndex },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={styles.columnDropTarget}
+      style={{ left: `${(columnIndex * 100) / columnCount}%`, width: `${100 / columnCount}%` }}
+      {...dropZoneAttrs(isOver, activeDragId, activeDragType, parentId)}
+      aria-label={`Drop target Colonna ${columnIndex + 1}`}
+    />
+  );
+}
+
 const EditorBlockWrapper = memo(function EditorBlockWrapper({
   id,
 }: EditorBlockWrapperProps): JSX.Element | null {
@@ -326,9 +358,10 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
     useShallow((state) => {
       const current = findLocation(state.tree, id);
       if (!current || current.index === 0) return null;
-      const siblings = current.parentId === null
-        ? state.tree
-        : (findNode(state.tree, current.parentId)?.children ?? []);
+      const siblings =
+        current.parentId === null
+          ? state.tree
+          : (findNode(state.tree, current.parentId)?.children ?? []);
       const previous = siblings[current.index - 1];
       return previous && canContainType(previous.type, node?.type ?? '')
         ? { parentId: previous.id, index: previous.children.length }
@@ -341,9 +374,10 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
       if (!current || current.parentId === null) return null;
       const parentLocation = findLocation(state.tree, current.parentId);
       if (!parentLocation || !node) return null;
-      const grandParentType = parentLocation.parentId === null
-        ? undefined
-        : findNode(state.tree, parentLocation.parentId)?.type;
+      const grandParentType =
+        parentLocation.parentId === null
+          ? undefined
+          : findNode(state.tree, parentLocation.parentId)?.type;
       return canContainType(grandParentType, node.type)
         ? { parentId: parentLocation.parentId, index: parentLocation.index + 1 }
         : null;
@@ -682,7 +716,6 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
     size: 12,
     'aria-hidden': true,
   });
-
 
   /**
    * Variante Elementor, solo su `section` (T-layout-colonne-section): bordo d'accento
@@ -1398,6 +1431,19 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
                   .join(' ')}
                 {...dropZoneAttrs(isOverInside, activeDragId, activeDragType, id)}
               />
+
+              {isSection &&
+                effectiveColumnsCount > 1 &&
+                Array.from({ length: effectiveColumnsCount }).map((_, columnIndex) => (
+                  <ColumnDropTarget
+                    key={`column-drop-${columnIndex}`}
+                    parentId={id}
+                    columnIndex={columnIndex}
+                    columnCount={effectiveColumnsCount}
+                    activeDragId={activeDragId}
+                    activeDragType={activeDragType}
+                  />
+                ))}
 
               {childIds.length === 0 ? (
                 effectiveColumnsCount > 1 ? (
