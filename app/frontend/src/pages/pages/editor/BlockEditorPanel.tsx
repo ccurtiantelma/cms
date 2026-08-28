@@ -55,6 +55,8 @@ interface BlockEditorPanelProps {
   onPreview?: () => void;
   /** Stato di caricamento della generazione del token di anteprima. */
   previewLoading?: boolean;
+  /** Registra il salvataggio della bozza per le transizioni avviate dall'intestazione. */
+  onSaveDraftReady?: (saveDraft: () => Promise<PageRecord | null>) => void;
   /**
    * `true` quando la scheda "Contenuto" è quella nominalmente selezionata in
    * `PagePageDetail.tsx` — inoltrato a `FullScreenEditorLayout`, che lo usa per rendersi
@@ -77,6 +79,7 @@ export default function BlockEditorPanel({
   onVersionConflict,
   onPreview,
   previewLoading,
+  onSaveDraftReady,
   active,
 }: BlockEditorPanelProps): JSX.Element {
   const [saving, setSaving] = useState(false);
@@ -152,7 +155,7 @@ export default function BlockEditorPanel({
   }
 
   /** Salva l'albero corrente come bozza (`PATCH /app/pages/:guid`, lock ottimistico). */
-  async function handleSaveDraft(): Promise<void> {
+  async function handleSaveDraft(): Promise<PageRecord | null> {
     setSaving(true);
     setInvalidBlockId(null);
     // Fotografato **prima** della richiesta: ciò che si modifica mentre il salvataggio è in
@@ -173,6 +176,7 @@ export default function BlockEditorPanel({
       useBlockEditorStore.getState().markSaved(savePoint);
       onPageUpdated(updated);
       notifications.show({ color: 'green', message: 'Bozza salvata' });
+      return updated;
     } catch (err) {
       const error = err as AxiosError<PagesErrorData>;
       const code = error.response?.data?.code;
@@ -184,10 +188,18 @@ export default function BlockEditorPanel({
           message: getErrorMessage(err, 'Errore nel salvataggio della bozza'),
         });
       }
+      return null;
     } finally {
       setSaving(false);
     }
   }
+
+  useEffect(() => {
+    onSaveDraftReady?.(handleSaveDraft);
+    // La funzione viene rinnovata a ogni render; la registrazione deve invece seguire
+    // solo il callback esterno e la versione della bozza catturata dal salvataggio.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onSaveDraftReady, page.guid, page.version]);
 
   return (
     <>

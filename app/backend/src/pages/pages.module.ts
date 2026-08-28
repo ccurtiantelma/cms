@@ -35,6 +35,6 @@ import { PublicPageCacheService } from './public-page-cache.service';
   imports: [DbModule, BlocksModule, CacheInvalidationQueueModule, SettingsModule],
   controllers: [PagesController, PublicPagesController],
   providers: [PagesService, PublicPagesService, PublicPageCacheService],
-  exports: [PagesService],
+  exports: [PagesService, PublicPagesService],
 })
 export class PagesModule {}

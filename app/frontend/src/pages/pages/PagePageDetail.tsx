@@ -17,7 +17,7 @@
  *   token JWT effimero (15 minuti, non rinnovabile) e apre `{PUBLIC_SITE_URL}/__preview/:token`
  *   in una nuova scheda — il token non viene mai persistito lato client.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Badge,
   Button,
@@ -218,6 +218,7 @@ export default function PagePageDetail(): JSX.Element {
   const [restoreTarget, setRestoreTarget] = useState<PageRevisionSummary | null>(null);
   const [viewRevision, setViewRevision] = useState<PageRevisionDetail | null>(null);
   const [viewRevisionLoading, setViewRevisionLoading] = useState(false);
+  const saveDraftRef = useRef<(() => Promise<PageRecord | null>) | null>(null);
 
   /**
    * `Tabs` controllato per comunicare al layout persistente se l'editor è attivo.
@@ -390,7 +391,10 @@ export default function PagePageDetail(): JSX.Element {
     setSubmitting(true);
     try {
       const payload: ChangeStatusPayload = { status: target, scheduledAt: scheduledAtIso };
-      const updated = await changePageStatus(page.guid, payload);
+      const pageToTransition =
+        target === 'published' && saveDraftRef.current ? await saveDraftRef.current() : page;
+      if (!pageToTransition) return;
+      const updated = await changePageStatus(pageToTransition.guid, payload);
       setPage(updated);
       notifications.show({
         color: 'green',
@@ -783,6 +787,9 @@ export default function PagePageDetail(): JSX.Element {
               page={page}
               onPageUpdated={setPage}
               onVersionConflict={notifyVersionConflict}
+              onSaveDraftReady={(saveDraft) => {
+                saveDraftRef.current = saveDraft;
+              }}
               onPreview={status === 'draft' ? () => void handlePreview() : undefined}
               previewLoading={previewLoading}
               active={activeTab === 'content'}

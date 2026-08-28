@@ -69,9 +69,18 @@ export function toEditorBlocks(raw: unknown): BlockNode[] {
  * `BLOCK_PROP_INVALID` se inviati. Non tocca `0`, `false` o stringhe non vuote:
  * sono valori legittimi, non assenza di valore.
  */
-function stripEmptyProps(props: Record<string, unknown>): Record<string, unknown> {
+function stripEmptyProps(
+  props: Record<string, unknown>,
+  descriptor: (typeof BLOCK_TYPES)[number] | undefined,
+): Record<string, unknown> {
+  const requiredProps = new Set(
+    descriptor?.props.filter((prop) => prop.required).map((prop) => prop.name),
+  );
   return Object.fromEntries(
-    Object.entries(props).filter(([, value]) => value !== '' && value !== null),
+    Object.entries(props).filter(
+      ([name, value]) =>
+        requiredProps.has(name) || (value !== '' && value !== null),
+    ),
   );
 }
 
@@ -91,7 +100,7 @@ export function toPersistableBlocks(tree: readonly BlockNode[]): Record<string, 
       id: node.id,
       type: node.type,
       ...(descriptor ? { v: descriptor.v } : {}),
-      props: stripEmptyProps(node.props),
+      props: stripEmptyProps(node.props, descriptor),
       children: toPersistableBlocks(node.children),
     };
   });
