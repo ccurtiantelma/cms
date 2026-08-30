@@ -33,6 +33,7 @@ import { useState } from 'react';
 import { ActionIcon, Alert, Badge, Group, Paper, Stack, Text, Tooltip } from '@mantine/core';
 import { IconArrowLeft, IconInfoCircle } from '@tabler/icons-react';
 import { BLOCK_TYPES, type BlockTypeDescriptor } from '../../../types/blocks.types';
+import styles from './PropertyInspector.module.css';
 import {
   useActiveViewport,
   useBlockEditorStore,
@@ -200,49 +201,52 @@ export default function PropertyInspector(): JSX.Element {
   }
 
   return (
-    <Paper
-      withBorder
-      p="md"
-      radius="md"
-      onMouseDown={(event) => event.stopPropagation()}
-      onClick={(event) => event.stopPropagation()}
-    >
-      <Stack gap="sm">
-        <Group justify="space-between" wrap="nowrap">
-          <Group gap="xs" wrap="nowrap">
-            {node && (
-              <Tooltip label="Torna ai widget" withArrow>
-                <ActionIcon
-                  variant="subtle"
-                  size="sm"
-                  aria-label="Torna ai widget"
-                  onClick={handleBackToWidgets}
-                >
-                  <IconArrowLeft size={16} />
-                </ActionIcon>
-              </Tooltip>
-            )}
-            <Text fw={600}>Proprietà</Text>
+    <div className={styles.root}>
+      <Paper
+        withBorder
+        p="md"
+        radius="md"
+        className={styles.paper}
+        onMouseDown={(event) => event.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <Stack gap="sm">
+          <Group justify="space-between" wrap="nowrap">
+            <Group gap="xs" wrap="nowrap">
+              {node && (
+                <Tooltip label="Torna ai widget" withArrow>
+                  <ActionIcon
+                    variant="subtle"
+                    size="sm"
+                    aria-label="Torna ai widget"
+                    onClick={handleBackToWidgets}
+                  >
+                    <IconArrowLeft size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              )}
+              <Text fw={600}>Proprietà</Text>
+            </Group>
+            {descriptor && <Badge variant="light">{descriptor.meta?.label ?? descriptor.type}</Badge>}
           </Group>
-          {descriptor && <Badge variant="light">{descriptor.meta?.label ?? descriptor.type}</Badge>}
-        </Group>
 
-        {!node ? (
-          <Text size="sm" c="dimmed">
-            Seleziona un blocco nel canvas per modificarne le proprietà.
-          </Text>
-        ) : !descriptor ? (
-          // Un tipo fuori registro non è raggiungibile dalla palette, ma può arrivare da un
-          // contenuto salvato prima che il tipo venisse rimosso: si dice cosa succede invece
-          // di mostrare un pannello vuoto.
-          <Alert color="orange" icon={<IconInfoCircle size={16} />}>
-            Il tipo di blocco &laquo;{node.type}&raquo; non è nel registro: non è modificabile e il
-            salvataggio verrà rifiutato finché il blocco resta nell&apos;albero.
-          </Alert>
-        ) : (
-          <PropertyForm key={`${node.id}:${generation}`} node={node} descriptor={descriptor} />
-        )}
-      </Stack>
-    </Paper>
+          {!node ? (
+            <Text size="sm" c="dimmed">
+              Seleziona un blocco nel canvas per modificarne le proprietà.
+            </Text>
+          ) : !descriptor ? (
+            // Un tipo fuori registro non è raggiungibile dalla palette, ma può arrivare da un
+            // contenuto salvato prima che il tipo venisse rimosso: si dice cosa succede invece
+            // di mostrare un pannello vuoto.
+            <Alert color="orange" icon={<IconInfoCircle size={16} />}>
+              Il tipo di blocco &laquo;{node.type}&raquo; non è nel registro: non è modificabile e il
+              salvataggio verrà rifiutato finché il blocco resta nell&apos;albero.
+            </Alert>
+          ) : (
+            <PropertyForm key={`${node.id}:${generation}`} node={node} descriptor={descriptor} />
+          )}
+        </Stack>
+      </Paper>
+    </div>
   );
 }

@@ -7,6 +7,7 @@
 .root {
   width: 320px;
   height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background-color: var(--mantine-color-white);
@@ -29,8 +30,10 @@
 
 /* Header schede fisso, contenuto della scheda scrollabile in modo indipendente. */
 .content {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .emptyState {

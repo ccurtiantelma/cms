@@ -1,0 +1,12 @@
+.root {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+.paper {
+  height: 100%;
+  min-height: 0;
+}

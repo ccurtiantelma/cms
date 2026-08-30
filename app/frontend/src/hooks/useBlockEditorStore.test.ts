@@ -115,6 +115,16 @@ describe('useBlockEditorStore — undo/redo: ritorno allo stato iniziale', () =>
     expect(snapshot()).toBe(iniziale);
   });
 
+  it('aggiunta di un blocco lo seleziona automaticamente, così appare subito nel canvas', () => {
+    state().addBlockAction('sec-1', 'button', 99, { label: 'Ciao', href: '' });
+
+    const insertedId = state().tree[0].children.at(-1)?.id;
+
+    expect(insertedId).toBeDefined();
+    expect(state().selectedId).toBe(insertedId);
+    expect(state().tree[0].children.at(-1)?.type).toBe('button');
+  });
+
   it('modifica di una prop → undo ripristina il valore precedente, non un valore vuoto', () => {
     state().updateBlockPropsAction('head-1', { text: 'Cambiato' });
 

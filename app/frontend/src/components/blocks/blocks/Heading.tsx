@@ -76,6 +76,7 @@ export default function Heading({
 }: HeadingProps) {
   /** Nodo DOM del titolo in editing — vedi il commento di testa del file. */
   const elementRef = useRef<HTMLHeadingElement | null>(null);
+  const placeholder = 'Titolo';
 
   // Scrive `text` nel DOM solo quando differisce da ciò che c'è già: mount iniziale (il
   // nodo `contentEditable` parte senza figli JSX, vedi sotto) e cambi genuini dall'esterno,
@@ -132,6 +133,7 @@ export default function Heading({
       className={className}
       contentEditable
       suppressContentEditableWarning
+      data-placeholder={placeholder}
       onInput={(event) => onTextInput?.(event.currentTarget.textContent ?? '')}
       onBlur={(event) => onTextChange?.(event.currentTarget.textContent ?? '')}
       onKeyDown={(event) => {
@@ -140,7 +142,7 @@ export default function Heading({
           event.currentTarget.blur();
         } else if (event.key === 'Escape') {
           event.preventDefault();
-          event.currentTarget.textContent = text;
+          event.currentTarget.textContent = text ?? '';
           event.currentTarget.blur();
         }
       }}

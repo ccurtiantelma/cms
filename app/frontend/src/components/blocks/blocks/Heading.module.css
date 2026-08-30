@@ -15,11 +15,29 @@
   (CLAUDE.md § confine Mantine/blocchi, il sito pubblico non la importa).
 */
 .editable {
+  display: block;
   cursor: text;
   outline: none;
+  min-height: 1.5em;
+  padding: 0.2em 0;
+  border: 1px dashed rgba(120, 128, 138, 0.6);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .editable:focus {
-  outline: 1px dashed #339af0;
-  outline-offset: 2px;
+  outline: none;
+  border-color: #93003c;
+  box-shadow: 0 0 0 2px rgba(147, 0, 60, 0.08);
+}
+
+.editable:empty::before {
+  content: attr(data-placeholder);
+  display: block;
+  color: #1f2430;
+  font-weight: 500;
+  line-height: 1.12;
+  min-height: 1.2em;
+  letter-spacing: -0.04em;
+  font-size: clamp(2.5rem, 3vw, 4rem);
 }

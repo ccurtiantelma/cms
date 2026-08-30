@@ -128,6 +128,18 @@ describe('EditorBlockWrapper — InlineFormattingToolbar (T-integrazione-toolbar
     expect(screen.getByRole('toolbar', { name: 'Formattazione del blocco' })).toBeInTheDocument();
   });
 
+  it('heading vuoto selezionato mostra un placeholder visibile per mantenere la struttura del canvas', () => {
+    const heading = node('h-empty', 'heading', { level: 'h2', text: '' });
+    useBlockEditorStore.getState().initTree([heading]);
+    useBlockEditorStore.getState().selectNode('h-empty');
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="h-empty" />);
+
+    expect(
+      container.querySelector('h2[data-placeholder="Aggiungi qui il testo del titolo"]'),
+    ).toBeInTheDocument();
+  });
+
   it('heading selezionato: la toolbar di formattazione non compare mai (solo richText)', () => {
     const heading = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
     useBlockEditorStore.getState().initTree([heading]);

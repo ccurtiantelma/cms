@@ -112,18 +112,34 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  border: 1px dashed var(--mantine-color-gray-4);
-  border-radius: 6px;
-  padding: 16px 12px;
+  gap: 12px;
+  min-height: 220px;
+  border: 1px dashed rgba(123, 128, 136, 0.7);
+  border-radius: 8px;
+  padding: 24px 20px;
   text-align: center;
   font-size: 13px;
-  color: var(--mantine-color-dimmed);
-  background-color: var(--mantine-color-gray-0);
+  color: #5d6771;
+  background: #dfead4;
   cursor: pointer;
   transition:
     background-color 120ms ease,
-    border-color 120ms ease;
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.emptyContainerTrigger {
+  width: 52px;
+  height: 52px;
+  border-radius: 9999px;
+  background: rgba(156, 179, 191, 0.3);
+  border: 1px solid rgba(123, 146, 159, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
+
+.emptyContainerTrigger:hover {
+  background: rgba(156, 179, 191, 0.38);
 }
 
 [data-mantine-color-scheme='dark'] .emptyContainer {
@@ -282,40 +298,18 @@
 }
 
 /*
-  Chrome differenziata per un blocco Container/Sezione (qualunque tipo il registro ammetta
-  come contenitore — `isContainer` in `EditorBlockWrapper.tsx`, non solo `container`):
-  bordo arancione invece del blu/magenta generico di `.hovered`/`.selected`/
-  `.handleBar(Selected)` sopra, per restare distinguibile a colpo d'occhio da un elemento
-  singolo (richiesta esplicita del task: "bordo blu per elementi singoli, arancione per
-  Container/Sezioni"). Arancione Mantine (`orange-7`, `#f76707`) — un colore diverso sia dal
-  blu/magenta di hover/selezione sia dal viola `#a333c8` usato altrove in questo file come
-  accento "drag & drop" (`.containerDropZone[data-over]`, `.dropZone[data-over]`,
-  `.columnResizer`), che resta invariato: overlay di puntamento/selezione e indicatore di
-  destinazione del trascinamento sono due segnali distinti, non lo stesso colore riusato.
-  Tratteggiato e semi-opaco su hover ("puntamento"), solido su selezione ("modifica attiva")
-  — stessa distinzione di peso/stile di `.hovered`/`.selected`.
+  Un blocco Container/Sezione (qualunque tipo il registro ammetta come contenitore —
+  `isContainer` in `EditorBlockWrapper.tsx`, non solo `container`) portava qui un bordo/
+  Handle Bar arancione distinto dal blu/magenta generico di `.hovered`/`.selected`/
+  `.handleBar(Selected)` sopra (richiesta esplicita di un task precedente: "bordo blu per
+  elementi singoli, arancione per Container/Sezioni"). Sostituito dallo stesso accento di
+  ogni altro blocco: fedeltà pixel a Elementor Pro (richiesta esplicita, ribadita più volte)
+  prevale sulla distinzione cromatica container-vs-elemento-singolo. Il viola `#a333c8`
+  usato altrove in questo file come accento "drag & drop" (`.containerDropZone[data-over]`,
+  `.dropZone[data-over]`, `.columnResizer`) resta comunque un terzo colore distinto, non
+  riusato qui: overlay di puntamento/selezione e indicatore di destinazione del
+  trascinamento restano due segnali diversi.
 */
-.containerHovered {
-  border-width: 1px;
-  border-style: dashed;
-  border-color: rgba(247, 103, 7, 0.6);
-}
-
-.containerSelected,
-.containerSelected:hover {
-  border-width: 2px;
-  border-style: solid;
-  border-color: #f76707;
-  padding: 3px;
-}
-
-.handleBarContainer {
-  background: rgba(247, 103, 7, 0.85);
-}
-
-.handleBarContainerSelected {
-  background: #f76707;
-}
 
 /* Nome del tipo di blocco dentro la Handle Bar: stesso colore/assenza di wrap del badge che sostituisce. */
 .handleBarLabel {

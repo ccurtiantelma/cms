@@ -493,6 +493,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
           { label: `Aggiunto blocco ${type}`, tree: cloneTree(provisionalTree) },
         ],
         historyIndex: state.historyIndex + 1,
+        selectedId: insertedNode.id,
       };
     });
   },

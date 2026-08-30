@@ -20,6 +20,16 @@
  * Supera esplicitamente ADR-31 Decisione 6 ("nessun selettore visivo a icone in questo
  * round"): quel rinvio era condizionato all'assenza di dati per pilotare un box
  * asimmetrico — `columnRatio` (ADR-33 § 2) fornisce ora quel dato.
+ *
+ * Icone dei preset verificate pixel-per-pixel contro lo "Select Your Structure" reale di
+ * Elementor (screenshot del produttore, non una ricostruzione a memoria): riga "Flexbox"
+ * = le sei tessere di struttura piatta (colonna/riga direzionali + 4 varianti a colonne),
+ * riga "Griglia" = le sei tessere a celle annidate/asimmetriche. Le tessere annidate della
+ * Griglia (ADR-39, `container` con `flexDirection`/`styleFlexBasis`) non hanno un
+ * equivalente nella prop `columns`/`columnRatio` di `section` — nessuna scorciatoia,
+ * nessuna nuova prop: si compone `section` + `container` già approvati, esattamente come
+ * la sua ADR li ha pensati. `columnRatio` di `section` produce solo lo split flessibile
+ * "33/67", mai le celle annidate — quelle attraversano `buildGridSectionSubtree` sotto.
  */
 import { useEffect, useState, type ComponentType } from 'react';
 import { ActionIcon, Group, Modal, SimpleGrid, Text } from '@mantine/core';
@@ -30,11 +40,12 @@ import { useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
 // stesso modal per la voce "Sezione" del suo menu (ADR-33 § 7), un import nell'altro
 // verso creerebbe un ciclo fra i due moduli.
 import { defaultPropsFor } from './block-registry.utils';
-import { findNode } from './block-tree.utils';
+import { findNode, type BlockNode } from './block-tree.utils';
 import styles from './SectionStructureModal.module.css';
 
-/** Descrittore `section` del registro (BLOCK_TYPES è statico: calcolato una volta a modulo). */
+/** Descrittori del registro (BLOCK_TYPES è statico: calcolati una volta a modulo). */
 const SECTION_DESCRIPTOR = BLOCK_TYPES.find((entry) => entry.type === 'section');
+const CONTAINER_DESCRIPTOR = BLOCK_TYPES.find((entry) => entry.type === 'container');
 
 /** Passo corrente del selettore a due step. */
 type Step = 'chooseType' | 'flexbox' | 'grid';
@@ -48,30 +59,33 @@ interface SectionColumnsValue {
   default: SectionColumnsToken;
 }
 
-/** `columns`/`columnRatio` da scrivere sul nodo `section` — comune a ogni preset dei due step. */
-interface SectionPresetValue {
-  columns: SectionColumnsValue;
-  columnRatio: SectionColumnRatioValue;
+/**
+ * Nodo dell'anteprima proporzionale condivisa fra le tessere "Flexbox" (una sola riga) e
+ * "Griglia" (fino a due righe, con celle annidate) — stesso spec renderizza l'icona nella
+ * tessera (`renderStructureNode`) e, per la Griglia, il sottoalbero `container` davvero
+ * inserito (`buildCellNode`): un solo posto dove le proporzioni sono dichiarate, mai due
+ * fonti che potrebbero divergere. Foglia = nessun `children` (una cella piena); ramo =
+ * `direction` + `children` (righe/colonne annidate, ADR-39). `weight` è insieme il peso
+ * `flex-grow` dell'anteprima e la percentuale `styleFlexBasis` del nodo reale — l'insieme
+ * dei valori usati (25/33/34/35/40/50/60/65/67) è chiuso ed esaurito dalle classi
+ * `.w25`…`.w67` di `SectionStructureModal.module.css`, mai un valore libero.
+ */
+interface StructureNode {
+  weight: number;
+  direction?: 'row' | 'column';
+  children?: readonly StructureNode[];
 }
 
-/**
- * Preset del layout "Flexbox". Lo schema di `section` non ha una prop `direction`
- * indipendente dal conteggio colonne (nessun concetto di riga/colonna come asse separato,
- * ADR-21 — un sesto `kind` di prop richiederebbe una nuova firma che non c'è): "Riga" è
- * quindi approssimata alla più piccola disposizione affiancata disponibile (`columns: '2'`,
- * stesso output di "2 colonne (50/50)"), e "Colonna" è l'unico vero 1-colonna disponibile
- * (`columns: '1'`). Scelta dichiarata, non un bug: le due tessere restano distinte in UI
- * (icona direzionale invece dell'anteprima a tracce) pur scrivendo lo stesso preset di un
- * altro tile quando coincidono.
- */
-interface FlexboxPreset extends SectionPresetValue {
+/** Preset del layout "Flexbox": split piatto scritto su `columns`/`columnRatio` di `section`. */
+interface FlexboxPreset {
   id: string;
   label: string;
-  /** Solo 'colonna'/'riga': icona direzionale al posto dell'anteprima a tracce. */
+  columns: SectionColumnsValue;
+  columnRatio: SectionColumnRatioValue;
+  /** Solo 'colonna'/'riga': icona direzionale al posto dell'anteprima a celle. */
   directionIcon?: ComponentType<{ size?: number }>;
-  /** Classe dell'anteprima a tracce (assente quando c'è `directionIcon`). */
-  gridClassName?: string;
-  trackCount?: number;
+  /** Assente quando c'è `directionIcon` — le due tessere direzionali non hanno un'anteprima a celle. */
+  rows?: readonly StructureNode[];
 }
 
 const FLEXBOX_PRESETS: readonly FlexboxPreset[] = [
@@ -82,95 +96,116 @@ const FLEXBOX_PRESETS: readonly FlexboxPreset[] = [
     columnRatio: 'equal',
     directionIcon: IconArrowDown,
   },
-  { id: 'row', label: 'Riga', columns: { default: '2' }, columnRatio: 'equal', directionIcon: IconArrowRight },
   {
-    id: '50-50',
-    label: '2 colonne (50/50)',
+    id: 'row',
+    label: 'Riga',
     columns: { default: '2' },
     columnRatio: 'equal',
-    gridClassName: 'grid_twoEqual',
-    trackCount: 2,
+    directionIcon: IconArrowRight,
   },
   {
-    id: '33-67',
+    id: '2-equal',
+    label: '2 colonne',
+    columns: { default: '2' },
+    columnRatio: 'equal',
+    rows: [{ weight: 1, direction: 'row', children: [{ weight: 50 }, { weight: 50 }] }],
+  },
+  {
+    id: '2-33-67',
     label: '2 colonne (33/67)',
     columns: { default: '2' },
     columnRatio: '33-66',
-    gridClassName: 'grid_3366',
-    trackCount: 2,
+    rows: [{ weight: 1, direction: 'row', children: [{ weight: 33 }, { weight: 67 }] }],
   },
   {
-    id: '67-33',
-    label: '2 colonne (67/33)',
-    columns: { default: '2' },
-    columnRatio: '66-33',
-    gridClassName: 'grid_6633',
-    trackCount: 2,
-  },
-  {
-    id: 'col-3',
-    label: '3 colonne',
-    columns: { default: '3' },
-    columnRatio: 'equal',
-    gridClassName: 'grid_threeEqual',
-    trackCount: 3,
-  },
-  {
-    id: 'col-4',
+    id: '4-equal',
     label: '4 colonne',
     columns: { default: '4' },
     columnRatio: 'equal',
-    gridClassName: 'grid_fourEqual',
-    trackCount: 4,
+    rows: [
+      {
+        weight: 1,
+        direction: 'row',
+        children: [{ weight: 25 }, { weight: 25 }, { weight: 25 }, { weight: 25 }],
+      },
+    ],
+  },
+  {
+    id: '3-equal',
+    label: '3 colonne',
+    columns: { default: '3' },
+    columnRatio: 'equal',
+    rows: [{ weight: 1, direction: 'row', children: [{ weight: 33 }, { weight: 34 }, { weight: 33 }] }],
   },
 ];
 
 /**
- * Preset del layout "Griglia". `decorativeRows` è puramente l'anteprima (una matrice di
- * tracce tratteggiate a due righe per dare l'aspetto "2×2"/"3×2" richiesto): non esiste
- * nessuna prop di riga persistita da nessuna parte — con `columns` fisso, le righe vere di
- * una `section` emergono automaticamente dal CSS Grid quando in futuro vi si trascinano più
- * widget dentro, non da uno stato salvato qui.
+ * Preset del layout "Griglia": ognuno è una lista di righe (`StructureNode`), risolta sia
+ * nell'anteprima della tessera sia nel sottoalbero `section` → `container`* davvero
+ * inserito da `buildGridSectionSubtree` — mai una prop piatta come i preset Flexbox, le
+ * celle annidate/asimmetriche di queste sei tessere non hanno un equivalente in
+ * `columns`/`columnRatio` (vedi commento di testa del file).
  */
-interface GridPreset extends SectionPresetValue {
+interface GridPreset {
   id: string;
   label: string;
-  gridClassName: string;
-  decorativeRows: 1 | 2;
+  rows: readonly StructureNode[];
 }
 
 const GRID_PRESETS: readonly GridPreset[] = [
   {
-    id: '2x1',
-    label: '2×1',
-    columns: { default: '2' },
-    columnRatio: 'equal',
-    gridClassName: 'grid_twoEqual',
-    decorativeRows: 1,
-  },
-  {
-    id: '1x2',
-    label: '1×2',
-    columns: { default: '1' },
-    columnRatio: 'equal',
-    gridClassName: 'grid_oneCol',
-    decorativeRows: 2,
-  },
-  {
     id: '2x2',
     label: '2×2',
-    columns: { default: '2' },
-    columnRatio: 'equal',
-    gridClassName: 'grid_twoEqual',
-    decorativeRows: 2,
+    rows: [
+      { weight: 1, direction: 'row', children: [{ weight: 50 }, { weight: 50 }] },
+      { weight: 1, direction: 'row', children: [{ weight: 50 }, { weight: 50 }] },
+    ],
+  },
+  {
+    id: '2top-1bottom',
+    label: '2 sopra, 1 sotto',
+    rows: [
+      { weight: 1, direction: 'row', children: [{ weight: 40 }, { weight: 60 }] },
+      { weight: 1 },
+    ],
+  },
+  {
+    id: '1left-2right',
+    label: '1 a sinistra, 2 a destra',
+    rows: [
+      {
+        weight: 1,
+        direction: 'row',
+        children: [
+          { weight: 40 },
+          { weight: 60, direction: 'column', children: [{ weight: 50 }, { weight: 50 }] },
+        ],
+      },
+    ],
   },
   {
     id: '3x2',
     label: '3×2',
-    columns: { default: '3' },
-    columnRatio: 'equal',
-    gridClassName: 'grid_threeEqual',
-    decorativeRows: 2,
+    rows: [
+      { weight: 1, direction: 'row', children: [{ weight: 33 }, { weight: 34 }, { weight: 33 }] },
+      { weight: 1, direction: 'row', children: [{ weight: 33 }, { weight: 34 }, { weight: 33 }] },
+    ],
+  },
+  {
+    id: '3top-2bottom',
+    label: '3 sopra, 2 sotto',
+    rows: [
+      { weight: 1, direction: 'row', children: [{ weight: 33 }, { weight: 34 }, { weight: 33 }] },
+      { weight: 1, direction: 'row', children: [{ weight: 33 }, { weight: 67 }] },
+    ],
+  },
+  {
+    id: 'offset-2x2',
+    label: 'Struttura sfalsata',
+    rows: [
+      { weight: 1, direction: 'row', children: [{ weight: 65 }, { weight: 35 }] },
+      { weight: 1, direction: 'row', children: [{ weight: 35 }, { weight: 65 }] },
+    ],
   },
 ];
 
@@ -203,6 +238,85 @@ function scrollBlockIntoView(id: string): void {
     ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
+/**
+ * Renderizza ricorsivamente l'anteprima proporzionale di una tessera preset, in puro CSS
+ * (classi `.w25`…`.w67` per il peso, mai uno `style` inline — vedi doc di
+ * {@link StructureNode}). Una foglia (`children` assente) è una cella piena; un ramo apre
+ * un nuovo asse flex (`direction`) e ricorre sui figli.
+ */
+function renderStructureNode(node: StructureNode, key: string): JSX.Element {
+  const weightClass = styles[`w${node.weight}`] ?? '';
+  if (!node.children) {
+    return <div key={key} className={[styles.cell, weightClass].join(' ')} />;
+  }
+  const directionClass = node.direction === 'column' ? styles.directionColumn : styles.directionRow;
+  return (
+    <div key={key} className={[styles.branch, directionClass, weightClass].join(' ')}>
+      {node.children.map((child, childIndex) => renderStructureNode(child, `${key}-${childIndex}`))}
+    </div>
+  );
+}
+
+/** Anteprima completa di una tessera: una colonna di righe (`rows`), stesso principio di {@link renderStructureNode}. */
+function StructurePreview({ rows }: { rows: readonly StructureNode[] }): JSX.Element {
+  return (
+    <div className={styles.previewTile}>
+      {rows.map((row, rowIndex) => renderStructureNode(row, `row-${rowIndex}`))}
+    </div>
+  );
+}
+
+let nodeIdSeed = 0;
+/** Id placeholder per un nodo del sottoalbero preset — rigenerato comunque da `insertSubtreeAction` (ADR-34 § 2), mai riusato per identità. */
+function nextPlaceholderId(): string {
+  nodeIdSeed += 1;
+  return `structure-preset-${nodeIdSeed}`;
+}
+
+/**
+ * Costruisce ricorsivamente il sottoalbero `container` di una riga/cella della Griglia
+ * (ADR-39): foglia → `container` vuoto (segnaposto interattivo esistente,
+ * `EditorBlockWrapper.module.css` `.emptyContainer`, l'utente vi trascina widget dopo);
+ * ramo → `container` con `flexDirection` sull'asse dichiarato, contenente i figli. `applyFlexBasis`
+ * è `false` solo per le righe di primo livello (figlie dirette della `section`, già a piena
+ * larghezza per via del suo `columns: '1'`): per ogni nodo più annidato scrive `styleFlexBasis`
+ * dal `weight` dello stesso spec dell'anteprima — un'unica fonte per le due proporzioni.
+ */
+function buildCellNode(node: StructureNode, applyFlexBasis: boolean): BlockNode {
+  if (!CONTAINER_DESCRIPTOR) throw new Error('Descrittore "container" assente dal registro blocchi.');
+  const props: Record<string, unknown> = { ...defaultPropsFor(CONTAINER_DESCRIPTOR) };
+  if (applyFlexBasis) props.styleFlexBasis = { value: node.weight, unit: '%' };
+
+  if (!node.children) {
+    return { id: nextPlaceholderId(), type: 'container', props, children: [] };
+  }
+
+  props.flexDirection = { default: node.direction ?? 'row' };
+  props.gap = { default: 'sm' };
+  return {
+    id: nextPlaceholderId(),
+    type: 'container',
+    props,
+    children: node.children.map((child) => buildCellNode(child, true)),
+  };
+}
+
+/** Sottoalbero `section` (colonna singola, righe impilate) da inserire per un preset Griglia — vedi {@link buildCellNode}. */
+function buildGridSectionSubtree(preset: GridPreset): BlockNode {
+  if (!SECTION_DESCRIPTOR) throw new Error('Descrittore "section" assente dal registro blocchi.');
+  return {
+    id: nextPlaceholderId(),
+    type: 'section',
+    props: {
+      ...defaultPropsFor(SECTION_DESCRIPTOR),
+      columns: { default: '1' },
+      columnRatio: 'equal',
+      gap: { default: 'sm' },
+    },
+    children: preset.rows.map((row) => buildCellNode(row, false)),
+  };
+}
+
 /** Modal di selezione del preset di struttura per una nuova `section` (ADR-33 § 7). */
 export default function SectionStructureModal({
   opened,
@@ -211,6 +325,7 @@ export default function SectionStructureModal({
   index,
 }: SectionStructureModalProps): JSX.Element {
   const addBlockAction = useBlockEditorStore((state) => state.addBlockAction);
+  const insertSubtreeAction = useBlockEditorStore((state) => state.insertSubtreeAction);
   const [step, setStep] = useState<Step>('chooseType');
 
   // Le tre chiamate di questo modal (`BlockPalette`, `CanvasAddSectionZone`,
@@ -221,13 +336,25 @@ export default function SectionStructureModal({
     if (opened) setStep('chooseType');
   }, [opened]);
 
+  /** Scrolla e chiude dopo un inserimento — comune alle due vie di selezione sotto. */
+  function afterInsert(insertedId: string | undefined): void {
+    setStep('chooseType');
+    onClose();
+    // Il modal si chiude e il wrapper del nuovo blocco ha bisogno di un giro di render per
+    // montarsi/aggiornarsi: senza rimandare lo scroll al frame successivo, il `querySelector`
+    // di `scrollBlockIntoView` cercherebbe un nodo non ancora nel DOM.
+    if (insertedId) {
+      requestAnimationFrame(() => scrollBlockIntoView(insertedId));
+    }
+  }
+
   /**
-   * Crea la Section col preset scelto: default del registro, `columns`/`columnRatio`
+   * Crea la Section col preset Flexbox scelto: default del registro, `columns`/`columnRatio`
    * sovrascritti. `addBlockAction` non ritorna l'id del nodo inserito (`void`): si replica
    * qui il clamping dell'indice che lo store applica internamente (`useBlockEditorStore.ts`,
    * `addBlockAction`) per ritrovare il nodo appena creato e scrollarlo in vista.
    */
-  function handleSelect(preset: SectionPresetValue): void {
+  function handleSelectFlexbox(preset: FlexboxPreset): void {
     const baseProps = SECTION_DESCRIPTOR ? defaultPropsFor(SECTION_DESCRIPTOR) : {};
     addBlockAction(parentId, 'section', index, {
       ...baseProps,
@@ -238,17 +365,18 @@ export default function SectionStructureModal({
     const tree = useBlockEditorStore.getState().tree;
     const siblings = parentId === null ? tree : (findNode(tree, parentId)?.children ?? []);
     const clampedIndex = Math.max(0, Math.min(index, siblings.length - 1));
-    const insertedId = siblings[clampedIndex]?.id;
+    afterInsert(siblings[clampedIndex]?.id);
+  }
 
-    setStep('chooseType');
-    onClose();
-
-    // Il modal si chiude e il wrapper del nuovo blocco ha bisogno di un giro di render per
-    // montarsi/aggiornarsi: senza rimandare lo scroll al frame successivo, il `querySelector`
-    // di `scrollBlockIntoView` cercherebbe un nodo non ancora nel DOM.
-    if (insertedId) {
-      requestAnimationFrame(() => scrollBlockIntoView(insertedId));
-    }
+  /**
+   * Inserisce il sottoalbero `section` → `container`* del preset Griglia scelto
+   * ({@link buildGridSectionSubtree}) — `insertSubtreeAction` seleziona già il nodo di
+   * radice inserito (`useBlockEditorStore.ts`), niente clamping manuale come in
+   * `handleSelectFlexbox`.
+   */
+  function handleSelectGrid(preset: GridPreset): void {
+    insertSubtreeAction(parentId, index, buildGridSectionSubtree(preset));
+    afterInsert(useBlockEditorStore.getState().selectedId ?? undefined);
   }
 
   return (
@@ -308,60 +436,40 @@ export default function SectionStructureModal({
       )}
 
       {step === 'flexbox' && (
-        <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md">
+        <SimpleGrid cols={{ base: 2, xs: 3, sm: 6 }} spacing="xs">
           {FLEXBOX_PRESETS.map((preset) => (
             <button
               key={preset.id}
               type="button"
               className={styles.presetButton}
               aria-label={preset.label}
-              onClick={() => handleSelect(preset)}
+              title={preset.label}
+              onClick={() => handleSelectFlexbox(preset)}
             >
               {preset.directionIcon ? (
                 <div className={styles.directionIconBox}>
-                  <preset.directionIcon size={24} />
+                  <preset.directionIcon size={22} />
                 </div>
               ) : (
-                <div className={[styles.previewBox, styles[preset.gridClassName ?? '']].join(' ')}>
-                  {Array.from({ length: preset.trackCount ?? 0 }).map((_, trackIndex) => (
-                    <div key={trackIndex} className={styles.track} />
-                  ))}
-                </div>
+                <StructurePreview rows={preset.rows ?? []} />
               )}
-              <Text size="xs" ta="center">
-                {preset.label}
-              </Text>
             </button>
           ))}
         </SimpleGrid>
       )}
 
       {step === 'grid' && (
-        <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md">
+        <SimpleGrid cols={{ base: 2, xs: 3, sm: 6 }} spacing="xs">
           {GRID_PRESETS.map((preset) => (
             <button
               key={preset.id}
               type="button"
               className={styles.presetButton}
               aria-label={preset.label}
-              onClick={() => handleSelect(preset)}
+              title={preset.label}
+              onClick={() => handleSelectGrid(preset)}
             >
-              <div
-                className={[
-                  styles.previewBox,
-                  styles[preset.gridClassName],
-                  preset.decorativeRows === 2 ? styles.previewRows2 : styles.previewRows1,
-                ].join(' ')}
-              >
-                {Array.from({ length: Number(preset.columns) * preset.decorativeRows }).map(
-                  (_, trackIndex) => (
-                    <div key={trackIndex} className={styles.track} />
-                  ),
-                )}
-              </div>
-              <Text size="xs" ta="center">
-                {preset.label}
-              </Text>
+              <StructurePreview rows={preset.rows} />
             </button>
           ))}
         </SimpleGrid>

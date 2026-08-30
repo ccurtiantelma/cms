@@ -4,6 +4,12 @@
  * Mantine, nessuno stile inline (il vincolo "zero CSS inline" vale anche qui, non solo per
  * i blocchi — l'unica eccezione dell'intero task è `Section.tsx`/`--section-bg`, altrove non
  * applicabile).
+ *
+ * Grafica delle tessere preset verificata contro lo "Select Your Structure" reale di
+ * Elementor: tessera piatta senza bordo proprio (il bordo tratteggiato arriva solo
+ * dall'hover), riempimento grigio pieno diviso da sottili linee — ottenute con `gap` fra
+ * flex item invece che da un `border` per cella: lo sfondo del `Modal` sotto la tessera
+ * fa già da linea divisoria, niente colore hardcoded da tenere allineato al tema.
  */
 
 /*
@@ -38,14 +44,17 @@
   border-color: var(--mantine-color-dark-4);
 }
 
+/*
+  Tessera preset: nessun bordo a riposo (fedele a Elementor, dove la tessera è solo il
+  riempimento grigio dell'anteprima) — il bordo tratteggiato compare solo in hover/focus,
+  come segnale di interattività, non come cornice permanente.
+*/
 .presetButton {
   display: flex;
-  flex-direction: column;
   align-items: stretch;
-  gap: 8px;
   width: 100%;
-  padding: 12px;
-  border: 1px dashed var(--mantine-color-gray-4);
+  padding: 6px;
+  border: 1px dashed transparent;
   border-radius: 6px;
   background-color: transparent;
   cursor: pointer;
@@ -54,57 +63,75 @@
 
 .presetButton:hover,
 .presetButton:focus-visible {
-  border-style: solid;
   border-color: var(--mantine-color-blue-6);
   background-color: var(--mantine-color-blue-light);
 }
 
-[data-mantine-color-scheme='dark'] .presetButton {
-  border-color: var(--mantine-color-dark-4);
+/*
+  Anteprima proporzionale (`StructurePreview`/`renderStructureNode`, SectionStructureModal.tsx):
+  una colonna di righe, ciascuna un asse flex indipendente. `gap` fra i figli funge da linea
+  divisoria — lo sfondo della tessera resta trasparente, la linea è lo sfondo del `Modal`
+  che traspare nell'intercapedine, mai un colore fisso da disallineare dal tema.
+*/
+.previewTile {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  height: 48px;
 }
 
-/* Anteprima proporzionale in puro CSS: una griglia con tante tracce quante colonne del
-   preset, larghezze fissate dalle classi `.grid_*` sotto (mai uno `style` inline). */
-.previewBox {
-  display: grid;
-  gap: 4px;
-  height: 44px;
+.branch {
+  display: flex;
+  gap: 3px;
 }
 
-.track {
+.directionRow {
+  flex-direction: row;
+}
+
+.directionColumn {
+  flex-direction: column;
+}
+
+.cell {
   background-color: var(--mantine-color-gray-3);
-  border-radius: 3px;
+  border-radius: 2px;
 }
 
-[data-mantine-color-scheme='dark'] .track {
+[data-mantine-color-scheme='dark'] .cell {
   background-color: var(--mantine-color-dark-4);
 }
 
-.grid_oneCol { grid-template-columns: 1fr; }
-.grid_twoEqual { grid-template-columns: 1fr 1fr; }
-.grid_threeEqual { grid-template-columns: 1fr 1fr 1fr; }
-.grid_fourEqual { grid-template-columns: 1fr 1fr 1fr 1fr; }
-.grid_3366 { grid-template-columns: 1fr 2fr; }
-.grid_6633 { grid-template-columns: 2fr 1fr; }
-
 /*
-  Righe decorative dell'anteprima "Griglia" (`GridPreset.decorativeRows`): puramente
-  visive, mai una prop persistita — vedi il commento su `GridPreset` in
-  `SectionStructureModal.tsx`.
+  Pesi `flex-grow` delle celle/righe (`StructureNode.weight`, SectionStructureModal.tsx):
+  insieme chiuso di valori usati dai dodici preset (sei Flexbox, sei Griglia) — mai un peso
+  libero, mai uno `style` inline. Lo stesso numero guida anche `styleFlexBasis` del
+  sottoalbero `container` davvero inserito per la Griglia (percentuale, non `flex-grow`, ma
+  stessa proporzione dichiarata una sola volta nello spec).
 */
-.previewRows1 { grid-template-rows: 1fr; }
-.previewRows2 { grid-template-rows: 1fr 1fr; }
+.w1 { flex: 1 1 0%; }
+.w25 { flex: 25 1 0%; }
+.w33 { flex: 33 1 0%; }
+.w34 { flex: 34 1 0%; }
+.w35 { flex: 35 1 0%; }
+.w40 { flex: 40 1 0%; }
+.w50 { flex: 50 1 0%; }
+.w60 { flex: 60 1 0%; }
+.w65 { flex: 65 1 0%; }
+.w67 { flex: 67 1 0%; }
 
 /*
   Tessera "Colonna"/"Riga" (`FlexboxPreset.directionIcon`): icona direzionale centrata al
-  posto dell'anteprima a tracce, stessa altezza di `.previewBox` per allineare la riga di
+  posto dell'anteprima a celle, stessa altezza di `.previewTile` per allineare la riga di
   tessere del `SimpleGrid`.
 */
 .directionIconBox {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 44px;
+  width: 100%;
+  height: 48px;
   color: var(--mantine-color-gray-6);
 }
 

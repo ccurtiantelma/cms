@@ -4,8 +4,8 @@
   `position: absolute` per restare fuori dal posizionamento automatico del contenitore
   genitore (mai un grid/flex item in più), striscia larga per l'afferrabilità e linea
   sottile per la resa visiva. L'accento è però il viola di `container` (#a333c8 è il
-  magenta di `section`; qui #7048e8, coerente con `.containerSelected`/`.handleBarContainer`),
-  così le due maniglie restano distinguibili quando un container è annidato in una section.
+  magenta di `section`; qui #7048e8), così le due maniglie restano distinguibili quando un
+  container è annidato in una section.
 */
 .handle {
   position: absolute;

@@ -1,7 +1,11 @@
 /* Scheda "Widgets" della sidebar dell'editor (WidgetPalette.tsx). */
 
 .root {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .search {

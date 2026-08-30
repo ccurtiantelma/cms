@@ -40,6 +40,15 @@ import { InvalidBlockProvider } from './EditorBlockWrapper';
 import FullScreenEditorLayout from './FullScreenEditorLayout';
 import EditorStructureNavigator from './EditorStructureNavigator';
 
+/**
+ * Id stabile della notifica d'errore di salvataggio: un nuovo tentativo (riuscito o fallito)
+ * aggiorna/rimuove sempre la stessa voce invece di impilarne una nuova. Senza, un primo
+ * tentativo respinto (es. blocco appena inserito, prop non ancora compilate) resta visibile
+ * per sempre (`autoClose: false`) anche dopo che l'utente ha corretto il blocco e salvato con
+ * successo — un errore risolto che continua a sembrare attuale.
+ */
+const SAVE_ERROR_NOTIFICATION_ID = 'page-draft-save-error';
+
 interface BlockEditorPanelProps {
   /** La Pagina in editing, già caricata dal dettaglio. */
   page: PageRecord;
@@ -146,6 +155,7 @@ export default function BlockEditorPanel({
       ? `Blocco "${blockLabel(node.type)}"${propName ? ` — proprietà "${propName}"` : ''}`
       : `Blocco in "${path}"`;
     notifications.show({
+      id: SAVE_ERROR_NOTIFICATION_ID,
       color: 'red',
       autoClose: false,
       title: 'Blocco non valido',
@@ -175,6 +185,9 @@ export default function BlockEditorPanel({
       // nell'effetto sopra, alla nuova `draftContent`.
       useBlockEditorStore.getState().markSaved(savePoint);
       onPageUpdated(updated);
+      // Un salvataggio riuscito rende obsoleto qualunque errore di un tentativo precedente
+      // ancora visibile (`autoClose: false` su `SAVE_ERROR_NOTIFICATION_ID`).
+      notifications.hide(SAVE_ERROR_NOTIFICATION_ID);
       notifications.show({ color: 'green', message: 'Bozza salvata' });
       return updated;
     } catch (err) {
@@ -184,6 +197,7 @@ export default function BlockEditorPanel({
         onVersionConflict();
       } else if (!handleTreeValidationError(error)) {
         notifications.show({
+          id: SAVE_ERROR_NOTIFICATION_ID,
           color: 'red',
           message: getErrorMessage(err, 'Errore nel salvataggio della bozza'),
         });

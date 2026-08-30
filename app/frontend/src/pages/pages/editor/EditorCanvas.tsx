@@ -16,8 +16,10 @@
  * `FullScreenEditorLayout.handleDragEnd`): senza un nodo già in radice non c'è nessuna
  * striscia `before`/`after` di `EditorBlockWrapper` su cui rilasciare il primo blocco. Il
  * div resta montato — solo invisibile, senza contenuto proprio — anche ad albero vuoto:
- * la resa visiva "Aggiungi sezione" è ora interamente di `CanvasAddSectionZone`, montata
- * subito sotto, che occupa la stessa funzione sia ad albero vuoto sia pieno.
+ * la resa visiva "Aggiungi sezione" ad albero vuoto è di `CanvasAddSectionZone` (i tre
+ * trigger fedeli a Elementor Pro — struttura/template/widget — più il modal a due passi
+ * `SectionStructureModal`). Ad albero pieno quella stessa azione resta raggiungibile dalle
+ * strisce di hover `CanvasSectionInserter`, prima del primo blocco e dopo ognuno.
  *
  * Porta anche `GLOBAL_TOKENS_CANVAS_SCOPE_CLASS` (`libs/globalTokensCompiler.ts`): è il
  * selettore su cui questo componente scopa il CSS compilato dal `ThemeConfig` dell'Editor
@@ -38,6 +40,7 @@ import { useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
 import { useThemeColorStore } from '../../../hooks/useThemeColor';
 import { GLOBAL_TOKENS_CANVAS_SCOPE_CLASS } from '../../../libs/globalTokensCompiler';
 import { generateThemeCss, THEME_STYLE_TAG_ID } from '../../../utils/theme-css.utils';
+import CanvasAddSectionZone from './CanvasAddSectionZone';
 import CanvasContextMenu from './CanvasContextMenu';
 import CanvasSectionInserter from './CanvasSectionInserter';
 import EditorBlockWrapper from './EditorBlockWrapper';
@@ -93,20 +96,25 @@ export default function EditorCanvas(): JSX.Element {
         onClick={() => selectNode(null)}
       >
         <Stack gap="sm">
-          <CanvasSectionInserter index={0} empty={rootIds.length === 0} />
           {rootIds.length === 0 ? (
             // Nessun contenuto visivo proprio (scelta di giudizio, vedi il commento di testa):
-            // la resa "Aggiungi sezione" è ora interamente di `CanvasAddSectionZone`, montata
-            // subito sotto anche in questo ramo. Il div resta solo come bersaglio
-            // `useDroppable` per il primo blocco trascinato — a riposo è una striscia quasi
-            // invisibile (`EditorCanvas.module.css`), che si allarga ed evidenzia in magenta
-            // solo durante un trascinamento sopra di lei (`data-over`).
-            <div ref={setEmptyDropRef} className={styles.emptyDropzone} data-over={isOverEmpty} />
+            // la resa "Aggiungi sezione" è interamente di `CanvasAddSectionZone`, montata
+            // subito sotto — il div resta solo come bersaglio `useDroppable` per il primo
+            // blocco trascinato: a riposo è una striscia quasi invisibile
+            // (`EditorCanvas.module.css`), che si allarga ed evidenzia in magenta solo
+            // durante un trascinamento sopra di lei (`data-over`).
+            <>
+              <div ref={setEmptyDropRef} className={styles.emptyDropzone} data-over={isOverEmpty} />
+              <CanvasAddSectionZone parentId={null} index={0} />
+            </>
           ) : (
-            rootIds.flatMap((id, index) => [
-              <EditorBlockWrapper key={id} id={id} />,
-              <CanvasSectionInserter key={`inserter-${index + 1}`} index={index + 1} />,
-            ])
+            <>
+              <CanvasSectionInserter index={0} />
+              {rootIds.flatMap((id, index) => [
+                <EditorBlockWrapper key={id} id={id} />,
+                <CanvasSectionInserter key={`inserter-${index + 1}`} index={index + 1} />,
+              ])}
+            </>
           )}
         </Stack>
       </div>

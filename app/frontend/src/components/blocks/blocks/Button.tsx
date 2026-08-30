@@ -62,6 +62,7 @@ export default function Button({
 }: ButtonProps) {
   /** Nodo DOM dell'etichetta in editing. */
   const elementRef = useRef<HTMLAnchorElement | null>(null);
+  const placeholder = 'Pulsante';
 
   useLayoutEffect(() => {
     if (!editable) return;
@@ -106,6 +107,7 @@ export default function Button({
       href={href}
       contentEditable
       suppressContentEditableWarning
+      data-placeholder={placeholder}
       onClick={(event) => {
         if (editable) event.preventDefault();
       }}

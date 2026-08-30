@@ -128,6 +128,7 @@ export default function RichText({
       className={className}
       contentEditable
       suppressContentEditableWarning
+      data-placeholder="Testo"
       onFocus={() => document.execCommand('defaultParagraphSeparator', false, 'p')}
       onInput={(event) => onHtmlInput?.(event.currentTarget.innerHTML)}
       onBlur={(event) => onHtmlChange?.(event.currentTarget.innerHTML)}
@@ -137,10 +138,11 @@ export default function RichText({
           document.execCommand('insertLineBreak');
         } else if (event.key === 'Escape') {
           event.preventDefault();
-          event.currentTarget.innerHTML = html;
+          event.currentTarget.innerHTML = html ?? '';
           event.currentTarget.blur();
         }
       }}
+      dangerouslySetInnerHTML={{ __html: html ?? '' }}
     />
   );
 }

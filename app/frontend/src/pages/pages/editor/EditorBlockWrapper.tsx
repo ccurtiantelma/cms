@@ -935,15 +935,14 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
 
   const className = [
     styles.wrapper,
-    // Overlay hover/selezione: bordo blu per un elemento singolo (`.hovered`/`.selected`),
-    // arancione per un blocco Container/Sezione — qualunque tipo il registro ammetta come
-    // contenitore (`isContainer`, sopra: `childrenAllow === '*'` o non vuoto — copre
-    // `container` e `section`, e ogni futuro tipo contenitore, non solo `container`), non
-    // il blu/magenta generico di un elemento foglia. `.hovered`/`.selected` restano
+    // Overlay hover/selezione: stesso accento blu (`.hovered`)/magenta Elementor
+    // (`.selected`) per ogni tipo di blocco, Container/Sezione incluso — fedeltà pixel a
+    // Elementor Pro (richiesta esplicita, ribadita più volte) prevale sulla precedente
+    // distinzione cromatica container-vs-elemento-singolo. `.hovered`/`.selected` restano
     // mutuamente esclusivi per costruzione (`isSelected` non implica `isHovered` in questo
     // array: un nodo selezionato ma non sotto il puntatore prende solo `.selected`).
-    isHovered && !isSelected ? (isContainer ? styles.containerHovered : styles.hovered) : '',
-    isSelected ? (isContainer ? styles.containerSelected : styles.selected) : '',
+    isHovered && !isSelected ? styles.hovered : '',
+    isSelected ? styles.selected : '',
     isInvalid ? styles.invalid : '',
     isDragging ? styles.dragging : '',
     resolveHideClassName(tokenStyles, 'hideDesktop', currentNode.props.styleHideDesktop),
@@ -1115,15 +1114,9 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           <Group
             className={[
               styles.handleBar,
-              // Arancione su ogni blocco Container/Sezione (`isContainer`), blu/magenta
-              // invariato per un elemento singolo — coerente con la variante di bordo
-              // scelta sopra.
-              isContainer ? styles.handleBarContainer : '',
-              isSelected
-                ? isContainer
-                  ? styles.handleBarContainerSelected
-                  : styles.handleBarSelected
-                : '',
+              // Stesso accento blu/magenta di ogni altro blocco, Container/Sezione incluso
+              // — vedi il commento su `className` più sopra.
+              isSelected ? styles.handleBarSelected : '',
             ]
               .filter(Boolean)
               .join(' ')}
@@ -1489,9 +1482,11 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
                     <BlockPalette
                       parentId={id}
                       parentType={node.type}
-                      label="Aggiungi Blocco"
+                      label="Aggiungi blocco"
                       size="sm"
                       variant="light"
+                      iconOnly
+                      triggerClassName={styles.emptyContainerTrigger}
                     />
                     <Text size="xs" c="dimmed" className={styles.emptyContainerHint}>
                       Contenitore vuoto — trascina qui un blocco
