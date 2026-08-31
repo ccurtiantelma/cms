@@ -120,5 +120,298 @@
         }
       ]
     }
+  },
+  {
+    "id": "testimonials-3col",
+    "label": "Testimonianze 3 colonne",
+    "subtree": {
+      "id": "preset-root",
+      "type": "section",
+      "props": { "columns": { "default": "3" }, "gap": { "default": "md" } },
+      "children": [
+        {
+          "id": "preset-quote-1",
+          "type": "richText",
+          "props": { "html": "<p>\"Un servizio eccellente, risultati oltre le aspettative.\"</p>" },
+          "children": []
+        },
+        {
+          "id": "preset-author-1",
+          "type": "heading",
+          "props": { "level": "h4", "text": "Maria Rossi" },
+          "children": []
+        },
+        {
+          "id": "preset-quote-2",
+          "type": "richText",
+          "props": { "html": "<p>\"Professionalità e attenzione al dettaglio in ogni fase.\"</p>" },
+          "children": []
+        },
+        {
+          "id": "preset-author-2",
+          "type": "heading",
+          "props": { "level": "h4", "text": "Luca Bianchi" },
+          "children": []
+        },
+        {
+          "id": "preset-quote-3",
+          "type": "richText",
+          "props": { "html": "<p>\"Consigliato senza esitazione, il miglior partner che abbiamo trovato.\"</p>" },
+          "children": []
+        },
+        {
+          "id": "preset-author-3",
+          "type": "heading",
+          "props": { "level": "h4", "text": "Giulia Verdi" },
+          "children": []
+        }
+      ]
+    }
+  },
+  {
+    "id": "pricing-3plans",
+    "label": "Tabella Prezzi 3 Piani",
+    "subtree": {
+      "id": "preset-root",
+      "type": "section",
+      "props": { "columns": { "default": "3" }, "gap": { "default": "md" } },
+      "children": [
+        {
+          "id": "preset-plan-1-title",
+          "type": "heading",
+          "props": { "level": "h3", "text": "Base" },
+          "children": []
+        },
+        {
+          "id": "preset-plan-1-body",
+          "type": "richText",
+          "props": { "html": "<p><strong>19€/mese</strong></p><ul><li>Funzionalità principale</li><li>Supporto email</li></ul>" },
+          "children": []
+        },
+        {
+          "id": "preset-plan-1-cta",
+          "type": "button",
+          "props": { "label": "Scegli Base", "href": "/contatti" },
+          "children": []
+        },
+        {
+          "id": "preset-plan-2-title",
+          "type": "heading",
+          "props": { "level": "h3", "text": "Pro" },
+          "children": []
+        },
+        {
+          "id": "preset-plan-2-body",
+          "type": "richText",
+          "props": { "html": "<p><strong>49€/mese</strong></p><ul><li>Tutte le funzionalità Base</li><li>Supporto prioritario</li><li>Integrazioni avanzate</li></ul>" },
+          "children": []
+        },
+        {
+          "id": "preset-plan-2-cta",
+          "type": "button",
+          "props": { "label": "Scegli Pro", "href": "/contatti" },
+          "children": []
+        },
+        {
+          "id": "preset-plan-3-title",
+          "type": "heading",
+          "props": { "level": "h3", "text": "Enterprise" },
+          "children": []
+        },
+        {
+          "id": "preset-plan-3-body",
+          "type": "richText",
+          "props": { "html": "<p><strong>Su richiesta</strong></p><ul><li>Tutte le funzionalità Pro</li><li>Account manager dedicato</li><li>SLA personalizzato</li></ul>" },
+          "children": []
+        },
+        {
+          "id": "preset-plan-3-cta",
+          "type": "button",
+          "props": { "label": "Contattaci", "href": "/contatti" },
+          "children": []
+        }
+      ]
+    }
+  },
+  {
+    "id": "faq-list",
+    "label": "Domande Frequenti",
+    "subtree": {
+      "id": "preset-root",
+      "type": "section",
+      "props": { "columns": { "default": "1" } },
+      "children": [
+        {
+          "id": "preset-q1",
+          "type": "heading",
+          "props": { "level": "h4", "text": "Come funziona il periodo di prova?" },
+          "children": []
+        },
+        {
+          "id": "preset-a1",
+          "type": "richText",
+          "props": { "html": "<p>Puoi provare tutte le funzionalità gratuitamente per 14 giorni, senza carta di credito.</p>" },
+          "children": []
+        },
+        {
+          "id": "preset-q2",
+          "type": "heading",
+          "props": { "level": "h4", "text": "Posso cambiare piano in qualsiasi momento?" },
+          "children": []
+        },
+        {
+          "id": "preset-a2",
+          "type": "richText",
+          "props": { "html": "<p>Sì, puoi passare a un piano superiore o inferiore quando vuoi dal pannello di controllo.</p>" },
+          "children": []
+        },
+        {
+          "id": "preset-q3",
+          "type": "heading",
+          "props": { "level": "h4", "text": "È previsto un supporto in italiano?" },
+          "children": []
+        },
+        {
+          "id": "preset-a3",
+          "type": "richText",
+          "props": { "html": "<p>Il nostro team di supporto risponde in italiano dal lunedì al venerdì.</p>" },
+          "children": []
+        },
+        {
+          "id": "preset-q4",
+          "type": "heading",
+          "props": { "level": "h4", "text": "Come posso disdire l'abbonamento?" },
+          "children": []
+        },
+        {
+          "id": "preset-a4",
+          "type": "richText",
+          "props": { "html": "<p>Puoi disdire in qualunque momento dalle impostazioni dell'account, senza vincoli.</p>" },
+          "children": []
+        }
+      ]
+    }
+  },
+  {
+    "id": "stats-counter-4col",
+    "label": "Contatori Statistiche 4 colonne",
+    "subtree": {
+      "id": "preset-root",
+      "type": "section",
+      "props": { "columns": { "default": "4" }, "gap": { "default": "md" } },
+      "children": [
+        {
+          "id": "preset-stat-1-num",
+          "type": "heading",
+          "props": { "level": "h2", "text": "250+" },
+          "children": []
+        },
+        {
+          "id": "preset-stat-1-label",
+          "type": "richText",
+          "props": { "html": "<p>Clienti attivi</p>" },
+          "children": []
+        },
+        {
+          "id": "preset-stat-2-num",
+          "type": "heading",
+          "props": { "level": "h2", "text": "98%" },
+          "children": []
+        },
+        {
+          "id": "preset-stat-2-label",
+          "type": "richText",
+          "props": { "html": "<p>Soddisfazione clienti</p>" },
+          "children": []
+        },
+        {
+          "id": "preset-stat-3-num",
+          "type": "heading",
+          "props": { "level": "h2", "text": "12" },
+          "children": []
+        },
+        {
+          "id": "preset-stat-3-label",
+          "type": "richText",
+          "props": { "html": "<p>Paesi serviti</p>" },
+          "children": []
+        },
+        {
+          "id": "preset-stat-4-num",
+          "type": "heading",
+          "props": { "level": "h2", "text": "24/7" },
+          "children": []
+        },
+        {
+          "id": "preset-stat-4-label",
+          "type": "richText",
+          "props": { "html": "<p>Supporto disponibile</p>" },
+          "children": []
+        }
+      ]
+    }
+  },
+  {
+    "id": "footer-modern-4col",
+    "label": "Footer Moderno 4 colonne",
+    "subtree": {
+      "id": "preset-root",
+      "type": "section",
+      "props": {
+        "columns": { "default": "4" },
+        "gap": { "default": "md" },
+        "styleBackground": { "default": "subtle" }
+      },
+      "children": [
+        {
+          "id": "preset-footer-brand-title",
+          "type": "heading",
+          "props": { "level": "h4", "text": "La tua Azienda" },
+          "children": []
+        },
+        {
+          "id": "preset-footer-brand-body",
+          "type": "richText",
+          "props": { "html": "<p>Una breve descrizione dell'azienda e della sua missione.</p>" },
+          "children": []
+        },
+        {
+          "id": "preset-footer-links-title",
+          "type": "heading",
+          "props": { "level": "h4", "text": "Link Rapidi" },
+          "children": []
+        },
+        {
+          "id": "preset-footer-links-body",
+          "type": "richText",
+          "props": { "html": "<ul><li>Chi siamo</li><li>Blog</li><li>Contatti</li></ul>" },
+          "children": []
+        },
+        {
+          "id": "preset-footer-services-title",
+          "type": "heading",
+          "props": { "level": "h4", "text": "Servizi" },
+          "children": []
+        },
+        {
+          "id": "preset-footer-services-body",
+          "type": "richText",
+          "props": { "html": "<ul><li>Consulenza</li><li>Supporto</li><li>Formazione</li></ul>" },
+          "children": []
+        },
+        {
+          "id": "preset-footer-contacts-title",
+          "type": "heading",
+          "props": { "level": "h4", "text": "Contatti" },
+          "children": []
+        },
+        {
+          "id": "preset-footer-contacts-body",
+          "type": "richText",
+          "props": { "html": "<p>info@example.com<br>+39 000 000 0000</p>" },
+          "children": []
+        }
+      ]
+    }
   }
 ]

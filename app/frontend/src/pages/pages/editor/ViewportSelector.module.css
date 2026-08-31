@@ -1,13 +1,34 @@
+/*
+ * Selettore responsive Desktop/Tablet/Mobile — restyle Elementor Pro (richiesta esplicita
+ * del task): pillola scura dentro la topbar `#1e1e1e` (Toolbar.module.css), non più il
+ * riquadro chiaro di Mantine. `data-variant`: attributo che Mantine imposta sul nodo DOM
+ * di `ActionIcon` a partire dalla prop `variant` (verificato sul sorgente installato,
+ * `Box.mjs`), unico aggancio CSS per colorare solo l'icona attiva senza toccare il JSX.
+ */
 .root {
   display: flex;
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-  padding: 2px;
-  border: 1px solid var(--mantine-color-gray-3);
-  border-radius: var(--mantine-radius-sm);
+  background: #2c2c2c;
+  border-radius: 20px;
+  padding: 2px 8px;
 }
 
-[data-mantine-color-scheme='dark'] .root {
-  border-color: var(--mantine-color-dark-4);
+.root :global(.mantine-ActionIcon-root) {
+  --ai-color: #9a9a9a;
+  --ai-hover-color: #ffffff;
+}
+
+.root :global(.mantine-ActionIcon-root:hover) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Icona attiva: unico accento a colore pieno della pillola, stesso azzurro Elementor
+   `#2271b1` usato per hover/selezione sul canvas (`EditorBlockWrapper.module.css`). */
+.root :global(.mantine-ActionIcon-root[data-variant='filled']) {
+  --ai-bg: #2271b1;
+  --ai-hover: #2271b1;
+  --ai-color: #ffffff;
+  --ai-hover-color: #ffffff;
 }

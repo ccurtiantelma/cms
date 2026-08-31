@@ -50,7 +50,11 @@ export default function CanvasAddSectionZone({
     // in uso in questo modulo per `BlockPalette`/`EditorBlockWrapper`.
     <div className={styles.zone} onClick={(event) => event.stopPropagation()}>
       <div className={styles.box}>
-        <Group justify="center" gap="md" mb="sm">
+        {/* `gap={0}`: la spaziatura fra i tre pulsanti circolari è `margin: 0 6px` su
+            ciascuno (`.addButton`/`.templateButton`/`.widgetButton`,
+            CanvasAddSectionZone.module.css) — valore letterale della spec, non più il
+            `gap` di `Group`. */}
+        <Group justify="center" gap={0} mb="sm">
           <Tooltip label="Scegli la struttura della sezione" withArrow>
             <ActionIcon
               variant="filled"

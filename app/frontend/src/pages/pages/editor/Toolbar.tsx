@@ -10,6 +10,14 @@ import type { EditorViewport } from '../../../hooks/useBlockEditorStore';
 import ViewportSelector from './ViewportSelector';
 import styles from './Toolbar.module.css';
 
+/**
+ * Sigla del logo della topbar (restyle Elementor Pro, richiesta esplicita del task): un
+ * solo carattere in un cerchio scuro, coerente col logo circolare "e" di Elementor Pro —
+ * nessun asset immagine importato solo per questo (nessuna dipendenza nuova, CLAUDE.md §
+ * "Ask first" sulle nuove dipendenze).
+ */
+const BRAND_INITIAL = 'E';
+
 export interface ToolbarProps {
   pageTitle: string;
   backHref: string;
@@ -46,8 +54,13 @@ export default function Toolbar({
   return (
     <header className={styles.root}>
       <div className={styles.section}>
+        {/* Logo circolare scuro (restyle Elementor Pro): puramente decorativo, la
+            navigazione resta sul link "Torna alla Dashboard" subito accanto. */}
+        <span className={styles.logo} aria-hidden="true">
+          {BRAND_INITIAL}
+        </span>
         <Tooltip label="Torna alla Dashboard" withArrow>
-          <ActionIcon component="a" href={backHref} variant="default" size="lg" aria-label="Torna alla Dashboard">
+          <ActionIcon component="a" href={backHref} variant="subtle" size="lg" aria-label="Torna alla Dashboard">
             <IconArrowLeft size={18} />
           </ActionIcon>
         </Tooltip>
@@ -84,9 +97,14 @@ export default function Toolbar({
         {hasUnsavedChanges ? (
           <Badge color="orange" variant="light">Modifiche non salvate</Badge>
         ) : (
-          <Text size="sm" c="dimmed">Salvato</Text>
+          <Text size="sm" className={styles.savedLabel}>Salvato</Text>
         )}
-        <Button leftSection={<IconDeviceFloppy size={16} />} onClick={onPublish} loading={saving}>
+        <Button
+          leftSection={<IconDeviceFloppy size={16} />}
+          onClick={onPublish}
+          loading={saving}
+          className={styles.publishButton}
+        >
           Pubblica
         </Button>
       </div>

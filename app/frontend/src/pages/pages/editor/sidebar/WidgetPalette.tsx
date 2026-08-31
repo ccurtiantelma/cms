@@ -83,7 +83,10 @@ function WidgetTile({ descriptor, onAdd }: WidgetTileProps): JSX.Element {
   // riferimento stabile di `ICON_MAP` (mai una funzione creata qui), ma un tag JSX con nome
   // dinamico assegnato a una variabile locale è indistinguibile, per l'analisi statica di
   // React Compiler (`react-hooks/static-components`), da un componente creato a ogni render.
-  const icon = createElement(blockIcon(descriptor.meta?.icon), { size: 20 });
+  // 24px (restyle Elementor Pro, richiesta esplicita del task): dimensione letterale
+  // della spec, non più i 20px generici di prima — solo la dimensione, `blockIcon`
+  // resta lo stesso riferimento stabile (vedi commento sopra su `react-hooks/static-components`).
+  const icon = createElement(blockIcon(descriptor.meta?.icon), { size: 24 });
 
   return (
     <button

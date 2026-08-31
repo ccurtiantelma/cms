@@ -1,23 +1,26 @@
 /*
  * CanvasAddSectionZone.tsx — zona di inserimento sezione sempre visibile in-canvas.
- * Restyle Elementor Pro (richiesta esplicita del task): box tratteggiato `#c2c6dc` con
- * sfondo `#f7f9fd`, tre pulsanti circolari da 40px con un colore dedicato ciascuno — non
- * più l'accento magenta unico `#a333c8` condiviso col drag & drop di `EditorCanvas.module.css`/
- * `EditorBlockWrapper.module.css`. Il selettore di struttura vero e proprio (box
- * tratteggiati dei preset) vive in `SectionStructureModal.module.css`, non qui: questo
- * file resta solo il trigger.
+ * Restyle Elementor Pro (richiesta esplicita del task, valori letterali della spec): box
+ * tratteggiato `#d5d8dc` con sfondo bianco, tre pulsanti circolari da 36px con un colore
+ * dedicato ciascuno. Il selettore di struttura vero e proprio (box tratteggiati dei
+ * preset) vive in `SectionStructureModal.module.css`, non qui: questo file resta solo il
+ * trigger.
  */
 
 .zone {
   width: 100%;
 }
 
-/* Box del trigger: bordo tratteggiato e sfondo chiaro, sempre visibile in canvas. */
+/* Box del trigger: bordo tratteggiato e sfondo bianco, centrato e limitato in larghezza
+   (valori letterali della spec). */
 .box {
-  border: 2px dashed #c2c6dc;
+  max-width: 1100px;
+  margin: 20px auto;
+  border: 1px dashed #d5d8dc;
   border-radius: 4px;
-  padding: 30px 0;
-  background-color: #f7f9fd;
+  padding: 24px;
+  background-color: #ffffff;
+  text-align: center;
   transition: border-color 120ms ease, background-color 120ms ease;
 }
 
@@ -27,11 +30,11 @@
 }
 
 /*
-  I tre pulsanti circolari condividono forma/dimensione (40px di diametro, icona bianca):
-  solo il colore di sfondo cambia. `variant="filled"` di Mantine calcola il proprio sfondo
-  da `color`/`theme.primaryColor` via custom property interna, che una singola classe della
-  stessa specificità non batte in modo affidabile — da qui `!important`, mirato solo a
-  questi tre pulsanti (stesso idioma già in uso in questo file prima del restyle).
+  I tre pulsanti circolari condividono forma/dimensione (36px di diametro): solo il
+  colore di sfondo/icona cambia. `variant="filled"` di Mantine calcola il proprio sfondo
+  da `color`/`theme.primaryColor` via custom property interna, che una singola classe
+  della stessa specificità non batte in modo affidabile — da qui `!important`, mirato
+  solo a questi tre pulsanti (stesso idioma già in uso in questo file prima del restyle).
 */
 .addButton,
 .addButton:hover,
@@ -42,39 +45,47 @@
 .widgetButton,
 .widgetButton:hover,
 .widgetButton:focus {
-  width: 40px !important;
-  height: 40px !important;
-  min-width: 40px !important;
-  min-height: 40px !important;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  margin: 0 6px !important;
   border-radius: 50% !important;
-  color: var(--mantine-color-white) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer;
 }
 
-/* Pulsante 1 — "+": scegli la struttura della sezione. Elementor Pink. */
+/* Pulsante 1 — "+": scegli la struttura della sezione (Aggiungi Struttura). Cerchio
+   grigio chiaro, icona grigio scuro — non più il riempimento a colore pieno. */
 .addButton,
 .addButton:hover,
 .addButton:focus {
-  background-color: #93005a !important;
+  background-color: #e6e8ea !important;
+  color: #6d787a !important;
 }
 
-/* Pulsante 2 — cartella: libreria template. */
+/* Pulsante 2 — cartella: libreria template. Cerchio nero, icona bianca. */
 .templateButton,
 .templateButton:hover,
 .templateButton:focus {
-  background-color: #55606e !important;
+  background-color: #23282d !important;
+  color: #ffffff !important;
 }
 
-/* Pulsante 3 — scintille: aggiungi widget. */
+/* Pulsante 3 — scintille: aggiungi widget (Magic/AI). Cerchio fucsia, icona bianca. */
 .widgetButton,
 .widgetButton:hover,
 .widgetButton:focus {
-  background-color: #a855f7 !important;
+  background-color: #e040fb !important;
+  color: #ffffff !important;
 }
 
 .helperText {
-  margin-top: 4px;
+  margin-top: 10px;
   font-size: 13px;
   font-style: italic;
-  color: #6d7882;
+  color: #8c8f94;
   text-align: center;
 }

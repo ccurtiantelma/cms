@@ -798,6 +798,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/settings/theme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Restituisce la configurazione del tema per il sito pubblico */
+        get: operations["PublicPagesController_getThemeConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/preview/pages/{token}": {
         parameters: {
             query?: never;
@@ -861,6 +878,40 @@ export interface paths {
         };
         /** Restituisce le Sezioni Globali attive per header e footer */
         get: operations["PublicGlobalSectionsController_getActive"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/ingest/pageview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ingest server-to-server di una pageview SSR riuscita */
+        post: operations["AnalyticsController_ingestPageview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** KPI analytics sito pubblico e utilizzo app (Admin+) */
+        get: operations["AnalyticsController_getAnalytics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2225,6 +2276,11 @@ export interface components {
              * @enum {string}
              */
             layoutSlot?: "none" | "header" | "footer";
+            /**
+             * @description Rende l'header sticky sul viewport quando lo slot è `header`.
+             * @example true
+             */
+            isSticky?: boolean;
             /** @description Albero di blocchi iniziale (default: albero vuoto) */
             content?: {
                 [key: string]: unknown;
@@ -2245,6 +2301,11 @@ export interface components {
              * @enum {string}
              */
             layoutSlot: "none" | "header" | "footer";
+            /**
+             * @description Se l'header è sticky sul viewport
+             * @example true
+             */
+            isSticky: boolean;
             /** @description Albero di blocchi corrente */
             content: {
                 [key: string]: unknown;
@@ -2281,6 +2342,11 @@ export interface components {
              * @enum {string}
              */
             layoutSlot?: "none" | "header" | "footer";
+            /**
+             * @description Rende l'header sticky sul viewport quando lo slot è `header`.
+             * @example true
+             */
+            isSticky?: boolean;
             /** @description Albero di blocchi aggiornato (sostituisce integralmente il precedente) */
             content?: {
                 [key: string]: unknown;
@@ -2289,6 +2355,11 @@ export interface components {
         PublicGlobalSectionDto: {
             /** @description Slug admin della Sezione (informativo, non una rotta pubblica) */
             slug?: string;
+            /**
+             * @description Se l'header è sticky sul viewport
+             * @example true
+             */
+            isSticky?: boolean;
             /** @description Albero di blocchi, già migrato/validato/sanitizzato in scrittura */
             content?: {
                 [key: string]: unknown;
@@ -2297,6 +2368,39 @@ export interface components {
         PublicActiveGlobalSectionsDto: {
             header?: components["schemas"]["PublicGlobalSectionDto"] | null;
             footer?: components["schemas"]["PublicGlobalSectionDto"] | null;
+        };
+        IngestPageviewDto: {
+            /**
+             * @description Percorso canonico della pagina HTML pubblicata
+             * @example /chi-siamo
+             */
+            path: string;
+        };
+        AnalyticsSeriesPointDto: {
+            /** @example 2026-08-28 */
+            date: string;
+            /** @example 42 */
+            visits: number;
+            /** @example /chi-siamo */
+            path?: string;
+        };
+        SiteAnalyticsDto: {
+            /** @example 420 */
+            totalVisits: number;
+            series: components["schemas"]["AnalyticsSeriesPointDto"][];
+        };
+        AppAnalyticsDto: {
+            /** @example 12 */
+            registeredUsers: number;
+            /** @example 10 */
+            activeUsers: number;
+            /** @example 84 */
+            successfulLogins: number;
+            loginSeries: components["schemas"]["AnalyticsSeriesPointDto"][];
+        };
+        AnalyticsResponseDto: {
+            site: components["schemas"]["SiteAnalyticsDto"];
+            app: components["schemas"]["AppAnalyticsDto"];
         };
     };
     responses: never;
@@ -4204,6 +4308,26 @@ export interface operations {
             };
         };
     };
+    PublicPagesController_getThemeConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Configurazione tema corrente */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThemeConfigDto"];
+                };
+            };
+        };
+    };
     PreviewPagesController_getByToken: {
         parameters: {
             query?: never;
@@ -4420,6 +4544,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicActiveGlobalSectionsDto"];
+                };
+            };
+        };
+    };
+    AnalyticsController_ingestPageview: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Analytics-Secret": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IngestPageviewDto"];
+            };
+        };
+        responses: {
+            /** @description Pageview accettata o già aggregata */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Secret assente o non valido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Il percorso non identifica una pagina pubblicata */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AnalyticsController_getAnalytics: {
+        parameters: {
+            query?: {
+                /** @description Data iniziale inclusa (YYYY-MM-DD) */
+                from?: string;
+                /** @description Data finale inclusa (YYYY-MM-DD) */
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description KPI e serie giornaliere */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsResponseDto"];
                 };
             };
         };

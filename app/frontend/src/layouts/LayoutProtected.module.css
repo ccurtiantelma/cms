@@ -158,10 +158,13 @@ nav.navbarSurface {
   white-space: nowrap;
 }
 
-/* --- Tasto "Editor tema" (solo SuperAdmin) --- */
+/* --- Azioni rapide in basso: notifica + editor tema --- */
 .customizerSection {
   flex-shrink: 0;
   padding: 0 12px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 /* --- Sezione utente in basso --- */

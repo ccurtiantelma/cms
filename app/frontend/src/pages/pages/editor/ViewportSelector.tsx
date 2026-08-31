@@ -16,7 +16,11 @@ interface ViewportOption {
 }
 
 const VIEWPORT_OPTIONS: ViewportOption[] = [
-  { value: 'desktop', label: 'Desktop', width: '1440px', icon: IconDeviceDesktop },
+  // "100%", non un pixel fisso: a differenza di Tablet/Mobile (device frame a larghezza
+  // fissa, `.viewportTablet`/`.viewportMobile` in `FullScreenEditorLayout.module.css`),
+  // il frame Desktop resta fluido fino al tetto di `.viewportDesktop` (`max-width: 1280px`)
+  // — l'etichetta "1440px" precedente non corrispondeva a nessun valore reale del CSS.
+  { value: 'desktop', label: 'Desktop', width: '100%', icon: IconDeviceDesktop },
   { value: 'tablet', label: 'Tablet', width: '768px', icon: IconDeviceTablet },
   { value: 'mobile', label: 'Mobile', width: '375px', icon: IconDeviceMobile },
 ];

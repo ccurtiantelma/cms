@@ -1,6 +1,7 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { ADMIN_STORAGE_STATE } from './helpers/admin-session';
 import {
+  addRootBlock,
   blockOfType,
   createPageFromUi,
   deletePageFromUi,
@@ -13,25 +14,6 @@ import {
 } from './helpers/page-editor';
 
 /**
- * `addRootBlock` (`helpers/page-editor.ts`) cerca il pulsante testuale "Aggiungi blocco in
- * fondo" — **non più presente nel canvas**: la zona vuota/di coda ora è `CanvasAddSectionZone`
- * (`app/frontend/src/pages/pages/editor/CanvasAddSectionZone.tsx`), tre `ActionIcon` senza
- * quel testo. Il terzo (icona `IconSparkles`) monta comunque una `BlockPalette` reale con
- * `aria-label="Aggiungi widget"` — stesso menu di inserimento, stesso `role="menu"` — solo un
- * trigger diverso: **verificato empiricamente** (`addRootBlock` va in timeout di 90s su
- * qualunque canvas vuoto, Pagina o Sezione Globale che sia). Bug applicativo/drift del test
- * helper rispetto all'interfaccia reale, segnalato nel report del test engineer — non è
- * responsabilità di questo file correggere l'helper condiviso, usato da altri spec: qui si
- * usa solo il trigger reale, in locale.
- */
-async function addRootBlockViaWidgetMenu(page: Page, label: string): Promise<void> {
-  await page.getByRole('button', { name: 'Aggiungi widget' }).click();
-  const menu = page.getByRole('menu');
-  await expect(menu).toBeVisible();
-  await menu.getByRole('menuitem', { name: label, exact: true }).click();
-}
-
-/**
  * E2E delle Sezioni Globali (F06, ADR-40): creazione dallo slot "Header", contenuto a
  * blocchi nel Builder dedicato (`/global-sections/:guid/builder`) e verifica sul sito
  * pubblico SSR reale (`app/public-site`) che il layout la innesti come `<header>`, prima di
@@ -39,7 +21,7 @@ async function addRootBlockViaWidgetMenu(page: Page, label: string): Promise<voi
  *
  * Serve una Pagina pubblicata reale per avere un `<main>` da confrontare: stesso flusso
  * minimo di creazione/pubblicazione già in `page-full-flow.spec.ts`/`page-preview.spec.ts`
- * (drawer "Nuova Pagina" → editor → "Salva bozza" → tendina di stato → "Vedi pagina"), non
+ * (drawer "Nuova Pagina" → editor → salvataggio bozza → tendina di stato → "Vedi pagina"), non
  * un percorso nuovo.
  */
 
@@ -175,7 +157,7 @@ test('Sezione Globale assegnata a "Header": il sito pubblico la serve come <head
   // ─── 2. Nel Builder: un blocco Titolo con il testo da riconoscere nell'HTML pubblico ──
   // Stessa chrome dell'editor di Pagina (`FullScreenEditorLayout`), stessi helper.
   await expect(page.getByText('Trascina il widget qui')).toBeVisible();
-  await addRootBlockViaWidgetMenu(page, 'Titolo');
+  await addRootBlock(page, 'Titolo');
   const heading = blockOfType(page, 'heading');
   await expect(heading).toHaveCount(1);
   await selectBlock(heading, 'Titolo');
@@ -184,15 +166,18 @@ test('Sezione Globale assegnata a "Header": il sito pubblico la serve come <head
   // Il Builder non ha "Bozza"/"Pubblicata": una Sezione Globale non ha stato distinto da
   // pubblicato (`PageGlobalSectionBuilder.tsx`, commento di testa) — la notifica di
   // salvataggio è "Sezione Globale salvata", non "Bozza salvata" (`saveDraft` di
-  // `helpers/page-editor.ts` non si applica qui: cerca il testo sbagliato).
-  await page.getByRole('button', { name: 'Salva bozza' }).click();
+  // `helpers/page-editor.ts` non si applica qui: cerca il testo sbagliato). Il pulsante resta
+  // però lo stesso `Toolbar.tsx` condiviso con l'editor di Pagina — quindi la stessa
+  // etichetta "Pubblica" (bug applicativo reale, non corretto qui: vedi il commento di testa
+  // di `saveButton`, `helpers/page-editor.ts`).
+  await page.getByRole('button', { name: 'Pubblica', exact: true }).click();
   await expect(page.getByRole('alert').getByText('Sezione Globale salvata')).toBeVisible();
 
   // ─── 3. Pagina pubblicata reale, per avere un <main> con cui confrontare l'header ─────
   const slug = uniqueSlug('ssr-global-sections-e2e');
   await createPageFromUi(page, { title: TITOLO_PAGINA, slug });
   await openContentTab(page);
-  await addRootBlockViaWidgetMenu(page, 'Titolo');
+  await addRootBlock(page, 'Titolo');
   const pageHeading = blockOfType(page, 'heading');
   await selectBlock(pageHeading, 'Titolo');
   await fillProp(page, 'text', 'Contenuto della pagina di prova');

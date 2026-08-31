@@ -1,14 +1,23 @@
+/*
+ * Topbar dell'editor full-screen — restyle Elementor Pro (richiesta esplicita del task):
+ * barra scura a tutta larghezza, non più la topbar chiara di Mantine. Le icone
+ * (`ActionIcon`)/i testi (`Text`/`Badge`) restano componenti Mantine invariati (chrome
+ * admin, CLAUDE.md § confine Mantine): qui si forza solo il loro colore/sfondo perché
+ * ereditano di default la palette chiara del tema, illeggibile su `#1e1e1e`.
+ */
+
 .root {
-  flex: 0 0 60px;
+  flex: 0 0 48px;
   min-width: 0;
-  height: 60px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 0 16px;
-  border-bottom: 1px solid var(--mantine-color-gray-3);
-  background: var(--mantine-color-body);
+  background: #1e1e1e;
+  color: #ffffff;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
 }
 
 .section {
@@ -18,11 +27,29 @@
   gap: 8px;
 }
 
+/* Logo "E" in cerchio scuro (fedeltà Elementor Pro): un tono distinto dalla barra
+   stessa, così resta leggibile invece di sparire nello stesso sfondo. */
+.logo {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #000000;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .pageTitle {
   max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .centerActions {
@@ -34,6 +61,52 @@
 
 .actions {
   justify-content: flex-end;
+}
+
+.savedLabel {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/*
+ * Pulsante primario "Pubblica": viola pieno, senza bordo — l'unico accento a piena
+ * saturazione di tutta la barra, coerente col trattamento riservato da Elementor Pro
+ * all'azione principale. `!important` mirato solo a questo pulsante: la classe interna
+ * di Mantine (`variant="filled"`, colore primario del tema) ha la stessa specificità di
+ * una singola classe e viene dopo nel foglio di stile — stesso idioma già in uso in
+ * `CanvasAddSectionZone.module.css` per lo stesso motivo.
+ */
+.publishButton,
+.publishButton:hover,
+.publishButton:focus {
+  background-color: #a435f0 !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 4px !important;
+  font-weight: 600 !important;
+  padding: 6px 18px !important;
+  height: auto !important;
+}
+
+/* Icone della barra: bianche a riposo, leggero fondo chiaro sull'hover — la palette
+   chiara di default di Mantine (`variant="subtle"`/`"default"`) sarebbe altrimenti
+   illeggibile su `#1e1e1e`. */
+.root :global(.mantine-ActionIcon-root) {
+  --ai-color: #ffffff;
+  --ai-hover-color: #ffffff;
+}
+
+.root :global(.mantine-ActionIcon-root[data-variant='subtle']:hover),
+.root :global(.mantine-ActionIcon-root[data-variant='default']:hover) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.root :global(.mantine-ActionIcon-root[data-variant='filled']) {
+  --ai-bg: #2271b1;
+  --ai-hover: #2271b1;
+}
+
+.root :global(.mantine-ActionIcon-root:disabled) {
+  --ai-color: rgba(255, 255, 255, 0.35);
 }
 
 @media (max-width: 62em) {

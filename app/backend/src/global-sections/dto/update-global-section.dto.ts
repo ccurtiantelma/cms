@@ -1,5 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsInt, IsObject, IsOptional, IsString, Min, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  Min,
+  MaxLength,
+} from 'class-validator';
 import { GlobalSectionLayoutSlot } from '../../common/enums';
 
 /**
@@ -39,6 +48,14 @@ export class UpdateGlobalSectionDto {
   @IsOptional()
   @IsEnum(GlobalSectionLayoutSlot, { message: 'layoutSlot non valido.' })
   layoutSlot?: GlobalSectionLayoutSlot;
+
+  @ApiPropertyOptional({
+    description: 'Rende l\'header sticky sul viewport quando lo slot è `header`.',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'isSticky deve essere un booleano.' })
+  isSticky?: boolean;
 
   @ApiPropertyOptional({
     description: 'Albero di blocchi aggiornato (sostituisce integralmente il precedente)',

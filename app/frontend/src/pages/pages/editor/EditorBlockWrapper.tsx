@@ -1,13 +1,15 @@
 /**
- * Chrome dell'editor attorno a un singolo nodo dell'albero (PLAN-F04-editor-visivo.md T4):
- * selezione, riordino fra fratelli, spostamento dentro/fuori da un contenitore, inserimento
- * posizionale di un blocco nuovo sopra o sotto questo, eliminazione, e — sui contenitori —
- * il trigger della palette per aggiungere figli.
+ * Chrome dell'editor attorno a un singolo nodo dell'albero (PLAN-F04-editor-visivo.md T4,
+ * restyle Elementor Pro nel punto 4 di un task successivo): selezione, drag & drop
+ * (dnd-kit), eliminazione ed inserimento posizionale — questi ultimi due solo dalla
+ * chrome compatta delle Sezioni (handle tab, "+"/"::"/"x") o dal menu contestuale
+ * (`CanvasContextMenu.tsx`, tasto destro), mai da una barra di icone fissa sul singolo
+ * blocco (rimossa, vedi il commento di testa del blocco di render "Chrome hover/
+ * selezione" più sotto).
  *
- * Ogni azione che cambia la struttura passa dallo store, che la verifica contro il registro
- * dei blocchi prima di applicarla: qui si decide solo se *offrirla*, e con la stessa
- * funzione (`canContainType`) che lo store userà per accettarla — mai con una regola
- * scritta due volte.
+ * Ogni azione che cambia la struttura passa dallo store, che la verifica contro il
+ * registro dei blocchi prima di applicarla: qui si decide solo se *offrirla* (es.
+ * `canDropInto` per il drag & drop) — mai una regola scritta due volte.
  *
  * **Un solo renderer.** Il contenuto del blocco è renderizzato dai componenti di F02 T8,
  * invariati: `BlockRenderer` per le foglie. Per un contenitore la chrome deve inserirsi
@@ -43,21 +45,11 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
-import { ActionIcon, Group, Menu, Text, Tooltip } from '@mantine/core';
+import { ActionIcon, Group, Text, Tooltip } from '@mantine/core';
 import { useShallow } from 'zustand/react/shallow';
 import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core';
 import { notifications } from '@mantine/notifications';
-import {
-  IconArrowDown,
-  IconArrowUp,
-  IconChevronUp,
-  IconCopy,
-  IconGripVertical,
-  IconHeading,
-  IconIndentDecrease,
-  IconIndentIncrease,
-  IconTrash,
-} from '@tabler/icons-react';
+import { IconGripVertical, IconPencil, IconX } from '@tabler/icons-react';
 import { BLOCK_TYPES } from '../../../types/blocks.types';
 import {
   useActiveViewport,
@@ -68,7 +60,7 @@ import {
   type EditorViewport,
 } from '../../../hooks/useBlockEditorStore';
 import { findLocation, findNode, type BlockNode } from './block-tree.utils';
-import { canContainType, canDropInto } from './block-registry.utils';
+import { canDropInto } from './block-registry.utils';
 import {
   containerWidthPercentFromPointer,
   formatContainerWidthBadge,
@@ -88,6 +80,8 @@ import ConfirmModal from '../../../components/ConfirmModal';
 import BlockPalette, { blockIcon } from './BlockPalette';
 import InlineFloatingToolbar from './InlineFloatingToolbar';
 import InlineFormattingToolbar, {
+  HEADING_LEVELS,
+  type HeadingLevel,
   type ToolbarAlign,
   type ToolbarFormat,
 } from './InlineFormattingToolbar';
@@ -215,9 +209,6 @@ function resolveContainerComponentProps(
     styleHideMobile: node.props.styleHideMobile,
   };
 }
-
-/** Livelli ammessi per `heading.level` (registro, `blocks.types.ts`): niente `h1`. */
-const HEADING_LEVELS = ['h2', 'h3', 'h4', 'h5', 'h6'] as const;
 
 /**
  * Nome della prop di visibilità (ADR-37 § 3) per ciascun viewport del Device Switcher
@@ -354,40 +345,8 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
     const current = findLocation(state.tree, id);
     return current?.parentId ? findNode(state.tree, current.parentId)?.type : undefined;
   });
-  const indentTarget = useBlockEditorStore(
-    useShallow((state) => {
-      const current = findLocation(state.tree, id);
-      if (!current || current.index === 0) return null;
-      const siblings =
-        current.parentId === null
-          ? state.tree
-          : (findNode(state.tree, current.parentId)?.children ?? []);
-      const previous = siblings[current.index - 1];
-      return previous && canContainType(previous.type, node?.type ?? '')
-        ? { parentId: previous.id, index: previous.children.length }
-        : null;
-    }),
-  );
-  const outdentTarget = useBlockEditorStore(
-    useShallow((state) => {
-      const current = findLocation(state.tree, id);
-      if (!current || current.parentId === null) return null;
-      const parentLocation = findLocation(state.tree, current.parentId);
-      if (!parentLocation || !node) return null;
-      const grandParentType =
-        parentLocation.parentId === null
-          ? undefined
-          : findNode(state.tree, parentLocation.parentId)?.type;
-      return canContainType(grandParentType, node.type)
-        ? { parentId: parentLocation.parentId, index: parentLocation.index + 1 }
-        : null;
-    }),
-  );
   const selectNode = useBlockEditorStore((state) => state.selectNode);
-  const moveBlockAction = useBlockEditorStore((state) => state.moveBlockAction);
-  const moveNodeToAction = useBlockEditorStore((state) => state.moveNodeToAction);
   const removeBlockAction = useBlockEditorStore((state) => state.removeBlockAction);
-  const duplicateNodeAction = useBlockEditorStore((state) => state.duplicateNodeAction);
   const updateBlockPropsAction = useBlockEditorStore((state) => state.updateBlockPropsAction);
   const setContainerResizePreview = useBlockEditorStore((state) => state.setContainerResizePreview);
   const clearContainerResizePreview = useBlockEditorStore(
@@ -544,7 +503,9 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
         ? 'center'
         : computed.textAlign === 'right' || computed.textAlign === 'end'
           ? 'right'
-          : 'left';
+          : computed.textAlign === 'justify'
+            ? 'justify'
+            : 'left';
     setFormattingIndicators({
       bold: !Number.isNaN(weight) ? weight >= 600 : computed.fontWeight === 'bold',
       italic: computed.fontStyle === 'italic',
@@ -601,8 +562,25 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   /** Allineamento: stesso comando `justify*` di `InlineFloatingToolbar.tsx`, applicato a tutto il blocco. */
   function handleAlignChange(align: ToolbarAlign): void {
     const command =
-      align === 'center' ? 'justifyCenter' : align === 'right' ? 'justifyRight' : 'justifyLeft';
+      align === 'center'
+        ? 'justifyCenter'
+        : align === 'right'
+          ? 'justifyRight'
+          : align === 'justify'
+            ? 'justifyFull'
+            : 'justifyLeft';
     applyFormattingCommand(command);
+  }
+
+  /**
+   * Cambio rapido di `heading.level` (gap #4): un click discreto, non una digitazione —
+   * `updateBlockPropsAction` diretto, mai {@link scheduleDebouncedUpdate}, stesso canale già
+   * usato dalla voce equivalente del menu "Cambia livello del titolo" nella toolbar
+   * integrata più sotto (`HEADING_LEVELS.map`), qui solo raggiungibile un passaggio prima
+   * (barra ancorata visibile appena il nodo è selezionato, senza aprire un menu).
+   */
+  function handleHeadingLevelChange(level: HeadingLevel): void {
+    updateBlockPropsAction(id, { level });
   }
 
   /**
@@ -612,8 +590,19 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
    * il suo posto — mai le due insieme sullo stesso nodo (vedi commento di testa di
    * `InlineFormattingToolbar.tsx`).
    */
-  const showFormattingToolbar = Boolean(
+  const showRichTextFormattingToolbar = Boolean(
     isSelected && !isEditingText && node?.type === 'richText' && !formattingToolbarDismissed,
+  );
+
+  /**
+   * Controllo rapido del livello titolo (gap #4): stesso momento di
+   * {@link showRichTextFormattingToolbar}, ma su `heading` — mutuamente esclusivi per
+   * costruzione (`node.type` non può essere contemporaneamente `'richText'` e `'heading'`),
+   * condividono lo stesso stato di chiusura esplicita (`formattingToolbarDismissed`) perché
+   * rappresentano lo stesso "giro di selezione" del punto di vista dell'utente.
+   */
+  const showHeadingLevelToolbar = Boolean(
+    isSelected && !isEditingText && node?.type === 'heading' && !formattingToolbarDismissed,
   );
 
   // Nuova selezione (o nuovo nodo): la chiusura esplicita di un giro precedente non deve
@@ -625,11 +614,12 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
 
   // Indicatori aggiornati non appena la barra compare (selezione) o rientra da un editing
   // appena concluso (blur) — mai mentre resta nascosta, per non leggere lo stile calcolato
-  // di un nodo che potrebbe non esistere più.
+  // di un nodo che potrebbe non esistere più. Solo `richText`: la modalità `heading` non ha
+  // indicatori di stile calcolato, solo il livello già letto direttamente dalle props.
   useEffect(() => {
-    if (showFormattingToolbar) refreshFormattingIndicators();
+    if (showRichTextFormattingToolbar) refreshFormattingIndicators();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refreshFormattingIndicators legge wrapperRef via getRichTextTarget, identità stabile (useCallback senza dipendenze reattive)
-  }, [showFormattingToolbar]);
+  }, [showRichTextFormattingToolbar]);
 
   // Il timer in sospeso non deve mai sparare contro un nodo deselezionato o smontato: sia
   // il cambio di `id` sia il flip di `isSelected` (l'`editing` passato a `BlockRenderer`
@@ -691,10 +681,6 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   // annidate (`handleCopyStyle` ecc.) — TypeScript non propaga il narrowing oltre un confine
   // di funzione.
   const currentNode = node;
-  /** `null` alla radice: guardia per "Seleziona il blocco padre" nella Handle Bar, alias
-   * non-`undefined` di `location.parentId` per lo stesso motivo di `currentNode` sopra
-   * (il narrowing di TypeScript su un accesso a proprietà non attraversa una closure). */
-  const parentIdForSelector = location.parentId;
 
   const descriptor = BLOCK_TYPES.find((entry) => entry.type === node.type);
   const label = descriptor?.meta?.label ?? node.type;
@@ -705,12 +691,13 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const isContainer =
     descriptor?.childrenAllow === '*' || (descriptor?.childrenAllow.length ?? 0) > 0;
   /**
-   * Icona del tipo di blocco per la Handle Bar (badge in alto a sinistra, punto 2 del
-   * task). `createElement`, non un tag JSX `<Icon />` assegnato a una variabile locale:
-   * `blockIcon` restituisce sempre lo stesso riferimento stabile di `ICON_MAP` (mai una
-   * funzione creata a questo render), ma per l'analisi statica di React Compiler
-   * (`react-hooks/static-components`) un tag JSX con nome dinamico è indistinguibile da un
-   * componente creato a ogni render — stesso idioma già in uso in `WidgetPalette.tsx`.
+   * Icona del tipo di blocco per il badge delle colonne (`.columnBadge`, restyle
+   * Elementor Pro, punto 4 del task). `createElement`, non un tag JSX `<Icon />`
+   * assegnato a una variabile locale: `blockIcon` restituisce sempre lo stesso
+   * riferimento stabile di `ICON_MAP` (mai una funzione creata a questo render), ma per
+   * l'analisi statica di React Compiler (`react-hooks/static-components`) un tag JSX con
+   * nome dinamico è indistinguibile da un componente creato a ogni render — stesso
+   * idioma già in uso in `WidgetPalette.tsx`.
    */
   const badgeIconElement = createElement(blockIcon(descriptor?.meta?.icon), {
     size: 12,
@@ -741,6 +728,13 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   )
     ? (currentNode.props.columnRatio as ColumnRatioValue)
     : 'equal';
+
+  /** Livello corrente del titolo per il controllo rapido H2-H6 (gap #4): stesso fallback `'h2'` già usato dal menu "Cambia livello del titolo" della toolbar integrata. */
+  const currentHeadingLevel: HeadingLevel = HEADING_LEVELS.includes(
+    currentNode.props.level as HeadingLevel,
+  )
+    ? (currentNode.props.level as HeadingLevel)
+    : 'h2';
 
   /**
    * Numero di colonne effettivo per il viewport attivo, per il segnaposto dello stato
@@ -933,16 +927,35 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
     clearContainerResizePreview();
   }
 
+  /**
+   * Bordo di hover/selezione (restyle Elementor Pro, richiesta esplicita del task, punto
+   * 4): un solo azzurro `#2271b1` in tutto l'editor, ma con un trattamento diverso per
+   * categoria di blocco — non più lo stesso `.hovered`/`.selected` indifferenziato di
+   * prima.
+   * - Sezioni (`isSection`): bordo sottile pieno su hover **o** selezione (`.hovered`).
+   * - Colonne (`isContainerBlockType`, il solo contenitore diverso da `section` nel
+   *   registro attuale, ADR-39): bordo tratteggiato (`.columnHovered`) — la spec lo lega
+   *   esplicitamente al solo hover; esteso qui anche alla selezione, altrimenti un
+   *   `container` selezionato ma non sotto il puntatore resterebbe privo di qualunque
+   *   segnale visivo (deviazione dichiarata in consegna).
+   * - Widget singoli (foglie): bordo pieno solo su selezione (`.selected`), mai su hover
+   *   — lettura letterale della spec ("bordo continuo azzurro ... su selezione").
+   */
+  const overlayBorderClassName = isContainerBlockType
+    ? isHovered || isSelected
+      ? styles.columnHovered
+      : ''
+    : isSection
+      ? isHovered || isSelected
+        ? styles.hovered
+        : ''
+      : isSelected
+        ? styles.selected
+        : '';
+
   const className = [
     styles.wrapper,
-    // Overlay hover/selezione: stesso accento blu (`.hovered`)/magenta Elementor
-    // (`.selected`) per ogni tipo di blocco, Container/Sezione incluso — fedeltà pixel a
-    // Elementor Pro (richiesta esplicita, ribadita più volte) prevale sulla precedente
-    // distinzione cromatica container-vs-elemento-singolo. `.hovered`/`.selected` restano
-    // mutuamente esclusivi per costruzione (`isSelected` non implica `isHovered` in questo
-    // array: un nodo selezionato ma non sotto il puntatore prende solo `.selected`).
-    isHovered && !isSelected ? styles.hovered : '',
-    isSelected ? styles.selected : '',
+    overlayBorderClassName,
     isInvalid ? styles.invalid : '',
     isDragging ? styles.dragging : '',
     resolveHideClassName(tokenStyles, 'hideDesktop', currentNode.props.styleHideDesktop),
@@ -1062,32 +1075,10 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
         )}
 
         {/*
-          Handle Bar (punto 2 del task T-canvas-declutter, stile Elementor Pro): **unico**
-          elemento fluttuante in alto a sinistra sul bordo del wrapper, stesso trigger di
-          prima (hover del nodo puntato, o selezione). Sostituisce integralmente tre
-          elementi che prima coesistevano e si sovrapponevano nello stesso angolo — il
-          badge sola-etichetta, la linguetta piena `sectionActionTab` (solo `section`) e la
-          barra `floatingActionBar` in alto a destra (ogni altro tipo) — con un solo badge
-          compatto (icona + nome del tipo) e tre azioni rapide minime: Drag, Duplica,
-          Elimina. "Seleziona il blocco padre" (ex `floatingActionBar`) e "Aggiungi Section
-          sopra" (ex "+" della `sectionActionTab`) non sono duplicate qui: la prima non ha
-          equivalente diretto altrove ed è stata giudicata accessoria rispetto al obiettivo
-          di decluttering; la seconda resta comunque raggiungibile dalla voce "Sezione" del
-          menu "Inserisci sopra" della toolbar integrata più sotto (`BlockPalette`, che
-          monta lo stesso `SectionStructureModal`) — nessuna funzionalità irraggiungibile,
-          solo non più duplicata in una seconda barra. Gli `aria-label` di Duplica/Elimina
-          restano distinti per formulazione (non solo suffisso) da quelli canonici della
-          toolbar integrata sotto, stesso motivo di sempre: senza `exact: true`,
-          `getByRole('button', { name })` di Playwright confronta per sottostringa, quindi
-          due bottoni con lo stesso testo/suffisso soddisferebbero entrambi la stessa query
-          (`strict mode violation`). La toolbar integrata resta la sorgente del nome
-          canonico, invariato, usato da `e2e/tests/helpers/page-editor.ts`.
-        */}
-        {/*
           `InlineFormattingToolbar` (T-integrazione-toolbar): overlay ancorato al bordo
           superiore del blocco, non un pannello fisso — `position: absolute` dentro
-          `.wrapper` (già `position: relative`), stesso principio geometrico della Handle
-          Bar poco sotto (`.handleBar`), non un secondo calcolo via `getBoundingClientRect`:
+          `.wrapper` (già `position: relative`), stesso principio geometrico della chrome
+          poco sotto (`.sectionHandle`), non un secondo calcolo via `getBoundingClientRect`:
           l'ancoraggio "al bordo superiore di *questo* elemento" è esattamente ciò che il
           layout CSS relativo/assoluto risolve da solo, senza bisogno di rimisurare il DOM
           ad ogni render (a differenza di `InlineFloatingToolbar`, che insegue una
@@ -1096,9 +1087,10 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           `.formattingToolbarAnchor`), mai sullo stesso rigo: eviterebbe la sovrapposizione
           quando entrambe sono visibili (`isSelected` le mostra entrambe).
         */}
-        {showFormattingToolbar && (
+        {showRichTextFormattingToolbar && (
           <div className={styles.formattingToolbarAnchor}>
             <InlineFormattingToolbar
+              mode="text"
               isBold={formattingIndicators.bold}
               isItalic={formattingIndicators.italic}
               activeAlign={formattingIndicators.align}
@@ -1110,94 +1102,141 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           </div>
         )}
 
-        {(isHovered || isSelected) && (
+        {/*
+          Controllo rapido del livello titolo (gap #4, T-integrazione-toolbar): stessa
+          posizione/stesso anchor CSS di `InlineFormattingToolbar` in modalità testo sopra —
+          le due condizioni (`showRichTextFormattingToolbar`/`showHeadingLevelToolbar`) sono
+          mutuamente esclusive per `node.type`, mai montate insieme. Non sostituisce il menu
+          "Cambia livello del titolo" della toolbar integrata più sotto (visibile solo su
+          hover/selezione, dietro un click aggiuntivo): questo è l'equivalente immediato,
+          senza aprire un menu, dello stesso identico comando.
+        */}
+        {showHeadingLevelToolbar && (
+          <div className={styles.formattingToolbarAnchor}>
+            <InlineFormattingToolbar
+              mode="heading"
+              headingLevel={currentHeadingLevel}
+              onLevelChange={handleHeadingLevelChange}
+              onClose={() => setFormattingToolbarDismissed(true)}
+              blockName={label}
+            />
+          </div>
+        )}
+
+        {/*
+          Chrome hover/selezione (restyle Elementor Pro, punto 4 del task): tre varianti
+          mutuamente esclusive per categoria di blocco (`isSection`/`isContainerBlockType`/
+          foglia), mai più di una montata insieme sullo stesso nodo — sostituiscono
+          integralmente la vecchia Handle Bar unica (badge + 3 azioni per ogni tipo) e la
+          barra sottostante da 10+ icone (`.toolbar`, rimossa): "Sposta su/giù",
+          "Sposta dentro/fuori dal contenitore", "Duplica"/"Elimina" testuali e il menu
+          "Cambia livello del titolo" restano raggiungibili dal menu contestuale (tasto
+          destro, `CanvasContextMenu.tsx`) — mai una seconda copia della stessa azione qui.
+          Deviazione dichiarata in consegna: gli helper Playwright di
+          `e2e/tests/helpers/page-editor.ts` che cercavano i vecchi pulsanti per
+          `aria-label` ("Duplica il blocco …", "Elimina il blocco …", "Aggiungi dentro")
+          smettono di trovare un match — fuori dallo scope di questo task (solo CSS Modules
+          + markup, CLAUDE.md § Frontend Developer), segnalato al Test Engineer.
+        */}
+        {/*
+          Sezioni: unica handle tab compatta, centrata sul bordo superiore, con soli tre
+          pulsanti (spec del task) — "+" (Aggiungi Sezione sopra, `BlockPalette`, stessa
+          voce "Sezione" del menu generico che apre `SectionStructureModal`, mai
+          un'azione diretta che salterebbe la scelta del tipo), "::" (drag, stessi
+          `attributes`/`listeners` dnd-kit di sempre) e "x" (Elimina, apre lo stesso
+          `ConfirmModal` di conferma già montato più sotto).
+        */}
+        {isSection && (isHovered || isSelected) && (
           <Group
-            className={[
-              styles.handleBar,
-              // Stesso accento blu/magenta di ogni altro blocco, Container/Sezione incluso
-              // — vedi il commento su `className` più sopra.
-              isSelected ? styles.handleBarSelected : '',
-            ]
-              .filter(Boolean)
-              .join(' ')}
-            gap={4}
+            className={styles.sectionHandle}
+            gap={0}
             wrap="nowrap"
             onClick={(event) => event.stopPropagation()}
           >
-            {badgeIconElement}
-            <Text size="xs" fw={500} className={styles.handleBarLabel} aria-hidden="true">
-              {label}
-            </Text>
-
-            {/*
-              "Seleziona il blocco padre" (Gap Analysis §2, P0 — regressione rispetto a
-              Elementor Pro, richiesta esplicita di ripristino): visibile solo quando questo
-              nodo ha un genitore (`location.parentId`, `findLocation`), mai alla radice
-              dell'albero. `stopPropagation` impedisce che il click raggiunga anche l'`onClick`
-              del wrapper (selezione del blocco corrente) — solo il padre deve risultare
-              selezionato dopo il click, mai insieme al figlio.
-            */}
-            {parentIdForSelector && (
-              <Tooltip label="Seleziona il blocco padre" withArrow>
-                <ActionIcon
-                  variant="transparent"
-                  color="white"
-                  size="xs"
-                  aria-label={`Seleziona il blocco padre di ${label}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    selectNode(parentIdForSelector);
-                  }}
-                >
-                  <IconChevronUp size={12} />
-                </ActionIcon>
-              </Tooltip>
-            )}
+            <BlockPalette
+              parentId={location.parentId}
+              parentType={parentType}
+              index={location.index}
+              label="Aggiungi Sezione sopra"
+              size="xs"
+              variant="transparent"
+              iconOnly
+              triggerClassName={styles.sectionHandleButton}
+            />
 
             <Tooltip label="Trascina per riordinare" withArrow>
               <ActionIcon
                 variant="transparent"
-                color="white"
                 size="xs"
-                aria-label={`Sposta il blocco ${label} (azione rapida)`}
+                className={styles.sectionHandleButton}
+                aria-label={`Trascina per spostare il blocco ${label}`}
                 onClick={(event) => event.stopPropagation()}
                 {...attributes}
                 {...listeners}
               >
-                <IconGripVertical size={12} />
-              </ActionIcon>
-            </Tooltip>
-
-            <Tooltip label="Duplica" withArrow>
-              <ActionIcon
-                variant="transparent"
-                color="white"
-                size="xs"
-                aria-label={`Duplica rapidamente il blocco ${label}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  duplicateNodeAction(id);
-                }}
-              >
-                <IconCopy size={12} />
+                <IconGripVertical size={14} />
               </ActionIcon>
             </Tooltip>
 
             <Tooltip label="Elimina" withArrow>
               <ActionIcon
                 variant="transparent"
-                color="white"
                 size="xs"
-                aria-label={`Elimina subito il blocco ${label}`}
+                className={styles.sectionHandleButton}
+                aria-label={`Elimina il blocco ${label}`}
                 onClick={(event) => {
                   event.stopPropagation();
                   setConfirmOpened(true);
                 }}
               >
-                <IconTrash size={12} />
+                <IconX size={14} />
               </ActionIcon>
             </Tooltip>
           </Group>
+        )}
+
+        {/*
+          Colonne (il `container` del registro, ADR-39 — il solo tipo contenitore diverso
+          da `section` oggi disponibile, mappatura dichiarata in consegna): badge compatto
+          d'identificazione nell'angolo superiore sinistro interno, icona + nome del tipo,
+          nessun pulsante — la spec riserva le azioni rapide solo alla handle tab delle
+          Sezioni. `pointer-events: none`: puramente informativo, il click-to-select del
+          wrapper (`onClick` sul `div` principale) resta l'unico modo di selezionare questo
+          nodo, invariato.
+        */}
+        {isContainerBlockType && (isHovered || isSelected) && (
+          <span className={styles.columnBadge} aria-hidden="true">
+            {badgeIconElement}
+            <Text size="xs" fw={500} className={styles.columnBadgeLabel}>
+              {label}
+            </Text>
+          </span>
+        )}
+
+        {/*
+          Widget singoli (ogni foglia: `heading`/`richText`/`image`/`button`/…): solo su
+          selezione (mai su hover, lettura letterale della spec), in alto a destra, una
+          sola linguetta azzurra con l'icona matita — nessuna azione propria oltre
+          confermare la selezione già attiva (il blocco è già `isSelected` quando questa
+          linguetta compare): l'editing vero e proprio resta quello in-place già gestito da
+          `BlockRenderer`/`editing` più sotto, questa è solo l'affordance visiva "Modifica"
+          richiesta dalla spec.
+        */}
+        {!isContainer && isSelected && (
+          <Tooltip label="Modifica" withArrow>
+            <ActionIcon
+              variant="filled"
+              size="xs"
+              className={styles.editTab}
+              aria-label={`Modifica il blocco ${label}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                selectNode(id);
+              }}
+            >
+              <IconPencil size={12} />
+            </ActionIcon>
+          </Tooltip>
         )}
 
         {/*
@@ -1212,195 +1251,6 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
             Nascosto su {VIEWPORT_LABEL[activeViewport]}
           </span>
         )}
-
-        <Group className={styles.toolbar} gap={4} wrap="nowrap">
-          {/*
-            Niente più etichetta testuale cliccabile qui (T-canvas-cleanup): era ridondante
-            con il click-to-select già gestito dal wrapper stesso (`onClick` sul `div`
-            principale, poco sopra) — un secondo modo di fare la stessa cosa, solo testuale.
-          */}
-          <Tooltip label="Trascina per riordinare" withArrow>
-            <ActionIcon
-              variant="subtle"
-              size="sm"
-              className={styles.dragHandle}
-              aria-label={`Trascina per spostare il blocco ${label}`}
-              onClick={(event) => event.stopPropagation()}
-              {...attributes}
-              {...listeners}
-            >
-              <IconGripVertical size={14} />
-            </ActionIcon>
-          </Tooltip>
-
-          <Tooltip label="Sposta su" withArrow>
-            <ActionIcon
-              variant="subtle"
-              size="sm"
-              aria-label={`Sposta su il blocco ${label}`}
-              disabled={location.index === 0}
-              onClick={(event) => {
-                event.stopPropagation();
-                moveBlockAction(id, 'up');
-              }}
-            >
-              <IconArrowUp size={14} />
-            </ActionIcon>
-          </Tooltip>
-
-          <Tooltip label="Sposta giù" withArrow>
-            <ActionIcon
-              variant="subtle"
-              size="sm"
-              aria-label={`Sposta giù il blocco ${label}`}
-              disabled={location.index === location.siblingsCount - 1}
-              onClick={(event) => {
-                event.stopPropagation();
-                moveBlockAction(id, 'down');
-              }}
-            >
-              <IconArrowDown size={14} />
-            </ActionIcon>
-          </Tooltip>
-
-          <Tooltip
-            label={indentTarget ? 'Sposta dentro il blocco precedente' : 'Nessun contenitore sopra'}
-            withArrow
-          >
-            <ActionIcon
-              variant="subtle"
-              size="sm"
-              aria-label={`Sposta il blocco ${label} dentro il contenitore precedente`}
-              disabled={!indentTarget}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (indentTarget) moveNodeToAction(id, indentTarget.parentId, indentTarget.index);
-              }}
-            >
-              <IconIndentIncrease size={14} />
-            </ActionIcon>
-          </Tooltip>
-
-          <Tooltip label="Porta fuori dal contenitore" withArrow>
-            <ActionIcon
-              variant="subtle"
-              size="sm"
-              aria-label={`Porta il blocco ${label} fuori dal contenitore`}
-              disabled={!outdentTarget}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (outdentTarget)
-                  moveNodeToAction(id, outdentTarget.parentId, outdentTarget.index);
-              }}
-            >
-              <IconIndentDecrease size={14} />
-            </ActionIcon>
-          </Tooltip>
-
-          <Tooltip label="Duplica" withArrow>
-            <ActionIcon
-              variant="subtle"
-              size="sm"
-              aria-label={`Duplica il blocco ${label}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                duplicateNodeAction(id);
-              }}
-            >
-              <IconCopy size={14} />
-            </ActionIcon>
-          </Tooltip>
-
-          <Tooltip label="Elimina" withArrow>
-            <ActionIcon
-              variant="subtle"
-              color="red"
-              size="sm"
-              aria-label={`Elimina il blocco ${label}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                setConfirmOpened(true);
-              }}
-            >
-              <IconTrash size={14} />
-            </ActionIcon>
-          </Tooltip>
-
-          {/*
-          Cambio livello del titolo (h2-h6, mai h1 — il registro non lo prevede,
-          `blocks.types.ts`): solo su `node.type === 'heading'`, stesso pattern
-          condizionale di `isSection` più sopra. `Menu` invece di un ciclo di
-          `ActionIcon` separati: sei livelli non stanno nella toolbar integrata senza
-          allungarla.
-        */}
-          {node.type === 'heading' && (
-            <Menu shadow="md" width={120} position="bottom-start" withinPortal zIndex={1100}>
-              <Menu.Target>
-                <Tooltip label="Cambia livello del titolo" withArrow>
-                  <ActionIcon
-                    variant="subtle"
-                    size="sm"
-                    aria-label={`Cambia livello del titolo ${label} (attuale ${String(
-                      node.props.level ?? 'h2',
-                    ).toUpperCase()})`}
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    <IconHeading size={14} />
-                  </ActionIcon>
-                </Tooltip>
-              </Menu.Target>
-              <Menu.Dropdown onClick={(event) => event.stopPropagation()}>
-                {HEADING_LEVELS.map((level) => (
-                  <Menu.Item
-                    key={level}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      updateBlockPropsAction(id, { level });
-                    }}
-                  >
-                    {level.toUpperCase()}
-                  </Menu.Item>
-                ))}
-              </Menu.Dropdown>
-            </Menu>
-          )}
-
-          {/*
-          Inserimento posizionale: un blocco nuovo si mette dove serve, non solo in fondo
-          all'albero. Il contenitore di destinazione è quello che ospita *questo* nodo, e
-          l'indice è il suo — quindi le due palette offrono esattamente i tipi ammessi in
-          quella posizione, non quelli ammessi dentro questo blocco.
-        */}
-          <BlockPalette
-            parentId={location.parentId}
-            parentType={parentType}
-            index={location.index}
-            label="Inserisci sopra"
-            size="xs"
-            variant="subtle"
-            iconOnly
-          />
-          <BlockPalette
-            parentId={location.parentId}
-            parentType={parentType}
-            index={location.index + 1}
-            label="Inserisci sotto"
-            size="xs"
-            variant="subtle"
-            iconOnly
-          />
-
-          {isContainer && (
-            <BlockPalette
-              parentId={id}
-              parentType={node.type}
-              label="Aggiungi dentro"
-              size="xs"
-              variant="subtle"
-              iconOnly
-            />
-          )}
-        </Group>
 
         {isContainer && ContainerComponent ? (
           <BlockErrorBoundary>

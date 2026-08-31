@@ -40,8 +40,9 @@ function GlobalSectionSlot({
 }) {
   const blocks = blocksOf(section?.content);
   if (blocks.length === 0) return null;
+  const stickyStyle = Tag === 'header' && section?.isSticky ? { position: 'sticky', top: 0, zIndex: 20 } : undefined;
   return (
-    <Tag>
+    <Tag style={stickyStyle}>
       {blocks.map((block) => (
         <BlockRenderer key={block.id} node={block} />
       ))}

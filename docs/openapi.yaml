@@ -1415,6 +1415,20 @@ paths:
       summary: Restituisce i Global Tokens per il rendering pubblico (SSR)
       tags:
         - Public Pages
+  /api/v1/public/settings/theme:
+    get:
+      operationId: PublicPagesController_getThemeConfig
+      parameters: []
+      responses:
+        '200':
+          description: Configurazione tema corrente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThemeConfigDto'
+      summary: Restituisce la configurazione del tema per il sito pubblico
+      tags:
+        - Public Pages
   /api/v1/preview/pages/{token}:
     get:
       operationId: PreviewPagesController_getByToken
@@ -1593,6 +1607,59 @@ paths:
       summary: Restituisce le Sezioni Globali attive per header e footer
       tags:
         - Public Global Sections
+  /api/v1/analytics/ingest/pageview:
+    post:
+      operationId: AnalyticsController_ingestPageview
+      parameters:
+        - name: X-Analytics-Secret
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngestPageviewDto'
+      responses:
+        '204':
+          description: Pageview accettata o già aggregata
+        '401':
+          description: Secret assente o non valido
+        '404':
+          description: Il percorso non identifica una pagina pubblicata
+      summary: Ingest server-to-server di una pageview SSR riuscita
+      tags:
+        - Analytics
+  /api/v1/analytics:
+    get:
+      operationId: AnalyticsController_getAnalytics
+      parameters:
+        - name: from
+          required: false
+          in: query
+          description: Data iniziale inclusa (YYYY-MM-DD)
+          schema:
+            type: string
+        - name: to
+          required: false
+          in: query
+          description: Data finale inclusa (YYYY-MM-DD)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: KPI e serie giornaliere
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsResponseDto'
+      security:
+        - access-token: []
+      summary: KPI analytics sito pubblico e utilizzo app (Admin+)
+      tags:
+        - Analytics
 info:
   title: CMS API
   description: >-
@@ -3512,6 +3579,10 @@ components:
             - header
             - footer
           example: header
+        isSticky:
+          type: boolean
+          description: Rende l'header sticky sul viewport quando lo slot è `header`.
+          example: true
         content:
           type: object
           description: 'Albero di blocchi iniziale (default: albero vuoto)'
@@ -3538,6 +3609,10 @@ components:
             - none
             - header
             - footer
+        isSticky:
+          type: boolean
+          description: Se l'header è sticky sul viewport
+          example: true
         content:
           type: object
           description: Albero di blocchi corrente
@@ -3559,6 +3634,7 @@ components:
         - title
         - slug
         - layoutSlot
+        - isSticky
         - content
         - version
         - createdAt
@@ -3586,6 +3662,10 @@ components:
             - header
             - footer
           example: footer
+        isSticky:
+          type: boolean
+          description: Rende l'header sticky sul viewport quando lo slot è `header`.
+          example: true
         content:
           type: object
           description: >-
@@ -3600,6 +3680,10 @@ components:
         slug:
           type: string
           description: Slug admin della Sezione (informativo, non una rotta pubblica)
+        isSticky:
+          type: boolean
+          description: Se l'header è sticky sul viewport
+          example: true
         content:
           type: object
           description: Albero di blocchi, già migrato/validato/sanitizzato in scrittura
@@ -3617,3 +3701,71 @@ components:
           type: object
           allOf:
             - $ref: '#/components/schemas/PublicGlobalSectionDto'
+    IngestPageviewDto:
+      type: object
+      properties:
+        path:
+          type: string
+          description: Percorso canonico della pagina HTML pubblicata
+          example: /chi-siamo
+      required:
+        - path
+    AnalyticsSeriesPointDto:
+      type: object
+      properties:
+        date:
+          type: string
+          example: '2026-08-28'
+        visits:
+          type: number
+          example: 42
+        path:
+          type: string
+          example: /chi-siamo
+      required:
+        - date
+        - visits
+    SiteAnalyticsDto:
+      type: object
+      properties:
+        totalVisits:
+          type: number
+          example: 420
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsSeriesPointDto'
+      required:
+        - totalVisits
+        - series
+    AppAnalyticsDto:
+      type: object
+      properties:
+        registeredUsers:
+          type: number
+          example: 12
+        activeUsers:
+          type: number
+          example: 10
+        successfulLogins:
+          type: number
+          example: 84
+        loginSeries:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsSeriesPointDto'
+      required:
+        - registeredUsers
+        - activeUsers
+        - successfulLogins
+        - loginSeries
+    AnalyticsResponseDto:
+      type: object
+      properties:
+        site:
+          $ref: '#/components/schemas/SiteAnalyticsDto'
+        app:
+          $ref: '#/components/schemas/AppAnalyticsDto'
+      required:
+        - site
+        - app

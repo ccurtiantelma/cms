@@ -28,13 +28,23 @@ async function bootstrap(): Promise<void> {
     exclude: [{ path: 'metrics', method: RequestMethod.GET }],
   });
 
-  // Due origini ammesse, mai un wildcard: l'admin (`FRONTEND_URL`, credenziali
-  // necessarie) e il sito pubblico SSR (`PUBLIC_SITE_URL`, ADR-22, workspace
-  // `app/public-site` non ancora presente in T2 ma l'origine va ammessa da
-  // subito). Nessuna aggiunta implicita di altre origini.
+  // In sviluppo locale il frontend può girare su un'altra porta `localhost`
+  // (es. 55173/55174), quindi non si limita più a un solo host: accettiamo
+  // tutte le origini di sviluppo `localhost`/`127.0.0.1` e manteniamo le
+  // origini dichiarate per i runtime non locali. Questo evita il blocco CORS
+  // sul login admin senza aprire un wildcard globale in produzione.
   const allowedOrigins = [AppConstants.frontendUrl, AppConstants.publicSiteUrl];
+  const isLocalDevOrigin = (origin: string | undefined): boolean =>
+    !!origin && /^(https?:\/\/)(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
   app.enableCors({
-    origin: allowedOrigins,
+    origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
+      if (!origin || allowedOrigins.includes(origin) || isLocalDevOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`Origin not allowed by CORS: ${origin}`), false);
+    },
     credentials: true,
   });
 

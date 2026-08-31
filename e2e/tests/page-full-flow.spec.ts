@@ -91,10 +91,12 @@ test('slug nidificato, section a due colonne, editing inline e prop responsive m
   // `{ ...valore, mobile: 'md' }`, mai un valore scalare che sovrascriverebbe `default`
   // (`PropertyInspector.tsx`, `breakpointKey`/`activeBreakpoint`, ADR-29 § 2).
   await page.getByRole('button', { name: 'Viewport Mobile' }).click();
-  // Il Titolo resta il nodo selezionato dal passo 4: la sua toolbar espone "Seleziona il
-  // blocco padre", l'unico modo — oltre a un secondo click sul canvas, meno affidabile con la
-  // section ormai piena di figli — di riselezionare la section da questo punto del percorso.
-  await page.getByRole('button', { name: 'Seleziona il blocco padre di Titolo' }).click();
+  // Il Titolo resta il nodo selezionato dal passo 4. Il pulsante di toolbar "Seleziona il
+  // blocco padre", che risaliva alla section senza un secondo click sul canvas, non esiste
+  // più (bug applicativo reale — la vecchia toolbar per-blocco che lo esponeva è stata
+  // rimossa dal restyle "Elementor Pro Twin", segnalato nel report del test engineer): si
+  // riseleziona la section direttamente, dal locator già in scope dal passo 3.
+  await selectBlock(section, 'Sezione');
   await selectProp(page, 'stylePadding', 'md');
 
   // ─── 6. Salvo la bozza (nessun 400, nessun 409) ────────────────────────────────────────────

@@ -91,7 +91,7 @@
    (vedi FullScreenEditorLayout.tsx): la transizione anima `flex-basis`, non presenza/assenza
    dell'elemento, così apertura/chiusura non scattano di colpo. */
 .sidebar {
-  flex: 0 0 320px;
+  flex: 0 0 300px;
   overflow: hidden;
   transition: flex-basis 200ms ease;
 }
@@ -113,9 +113,26 @@
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   justify-content: center;
-  background-color: #f3f4f6;
+  background-color: #000000!important;
+  scrollbar-width: thin;
+  scrollbar-color: #a7aaad transparent;
+  scrollbar-gutter: stable;
+}
+
+.canvasArea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.canvasArea::-webkit-scrollbar-thumb {
+  background-color: #a7aaad;
+  border-radius: 3px;
+}
+
+.canvasArea::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 [data-mantine-color-scheme='dark'] .canvasArea {
@@ -157,22 +174,37 @@
  */
 .viewportTablet,
 .viewportMobile {
-  margin-block: 24px;
+  margin-block: 20px;
   background-color: var(--mantine-color-body);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.08),
-    0 12px 32px rgba(0, 0, 0, 0.18);
-  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .viewportTablet {
   width: 768px;
   max-width: 100%;
+  border-radius: 8px;
 }
 
 .viewportMobile {
   width: 375px;
   max-width: 100%;
+  border-radius: 12px;
+}
+
+/*
+ * Label dei pixel del device frame (PLAN-F04f), sotto la Topbar — solo Tablet/Mobile
+ * (`FullScreenEditorLayout.tsx`, `VIEWPORT_DIMENSIONS`), mai per Desktop che resta fluido.
+ * `flex: 0 0 auto`: una striscia propria nel `column flex` di `.root`, non sovrapposta al
+ * canvas sotto.
+ */
+.viewportDimensionLabel {
+  flex: 0 0 auto;
+  padding: 4px 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--mantine-color-dimmed);
+  background-color: var(--mantine-color-body);
+  border-bottom: 1px solid var(--mantine-color-default-border);
 }
 
 /* --- Pannello destro "Struttura/Navigator" --- */
@@ -185,7 +217,24 @@
   border-left: 1px solid var(--mantine-color-gray-3);
   background-color: var(--mantine-color-white);
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #a7aaad transparent;
+  scrollbar-gutter: stable;
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
+}
+
+.structurePanel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.structurePanel::-webkit-scrollbar-thumb {
+  background-color: #a7aaad;
+  border-radius: 3px;
+}
+
+.structurePanel::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 [data-mantine-color-scheme='dark'] .structurePanel {

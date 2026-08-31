@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ADMIN_STORAGE_STATE } from './helpers/admin-session';
 import {
+  activateMenuItem,
   addChildBlock,
   addRootBlock,
   blockOfType,
@@ -9,8 +10,8 @@ import {
   deletePageFromUi,
   fillProp,
   openContentTab,
-  paletteEntries,
   publishFromStatusMenu,
+  reorderBlock,
   saveDraft,
   selectBlock,
   selectProp,
@@ -73,27 +74,38 @@ test('percorso completo: creo, compongo, salvo, pubblico e ritrovo il contenuto 
   await expect(section).toHaveCount(1);
   await expect(section.getByText('Contenitore vuoto')).toBeVisible();
 
-  // Il pulsante "Aggiungi dentro" vive nella toolbar integrata, `visibility: hidden` a
-  // riposo (EditorBlockWrapper.module.css) e resa visibile solo da `.hovered`/
-  // `.selected`: senza selezionare prima il contenitore non è mai azionabile per
-  // Playwright, anche se presente nel DOM.
-  await selectBlock(section, 'Sezione');
+  // `addChildBlock` sceglie da sola il trigger giusto: il segnaposto "Contenitore vuoto"
+  // (primo figlio) o "Inserisci Dopo" dal menu contestuale dell'ultimo figlio già presente
+  // (dal secondo figlio in poi) — vedi il suo commento di testa, `helpers/page-editor.ts`:
+  // nessun trigger di coda dedicato resta su un contenitore che ha già almeno un figlio.
   await addChildBlock(section, 'Titolo');
-  await selectBlock(section, 'Sezione');
   await addChildBlock(section, 'Testo');
-  await selectBlock(section, 'Sezione');
   await addChildBlock(section, 'Pulsante');
 
   await expect(blockOfType(section, 'heading')).toHaveCount(1);
   await expect(blockOfType(section, 'richText')).toHaveCount(1);
   await expect(blockOfType(section, 'button')).toHaveCount(1);
 
-  // La palette è generata dal registro: dentro una section non si offrono section.
-  await selectBlock(section, 'Sezione');
-  const vociAmmesse = await paletteEntries(
-    section.getByRole('button', { name: 'Aggiungi dentro' }).first(),
-  );
-  expect(vociAmmesse).toEqual(['Titolo', 'Testo', 'Immagine', 'Pulsante']);
+  // La palette è generata dal registro: dentro una section non si offrono section. Letta
+  // dallo stesso flusso "Inserisci Dopo" di `addChildBlock` (nessun trigger diretto rimasto
+  // su un contenitore non vuoto): si apre e si chiude senza scegliere nulla. Da tastiera, non
+  // `.click()`: il menu contestuale del canvas non ha `zIndex={1100}` come ogni altro popover
+  // dell'editor — bug applicativo reale, segnalato nel report del test engineer (vedi il
+  // commento di testa di `activateMenuItem`, `helpers/page-editor.ts`).
+  await blockOfType(section, 'button').click({ button: 'right' });
+  const contextMenu = page.getByRole('menu');
+  await expect(contextMenu).toBeVisible();
+  await activateMenuItem(contextMenu.getByRole('menuitem', { name: 'Inserisci Dopo', exact: true }));
+  // `.last()`: il primo menu resta nel DOM durante la propria transizione di chiusura,
+  // vedi il commento in `addChildBlock` (`helpers/page-editor.ts`) per lo stesso dettaglio.
+  const insertMenu = page.getByRole('menu').last();
+  await expect(insertMenu).toBeVisible();
+  const vociAmmesse = await insertMenu.getByRole('menuitem').allInnerTexts();
+  await page.keyboard.press('Escape');
+  // `container` (ADR-39, "Contenitore") è stato aggiunto ai tipi ammessi dentro una
+  // `section` dopo che questa lista era stata scritta la prima volta — non una regressione
+  // del restyle, un'evoluzione del registro nel frattempo: verificato sul DOM reale.
+  expect(vociAmmesse).toEqual(['Titolo', 'Testo', 'Immagine', 'Pulsante', 'Contenitore']);
 
   // ─── 4. Compilo le proprietà dall'ispettore generato dal registro ─────────
   await selectBlock(blockOfType(section, 'heading'), 'Titolo');
@@ -109,7 +121,7 @@ test('percorso completo: creo, compongo, salvo, pubblico e ritrovo il contenuto 
     .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-block-type')));
   expect(tipiPrimaDelRiordino).toEqual(['heading', 'richText', 'button']);
 
-  await page.getByRole('button', { name: 'Sposta su il blocco Testo' }).click();
+  await reorderBlock(blockOfType(section, 'richText'), 'up');
 
   const tipiDopoIlRiordino = await section
     .locator('[data-block-type]')
@@ -118,7 +130,7 @@ test('percorso completo: creo, compongo, salvo, pubblico e ritrovo il contenuto 
 
   // ─── 6. Elimino un blocco ─────────────────────────────────────────────────
   await selectBlock(blockOfType(section, 'button'), 'Pulsante');
-  await deleteBlock(page, 'Pulsante');
+  await deleteBlock(blockOfType(section, 'button'), 'Pulsante');
   await expect(blockOfType(section, 'button')).toHaveCount(0);
   await expect(blockOfType(section, 'heading')).toHaveCount(1);
   await expect(blockOfType(section, 'richText')).toHaveCount(1);

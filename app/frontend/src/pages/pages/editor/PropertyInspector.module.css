@@ -1,9 +1,38 @@
+/*
+ * Scroll indipendente dal resto della chrome (topbar/tabs restano fissi mentre il
+ * pannello proprietà scorre): niente `calc(100vh - 100px)` esplicito — quel valore
+ * magico si romperebbe ad ogni variazione dell'altezza reale della topbar (60px, non
+ * 100px, `Toolbar.module.css`) e dei `Tabs.List` sopra questo pannello
+ * (`EditorSidebar.module.css`). L'altezza qui deriva invece da una catena `flex` +
+ * `min-height: 0` (`FullScreenEditorLayout.module.css` `.root`→`.workArea`→`.sidebar`,
+ * `EditorSidebar.module.css` `.root`→`.content`) che risale fino alla radice
+ * `position: fixed; inset: 0` dell'editor — ogni anello ha già un'altezza definita,
+ * quindi `height: 100%` qui sotto risolve correttamente senza un valore hardcoded da
+ * tenere sincronizzato a mano con la topbar.
+ */
 .root {
   height: 100%;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #a7aaad transparent;
+  scrollbar-gutter: stable;
+}
+
+/* Scrollbar sottile stile Elementor Pro — vedi `sidebar/EditorSidebar.module.css`. */
+.root::-webkit-scrollbar {
+  width: 6px;
+}
+
+.root::-webkit-scrollbar-thumb {
+  background-color: #a7aaad;
+  border-radius: 3px;
+}
+
+.root::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .paper {

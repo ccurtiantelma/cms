@@ -252,21 +252,37 @@ export default function LayoutProtected(): JSX.Element {
                 ))}
             </ScrollArea>
 
-            {/* Tasto dell'Editor tema — sopra il profilo utente, solo SuperAdmin,
-              variante icon-only a sidebar compressa. Sulla pagina stessa non ha
-              senso riproporre il link all'Editor tema: diventa un ritorno
-              rapido alla Dashboard. */}
-            {user?.role === AppUserRoles.SuperAdmin && (
-              <div className={classes.customizerSection}>
-                {isCollapsed ? (
-                  <Tooltip
-                    label={isThemeEditorRoute ? 'Chiudi editor tema' : 'Editor tema'}
-                    position="right"
-                    withArrow
-                  >
+            {/* Azioni rapide in basso: notifica prima dell'Editor tema, poi profilo utente. */}
+            <div className={classes.customizerSection}>
+              <NotificationBell />
+
+              {user?.role === AppUserRoles.SuperAdmin && (
+                <>
+                  {isCollapsed ? (
+                    <Tooltip
+                      label={isThemeEditorRoute ? 'Chiudi editor tema' : 'Editor tema'}
+                      position="right"
+                      withArrow
+                    >
+                      <button
+                        type="button"
+                        className={`${classes.navItem} ${classes.navItemCollapsed}`}
+                        onClick={() => goTo(isThemeEditorRoute ? '/dashboard' : '/theme-editor')}
+                        aria-label={isThemeEditorRoute ? 'Chiudi editor tema' : 'Editor tema'}
+                      >
+                        <span className={classes.navIcon}>
+                          {isThemeEditorRoute ? (
+                            <IconLayoutDashboard size={20} />
+                          ) : (
+                            <IconPalette size={20} />
+                          )}
+                        </span>
+                      </button>
+                    </Tooltip>
+                  ) : (
                     <button
                       type="button"
-                      className={`${classes.navItem} ${classes.navItemCollapsed}`}
+                      className={classes.navItem}
                       onClick={() => goTo(isThemeEditorRoute ? '/dashboard' : '/theme-editor')}
                       aria-label={isThemeEditorRoute ? 'Chiudi editor tema' : 'Editor tema'}
                     >
@@ -277,29 +293,14 @@ export default function LayoutProtected(): JSX.Element {
                           <IconPalette size={20} />
                         )}
                       </span>
+                      <span className={classes.navLabel}>
+                        {isThemeEditorRoute ? 'Chiudi editor tema' : 'Editor tema'}
+                      </span>
                     </button>
-                  </Tooltip>
-                ) : (
-                  <button
-                    type="button"
-                    className={classes.navItem}
-                    onClick={() => goTo(isThemeEditorRoute ? '/dashboard' : '/theme-editor')}
-                    aria-label={isThemeEditorRoute ? 'Chiudi editor tema' : 'Editor tema'}
-                  >
-                    <span className={classes.navIcon}>
-                      {isThemeEditorRoute ? (
-                        <IconLayoutDashboard size={20} />
-                      ) : (
-                        <IconPalette size={20} />
-                      )}
-                    </span>
-                    <span className={classes.navLabel}>
-                      {isThemeEditorRoute ? 'Chiudi editor tema' : 'Editor tema'}
-                    </span>
-                  </button>
-                )}
-              </div>
-            )}
+                  )}
+                </>
+              )}
+            </div>
 
             <div
               className={`${classes.userSection} ${isCollapsed ? classes.userSectionCollapsed : ''}`}
@@ -324,7 +325,6 @@ export default function LayoutProtected(): JSX.Element {
               <div
                 className={`${classes.userActions} ${isCollapsed ? classes.userActionsCollapsed : ''}`}
               >
-                <NotificationBell />
                 <Tooltip label={collapsed ? 'Espandi menu' : 'Comprimi menu'} position="top">
                   <ActionIcon
                     className={classes.bottomBtn}

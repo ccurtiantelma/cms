@@ -13,7 +13,7 @@
  * approvato (`@mantine/tiptap`, usato solo dall'ispettore a schede — `RichTextFieldEditor.tsx`,
  * ADR-26 — mai dal canvas). `execCommand` è deprecato ma ancora universalmente supportato nei
  * browser desktop di amministrazione di questo CMS; ogni comando qui prodotto (`<b>`/`<strong>`,
- * `<i>`/`<em>`, `<u>`, `<a>`, `text-align` su `<p>`) resta dentro l'allowlist del profilo
+ * `<i>`/`<em>`, `<u>`, `<s>`, `<a>`, `text-align` (incluso `justify`) su `<p>`) resta dentro l'allowlist del profilo
  * `basic` (`block-sanitize-profiles.config.ts`), verificata server-side pre-persistenza
  * (ADR-20/ADR-21) — questo componente non sanitizza nulla, propone solo l'HTML risultante al
  * chiamante, che lo affida a `updateBlockPropsAction` come ogni altro commit di questo file.
@@ -33,12 +33,15 @@ import {
 import { ActionIcon, Popover, TextInput, Tooltip } from '@mantine/core';
 import {
   IconAlignCenter,
+  IconAlignJustified,
   IconAlignLeft,
   IconAlignRight,
   IconBold,
   IconClearFormatting,
   IconItalic,
   IconLink,
+  IconStrikethrough,
+  IconUnderline,
   IconUnlink,
 } from '@tabler/icons-react';
 import styles from './InlineFloatingToolbar.module.css';
@@ -107,6 +110,8 @@ export default function InlineFloatingToolbar({
   const [style, setStyle] = useState<{ top: number; left: number } | null>(null);
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
+  const [isUnderline, setIsUnderline] = useState(false);
+  const [isStrikethrough, setIsStrikethrough] = useState(false);
   const [isLink, setIsLink] = useState(false);
   const [linkPopoverOpened, setLinkPopoverOpened] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
@@ -127,6 +132,8 @@ export default function InlineFloatingToolbar({
     setAnchorRect(computeAnchorRect(target));
     setIsBold(document.queryCommandState('bold'));
     setIsItalic(document.queryCommandState('italic'));
+    setIsUnderline(document.queryCommandState('underline'));
+    setIsStrikethrough(document.queryCommandState('strikethrough'));
     setIsLink(!!findEnclosingLink(target, anchorNode));
   }, [getTarget]);
 
@@ -202,13 +209,30 @@ export default function InlineFloatingToolbar({
     runCommand('createLink', url);
   }
 
-  if (!style) return null;
+  /**
+   * Bug preesistente scoperto verificando il montaggio di questo componente per il task
+   * (gap #1-3): il guard era `if (!style) return null`, ma `style` viene scritto **solo**
+   * dal secondo `useLayoutEffect` sopra, che a sua volta legge `toolbarRef.current` — un
+   * riferimento che può esistere solo se il `<div>` è già nel DOM. Con quel guard, il
+   * `<div>` non veniva mai montato la prima volta (serve `style` per montarlo, serve il
+   * montaggio per calcolare `style`): un classico stallo circolare, verificato con un
+   * componente di prova dedicato — mai un solo bottone (Grassetto compreso, non solo quelli
+   * nuovi di questo task) diventava mai cliccabile. Il guard corretto è `anchorRect`
+   * (scritto dal *primo* effetto, che non dipende dal ref): il `<div>` monta subito,
+   * invisibile per via di `.toolbar` (`opacity: 0`, InlineFloatingToolbar.module.css — la
+   * stessa classe la cui intenzione, secondo il commento originale del modulo CSS, era
+   * proprio "misurata prima di essere posizionata"), il ref si popola, il secondo effetto
+   * lo trova e calcola `style`, e solo allora si aggiunge `.toolbarVisible`. Nessuna
+   * modifica di comportamento visibile richiesta dal task — solo la barra che finalmente
+   * appare.
+   */
+  if (!anchorRect) return null;
 
   return (
     <div
       ref={toolbarRef}
-      className={`${styles.toolbar} ${styles.toolbarVisible}`}
-      style={{ top: style.top, left: style.left }}
+      className={`${styles.toolbar} ${style ? styles.toolbarVisible : ''}`}
+      style={style ? { top: style.top, left: style.left } : undefined}
       onMouseDown={preserveSelection}
       role="toolbar"
       aria-label="Formattazione testo"
@@ -234,6 +258,30 @@ export default function InlineFloatingToolbar({
           onClick={() => runCommand('italic')}
         >
           <IconItalic size={14} />
+        </ActionIcon>
+      </Tooltip>
+
+      <Tooltip label="Sottolineato" withArrow>
+        <ActionIcon
+          variant={isUnderline ? 'filled' : 'subtle'}
+          size="sm"
+          aria-label="Sottolineato"
+          aria-pressed={isUnderline}
+          onClick={() => runCommand('underline')}
+        >
+          <IconUnderline size={14} />
+        </ActionIcon>
+      </Tooltip>
+
+      <Tooltip label="Barrato" withArrow>
+        <ActionIcon
+          variant={isStrikethrough ? 'filled' : 'subtle'}
+          size="sm"
+          aria-label="Barrato"
+          aria-pressed={isStrikethrough}
+          onClick={() => runCommand('strikeThrough')}
+        >
+          <IconStrikethrough size={14} />
         </ActionIcon>
       </Tooltip>
 
@@ -317,6 +365,17 @@ export default function InlineFloatingToolbar({
           onClick={() => runCommand('justifyRight')}
         >
           <IconAlignRight size={14} />
+        </ActionIcon>
+      </Tooltip>
+
+      <Tooltip label="Allinea giustificato" withArrow>
+        <ActionIcon
+          variant="subtle"
+          size="sm"
+          aria-label="Allinea giustificato"
+          onClick={() => runCommand('justifyFull')}
+        >
+          <IconAlignJustified size={14} />
         </ActionIcon>
       </Tooltip>
 

@@ -22,10 +22,23 @@ import {
  * test end-to-end). Copre, dal solo browser e senza mai passare dallo store direttamente:
  *
  * 1. Un giro reale undo → redo → salva, sulla toolbar in cima al canvas.
- * 2. L'inserimento posizionale fra contenitori (`moveNodeToAction`): non c'è drag & drop
- *    nel primo rilascio, l'operazione è esposta come "porta dentro il contenitore
- *    precedente" / "porta fuori dal contenitore" sulla toolbar di ogni blocco — sopra
- *    (dentro) e sotto (fuori) rispetto a un blocco già esistente.
+ * 2. L'inserimento posizionale fra contenitori (`moveNodeToAction`).
+ *
+ * **Deviazione dal round F04b originale, dichiarata nel report del test engineer**: allora
+ * l'operazione era esposta da una coppia di pulsanti di toolbar, autosufficienti ("porta
+ * dentro il contenitore precedente" / "porta fuori dal contenitore"). Dal restyle "Elementor
+ * Pro Twin" quella toolbar (e quei due pulsanti) non esiste più — verificato sul codice
+ * sorgente, nessuna voce equivalente nel menu contestuale (`CanvasContextMenu.tsx`, solo
+ * "Sposta su/giù" fra fratelli, mai un cambio di profondità). L'unico percorso oggi
+ * funzionante per cambiare il genitore di un blocco è il trascinamento a puntatore nel
+ * pannello Struttura (`indentBlock`/`outdentBlock`, ora basati su
+ * `dragTreeNodeOnto`/`treeNodeRow`, `helpers/page-editor.ts`) — con un limite reale, non di
+ * questo test: il bersaglio del trascinamento dev'essere un **figlio già esistente** del
+ * contenitore di destinazione, mai il contenitore vuoto stesso (vedi il commento di testa di
+ * `dragTreeNodeOnto`). Il test compone quindi la Pagina con due blocchi "ancora" in più
+ * (un'Immagine dentro la Sezione, un Pulsante di radice dopo il Titolo) al solo scopo di
+ * avere bersagli validi per il trascinamento — mai controllati dalle asserzioni oltre alla
+ * loro presenza.
  *
  * Non ripete la copertura di `page-editor.spec.ts` (percorso completo di creazione/
  * composizione/pubblicazione) né quella di `page-editor-conflitto.spec.ts` (409
@@ -87,9 +100,35 @@ test('inserimento posizionale: porto un blocco dentro il contenitore precedente 
   await createPageFromUi(page, { title: TITOLO_PAGINA, slug });
   await openContentTab(page);
 
-  // Due blocchi di radice: una section (può contenere un titolo) e un titolo, in quest'ordine.
+  // Sezione con un figlio "sacrificale" (Testo/richText — scelto apposta: unico tipo la cui
+  // prop obbligatoria ammette esplicitamente la stringa vuota, `rich-text.block.ts`,
+  // "Stringa vuota ammessa"; un'Immagine richiederebbe un `mediaRef` reale mai impostato, un
+  // Pulsante un `href` che il validatore respinge comunque vuoto — nessuno dei due
+  // salverebbe mai la bozza senza compilare prop non pertinenti a questo test; mai
+  // controllato dalle asserzioni oltre alla sua presenza): il pannello Struttura sposta il
+  // nodo trascinato accanto alla riga sorvolata, mai "dentro" la riga di un contenitore
+  // ancora privo di figli — un contenitore vuoto non è oggi raggiungibile da nessun percorso
+  // "indent" dell'editor (bug applicativo reale, segnalato nel report del test engineer,
+  // vedi il commento di testa di `dragTreeNodeOnto`, `helpers/page-editor.ts`). Un secondo
+  // blocco di radice, dopo il Titolo (qui un Pulsante, mai controllato dalle asserzioni oltre
+  // alla sua presenza — la sua prop obbligatoria non viene mai letta, solo la sua posizione),
+  // è l'ancora su cui atterra l'"outdent": senza una riga di radice **dopo** la Sezione, non
+  // c'è modo di far rientrare il Titolo esattamente dopo di lei (il trascinamento inserisce
+  // sempre "prima della riga sorvolata", mai "in fondo alla lista" — stesso limite).
   await addRootBlock(page, 'Sezione');
+  const section = blockOfType(page, 'section');
+  await addChildBlock(section, 'Testo');
   await addRootBlock(page, 'Titolo');
+  await addRootBlock(page, 'Pulsante');
+  // L'ancora "Pulsante" ha due prop obbligatorie che il validatore server-side respinge
+  // vuote per davvero (`href`, `kind: 'url'`: una stringa vuota non è uno schema ammesso,
+  // indipendentemente da `nonEmpty` — a differenza di `richText`/`heading.text`, che quel
+  // flag non lo dichiarano affatto): a differenza del filler "Testo" sopra, questa non può
+  // restare mai toccata, va compilata subito o il salvataggio finale fallirebbe per
+  // validazione, non per lo spostamento.
+  await selectBlock(blockOfType(page, 'button'), 'Pulsante');
+  await fillProp(page, 'label', 'Ancora');
+  await fillProp(page, 'href', 'https://esempio.test/ancora');
 
   // Tipi dei soli blocchi di radice: quelli il cui `[data-block-type]` più vicino, salendo
   // nel DOM, è se stesso — un blocco annidato ha sempre un antenato `[data-block-type]`.
@@ -99,27 +138,21 @@ test('inserimento posizionale: porto un blocco dentro il contenitore precedente 
         .filter((node) => (node.parentElement?.closest('[data-block-type]') ?? null) === null)
         .map((node) => node.getAttribute('data-block-type')),
     );
-  await expect.poll(tipiDiRadice).toEqual(['section', 'heading']);
-
-  const section = blockOfType(page, 'section');
+  await expect.poll(tipiDiRadice).toEqual(['section', 'heading', 'button']);
   await expect(blockOfType(section, 'heading')).toHaveCount(0);
 
-  // "Porta dentro": il titolo di radice entra nella section che lo precede.
-  // Il pulsante indent/outdent vive nella toolbar integrata, `visibility: hidden` a
-  // riposo (EditorBlockWrapper.module.css) e resa visibile solo da `.hovered`/
-  // `.selected`: senza selezionare prima il blocco non è mai azionabile per Playwright,
-  // anche se presente nel DOM.
-  await selectBlock(blockOfType(page, 'heading'), 'Titolo');
-  await indentBlock(page, 'Titolo');
+  // "Porta dentro": il titolo di radice entra nella Sezione, sorvolando (nel pannello
+  // Struttura) la riga del suo figlio Testo già presente.
+  await indentBlock(page, 'Titolo', 'Testo');
 
-  await expect.poll(tipiDiRadice).toEqual(['section']);
+  await expect.poll(tipiDiRadice).toEqual(['section', 'button']);
   await expect(blockOfType(section, 'heading')).toHaveCount(1);
 
-  // "Porta fuori": lo riporto al livello di radice, subito dopo la section.
-  await selectBlock(blockOfType(section, 'heading'), 'Titolo');
-  await outdentBlock(page, 'Titolo');
+  // "Porta fuori": lo riporto al livello di radice, sorvolando la riga del Pulsante — che
+  // lo fa atterrare esattamente fra la Sezione e il Pulsante, cioè subito dopo la Sezione.
+  await outdentBlock(page, 'Titolo', 'Pulsante');
 
-  await expect.poll(tipiDiRadice).toEqual(['section', 'heading']);
+  await expect.poll(tipiDiRadice).toEqual(['section', 'heading', 'button']);
   await expect(blockOfType(section, 'heading')).toHaveCount(0);
 
   // Compilo la prop richiesta (altrimenti il salvataggio è respinto per validazione, non
@@ -130,5 +163,5 @@ test('inserimento posizionale: porto un blocco dentro il contenitore precedente 
   await saveDraft(page);
   await page.reload();
   await openContentTab(page);
-  await expect.poll(tipiDiRadice).toEqual(['section', 'heading']);
+  await expect.poll(tipiDiRadice).toEqual(['section', 'heading', 'button']);
 });

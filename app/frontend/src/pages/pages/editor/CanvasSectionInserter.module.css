@@ -1,47 +1,17 @@
+/*
+  Striscia invisibile a riposo (solo bersaglio drag & drop, nessun pulsante "+" persistente
+  — rimosso, l'editor resta identico a Elementor Pro): si allarga leggermente solo durante
+  un trascinamento sopra di lei, quando `CanvasDropIndicator` mostra l'indicatore magenta.
+*/
 .inserter {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 18px;
+  min-height: 8px;
   transition: min-height 120ms ease;
 }
 
-.empty {
-  min-height: 180px;
-  flex-direction: column;
-  border: 2px dashed var(--mantine-color-gray-4);
-  border-radius: 6px;
-  background: var(--mantine-color-gray-0);
-}
-
-.between {
-  opacity: 0.35;
-}
-
-.between:hover,
-.between:focus-within {
-  min-height: 42px;
-  opacity: 1;
-}
-
-.button {
-  position: relative;
-  z-index: 1;
-  background: var(--mantine-primary-color-filled);
-}
-
-.label {
-  color: var(--mantine-color-dimmed);
-  font-size: 12px;
-}
-
-.between .label {
-  display: none;
-}
-
-.between:hover .label,
-.between:focus-within .label {
-  display: block;
+.inserter[data-over='true'] {
+  min-height: 24px;
 }

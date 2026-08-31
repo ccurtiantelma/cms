@@ -5,37 +5,121 @@
  */
 
 .root {
-  width: 320px;
+  width: 300px;
   height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background-color: var(--mantine-color-white);
-  border-right: 1px solid var(--mantine-color-gray-3);
+  background-color: #f7f7f7;
+  border-right: 1px solid #e5e7eb;
+  overflow: hidden;
 }
 
 [data-mantine-color-scheme='dark'] .root {
-  background-color: var(--mantine-color-dark-6);
+  background-color: var(--mantine-color-dark-7);
   border-right-color: var(--mantine-color-dark-4);
 }
 
 .tabs {
   flex: 0 0 auto;
-  border-bottom: 1px solid var(--mantine-color-gray-3);
+  border-bottom: 1px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(4px);
 }
 
 [data-mantine-color-scheme='dark'] .tabs {
   border-bottom-color: var(--mantine-color-dark-4);
+  background: rgba(26, 27, 30, 0.82);
+}
+
+.tabs :global(.mantine-Tabs-list) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 8px 8px 0;
+  border: 0;
+  background: transparent;
+}
+
+.tabs :global(.mantine-Tabs-tab) {
+  min-height: 38px;
+  border-radius: 8px 8px 0 0;
+  border: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #4b5563;
+  background: transparent;
+}
+
+.tabs :global(.mantine-Tabs-tab[data-active='true']) {
+  background: #ffffff;
+  color: #111827;
+  box-shadow: inset 0 -2px 0 #111827;
+}
+
+[data-mantine-color-scheme='dark'] .tabs :global(.mantine-Tabs-tab) {
+  color: #c7ccd4;
+}
+
+[data-mantine-color-scheme='dark'] .tabs :global(.mantine-Tabs-tab[data-active='true']) {
+  background: #1f2937;
+  color: #f9fafb;
+  box-shadow: inset 0 -2px 0 #e5e7eb;
 }
 
 /* Header schede fisso, contenuto della scheda scrollabile in modo indipendente. */
 .content {
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+}
+
+.panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  overflow-y: scroll;
   overflow-x: hidden;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(110, 118, 129, 0.8) transparent;
+  scrollbar-gutter: stable;
+  padding-right: 4px;
+}
+
+/*
+  Scrollbar sottile stile Elementor Pro (WebKit/Blink — Firefox non supporta
+  `::-webkit-scrollbar`, resta sulla scrollbar nativa del sistema, nessun degrado
+  funzionale). 6px di larghezza, thumb `#a7aaad` — stesso valore duplicato in
+  `PropertyInspector.module.css`/`WidgetPalette.module.css` (i due contenitori
+  effettivamente scrollabili annidati dentro `.content`): nessun file condiviso, stesso
+  principio già in uso in questo codebase per piccoli helper cross-modulo.
+*/
+.content::-webkit-scrollbar,
+.panel::-webkit-scrollbar,
+.root::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  display: block;
+}
+
+.content::-webkit-scrollbar-thumb,
+.panel::-webkit-scrollbar-thumb,
+.root::-webkit-scrollbar-thumb {
+  background-color: rgba(110, 118, 129, 0.8);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.content::-webkit-scrollbar-track,
+.panel::-webkit-scrollbar-track,
+.root::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .emptyState {
+  width: 100%;
   padding: 24px 16px;
+  align-self: center;
 }

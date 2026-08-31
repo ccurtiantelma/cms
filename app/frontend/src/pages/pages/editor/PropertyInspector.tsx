@@ -217,6 +217,7 @@ export default function PropertyInspector(): JSX.Element {
                 <Tooltip label="Torna ai widget" withArrow>
                   <ActionIcon
                     variant="subtle"
+                    color="gray"
                     size="sm"
                     aria-label="Torna ai widget"
                     onClick={handleBackToWidgets}
@@ -225,9 +226,13 @@ export default function PropertyInspector(): JSX.Element {
                   </ActionIcon>
                 </Tooltip>
               )}
-              <Text fw={600}>Proprietà</Text>
+              <Text fw={700} c="dark.8">Proprietà</Text>
             </Group>
-            {descriptor && <Badge variant="light">{descriptor.meta?.label ?? descriptor.type}</Badge>}
+            {descriptor && (
+              <Badge variant="light" color="gray">
+                {descriptor.meta?.label ?? descriptor.type}
+              </Badge>
+            )}
           </Group>
 
           {!node ? (

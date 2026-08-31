@@ -2,6 +2,7 @@
 
 .wrapper {
   position: relative;
+  min-width: 0;
   border: 1px dashed transparent;
   border-radius: 6px;
   padding: 4px 4px 4px 4px;
@@ -16,35 +17,25 @@
 }
 
 /*
+  Bordo di hover/selezione — restyle Elementor Pro (richiesta esplicita del task, punto 4):
+  un solo azzurro `#2271b1` in tutto l'editor (non più il magenta `#93003c` riservato prima
+  alla selezione), con un trattamento diverso per categoria di blocco calcolato in
+  `EditorBlockWrapper.tsx` (`overlayBorderClassName`):
+  - `.hovered`: Sezioni, bordo sottile pieno su hover **o** selezione.
+  - `.selected`: Widget singoli (foglie), bordo pieno solo su selezione.
+  - `.columnHovered` (sotto): Colonne (`container`), bordo tratteggiato.
   Hover promosso a stato esplicito (`isHovered`, EditorBlockWrapper.tsx), niente `:hover`
   CSS nativo sul wrapper (rimosso: cadrebbe su ogni antenato del nodo puntato, il DOM di un
-  figlio è geometricamente dentro quello del padre) — questa classe è applicata via JS solo
-  al nodo effettivamente sotto il puntatore (mai contemporaneamente ai suoi
-  antenati/discendenti), e mai insieme a `.selected` (`isHovered && !isSelected` in
-  `EditorBlockWrapper.tsx`): "puntamento" e "modifica attiva" restano due segnali sempre
-  distinguibili, mai lo stesso colore per due stati diversi (Gap Analysis §2, P0). Colore
-  Elementor-style (`#2271b1`, richiesta esplicita del task), non il blue-5 di Mantine usato
-  altrove in chrome admin: qui la superficie è il canvas WYSIWYG, non un pannello.
+  figlio è geometricamente dentro quello del padre) — la classe è applicata via JS solo al
+  nodo effettivamente sotto il puntatore, mai contemporaneamente ai suoi
+  antenati/discendenti. Stesso spessore (1px) di `.wrapper` a riposo: nessuna compensazione
+  di `padding` necessaria, il contenuto non trasla fra i due stati.
 */
-.hovered {
+.hovered,
+.selected {
   border-width: 1px;
   border-style: solid;
   border-color: #2271b1;
-}
-
-/*
-  Selezione: bordo marcato (2px, non 1px come l'hover) in magenta Elementor
-  (`#93003c`) invece del blu di puntamento — prima condivideva `#2271b1` con `.hovered`,
-  rendendo indistinguibile "sto passando sopra" da "sto modificando questo" (Gap Analysis
-  §2, P0). `padding: 3px` compensa il pixel di bordo in più rispetto a `.wrapper` (1px +
-  4px di padding) così il contenuto non trasla quando il nodo passa da hover a selezionato.
-*/
-.selected,
-.selected:hover {
-  border-width: 2px;
-  border-style: solid;
-  border-color: #93003c;
-  padding: 3px;
 }
 
 /* Nodo respinto dall'ultima validazione server-side (400 con path del colpevole). */
@@ -56,43 +47,26 @@
 }
 
 /*
-  Invisibile a riposo (T-canvas-cleanup): un'opacità intermedia lasciava comunque una
-  fila di icone sempre leggibile su ogni blocco, lo stesso "inquinamento visivo" delle
-  etichette testuali rimosse — solo più discreto. `visibility:hidden` (non solo
-  `opacity:0`) toglie anche i pulsanti dal focus da tab quando il blocco è a riposo:
-  `.wrapper:focus-within` qui sotto li restituisce non appena uno di loro riceve il
-  focus da tastiera, così restano raggiungibili in sequenza da chi c'è già entrato.
+  Colonne (`container`, ADR-39 — il solo tipo contenitore diverso da `section` nel
+  registro attuale, mappatura dichiarata in consegna): bordo tratteggiato azzurro, non
+  pieno come `.hovered`/`.selected` sopra — unico segnale che distingue visivamente un
+  `container` da una Section senza introdurre un terzo colore (fedeltà Elementor Pro,
+  richiesta esplicita del task). Esteso anche alla sola selezione (oltre all'hover
+  letterale della spec): un `container` selezionato ma non sotto il puntatore resterebbe
+  altrimenti privo di qualunque segnale visivo, vedi il commento di
+  `overlayBorderClassName` in `EditorBlockWrapper.tsx`.
 */
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 4px;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 120ms ease;
+.columnHovered {
+  border-width: 1px;
+  border-style: dashed;
+  border-color: #2271b1;
 }
 
-/*
-  Mai `.wrapper:hover` qui (a differenza del bordo grigio sopra, che può cascare sugli
-  antenati come discreto pass-through): `:hover` nativo è vero per ogni antenato del nodo
-  puntato, e mostrerebbe anche la toolbar della Section che contiene il blocco realmente
-  sotto il cursore — esattamente il "contemporaneamente ai suoi antenati" che `.hovered`
-  (stato JS, commento sopra) esiste apposta per evitare. `.wrapper:focus-within` ha lo
-  stesso problema (`:focus-within` sale per tutti gli antenati) — sostituito da
-  `.selected` sul nodo che la tastiera ha davvero raggiunto (`onKeyDown`/click impostano
-  entrambi `selectedId`, quindi tab+Invio su un blocco lo seleziona e la sua toolbar
-  compare da `.selected > .toolbar` qui sotto, senza toccare quella dei suoi antenati).
-*/
-.hovered > .toolbar,
-.selected > .toolbar,
-.invalid > .toolbar {
-  opacity: 1;
-  visibility: visible;
-}
-
-/* Un figlio sotto il cursore ha precedenza anche se il contenitore resta selezionato. */
-.selected:has(.hovered) > .handleBar {
+/* Un figlio sotto il cursore ha precedenza anche se il contenitore resta selezionato:
+   la chrome del genitore (handle tab di Sezione, badge di Colonna) si nasconde finché
+   dura, così le due non si sovrappongono mai sullo stesso angolo del canvas. */
+.selected:has(.hovered) > .sectionHandle,
+.selected:has(.hovered) > .columnBadge {
   opacity: 0;
   visibility: hidden;
 }
@@ -113,8 +87,8 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  min-height: 220px;
-  border: 1px dashed rgba(123, 128, 136, 0.7);
+  min-height: 120px;
+  border: 1px dashed #c3c4c7;
   border-radius: 8px;
   padding: 24px 20px;
   text-align: center;
@@ -221,11 +195,6 @@
   display: none;
 }
 
-/* Maniglia di trascinamento nella toolbar: mai il corpo del blocco. */
-.dragHandle {
-  cursor: grab;
-}
-
 /*
   Bersaglio invisibile del menu contestuale (tasto destro, EditorBlockWrapper.tsx): un
   punto 1x1 posizionato sulle coordinate del click via `top`/`left` inline (calcolate ad
@@ -240,33 +209,13 @@
 }
 
 /*
-  Handle Bar (punto 1/2 del task T-canvas-declutter, stile Elementor Pro): **unico**
-  elemento fluttuante in alto a sinistra sul bordo del wrapper — badge compatto (icona +
-  nome del tipo di blocco) più le tre azioni rapide (Drag/Duplica/Elimina, `ActionIcon`
-  Mantine nel JSX). Sostituisce tre elementi che prima coesistevano nello stesso angolo e
-  si sovrapponevano fra loro e con la selezione: il vecchio badge sola-etichetta
-  (`.hoverBadge`), la barra `.floatingActionBar` in alto a destra e la linguetta
-  `.sectionActionTab` sopra le `section` (quest'ultima, a sua volta, sostituiva una "pill"
-  centrata magenta/viola ancora precedente — vedi git history — il punto di origine più
-  probabile del badge viola "orfano" lamentato: con questa Handle Bar unica, quella
-  stratificazione di varianti sparisce). Fuori dal box del wrapper (top negativo), mai
-  dentro il flusso della toolbar integrata sotto — così non compete per spazio con le sue
-  azioni. Blu `#2271b1` a riposo (solo hover), stesso di `.hovered` — `.handleBarSelected`
-  sotto la ridipinge in magenta quando il nodo è selezionato, coerente con `.selected` sul
-  bordo (Gap Analysis §2, P0: hover e selezione restano due segnali distinti anche qui, non
-  solo sul bordo del wrapper). Una Handle Bar di un nodo innestato è sempre dipinta sopra
-  quella del suo contenitore: entrambe sono discendenti dello stesso stacking context
-  implicito (nessuno dei due wrapper dichiara un proprio `z-index`), e l'ordine del DOM
-  mette quella del figlio dopo quella del padre.
-*/
-/*
-  Ancoraggio di `InlineFormattingToolbar` (T-integrazione-toolbar): riga distinta sopra la
-  Handle Bar (`top: -54px` = -22px della Handle Bar - 2px di respiro - 30px di altezza
-  minima della barra, EditorBlockWrapper.module.css/InlineFormattingToolbar.module.css),
-  mai sulla stessa riga — le due possono comparire insieme (`isSelected` mostra entrambe,
-  vedi il commento nel JSX) e non devono sovrapporsi. `z-index` sopra la Handle Bar: in caso
-  di blocco molto stretto, dove le due righe potessero toccarsi, la barra di formattazione
-  (azione attiva, in editing) resta sopra il badge passivo del tipo.
+  Ancoraggio di `InlineFormattingToolbar` (T-integrazione-toolbar): overlay fluttuante
+  sopra il blocco, mostrato solo mentre il testo è effettivamente in editing/selezionato
+  (`showRichTextFormattingToolbar`/`showHeadingLevelToolbar`, EditorBlockWrapper.tsx) —
+  solo su foglie (`richText`/`heading`), mai insieme a `.sectionHandle` (solo `section`),
+  quindi nessuna sovrapposizione possibile con quella. Resta comunque sopra `.editTab`
+  (z-index maggiore): in caso di blocco molto stretto, dove le due potessero toccarsi, la
+  barra di formattazione (azione attiva) prevale sulla linguetta passiva "Modifica".
 */
 .formattingToolbarAnchor {
   position: absolute;
@@ -276,43 +225,56 @@
   pointer-events: auto;
 }
 
-.handleBar {
+/*
+  Handle tab compatta delle Sezioni — restyle Elementor Pro (richiesta esplicita del
+  task, punto 4): **unico** elemento fluttuante, centrato sul bordo superiore del blocco,
+  con soli tre pulsanti ("+"/"::"/"x", vedi il JSX) — sostituisce integralmente la vecchia
+  Handle Bar (badge + 3 azioni, ancorata a sinistra su ogni tipo di blocco) e la barra da
+  10+ icone sottostante (`.toolbar`, rimossa). Valori di posizionamento letterali della
+  spec del task.
+*/
+.sectionHandle {
   position: absolute;
-  top: -22px;
-  left: 0;
-  z-index: 3;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  height: 22px;
-  padding: 0 4px 0 6px;
-  border-radius: 3px 3px 0 0;
+  border-radius: 4px;
   background: #2271b1;
-  color: var(--mantine-color-white);
   pointer-events: auto;
 }
 
-/* Blocco selezionato (Gap Analysis §2, P0): la Handle Bar segue lo stesso accento magenta di `.selected`, mai lo stesso blu di `.hovered`. */
-.handleBarSelected {
-  background: #93003c;
+.sectionHandleButton,
+.sectionHandleButton:hover,
+.sectionHandleButton:focus {
+  color: var(--mantine-color-white) !important;
 }
 
 /*
-  Un blocco Container/Sezione (qualunque tipo il registro ammetta come contenitore —
-  `isContainer` in `EditorBlockWrapper.tsx`, non solo `container`) portava qui un bordo/
-  Handle Bar arancione distinto dal blu/magenta generico di `.hovered`/`.selected`/
-  `.handleBar(Selected)` sopra (richiesta esplicita di un task precedente: "bordo blu per
-  elementi singoli, arancione per Container/Sezioni"). Sostituito dallo stesso accento di
-  ogni altro blocco: fedeltà pixel a Elementor Pro (richiesta esplicita, ribadita più volte)
-  prevale sulla distinzione cromatica container-vs-elemento-singolo. Il viola `#a333c8`
-  usato altrove in questo file come accento "drag & drop" (`.containerDropZone[data-over]`,
-  `.dropZone[data-over]`, `.columnResizer`) resta comunque un terzo colore distinto, non
-  riusato qui: overlay di puntamento/selezione e indicatore di destinazione del
-  trascinamento restano due segnali diversi.
+  Badge delle Colonne (`container`, ADR-39 — mappatura dichiarata in consegna): solo
+  identificazione (icona + nome del tipo), nessun pulsante — la spec riserva le azioni
+  rapide alla sola handle tab delle Sezioni. Angolo superiore sinistro *interno* al
+  wrapper (non fuori, a differenza di `.sectionHandle`/`.hiddenBadge`): valori letterali
+  della spec del task.
 */
+.columnBadge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 0 0 4px 0;
+  background: #2271b1;
+  color: var(--mantine-color-white);
+  pointer-events: none;
+}
 
-/* Nome del tipo di blocco dentro la Handle Bar: stesso colore/assenza di wrap del badge che sostituisce. */
-.handleBarLabel {
+.columnBadgeLabel {
   color: var(--mantine-color-white);
   font-size: 11px;
   white-space: nowrap;
@@ -320,17 +282,39 @@
 }
 
 /*
-  Badge "Nascosto su [Device]" (ADR-37 § 3): sempre visibile (non solo hover/selezione,
-  a differenza della Handle Bar sopra) quando il nodo è nascosto sul dispositivo attivo
-  del Device Switcher — l'attenuazione del contenuto (`previewHidden`,
+  Linguetta "Modifica" dei widget singoli (ogni foglia del registro: `heading`/
+  `richText`/`image`/`button`/…) — restyle Elementor Pro, valori letterali della spec:
+  solo l'icona matita, visibile solo su selezione (mai su hover, a differenza delle
+  Sezioni/Colonne sopra).
+*/
+.editTab {
+  position: absolute;
+  top: -10px;
+  right: 0;
+  z-index: 3;
+}
+
+.editTab,
+.editTab:hover,
+.editTab:focus {
+  background-color: #2271b1 !important;
+  color: var(--mantine-color-white) !important;
+}
+
+/*
+  Badge "Nascosto su [Device]" (ADR-37 § 3): sempre visibile (non solo su selezione, a
+  differenza di `.editTab` sopra) quando il nodo è nascosto sul dispositivo attivo del
+  Device Switcher — l'attenuazione del contenuto (`previewHidden`,
   `style-tokens.module.css`) da sola non spiegherebbe perché il blocco appare sbiadito.
-  In alto a destra, sullo stesso bordo della Handle Bar (in alto a sinistra): mai
-  sovrapposti. Colore d'allerta (arancione), distinto dal blu di hover/selezione e dal
-  rosso di `.invalid` — tre segnali visivi diversi per tre stati diversi.
+  In alto a destra, sopra `.editTab` (`top: -32px`, non `-20px`: lascia libero lo spazio
+  che `.editTab` occupa fra `-10px` e `+10px` — un widget selezionato e nascosto sul
+  viewport attivo può mostrare entrambi insieme, mai sovrapposti). Colore d'allerta
+  (arancione), distinto dal blu di hover/selezione/modifica e dal rosso di `.invalid` —
+  segnali visivi diversi per stati diversi.
 */
 .hiddenBadge {
   position: absolute;
-  top: -20px;
+  top: -32px;
   right: 0;
   z-index: 2;
   display: inline-flex;

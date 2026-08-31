@@ -47,8 +47,8 @@ import {
   IconEye,
   IconHistory,
   IconLayoutGrid,
-  IconLayoutSidebar,
   IconLayoutSidebarRight,
+  IconPlus,
 } from '@tabler/icons-react';
 import {
   DndContext,
@@ -97,6 +97,18 @@ interface DraggedBlockInfo {
   label: string;
   iconName: string | undefined;
 }
+
+/**
+ * Dimensioni del device frame simulato, solo per la label sotto la Topbar
+ * (`.viewportDimensionLabel`) — Desktop resta fluido (`.viewportDesktop`, nessuna label),
+ * Tablet/Mobile hanno invece una larghezza/altezza fissa da mostrare com'è, non calcolata
+ * da `getBoundingClientRect` (la label deve leggere il vincolo dichiarato, non l'esito del
+ * layout).
+ */
+const VIEWPORT_DIMENSIONS: Record<'tablet' | 'mobile', { width: number; height: number }> = {
+  tablet: { width: 768, height: 1024 },
+  mobile: { width: 375, height: 667 },
+};
 
 /**
  * Legge dal payload di dnd-kit (`event.active.data.current`, valorizzato sia da
@@ -338,14 +350,40 @@ export default function FullScreenEditorLayout({
         onPublish={onSaveDraft}
         leadingActions={
           <>
+            {/* "+" Widget (restyle Elementor Pro, richiesta esplicita del task): stessa
+                azione di sempre (mostra/nascondi il pannello Widgets), solo il glifo
+                cambia da un'icona di layout generica al "+" letterale del task — nessuna
+                modifica di comportamento. */}
             <ActionIcon
-              variant={isSidebarOpen ? 'filled' : 'default'}
+              variant={isSidebarOpen ? 'filled' : 'subtle'}
               size="lg"
               aria-label="Mostra/Nascondi pannello widget"
               aria-pressed={isSidebarOpen}
               onClick={toggleSidebar}
             >
-              <IconLayoutSidebar size={18} />
+              <IconPlus size={18} />
+            </ActionIcon>
+            {/* Storia/Navigatore (restyle Elementor Pro): spostate qui dal gruppo di destra
+                — stessi due `ActionIcon`, stessi handler, solo la posizione nella topbar
+                cambia (nessun "Impostazioni" aggiunto: nessuna funzionalità corrispondente
+                esiste in questo codebase, vedi nota di consegna). */}
+            <ActionIcon
+              variant={historyOpened ? 'filled' : 'subtle'}
+              size="lg"
+              aria-label="Cronologia Azioni"
+              aria-pressed={historyOpened}
+              onClick={toggleHistory}
+            >
+              <IconHistory size={18} />
+            </ActionIcon>
+            <ActionIcon
+              variant={isStructurePanelOpen ? 'filled' : 'subtle'}
+              size="lg"
+              aria-label="Pannello struttura"
+              aria-pressed={isStructurePanelOpen}
+              onClick={toggleStructurePanel}
+            >
+              <IconLayoutSidebarRight size={18} />
             </ActionIcon>
           </>
         }
@@ -363,34 +401,29 @@ export default function FullScreenEditorLayout({
               </Button>
             )}
             <ActionIcon
-              variant="default"
+              variant="subtle"
               size="lg"
               aria-label="Libreria sezioni"
               onClick={() => setTemplateLibraryOpened(true)}
             >
               <IconLayoutGrid size={18} />
             </ActionIcon>
-            <ActionIcon
-              variant={historyOpened ? 'filled' : 'default'}
-              size="lg"
-              aria-label="Cronologia Azioni"
-              aria-pressed={historyOpened}
-              onClick={toggleHistory}
-            >
-              <IconHistory size={18} />
-            </ActionIcon>
-            <ActionIcon
-              variant={isStructurePanelOpen ? 'filled' : 'default'}
-              size="lg"
-              aria-label="Pannello struttura"
-              aria-pressed={isStructurePanelOpen}
-              onClick={toggleStructurePanel}
-            >
-              <IconLayoutSidebarRight size={18} />
-            </ActionIcon>
           </>
         }
       />
+
+      {/*
+        Label discreta sotto la Topbar coi pixel del device frame simulato, solo quando
+        Tablet/Mobile impongono una larghezza fissa (Desktop resta fluido, `VIEWPORT_
+        DIMENSIONS` sopra non lo elenca) — puramente informativa, nessun effetto sul
+        rendering: la larghezza reale del frame resta pilotata solo da `viewportClass` sotto.
+      */}
+      {activeViewport !== 'desktop' && (
+        <div className={styles.viewportDimensionLabel}>
+          {VIEWPORT_DIMENSIONS[activeViewport].width}px ×{' '}
+          {VIEWPORT_DIMENSIONS[activeViewport].height}px
+        </div>
+      )}
 
       <DndContext
         sensors={sensors}

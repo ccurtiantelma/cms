@@ -13,7 +13,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { screen, fireEvent, createEvent } from '@testing-library/react';
 import { renderWithProviders } from '../../../../test/utils';
-import type { BlockNode } from '../block-tree.utils';
+import { findNode, type BlockNode } from '../block-tree.utils';
 
 const { useBlockEditorStore } = await import('../../../../hooks/useBlockEditorStore');
 const { default: EditorBlockWrapper } = await import('../EditorBlockWrapper');
@@ -135,9 +135,7 @@ describe('EditorBlockWrapper — InlineFormattingToolbar (T-integrazione-toolbar
 
     const { container } = renderWithProviders(<EditorBlockWrapper id="h-empty" />);
 
-    expect(
-      container.querySelector('h2[data-placeholder="Aggiungi qui il testo del titolo"]'),
-    ).toBeInTheDocument();
+    expect(container.querySelector('h2[data-placeholder="Titolo"]')).toBeInTheDocument();
   });
 
   it('heading selezionato: la toolbar di formattazione non compare mai (solo richText)', () => {
@@ -221,5 +219,105 @@ describe('EditorBlockWrapper — InlineFormattingToolbar (T-integrazione-toolbar
       screen.queryByRole('toolbar', { name: 'Formattazione del blocco' }),
     ).not.toBeInTheDocument();
     expect(useBlockEditorStore.getState().selectedId).toBe('rt-1');
+  });
+
+  it('"Allinea giustificato" applica `justifyFull` a tutto il blocco', () => {
+    const richText = node('rt-1', 'richText', { html: '<p>Ciao</p>' });
+    useBlockEditorStore.getState().initTree([richText]);
+    useBlockEditorStore.getState().selectNode('rt-1');
+
+    renderWithProviders(<EditorBlockWrapper id="rt-1" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Allinea giustificato' }));
+
+    expect(document.execCommand).toHaveBeenCalledWith('justifyFull', false, undefined);
+  });
+});
+
+/**
+ * Controllo rapido del livello titolo (gap #4, T-integrazione-toolbar): estende
+ * `InlineFormattingToolbar` con una modalità `heading`, montata nello stesso momento
+ * (`isSelected && !isEditingText`) della modalità `text` per `richText` — vedi il commento
+ * di testa di `InlineFormattingToolbar.tsx`. Usa un `aria-label` distinto ("Livello del
+ * titolo") per non collidere con le query del describe precedente su
+ * "Formattazione del blocco", che deve restare **assente** su `heading` (Grassetto/
+ * Corsivo/Link restano esclusi, `text` è `plainText`).
+ */
+describe('EditorBlockWrapper — controllo rapido livello titolo H2-H6 (gap #4)', () => {
+  beforeEach(() => {
+    useBlockEditorStore.getState().initTree([]);
+    useBlockEditorStore.getState().setActiveViewport('desktop');
+    useBlockEditorStore.getState().selectNode(null);
+  });
+
+  it('heading selezionato ma non in editing: compare la barra "Livello del titolo" con i 5 pulsanti H2-H6', () => {
+    const heading = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
+    useBlockEditorStore.getState().initTree([heading]);
+    useBlockEditorStore.getState().selectNode('h-1');
+
+    renderWithProviders(<EditorBlockWrapper id="h-1" />);
+
+    const toolbar = screen.getByRole('toolbar', { name: 'Livello del titolo' });
+    expect(toolbar).toBeInTheDocument();
+    for (const level of ['H2', 'H3', 'H4', 'H5', 'H6']) {
+      expect(screen.getByRole('button', { name: `Titolo ${level}` })).toBeInTheDocument();
+    }
+    // Nessun Grassetto/Corsivo/Link su heading: `text` è `plainText` per il registro.
+    expect(screen.queryByRole('button', { name: 'Grassetto' })).not.toBeInTheDocument();
+  });
+
+  it('il livello corrente è marcato attivo (`aria-pressed`)', () => {
+    const heading = node('h-1', 'heading', { level: 'h4', text: 'Titolo' });
+    useBlockEditorStore.getState().initTree([heading]);
+    useBlockEditorStore.getState().selectNode('h-1');
+
+    renderWithProviders(<EditorBlockWrapper id="h-1" />);
+
+    expect(screen.getByRole('button', { name: 'Titolo H4' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Titolo H2' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+
+  it('click su un livello scrive `level` sul nodo tramite lo stesso canale di commit (undo/redo incluso), senza debounce', () => {
+    const heading = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
+    useBlockEditorStore.getState().initTree([heading]);
+    useBlockEditorStore.getState().selectNode('h-1');
+
+    renderWithProviders(<EditorBlockWrapper id="h-1" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Titolo H4' }));
+
+    const updated = findNode(useBlockEditorStore.getState().tree, 'h-1');
+    expect(updated?.props.level).toBe('h4');
+  });
+
+  it('"Chiudi" nasconde la barra "Livello del titolo" senza deselezionare il blocco', () => {
+    const heading = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
+    useBlockEditorStore.getState().initTree([heading]);
+    useBlockEditorStore.getState().selectNode('h-1');
+
+    renderWithProviders(<EditorBlockWrapper id="h-1" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Chiudi toolbar' }));
+
+    expect(screen.queryByRole('toolbar', { name: 'Livello del titolo' })).not.toBeInTheDocument();
+    expect(useBlockEditorStore.getState().selectedId).toBe('h-1');
+  });
+
+  it('richText selezionato: mai la barra "Livello del titolo" (solo heading)', () => {
+    const richText = node('rt-1', 'richText', { html: '<p>Ciao</p>' });
+    useBlockEditorStore.getState().initTree([richText]);
+    useBlockEditorStore.getState().selectNode('rt-1');
+    document.execCommand = vi.fn().mockReturnValue(true);
+    document.queryCommandState = vi.fn().mockReturnValue(false);
+
+    renderWithProviders(<EditorBlockWrapper id="rt-1" />);
+
+    expect(screen.queryByRole('toolbar', { name: 'Livello del titolo' })).not.toBeInTheDocument();
   });
 });

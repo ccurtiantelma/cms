@@ -49,13 +49,19 @@ export default function EditorSidebar(): JSX.Element {
 
       <div className={styles.content}>
         {activeTab === 'widgets' ? (
-          <WidgetSidebar />
+          <div className={styles.panel}>
+            <WidgetSidebar />
+          </div>
         ) : selectedId === null ? (
-          <Text size="sm" c="dimmed" ta="center" className={styles.emptyState}>
-            Seleziona un elemento nel canvas per modificarne le proprietà.
-          </Text>
+          <div className={styles.panel}>
+            <Text size="sm" c="dimmed" ta="center" className={styles.emptyState}>
+              Seleziona un elemento nel canvas per modificarne le proprietà.
+            </Text>
+          </div>
         ) : (
-          <PropertyInspector />
+          <div className={styles.panel}>
+            <PropertyInspector />
+          </div>
         )}
       </div>
     </div>

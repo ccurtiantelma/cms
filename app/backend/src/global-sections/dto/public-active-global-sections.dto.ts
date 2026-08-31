@@ -5,6 +5,9 @@ export class PublicGlobalSectionDto {
   @ApiPropertyOptional({ description: 'Slug admin della Sezione (informativo, non una rotta pubblica)' })
   slug!: string;
 
+  @ApiPropertyOptional({ description: 'Se l\'header è sticky sul viewport', example: true })
+  isSticky!: boolean;
+
   @ApiPropertyOptional({
     description: 'Albero di blocchi, già migrato/validato/sanitizzato in scrittura',
     type: 'object',

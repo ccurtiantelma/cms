@@ -108,11 +108,15 @@ export class GlobalSectionsService {
     const contentInput = dto.content ?? { version: ENVELOPE_VERSION, blocks: [] };
     const content = this.runWriteContentPipeline(contentInput);
 
+    const layoutSlot = dto.layoutSlot ?? GlobalSectionLayoutSlot.None;
+    const isSticky = layoutSlot === GlobalSectionLayoutSlot.Header ? Boolean(dto.isSticky) : false;
+
     const row = await this.insertOrMapConflict({
       guid: Utils.randomString(16),
       title: dto.title,
       slug,
-      layoutSlot: dto.layoutSlot ?? GlobalSectionLayoutSlot.None,
+      layoutSlot,
+      isSticky,
       content,
       createdBy: authInfo.userId,
       updatedBy: authInfo.userId,
@@ -146,6 +150,11 @@ export class GlobalSectionsService {
     if (dto.title !== undefined) values.title = dto.title;
     if (dto.slug !== undefined) values.slug = this.normalizeAndValidateSlug(dto.slug);
     if (dto.layoutSlot !== undefined) values.layoutSlot = dto.layoutSlot;
+    const targetSlot = dto.layoutSlot ?? row.layoutSlot;
+    if (dto.layoutSlot !== undefined || dto.isSticky !== undefined) {
+      values.isSticky =
+        targetSlot === GlobalSectionLayoutSlot.Header ? Boolean(dto.isSticky ?? row.isSticky) : false;
+    }
     if (dto.content !== undefined) values.content = this.runWriteContentPipeline(dto.content);
 
     const slotOrContentChanged = values.layoutSlot !== undefined || values.content !== undefined;
@@ -216,8 +225,20 @@ export class GlobalSectionsService {
     const footer = rows.find((r) => r.layoutSlot === GlobalSectionLayoutSlot.Footer) ?? null;
 
     const dto: PublicActiveGlobalSectionsDto = {
-      header: header ? { slug: header.slug, content: header.content as Record<string, unknown> } : null,
-      footer: footer ? { slug: footer.slug, content: footer.content as Record<string, unknown> } : null,
+      header: header
+        ? {
+            slug: header.slug,
+            isSticky: header.isSticky,
+            content: header.content as Record<string, unknown>,
+          }
+        : null,
+      footer: footer
+        ? {
+            slug: footer.slug,
+            isSticky: footer.isSticky,
+            content: footer.content as Record<string, unknown>,
+          }
+        : null,
     };
 
     await this.publicCache.setCached(dto);
@@ -287,6 +308,7 @@ export class GlobalSectionsService {
       title: row.title,
       slug: row.slug,
       layoutSlot: row.layoutSlot as GlobalSectionLayoutSlot,
+      isSticky: row.isSticky,
       content: row.content as Record<string, unknown>,
       version: row.version,
       createdAt: row.createdAt,

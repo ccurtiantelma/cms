@@ -18,8 +18,14 @@
  * div resta montato — solo invisibile, senza contenuto proprio — anche ad albero vuoto:
  * la resa visiva "Aggiungi sezione" ad albero vuoto è di `CanvasAddSectionZone` (i tre
  * trigger fedeli a Elementor Pro — struttura/template/widget — più il modal a due passi
- * `SectionStructureModal`). Ad albero pieno quella stessa azione resta raggiungibile dalle
- * strisce di hover `CanvasSectionInserter`, prima del primo blocco e dopo ognuno.
+ * `SectionStructureModal`). Quella stessa `CanvasAddSectionZone` resta montata anche ad
+ * albero pieno, in fondo al canvas dopo l'ultimo blocco radice (`index={rootIds.length}`):
+ * sempre presente come in Elementor Pro, non solo a pagina vuota (richiesta esplicita del
+ * task). Le strisce `CanvasSectionInserter` fra le sezioni radice non portano invece un
+ * pulsante "+" visibile (rimosso nello stesso task — nessun trigger isolato sempre visibile
+ * lì), restano solo bersaglio invisibile del drag & drop; l'inserimento puntuale fra due
+ * sezioni esistenti resta comunque raggiungibile dalla voce "Sezione" del menu "Inserisci
+ * sopra/sotto" di ogni Section (`BlockPalette`, toolbar di `EditorBlockWrapper.tsx`).
  *
  * Porta anche `GLOBAL_TOKENS_CANVAS_SCOPE_CLASS` (`libs/globalTokensCompiler.ts`): è il
  * selettore su cui questo componente scopa il CSS compilato dal `ThemeConfig` dell'Editor
@@ -114,6 +120,7 @@ export default function EditorCanvas(): JSX.Element {
                 <EditorBlockWrapper key={id} id={id} />,
                 <CanvasSectionInserter key={`inserter-${index + 1}`} index={index + 1} />,
               ])}
+              <CanvasAddSectionZone parentId={null} index={rootIds.length} />
             </>
           )}
         </Stack>

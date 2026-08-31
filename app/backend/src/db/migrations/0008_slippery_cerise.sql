@@ -1,0 +1,1 @@
+ALTER TABLE "global_sections" ADD COLUMN "is_sticky" boolean DEFAULT false NOT NULL;

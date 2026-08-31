@@ -23,13 +23,16 @@
  *
  * Icone dei preset verificate pixel-per-pixel contro lo "Select Your Structure" reale di
  * Elementor (screenshot del produttore, non una ricostruzione a memoria): riga "Flexbox"
- * = le sei tessere di struttura piatta (colonna/riga direzionali + 4 varianti a colonne),
- * riga "Griglia" = le sei tessere a celle annidate/asimmetriche. Le tessere annidate della
- * Griglia (ADR-39, `container` con `flexDirection`/`styleFlexBasis`) non hanno un
- * equivalente nella prop `columns`/`columnRatio` di `section` — nessuna scorciatoia,
- * nessuna nuova prop: si compone `section` + `container` già approvati, esattamente come
- * la sua ADR li ha pensati. `columnRatio` di `section` produce solo lo split flessibile
- * "33/67", mai le celle annidate — quelle attraversano `buildGridSectionSubtree` sotto.
+ * = le sette tessere di struttura piatta (colonna/riga direzionali + 5 varianti a colonne,
+ * inclusa la coppia simmetrica 33/67 e 67/33 — gap-analysis T-editor-refinement: il
+ * "66-33" di `SectionColumnRatioValue` era un valore di tipo già valido ma orfano di
+ * preset), riga "Griglia" = le sei tessere a celle annidate/asimmetriche. Le tessere
+ * annidate della Griglia (ADR-39, `container` con `flexDirection`/`styleFlexBasis`) non
+ * hanno un equivalente nella prop `columns`/`columnRatio` di `section` — nessuna
+ * scorciatoia, nessuna nuova prop: si compone `section` + `container` già approvati,
+ * esattamente come la sua ADR li ha pensati. `columnRatio` di `section` produce solo lo
+ * split flessibile "33/67"/"67/33", mai le celle annidate — quelle attraversano
+ * `buildGridSectionSubtree` sotto.
  */
 import { useEffect, useState, type ComponentType } from 'react';
 import { ActionIcon, Group, Modal, SimpleGrid, Text } from '@mantine/core';
@@ -116,6 +119,13 @@ const FLEXBOX_PRESETS: readonly FlexboxPreset[] = [
     columns: { default: '2' },
     columnRatio: '33-66',
     rows: [{ weight: 1, direction: 'row', children: [{ weight: 33 }, { weight: 67 }] }],
+  },
+  {
+    id: '2-67-33',
+    label: '2 colonne (67/33)',
+    columns: { default: '2' },
+    columnRatio: '66-33',
+    rows: [{ weight: 1, direction: 'row', children: [{ weight: 67 }, { weight: 33 }] }],
   },
   {
     id: '4-equal',

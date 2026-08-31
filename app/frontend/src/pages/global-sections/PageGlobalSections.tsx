@@ -14,7 +14,7 @@
  * nel frattempo) è il `409` a fermare la scrittura, non questa UI.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Badge, ScrollArea, Select, Stack, Text, TextInput } from '@mantine/core';
+import { Alert, Badge, Checkbox, ScrollArea, Select, Stack, Text, TextInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import {
@@ -75,12 +75,14 @@ interface GlobalSectionFormValues {
   title: string;
   slug: string;
   layoutSlot: GlobalSectionLayoutSlot;
+  isSticky: boolean;
 }
 
 const EMPTY_FORM: GlobalSectionFormValues = {
   title: '',
   slug: '',
   layoutSlot: 'none',
+  isSticky: false,
 };
 
 /** Formatta una data ISO nel formato locale italiano (data + ora). */
@@ -156,7 +158,12 @@ export default function PageGlobalSections(): JSX.Element {
 
   function openEdit(row: GlobalSectionRecord): void {
     setEditTarget(row);
-    form.setValues({ title: row.title, slug: row.slug, layoutSlot: row.layoutSlot });
+    form.setValues({
+      title: row.title,
+      slug: row.slug,
+      layoutSlot: row.layoutSlot,
+      isSticky: row.isSticky ?? false,
+    });
     setFormOpened(true);
   }
 
@@ -225,6 +232,7 @@ export default function PageGlobalSections(): JSX.Element {
           title: values.title.trim(),
           slug: values.slug.trim() || undefined,
           layoutSlot: values.layoutSlot,
+          isSticky: values.layoutSlot === 'header' ? values.isSticky : false,
         });
         notifications.show({ color: 'green', message: 'Sezione Globale aggiornata' });
         closeForm();
@@ -234,6 +242,7 @@ export default function PageGlobalSections(): JSX.Element {
           title: values.title.trim(),
           slug: values.slug.trim() || undefined,
           layoutSlot: values.layoutSlot,
+          isSticky: values.layoutSlot === 'header' ? values.isSticky : false,
         });
         notifications.show({ color: 'green', message: 'Sezione Globale creata' });
         closeForm();
@@ -386,6 +395,13 @@ export default function PageGlobalSections(): JSX.Element {
             allowDeselect={false}
             {...form.getInputProps('layoutSlot')}
           />
+          {form.values.layoutSlot === 'header' && (
+            <Checkbox
+              label="Header sticky"
+              description="Rende l'header fisso in alto durante lo scroll della pagina."
+              {...form.getInputProps('isSticky', { type: 'checkbox' })}
+            />
+          )}
           {conflictingOccupant && (
             <Alert color="orange" icon={<IconAlertTriangle size={16} />}>
               Lo slot <strong>{LAYOUT_SLOT_LABELS[selectedSlot]}</strong> è occupato da{' '}

@@ -377,6 +377,8 @@ export const globalSectionEntity = pgTable(
     layoutSlot: varchar('layout_slot', { length: 20 })
       .notNull()
       .default(GlobalSectionLayoutSlot.None),
+    /** Quando lo slot è `header`, decide se la sezione resta fissa in cima al viewport. */
+    isSticky: boolean('is_sticky').notNull().default(false),
     /** Albero di blocchi (envelope `{ version, blocks }`, ADR-21), stessa pipeline di validazione delle Pagine. */
     content: jsonb('content').notNull(),
     /** Lock ottimistico: incrementato a ogni UPDATE, confrontato nella WHERE. */

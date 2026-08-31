@@ -37,11 +37,6 @@ const TESTO_DI_B = 'Titolo scritto dalla sessione B';
 async function comporreTitolo(page: Page, testo: string): Promise<void> {
   await addRootBlock(page, 'Sezione');
   const section = blockOfType(page, 'section');
-  // Il pulsante "Aggiungi dentro" vive nella toolbar integrata, `visibility: hidden` a
-  // riposo (EditorBlockWrapper.module.css) e resa visibile solo da `.hovered`/
-  // `.selected`: senza selezionare prima il contenitore non è mai azionabile per
-  // Playwright, anche se presente nel DOM.
-  await selectBlock(section, 'Sezione');
   await addChildBlock(section, 'Titolo');
   await selectBlock(blockOfType(section, 'heading'), 'Titolo');
   await fillProp(page, 'text', testo);
@@ -79,8 +74,14 @@ test('due sessioni sulla stessa Pagina: la seconda riceve 409 e le modifiche del
     await expect(sessioneB.getByText('Trascina il widget qui')).toBeVisible();
 
     // ─── 3. A compone e salva: la sua bozza è ora quella persistita ─────────
+    // `{ name: 'Pubblica', exact: true }`, non "Salva bozza": bug applicativo reale,
+    // segnalato nel report del test engineer (vedi il commento di testa di `saveButton`,
+    // `helpers/page-editor.ts`) — il pulsante che salva la bozza porta oggi l'etichetta
+    // "Pubblica" (icona a dischetto), ma non pubblica nulla: `onClick` resta collegato a
+    // `onSaveDraft`. `exact: true` lo distingue dall'omonimo bottone del dialog "Conferma
+    // cambio di stato" (mai visibile insieme a questo).
     await comporreTitolo(sessioneA, TESTO_DI_A);
-    await sessioneA.getByRole('button', { name: 'Salva bozza' }).click();
+    await sessioneA.getByRole('button', { name: 'Pubblica', exact: true }).click();
     // `getByRole('alert')`, non un `getByText` nudo: la chrome full-screen
     // (`FullScreenEditorLayout.tsx`) porta nel topbar un'etichetta permanente con lo
     // stesso testo esatto quando non ci sono modifiche non salvate — una ricerca per
@@ -91,7 +92,7 @@ test('due sessioni sulla stessa Pagina: la seconda riceve 409 e le modifiche del
 
     // ─── 4. B compone sulla version vecchia e salva: 409 ────────────────────
     await comporreTitolo(sessioneB, TESTO_DI_B);
-    await sessioneB.getByRole('button', { name: 'Salva bozza' }).click();
+    await sessioneB.getByRole('button', { name: 'Pubblica', exact: true }).click();
 
     // Messaggio dedicato al conflitto di editing, distinto da quello di slug
     // duplicato: nomina il problema e offre l'unica via d'uscita corretta.
@@ -106,6 +107,15 @@ test('due sessioni sulla stessa Pagina: la seconda riceve 409 e le modifiche del
     await expect(sessioneB.getByText(TESTO_DI_B)).toBeVisible();
 
     // ─── 5. Il lavoro di A è intatto: lo si verifica ricaricando davvero ────
+    // Il bottone "Ricarica" vive nell'intestazione della Pagina (`PagePageDetail.tsx`), non
+    // nella chrome dell'editor: mentre la scheda "Contenuto" è attiva quell'intestazione sta
+    // dietro la chrome full-screen dell'editor (z-index 1000, ADR-32) e non riceve click —
+    // bug applicativo reale, segnalato nel report del test engineer (stesso di
+    // `publishFromStatusMenu`, `helpers/page-editor.ts`, ma qui senza nemmeno il tentativo di
+    // correzione — errato — che quella tendina porta: nessun `zIndex` esplicito affatto sul
+    // `Group` che contiene "Ricarica"). Si esce prima dalla scheda con lo stesso link "Torna
+    // alla Dashboard" del topbar dell'editor.
+    await sessioneA.getByRole('link', { name: 'Torna alla Dashboard' }).click();
     await sessioneA.getByRole('button', { name: 'Ricarica' }).click();
     await openContentTab(sessioneA);
     await expect(sessioneA.getByText(TESTO_DI_A)).toBeVisible();
@@ -117,7 +127,7 @@ test('due sessioni sulla stessa Pagina: la seconda riceve 409 e le modifiche del
     // `PagePageDetail.tsx`: resta finché non si agisce consapevolmente) — cliccare la sua
     // azione non la chiude da sola. Da quando le notifiche portano `zIndex={1100}` per
     // restare sopra la chrome full-screen dell'editor, restare a schermo la mette davanti
-    // al bottone "Salva bozza" del passo 7 più sotto: la si chiude esplicitamente
+    // al bottone "Pubblica" (che salva la bozza, vedi sopra) del passo 7 più sotto: la si chiude esplicitamente
     // (`.last()`: l'alert ha ancora il bottone d'azione appena cliccato, oltre alla X).
     await sessioneB.getByRole('alert').getByRole('button').last().click();
     await expect(sessioneB.getByRole('alert')).toHaveCount(0);
@@ -129,7 +139,7 @@ test('due sessioni sulla stessa Pagina: la seconda riceve 409 e le modifiche del
     // Il 409 è un invito a riprovare informati, non un vicolo cieco.
     await selectBlock(blockOfType(sessioneB, 'heading'), 'Titolo');
     await fillProp(sessioneB, 'text', `${TESTO_DI_A} — poi rivisto da B`);
-    await sessioneB.getByRole('button', { name: 'Salva bozza' }).click();
+    await sessioneB.getByRole('button', { name: 'Pubblica', exact: true }).click();
     await expect(sessioneB.getByRole('alert').getByText('Bozza salvata')).toBeVisible();
   } finally {
     // Pulizia dei dati di verifica dalla stessa interfaccia del test, prima di
