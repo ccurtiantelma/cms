@@ -162,6 +162,14 @@ export default function App(): JSX.Element {
               }
             />
             <Route
+              path="site-templates/:guid/builder"
+              element={
+                <RequireRole allowed={SITE_TEMPLATES_ROLES}>
+                  <PageSiteTemplateBuilder />
+                </RequireRole>
+              }
+            />
+            <Route
               path="users"
               element={
                 <RequireRole allowed={ADMIN_ROLES}>
