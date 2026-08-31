@@ -100,6 +100,7 @@ services:
     environment:
       PORT: 4000
       PUBLIC_API_BASE_URL: http://backend:3000
+      ANALYTICS_INGEST_SECRET: ${ANALYTICS_INGEST_SECRET:?Imposta ANALYTICS_INGEST_SECRET in .env}
     depends_on:
       - backend
     # Solo il lato host (stesso motivo del backend sopra): il container resta

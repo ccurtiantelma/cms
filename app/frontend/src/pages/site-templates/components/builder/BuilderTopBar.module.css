@@ -1,0 +1,58 @@
+/*
+ * Topbar del Template Editor (`BuilderTopBar.tsx`) — stesse dimensioni/bordo della topbar
+ * dell'editor a blocchi di Pagina (`FullScreenEditorLayout.module.css` § `.topbar`), tema
+ * chiaro Mantine di default (nessun restyle scuro qui: file autonomo, nessuna dipendenza da
+ * `Toolbar.module.css`).
+ */
+.root {
+  flex: 0 0 60px;
+  height: 60px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+  background-color: var(--mantine-color-body);
+}
+
+[data-mantine-color-scheme='dark'] .root {
+  border-bottom-color: var(--mantine-color-dark-4);
+}
+
+.section {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.centerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.actions {
+  justify-content: flex-end;
+}
+
+@media (max-width: 62em) {
+  .root {
+    gap: 6px;
+    padding-inline: 8px;
+  }
+
+  .title {
+    display: none;
+  }
+}

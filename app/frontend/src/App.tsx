@@ -23,6 +23,12 @@ const ADMIN_ROLES = [AppUserRoles.SuperAdmin, AppUserRoles.Admin];
  */
 const GLOBAL_SECTIONS_ROLES = [AppUserRoles.SuperAdmin, AppUserRoles.Admin, AppUserRoles.Manager];
 
+/**
+ * Ruoli ammessi sui Template di tema (`/site-templates`, RFC-40 Opzione B):
+ * stessa soglia `Manager`+ delle Sezioni Globali — nessuna ownership per riga.
+ */
+const SITE_TEMPLATES_ROLES = [AppUserRoles.SuperAdmin, AppUserRoles.Admin, AppUserRoles.Manager];
+
 const PageLogin = lazy(() => import('./pages/auth/PageLogin'));
 const PageSetPassword = lazy(() => import('./pages/auth/PageSetPassword'));
 const PageForgottenPassword = lazy(() => import('./pages/auth/PageForgottenPassword'));
@@ -35,6 +41,10 @@ const PageThemeEditor = lazy(() => import('./pages/theme-editor/PageThemeEditor'
 const PageGlobalSections = lazy(() => import('./pages/global-sections/PageGlobalSections'));
 const PageGlobalSectionBuilder = lazy(
   () => import('./pages/global-sections/PageGlobalSectionBuilder'),
+);
+const PageSiteTemplates = lazy(() => import('./pages/site-templates/PageSiteTemplates'));
+const PageSiteTemplateBuilder = lazy(
+  () => import('./pages/site-templates/PageSiteTemplateBuilder'),
 );
 
 /** Fallback mostrato durante il caricamento dei chunk delle pagine lazy. */
@@ -140,6 +150,14 @@ export default function App(): JSX.Element {
               element={
                 <RequireRole allowed={GLOBAL_SECTIONS_ROLES}>
                   <PageGlobalSectionBuilder />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="site-templates"
+              element={
+                <RequireRole allowed={SITE_TEMPLATES_ROLES}>
+                  <PageSiteTemplates />
                 </RequireRole>
               }
             />

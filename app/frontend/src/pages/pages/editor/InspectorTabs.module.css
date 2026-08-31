@@ -7,3 +7,24 @@
   width: 100%;
   min-width: 0;
 }
+
+/*
+  Mantine `Tabs.List` è `flex-wrap: wrap` di default (styles/Tabs.css del pacchetto):
+  con tre schede strette nella sidebar da 300px, la larghezza `grow` non bastava e
+  "Avanzato" scendeva su una riga propria invece di restare affiancato a "Contenuto"/
+  "Stile". `flex-wrap: nowrap` più `min-width: 0` sui singoli tab (che di default non
+  scendono sotto la larghezza del proprio contenuto) tengono le tre schede sempre sulla
+  stessa riga; il padding orizzontale ridotto (da `md` a `xs`) dà loro margine per starci
+  comodamente. Override via `:global()` sulle classi Mantine, stesso principio già in uso
+  in `sidebar/EditorSidebar.module.css` — non un wrapper custom sopra il componente.
+*/
+.root :global(.mantine-Tabs-list) {
+  flex-wrap: nowrap;
+}
+
+.root :global(.mantine-Tabs-tab) {
+  min-width: 0;
+  padding-inline: var(--mantine-spacing-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

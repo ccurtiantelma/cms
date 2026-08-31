@@ -1,0 +1,153 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: 10px;
+  background: var(--mantine-color-body);
+  overflow: hidden;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.card:hover {
+  border-color: var(--mantine-color-blue-4);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.previewButton {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid var(--mantine-color-gray-2);
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.preview {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  aspect-ratio: 16 / 10;
+  padding: 10px 14px;
+  background: var(--mantine-color-gray-0);
+}
+
+.mockupHeader {
+  height: 8px;
+  border-radius: 3px;
+  background: var(--mantine-color-gray-4);
+}
+
+.mockupFooter {
+  height: 6px;
+  margin-top: auto;
+  border-radius: 3px;
+  background: var(--mantine-color-gray-3);
+}
+
+.mockupBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.mockupLine {
+  height: 6px;
+  width: 70%;
+  border-radius: 3px;
+  background: var(--mantine-color-gray-3);
+}
+
+.mockupLine[data-w='80'] {
+  width: 80%;
+}
+
+.mockupLine[data-w='60'] {
+  width: 60%;
+}
+
+.mockupLine[data-w='70'] {
+  width: 70%;
+}
+
+.mockupList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mockupList span {
+  display: block;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--mantine-color-gray-3);
+}
+
+.mockupList span:nth-child(2) {
+  width: 85%;
+}
+
+.mockupList span:nth-child(3) {
+  width: 70%;
+}
+
+.mockupLoopGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.mockupLoopGrid span {
+  display: block;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--mantine-color-gray-3);
+}
+
+.mockupIcon {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  color: var(--mantine-color-gray-5);
+  opacity: 0.7;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px 4px;
+}
+
+.footerMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.title {
+  min-width: 0;
+}
+
+.statusDot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mantine-color-gray-4);
+}
+
+.statusDot[data-published='true'] {
+  background: var(--mantine-color-green-6);
+}
+
+.badges {
+  padding: 0 12px 12px;
+}

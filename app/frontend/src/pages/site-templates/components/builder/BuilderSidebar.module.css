@@ -1,0 +1,99 @@
+/*
+ * Sidebar sinistra del Template Editor (`BuilderSidebar.tsx`) — stessa larghezza/struttura a
+ * schede di `EditorSidebar.module.css` (editor di Pagina), file autonomo perché il contenuto
+ * delle schede è proprio (widget "Sito/Struttura"/"Template/Contenuto"/"Layout & Base",
+ * `PropertyInspector` riusato per l'Ispettore).
+ */
+
+.root {
+  width: 300px;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: #f7f7f7;
+  border-right: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+[data-mantine-color-scheme='dark'] .root {
+  background-color: var(--mantine-color-dark-7);
+  border-right-color: var(--mantine-color-dark-4);
+}
+
+.tabs {
+  flex: 0 0 auto;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+[data-mantine-color-scheme='dark'] .tabs {
+  border-bottom-color: var(--mantine-color-dark-4);
+}
+
+.content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+}
+
+.panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  padding: 12px 10px 14px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 80px;
+  padding: 10px 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #1f2937;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.tile:hover,
+.tile:focus-visible {
+  border-color: #b0b0b0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  outline: none;
+}
+
+.tileIcon {
+  color: #555d66;
+}
+
+.tileLabel {
+  margin-top: 6px;
+  text-align: center;
+  line-height: 1.2;
+  font-size: 11px;
+  font-weight: 500;
+  color: #495057;
+}
+
+[data-mantine-color-scheme='dark'] .tile {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(31, 41, 55, 0.72);
+  color: #e5e7eb;
+}
+
+[data-mantine-color-scheme='dark'] .tileIcon,
+[data-mantine-color-scheme='dark'] .tileLabel {
+  color: #e5e7eb;
+}

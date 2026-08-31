@@ -406,6 +406,53 @@ export const globalSectionEntity = pgTable(
   ],
 );
 
+// ─── SITE TEMPLATES ───────────────────────────────────────────────────────────
+// Template di tema (RFC-40 Opzione B, decisione umana 2026-08-31): un pilastro
+// a sé, distinto da F06/`global_sections` (ADR-40, che resta l'unica entità per
+// header/footer — nessun doppio binario). `type` NON include `header`/`footer`
+// per lo stesso motivo. `single_post`/`archive` sono accettati come valori
+// dell'enum ma senza semantica di risoluzione (vedi commento su
+// `SiteTemplateType`): il CMS non ha oggi un concetto di tipo di
+// contenuto/tassonomia (regola 1 del modello di contenuto). `contentTree` è lo
+// stesso envelope jsonb di ADR-21 (albero di blocchi validato contro il
+// registro), stessa pipeline di validazione/sanitizzazione di Pagine e Sezioni
+// Globali — nessuna logica di dominio sui blocchi duplicata.
+
+export const siteTemplateEntity = pgTable(
+  'site_templates',
+  {
+    id: serial().notNull().primaryKey(),
+    guid: char('guid', { length: 16 })
+      .notNull()
+      .$defaultFn(() => Utils.randomString(16)),
+    title: varchar('title', { length: 255 }).notNull(),
+    type: varchar('type', { length: 20 }).notNull(),
+    /** Albero di blocchi (envelope `{ version, blocks }`, ADR-21), stessa pipeline di validazione delle Pagine. */
+    contentTree: jsonb('content_tree').notNull(),
+    isPublished: boolean('is_published').notNull().default(false),
+    language: varchar('language', { length: 10 }).notNull().default('IT'),
+    /** Priorità di risoluzione: a parità di `type`/`language`/condizioni verificate, vince il valore più alto. */
+    priority: integer('priority').notNull().default(0),
+    /** Array di `DisplayConditionRule` (`common/types.ts`), valutato da `TemplateResolverService`. */
+    displayConditions: jsonb('display_conditions').notNull().default([]),
+    /** Lock ottimistico: incrementato a ogni UPDATE, confrontato nella WHERE. */
+    version: integer('version').notNull().default(1),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: integer('created_by')
+      .notNull()
+      .references(() => userEntity.id, { onDelete: 'restrict', onUpdate: 'restrict' }),
+    updatedBy: integer('updated_by')
+      .notNull()
+      .references(() => userEntity.id, { onDelete: 'restrict', onUpdate: 'restrict' }),
+  },
+  (t) => [
+    uniqueIndex('site_templates_guid_idx').on(t.guid),
+    index('site_templates_type_lang_published_idx').on(t.type, t.language, t.isPublished),
+  ],
+);
+
 // ─── PUBLIC PAGEVIEW DAILY ───────────────────────────────────────────────────
 // Aggregato anonimo prodotto dal consumer SSR: nessun IP, cookie, user-agent o
 // identificatore personale. Le righe oltre 24 mesi vengono soft-deleted.
@@ -531,6 +578,17 @@ export const globalSectionsRelations = relations(globalSectionEntity, ({ one }) 
   }),
   updatedByUser: one(userEntity, {
     fields: [globalSectionEntity.updatedBy],
+    references: [userEntity.id],
+  }),
+}));
+
+export const siteTemplatesRelations = relations(siteTemplateEntity, ({ one }) => ({
+  createdByUser: one(userEntity, {
+    fields: [siteTemplateEntity.createdBy],
+    references: [userEntity.id],
+  }),
+  updatedByUser: one(userEntity, {
+    fields: [siteTemplateEntity.updatedBy],
     references: [userEntity.id],
   }),
 }));

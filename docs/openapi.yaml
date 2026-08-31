@@ -1607,6 +1607,186 @@ paths:
       summary: Restituisce le Sezioni Globali attive per header e footer
       tags:
         - Public Global Sections
+  /api/v1/app/site-templates:
+    get:
+      operationId: SiteTemplatesController_findAll
+      parameters:
+        - name: p
+          required: false
+          in: query
+          description: Pagina (default 1)
+          schema:
+            type: string
+        - name: i
+          required: false
+          in: query
+          description: Elementi per pagina (default 20)
+          schema:
+            type: string
+        - name: q
+          required: false
+          in: query
+          description: Ricerca testuale sul titolo
+          schema:
+            type: string
+        - name: type
+          required: false
+          in: query
+          description: Filtro per tipo di Template
+          schema:
+            type: string
+        - name: language
+          required: false
+          in: query
+          description: Filtro per lingua
+          schema:
+            type: string
+        - name: isPublished
+          required: false
+          in: query
+          description: Filtro per stato di pubblicazione
+          schema:
+            type: string
+        - name: o
+          required: false
+          in: query
+          description: >-
+            Campo di ordinamento (title, type, language, priority, createdAt,
+            updatedAt)
+          schema:
+            type: string
+        - name: d
+          required: false
+          in: query
+          description: Direzione ordinamento (asc|desc, default desc)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista Template di tema paginata
+      security:
+        - access-token: []
+      summary: Lista paginata dei Template di tema
+      tags:
+        - Site Templates
+    post:
+      operationId: SiteTemplatesController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSiteTemplateDto'
+      responses:
+        '201':
+          description: Template creato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteTemplateResponseDto'
+        '400':
+          description: Payload non valido o albero blocchi malformato
+      security:
+        - access-token: []
+      summary: Crea un Template di tema
+      tags:
+        - Site Templates
+  /api/v1/app/site-templates/{guid}:
+    get:
+      operationId: SiteTemplatesController_findOne
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Template trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteTemplateResponseDto'
+        '404':
+          description: Template non trovato o eliminato
+      security:
+        - access-token: []
+      summary: Dettaglio di un Template di tema
+      tags:
+        - Site Templates
+    patch:
+      operationId: SiteTemplatesController_update
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSiteTemplateDto'
+      responses:
+        '200':
+          description: Template aggiornato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteTemplateResponseDto'
+        '400':
+          description: Payload non valido o albero blocchi malformato
+        '404':
+          description: Template non trovato o eliminato
+        '409':
+          description: Version obsoleta
+      security:
+        - access-token: []
+      summary: Aggiorna un Template di tema (richiede version per il lock ottimistico)
+      tags:
+        - Site Templates
+    delete:
+      operationId: SiteTemplatesController_remove
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Template eliminato
+        '404':
+          description: Template non trovato o già eliminato
+      security:
+        - access-token: []
+      summary: Elimina (soft-delete) un Template di tema
+      tags:
+        - Site Templates
+  /api/v1/public/site-templates/resolve:
+    post:
+      operationId: PublicSiteTemplatesController_resolve
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveSiteTemplateDto'
+      responses:
+        '200':
+          description: Template risolto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolvedSiteTemplateDto'
+        '404':
+          description: Nessun Template applicabile alla rotta richiesta
+      summary: Risolve il Template di tema applicabile a una rotta pubblica
+      tags:
+        - Public Site Templates
   /api/v1/analytics/ingest/pageview:
     post:
       operationId: AnalyticsController_ingestPageview
@@ -3701,6 +3881,265 @@ components:
           type: object
           allOf:
             - $ref: '#/components/schemas/PublicGlobalSectionDto'
+    DisplayConditionRuleDto:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Verso della regola
+          enum:
+            - include
+            - exclude
+        target:
+          type: string
+          description: Bersaglio della regola
+          enum:
+            - entire_site
+            - specific_page
+            - path_pattern
+        value:
+          type: string
+          description: >-
+            Path esatto (target specific_page) o pattern con wildcard "*"
+            (target path_pattern); assente per entire_site.
+          example: /blog/*
+      required:
+        - type
+        - target
+    CreateSiteTemplateDto:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Titolo del Template
+          example: Ricerca — layout risultati
+        type:
+          type: string
+          description: Tipo di Template
+          enum:
+            - single_post
+            - single_page
+            - archive
+            - search_results
+            - loop_item
+            - error_404
+        contentTree:
+          type: object
+          description: 'Albero di blocchi iniziale (default: albero vuoto)'
+          additionalProperties: true
+        isPublished:
+          type: boolean
+          description: Pubblicato (default false)
+          example: false
+        language:
+          type: string
+          description: Lingua (default "IT")
+          example: IT
+        priority:
+          type: number
+          description: Priorità di risoluzione (default 0, più alto vince)
+          example: 0
+        displayConditions:
+          description: Condizioni di visualizzazione (default nessuna)
+          type: array
+          items:
+            $ref: '#/components/schemas/DisplayConditionRuleDto'
+      required:
+        - title
+        - type
+    SiteTemplateResponseDto:
+      type: object
+      properties:
+        guid:
+          type: string
+          description: Guid del Template
+          example: a1b2c3d4e5f6a7b8
+        title:
+          type: string
+          description: Titolo del Template
+        type:
+          type: string
+          description: Tipo di Template
+          enum:
+            - single_post
+            - single_page
+            - archive
+            - search_results
+            - loop_item
+            - error_404
+        contentTree:
+          type: object
+          description: Albero di blocchi corrente
+          additionalProperties: true
+        isPublished:
+          type: boolean
+          description: Pubblicato
+        language:
+          type: string
+          description: Lingua
+        priority:
+          type: number
+          description: Priorità di risoluzione (più alto vince)
+        displayConditions:
+          description: Condizioni di visualizzazione
+          type: array
+          items:
+            $ref: '#/components/schemas/DisplayConditionRuleDto'
+        version:
+          type: number
+          description: Version corrente (lock ottimistico)
+          example: 1
+        createdAt:
+          format: date-time
+          type: string
+          description: Data creazione
+        updatedAt:
+          format: date-time
+          type: string
+          description: Data ultimo aggiornamento
+      required:
+        - guid
+        - title
+        - type
+        - contentTree
+        - isPublished
+        - language
+        - priority
+        - displayConditions
+        - version
+        - createdAt
+        - updatedAt
+    UpdateSiteTemplateDto:
+      type: object
+      properties:
+        version:
+          type: number
+          description: Version letta al caricamento del Template (lock ottimistico)
+          example: 3
+        title:
+          type: string
+          description: Titolo del Template
+        type:
+          type: string
+          description: Tipo di Template
+          enum:
+            - single_post
+            - single_page
+            - archive
+            - search_results
+            - loop_item
+            - error_404
+        contentTree:
+          type: object
+          description: >-
+            Albero di blocchi aggiornato (sostituisce integralmente il
+            precedente)
+          additionalProperties: true
+        isPublished:
+          type: boolean
+          description: Pubblicato
+        language:
+          type: string
+          description: Lingua
+        priority:
+          type: number
+          description: Priorità di risoluzione (più alto vince)
+        displayConditions:
+          description: >-
+            Condizioni di visualizzazione (sostituisce integralmente l'array
+            precedente)
+          type: array
+          items:
+            $ref: '#/components/schemas/DisplayConditionRuleDto'
+      required:
+        - version
+    ResolveSiteTemplateDto:
+      type: object
+      properties:
+        path:
+          type: string
+          description: Path pubblico da risolvere
+          example: /blog/il-mio-articolo
+        type:
+          type: string
+          description: Tipo di Template richiesto
+          enum:
+            - single_post
+            - single_page
+            - archive
+            - search_results
+            - loop_item
+            - error_404
+        lang:
+          type: string
+          description: Lingua richiesta
+          example: IT
+      required:
+        - path
+        - type
+        - lang
+    ResolvedSiteTemplateDto:
+      type: object
+      properties:
+        guid:
+          type: string
+          description: Guid del Template
+          example: a1b2c3d4e5f6a7b8
+        title:
+          type: string
+          description: Titolo del Template
+        type:
+          type: string
+          description: Tipo di Template
+          enum:
+            - single_post
+            - single_page
+            - archive
+            - search_results
+            - loop_item
+            - error_404
+        contentTree:
+          type: object
+          description: Albero di blocchi corrente
+          additionalProperties: true
+        isPublished:
+          type: boolean
+          description: Pubblicato
+        language:
+          type: string
+          description: Lingua
+        priority:
+          type: number
+          description: Priorità di risoluzione (più alto vince)
+        displayConditions:
+          description: Condizioni di visualizzazione
+          type: array
+          items:
+            $ref: '#/components/schemas/DisplayConditionRuleDto'
+        version:
+          type: number
+          description: Version corrente (lock ottimistico)
+          example: 1
+        createdAt:
+          format: date-time
+          type: string
+          description: Data creazione
+        updatedAt:
+          format: date-time
+          type: string
+          description: Data ultimo aggiornamento
+      required:
+        - guid
+        - title
+        - type
+        - contentTree
+        - isPublished
+        - language
+        - priority
+        - displayConditions
+        - version
+        - createdAt
+        - updatedAt
     IngestPageviewDto:
       type: object
       properties:

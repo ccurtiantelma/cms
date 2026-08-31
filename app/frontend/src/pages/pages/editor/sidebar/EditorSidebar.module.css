@@ -75,47 +75,22 @@
   display: flex;
 }
 
+/*
+  Solo passthrough flex, nessuno scroll proprio: quello vero vive nel figlio
+  (`PropertyInspector.module.css` `.root` per la scheda "Proprietà",
+  `WidgetPalette.module.css` `.root` per "Widgets"), ciascuno con la propria scrollbar
+  sottile indipendente. Uno scroll anche qui produceva due scrollbar annidate — quella
+  esterna sempre visibile (per via di `overflow-y: scroll`, non `auto`) ma senza nulla da
+  scorrere davvero (il figlio riempie `.panel` e gestisce già da sé il proprio overflow),
+  quella interna incapace di attivarsi finché l'altezza disponibile non risaliva
+  correttamente la catena flex (risolto in `FullScreenEditorLayout.module.css`
+  `.canvasShell`).
+*/
 .panel {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
-  overflow-y: scroll;
-  overflow-x: hidden;
-  scrollbar-width: auto;
-  scrollbar-color: rgba(110, 118, 129, 0.8) transparent;
-  scrollbar-gutter: stable;
-  padding-right: 4px;
-}
-
-/*
-  Scrollbar sottile stile Elementor Pro (WebKit/Blink — Firefox non supporta
-  `::-webkit-scrollbar`, resta sulla scrollbar nativa del sistema, nessun degrado
-  funzionale). 6px di larghezza, thumb `#a7aaad` — stesso valore duplicato in
-  `PropertyInspector.module.css`/`WidgetPalette.module.css` (i due contenitori
-  effettivamente scrollabili annidati dentro `.content`): nessun file condiviso, stesso
-  principio già in uso in questo codebase per piccoli helper cross-modulo.
-*/
-.content::-webkit-scrollbar,
-.panel::-webkit-scrollbar,
-.root::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-  display: block;
-}
-
-.content::-webkit-scrollbar-thumb,
-.panel::-webkit-scrollbar-thumb,
-.root::-webkit-scrollbar-thumb {
-  background-color: rgba(110, 118, 129, 0.8);
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-
-.content::-webkit-scrollbar-track,
-.panel::-webkit-scrollbar-track,
-.root::-webkit-scrollbar-track {
-  background: transparent;
+  overflow: hidden;
 }
 
 .emptyState {

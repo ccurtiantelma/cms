@@ -1,3 +1,7 @@
+// Carica le variabili d'ambiente dal file .env prima di tutto il resto
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';

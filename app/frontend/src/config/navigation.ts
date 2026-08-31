@@ -7,6 +7,7 @@ import {
   IconFileText,
   IconLayoutDashboard,
   IconLayoutNavbar,
+  IconTemplate,
   IconUsers,
 } from '@tabler/icons-react';
 import { AppUserRoles } from '../types/common.types';
@@ -43,6 +44,14 @@ export const navigationItems: NavigationItem[] = [
     icon: IconLayoutNavbar,
     // Soglia `Manager`+, la stessa del `GuardManager` sul controller admin
     // (ADR-40): le Sezioni Globali non hanno ownership per riga.
+    roles: [AppUserRoles.SuperAdmin, AppUserRoles.Admin, AppUserRoles.Manager],
+  },
+  {
+    label: 'Template Editor',
+    path: '/site-templates',
+    icon: IconTemplate,
+    // Stessa soglia `Manager`+ delle Sezioni Globali (RFC-40 Opzione B): i
+    // Template di tema non hanno ownership per riga.
     roles: [AppUserRoles.SuperAdmin, AppUserRoles.Admin, AppUserRoles.Manager],
   },
   {

@@ -74,3 +74,12 @@ export interface FilesQueryParams {
   /** Match esatto su `mimeType`, non prefix. */
   mimeType?: string;
 }
+
+/** Parametri di filtro per GET /app/site-templates. */
+export interface SiteTemplatesQueryParams extends PaginationParams {
+  /** Match esatto su `type` (`SiteTemplateType`). */
+  type?: string;
+  /** Match esatto su `language`. */
+  language?: string;
+  isPublished?: boolean;
+}

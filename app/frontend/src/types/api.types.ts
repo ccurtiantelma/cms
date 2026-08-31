@@ -886,6 +886,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/app/site-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista paginata dei Template di tema */
+        get: operations["SiteTemplatesController_findAll"];
+        put?: never;
+        /** Crea un Template di tema */
+        post: operations["SiteTemplatesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/app/site-templates/{guid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dettaglio di un Template di tema */
+        get: operations["SiteTemplatesController_findOne"];
+        put?: never;
+        post?: never;
+        /** Elimina (soft-delete) un Template di tema */
+        delete: operations["SiteTemplatesController_remove"];
+        options?: never;
+        head?: never;
+        /** Aggiorna un Template di tema (richiede version per il lock ottimistico) */
+        patch: operations["SiteTemplatesController_update"];
+        trace?: never;
+    };
+    "/api/v1/public/site-templates/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Risolve il Template di tema applicabile a una rotta pubblica */
+        post: operations["PublicSiteTemplatesController_resolve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/analytics/ingest/pageview": {
         parameters: {
             query?: never;
@@ -2368,6 +2422,181 @@ export interface components {
         PublicActiveGlobalSectionsDto: {
             header?: components["schemas"]["PublicGlobalSectionDto"] | null;
             footer?: components["schemas"]["PublicGlobalSectionDto"] | null;
+        };
+        DisplayConditionRuleDto: {
+            /**
+             * @description Verso della regola
+             * @enum {string}
+             */
+            type: "include" | "exclude";
+            /**
+             * @description Bersaglio della regola
+             * @enum {string}
+             */
+            target: "entire_site" | "specific_page" | "path_pattern";
+            /**
+             * @description Path esatto (target specific_page) o pattern con wildcard "*" (target path_pattern); assente per entire_site.
+             * @example /blog/*
+             */
+            value?: string;
+        };
+        CreateSiteTemplateDto: {
+            /**
+             * @description Titolo del Template
+             * @example Ricerca — layout risultati
+             */
+            title: string;
+            /**
+             * @description Tipo di Template
+             * @enum {string}
+             */
+            type: "single_post" | "single_page" | "archive" | "search_results" | "loop_item" | "error_404";
+            /** @description Albero di blocchi iniziale (default: albero vuoto) */
+            contentTree?: {
+                [key: string]: unknown;
+            };
+            /**
+             * @description Pubblicato (default false)
+             * @example false
+             */
+            isPublished?: boolean;
+            /**
+             * @description Lingua (default "IT")
+             * @example IT
+             */
+            language?: string;
+            /**
+             * @description Priorità di risoluzione (default 0, più alto vince)
+             * @example 0
+             */
+            priority?: number;
+            /** @description Condizioni di visualizzazione (default nessuna) */
+            displayConditions?: components["schemas"]["DisplayConditionRuleDto"][];
+        };
+        SiteTemplateResponseDto: {
+            /**
+             * @description Guid del Template
+             * @example a1b2c3d4e5f6a7b8
+             */
+            guid: string;
+            /** @description Titolo del Template */
+            title: string;
+            /**
+             * @description Tipo di Template
+             * @enum {string}
+             */
+            type: "single_post" | "single_page" | "archive" | "search_results" | "loop_item" | "error_404";
+            /** @description Albero di blocchi corrente */
+            contentTree: {
+                [key: string]: unknown;
+            };
+            /** @description Pubblicato */
+            isPublished: boolean;
+            /** @description Lingua */
+            language: string;
+            /** @description Priorità di risoluzione (più alto vince) */
+            priority: number;
+            /** @description Condizioni di visualizzazione */
+            displayConditions: components["schemas"]["DisplayConditionRuleDto"][];
+            /**
+             * @description Version corrente (lock ottimistico)
+             * @example 1
+             */
+            version: number;
+            /**
+             * Format: date-time
+             * @description Data creazione
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Data ultimo aggiornamento
+             */
+            updatedAt: string;
+        };
+        UpdateSiteTemplateDto: {
+            /**
+             * @description Version letta al caricamento del Template (lock ottimistico)
+             * @example 3
+             */
+            version: number;
+            /** @description Titolo del Template */
+            title?: string;
+            /**
+             * @description Tipo di Template
+             * @enum {string}
+             */
+            type?: "single_post" | "single_page" | "archive" | "search_results" | "loop_item" | "error_404";
+            /** @description Albero di blocchi aggiornato (sostituisce integralmente il precedente) */
+            contentTree?: {
+                [key: string]: unknown;
+            };
+            /** @description Pubblicato */
+            isPublished?: boolean;
+            /** @description Lingua */
+            language?: string;
+            /** @description Priorità di risoluzione (più alto vince) */
+            priority?: number;
+            /** @description Condizioni di visualizzazione (sostituisce integralmente l'array precedente) */
+            displayConditions?: components["schemas"]["DisplayConditionRuleDto"][];
+        };
+        ResolveSiteTemplateDto: {
+            /**
+             * @description Path pubblico da risolvere
+             * @example /blog/il-mio-articolo
+             */
+            path: string;
+            /**
+             * @description Tipo di Template richiesto
+             * @enum {string}
+             */
+            type: "single_post" | "single_page" | "archive" | "search_results" | "loop_item" | "error_404";
+            /**
+             * @description Lingua richiesta
+             * @example IT
+             */
+            lang: string;
+        };
+        ResolvedSiteTemplateDto: {
+            /**
+             * @description Guid del Template
+             * @example a1b2c3d4e5f6a7b8
+             */
+            guid: string;
+            /** @description Titolo del Template */
+            title: string;
+            /**
+             * @description Tipo di Template
+             * @enum {string}
+             */
+            type: "single_post" | "single_page" | "archive" | "search_results" | "loop_item" | "error_404";
+            /** @description Albero di blocchi corrente */
+            contentTree: {
+                [key: string]: unknown;
+            };
+            /** @description Pubblicato */
+            isPublished: boolean;
+            /** @description Lingua */
+            language: string;
+            /** @description Priorità di risoluzione (più alto vince) */
+            priority: number;
+            /** @description Condizioni di visualizzazione */
+            displayConditions: components["schemas"]["DisplayConditionRuleDto"][];
+            /**
+             * @description Version corrente (lock ottimistico)
+             * @example 1
+             */
+            version: number;
+            /**
+             * Format: date-time
+             * @description Data creazione
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Data ultimo aggiornamento
+             */
+            updatedAt: string;
         };
         IngestPageviewDto: {
             /**
@@ -4545,6 +4774,206 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PublicActiveGlobalSectionsDto"];
                 };
+            };
+        };
+    };
+    SiteTemplatesController_findAll: {
+        parameters: {
+            query?: {
+                /** @description Pagina (default 1) */
+                p?: string;
+                /** @description Elementi per pagina (default 20) */
+                i?: string;
+                /** @description Ricerca testuale sul titolo */
+                q?: string;
+                /** @description Filtro per tipo di Template */
+                type?: string;
+                /** @description Filtro per lingua */
+                language?: string;
+                /** @description Filtro per stato di pubblicazione */
+                isPublished?: string;
+                /** @description Campo di ordinamento (title, type, language, priority, createdAt, updatedAt) */
+                o?: string;
+                /** @description Direzione ordinamento (asc|desc, default desc) */
+                d?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista Template di tema paginata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SiteTemplatesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSiteTemplateDto"];
+            };
+        };
+        responses: {
+            /** @description Template creato */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteTemplateResponseDto"];
+                };
+            };
+            /** @description Payload non valido o albero blocchi malformato */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SiteTemplatesController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Template trovato */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteTemplateResponseDto"];
+                };
+            };
+            /** @description Template non trovato o eliminato */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SiteTemplatesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Template eliminato */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Template non trovato o già eliminato */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SiteTemplatesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSiteTemplateDto"];
+            };
+        };
+        responses: {
+            /** @description Template aggiornato */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteTemplateResponseDto"];
+                };
+            };
+            /** @description Payload non valido o albero blocchi malformato */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Template non trovato o eliminato */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Version obsoleta */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicSiteTemplatesController_resolve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveSiteTemplateDto"];
+            };
+        };
+        responses: {
+            /** @description Template risolto */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResolvedSiteTemplateDto"];
+                };
+            };
+            /** @description Nessun Template applicabile alla rotta richiesta */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

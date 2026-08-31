@@ -74,13 +74,21 @@
 /*
  * Confine il canvas sotto la chrome superiore: il suo stacking context resta separato
  * dall'header e il contenitore può restringersi correttamente prima di delegare lo scroll
- * verticale a `.canvasArea`.
+ * verticale a `.canvasArea`. `display: flex` è necessario qui, non solo estetico: senza,
+ * `.workArea` sotto (che dichiara `flex: 1; min-height: 0`) non è affatto un flex item —
+ * quelle proprietà valgono solo dentro un genitore flex/grid — e resta `height: auto`,
+ * crescendo quanto il suo contenuto invece di fermarsi all'altezza disponibile. L'eccesso
+ * finiva clippato qui silenziosamente (`overflow: hidden`, senza barra) invece di scorrere
+ * nella scrollbar di `.canvasArea` — la stessa causa impediva anche alla sidebar sinistra
+ * di ricevere un'altezza vincolata, quindi il suo scroll interno non si attivava mai.
  */
 .canvasShell {
   position: relative;
   z-index: 1;
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   isolation: isolate;
 }

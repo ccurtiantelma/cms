@@ -23,6 +23,7 @@ import Heading from './blocks/Heading';
 import RichText from './blocks/RichText';
 import Image from './blocks/Image';
 import Button from './blocks/Button';
+import ContentPlaceholderBlock, { CONTENT_AREA_BLOCK_ID } from './blocks/ContentPlaceholderBlock';
 
 const KNOWN_TYPES = new Map(BLOCK_TYPES.map((descriptor) => [descriptor.type, descriptor]));
 
@@ -102,6 +103,20 @@ function renderNode(node: RenderableBlockNode, editing: BlockEditingProps | unde
         </Section>
       );
     case 'container':
+      // Segnaposto "Area Contenuto Pagina" del Template Editor (Site Templates): un
+      // `container` reale e già valido nello schema, riconosciuto solo dalla sua prop
+      // `customElementId` (mai un settimo tipo di blocco, mai l'`id` strutturale del nodo —
+      // vedi il commento di testa di `ContentPlaceholderBlock.tsx`). Early-check additivo,
+      // nessun'altra modifica a questo dispatcher.
+      if (node.props.customElementId === CONTENT_AREA_BLOCK_ID) {
+        return (
+          <ContentPlaceholderBlock>
+            {node.children.map((child) => (
+              <BlockRenderer key={child.id} node={child} />
+            ))}
+          </ContentPlaceholderBlock>
+        );
+      }
       return (
         <Container
           display={node.props.display}

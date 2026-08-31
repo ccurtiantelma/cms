@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "build": "vite build --ssr src/server.ts --outDir dist",
-    "start": "node dist/server.js",
+    "start": "node --require dotenv/config dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
+    "dotenv": "^16.6.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

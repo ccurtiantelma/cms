@@ -23,6 +23,7 @@ import { MetricsModule } from './metrics/metrics.module';
 import { PagesModule } from './pages/pages.module';
 import { PreviewPagesModule } from './preview-pages/preview-pages.module';
 import { GlobalSectionsModule } from './global-sections/global-sections.module';
+import { SiteTemplatesModule } from './site-templates/site-templates.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
@@ -127,6 +128,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     PagesModule,
     PreviewPagesModule,
     GlobalSectionsModule,
+    SiteTemplatesModule,
     AnalyticsModule,
     // TODO: aggiungere qui i moduli applicativi del CMS man mano che vengono creati.
   ],

@@ -1,0 +1,85 @@
+/*
+ * Guscio full-screen del Template Editor (`PageSiteTemplateBuilder.tsx`) — stesso principio
+ * di `FullScreenEditorLayout.module.css` (`position: fixed; inset: 0; z-index: 1000`, così si
+ * sgancia da `LayoutProtected` senza toccare il routing), ma file autonomo: quello è condiviso
+ * con l'editor di Pagina e delle Sezioni Globali e non va toccato per questo modulo.
+ */
+
+.root {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  width: 100vw;
+  overflow: hidden;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--mantine-color-body);
+}
+
+.workArea {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.sidebar {
+  flex: 0 0 300px;
+  overflow: hidden;
+}
+
+.canvasArea {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  background-color: #f3f4f6;
+}
+
+[data-mantine-color-scheme='dark'] .canvasArea {
+  background-color: var(--mantine-color-dark-8);
+}
+
+/* Larghezza reattiva al viewport simulato (BuilderTopBar), stessa transizione fluida di `FullScreenEditorLayout.module.css`. */
+.viewportContainer {
+  width: 100%;
+  max-width: 100%;
+  container-type: inline-size;
+  transition:
+    width 0.3s ease-in-out,
+    max-width 0.3s ease-in-out,
+    margin 0.3s ease-in-out,
+    box-shadow 0.3s ease-in-out;
+}
+
+.viewportDesktop {
+  width: 100%;
+  max-width: 1280px;
+}
+
+.viewportTablet,
+.viewportMobile {
+  margin-block: 24px;
+  background-color: var(--mantine-color-body);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.08),
+    0 12px 32px rgba(0, 0, 0, 0.18);
+  border-radius: 4px;
+}
+
+.viewportTablet {
+  width: 768px;
+  max-width: 100%;
+}
+
+.viewportMobile {
+  width: 375px;
+  max-width: 100%;
+}

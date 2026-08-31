@@ -64,6 +64,13 @@
       "when": 1788112529649,
       "tag": "0008_slippery_cerise",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788170995420,
+      "tag": "0009_brown_red_skull",
+      "breakpoints": true
     }
   ]
 }
