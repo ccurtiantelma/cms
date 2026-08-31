@@ -101,8 +101,14 @@ export class AppConstants {
    * `pages`, non qui.
    */
   static readonly pagePreviewTokenSecret = str('PAGE_PREVIEW_TOKEN_SECRET');
-  /** Secret server-to-server usato dal consumer SSR per inviare pageview validate. */
-  static readonly analyticsIngestSecret = str('ANALYTICS_INGEST_SECRET');
+  /**
+   * Secret per la rotazione giornaliera del salt di anonimizzazione visitatore
+   * (`visitor-hash.util.ts`, GDPR/zero-cookie): `dailySalt = SHA256(secret +
+   * ':' + dataUTC)`, mai l'IP grezzo persistito. Stesso pattern del
+   * `analyticsIngestSecret` ora rimosso (ingestion via secret POST superata
+   * dal middleware su `public/*path`).
+   */
+  static readonly analyticsSaltSecret = str('ANALYTICS_SALT_SECRET', 'change_me_analytics_salt');
 
   static readonly frontendUrl = str('FRONTEND_URL', 'http://localhost:55173');
   /**
@@ -169,6 +175,15 @@ export class AppConstants {
   static readonly filesCleanupCronPattern = str('FILES_CLEANUP_CRON_PATTERN', '0 3 * * *');
   /** Numero massimo di blob rimossi per singola esecuzione del job (guardrail, non business rule). */
   static readonly filesCleanupBatchSize = num('FILES_CLEANUP_BATCH_SIZE', 500);
+
+  /**
+   * Job repeatable BullMQ (`analytics-rollup-queue`) che ricalcola oggi/ieri
+   * (UTC) di `analytics_daily_rollups` da `analytics_events`. Sempre attivo
+   * (nessun flag enabled/disabled, a differenza del cleanup file): a
+   * differenza della rimozione fisica di un blob, un rollup ricalcolato non è
+   * un'azione distruttiva.
+   */
+  static readonly analyticsRollupCronPattern = str('ANALYTICS_ROLLUP_CRON_PATTERN', '*/5 * * * *');
 
   /**
    * Osservabilità opzionale (ADR-15), entrambe disattivate di default (opt-in

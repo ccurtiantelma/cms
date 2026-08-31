@@ -71,6 +71,20 @@
       "when": 1788170995420,
       "tag": "0009_brown_red_skull",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788180291065,
+      "tag": "0010_faithful_morlocks",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788180305527,
+      "tag": "0011_careless_timeslip",
+      "breakpoints": true
     }
   ]
 }

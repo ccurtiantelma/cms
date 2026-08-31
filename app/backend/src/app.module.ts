@@ -10,6 +10,7 @@ import { DbModule } from './db/db.module';
 import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
 import { AuthMiddleware } from './auth/auth.middleware';
+import { AnalyticsIngestionMiddleware } from './analytics/analytics-ingestion.middleware';
 import { RedisModule } from './redis/redis.module';
 import { AdminModule } from './admin/admin.module';
 import { SettingsModule } from './settings/settings.module';
@@ -42,7 +43,9 @@ import { AnalyticsModule } from './analytics/analytics.module';
         // Segreto dedicato del JWT di anteprima di una bozza (ADR-25 § 1),
         // volutamente distinto da SECURITY_KEY (access/refresh).
         PAGE_PREVIEW_TOKEN_SECRET: Joi.string().required(),
-        ANALYTICS_INGEST_SECRET: Joi.string().allow('').optional(),
+        // Rotazione giornaliera del salt di anonimizzazione visitatore
+        // (AppConstants.analyticsSaltSecret, GDPR/zero-cookie).
+        ANALYTICS_SALT_SECRET: Joi.string().default('change_me_analytics_salt'),
         COOKIE_SECRET: Joi.string().default('change_me_cookie_secret'),
         COOKIE_DOMAIN: Joi.string().default('localhost'),
         // Allineato ad AppConstants.jwtExpiration (fix: entrambi i default devono coincidere).
@@ -81,6 +84,9 @@ import { AnalyticsModule } from './analytics/analytics.module';
         FILES_CLEANUP_GRACE_DAYS: Joi.number().default(30),
         FILES_CLEANUP_CRON_PATTERN: Joi.string().default('0 3 * * *'),
         FILES_CLEANUP_BATCH_SIZE: Joi.number().default(500),
+        // Pattern cron del repeatable job di rollup analytics (sempre attivo),
+        // mirror di FILES_CLEANUP_CRON_PATTERN.
+        ANALYTICS_ROLLUP_CRON_PATTERN: Joi.string().default('*/5 * * * *'),
         SENTRY_ENABLED: Joi.boolean().default(false),
         SENTRY_DSN: Joi.string().allow('').optional(),
         SENTRY_ENVIRONMENT: Joi.string().optional(),
@@ -154,7 +160,6 @@ export class AppModule {
         // costruzione, il token stesso è la prova di accesso — non un JWT
         // di sessione, quindi mai dietro `AuthMiddleware`.
         { path: 'preview/*path', method: RequestMethod.ALL },
-        { path: 'analytics/ingest/pageview', method: RequestMethod.POST },
         // `/metrics` (ADR-15) NON va escluso qui: essendo montato fuori dal
         // prefisso globale `api/v1` (vedi main.ts), questo `.exclude()` finirebbe
         // per confrontarsi con `api/v1/metrics` (mai servito) e non con il path
@@ -168,5 +173,12 @@ export class AppModule {
         { path: 'auth/reset-password', method: RequestMethod.ALL },
       )
       .forRoutes({ path: '*path', method: RequestMethod.ALL });
+
+    // Ingestion analytics privacy-first: middleware separato (non sostituisce
+    // AuthMiddleware, che sopra esclude comunque `public/*path`), montato solo
+    // sulle GET pubbliche. Non blocca mai la risposta (vedi JSDoc della classe).
+    consumer
+      .apply(AnalyticsIngestionMiddleware)
+      .forRoutes({ path: 'public/*path', method: RequestMethod.GET });
   }
 }

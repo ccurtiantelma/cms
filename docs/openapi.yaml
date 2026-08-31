@@ -1787,34 +1787,9 @@ paths:
       summary: Risolve il Template di tema applicabile a una rotta pubblica
       tags:
         - Public Site Templates
-  /api/v1/analytics/ingest/pageview:
-    post:
-      operationId: AnalyticsController_ingestPageview
-      parameters:
-        - name: X-Analytics-Secret
-          in: header
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/IngestPageviewDto'
-      responses:
-        '204':
-          description: Pageview accettata o già aggregata
-        '401':
-          description: Secret assente o non valido
-        '404':
-          description: Il percorso non identifica una pagina pubblicata
-      summary: Ingest server-to-server di una pageview SSR riuscita
-      tags:
-        - Analytics
-  /api/v1/analytics:
+  /api/v1/analytics/overview:
     get:
-      operationId: AnalyticsController_getAnalytics
+      operationId: AnalyticsController_getOverview
       parameters:
         - name: from
           required: false
@@ -1828,16 +1803,237 @@ paths:
           description: Data finale inclusa (YYYY-MM-DD)
           schema:
             type: string
+        - name: interval
+          required: false
+          in: query
+          description: >-
+            Granularità dei bucket per la timeseries. Default: "day" (gestito
+            dal service).
+          schema:
+            type: string
+            enum:
+              - day
+              - hour
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Numero massimo di righe per top-pages/referrers. Default: 10
+            (gestito dal service).
+          schema:
+            minimum: 1
+            maximum: 100
+            type: number
       responses:
         '200':
-          description: KPI e serie giornaliere
+          description: KPI dell'intervallo richiesto
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AnalyticsResponseDto'
+                $ref: '#/components/schemas/AnalyticsOverviewDto'
       security:
         - access-token: []
-      summary: KPI analytics sito pubblico e utilizzo app (Admin+)
+      summary: KPI aggregati (view, visitatori unici, pagine con traffico, trend)
+      tags:
+        - Analytics
+  /api/v1/analytics/timeseries:
+    get:
+      operationId: AnalyticsController_getTimeseries
+      parameters:
+        - name: from
+          required: false
+          in: query
+          description: Data iniziale inclusa (YYYY-MM-DD)
+          schema:
+            type: string
+        - name: to
+          required: false
+          in: query
+          description: Data finale inclusa (YYYY-MM-DD)
+          schema:
+            type: string
+        - name: interval
+          required: false
+          in: query
+          description: >-
+            Granularità dei bucket per la timeseries. Default: "day" (gestito
+            dal service).
+          schema:
+            type: string
+            enum:
+              - day
+              - hour
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Numero massimo di righe per top-pages/referrers. Default: 10
+            (gestito dal service).
+          schema:
+            minimum: 1
+            maximum: 100
+            type: number
+      responses:
+        '200':
+          description: Serie temporale ordinata crescente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsTimeseriesDto'
+      security:
+        - access-token: []
+      summary: Serie temporale view/visitatori unici (bucket giorno o ora)
+      tags:
+        - Analytics
+  /api/v1/analytics/top-pages:
+    get:
+      operationId: AnalyticsController_getTopPages
+      parameters:
+        - name: from
+          required: false
+          in: query
+          description: Data iniziale inclusa (YYYY-MM-DD)
+          schema:
+            type: string
+        - name: to
+          required: false
+          in: query
+          description: Data finale inclusa (YYYY-MM-DD)
+          schema:
+            type: string
+        - name: interval
+          required: false
+          in: query
+          description: >-
+            Granularità dei bucket per la timeseries. Default: "day" (gestito
+            dal service).
+          schema:
+            type: string
+            enum:
+              - day
+              - hour
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Numero massimo di righe per top-pages/referrers. Default: 10
+            (gestito dal service).
+          schema:
+            minimum: 1
+            maximum: 100
+            type: number
+      responses:
+        '200':
+          description: Righe ordinate per view decrescenti
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AnalyticsTopPageDto'
+      security:
+        - access-token: []
+      summary: Classifica delle pagine più visitate nell'intervallo
+      tags:
+        - Analytics
+  /api/v1/analytics/referrers:
+    get:
+      operationId: AnalyticsController_getReferrers
+      parameters:
+        - name: from
+          required: false
+          in: query
+          description: Data iniziale inclusa (YYYY-MM-DD)
+          schema:
+            type: string
+        - name: to
+          required: false
+          in: query
+          description: Data finale inclusa (YYYY-MM-DD)
+          schema:
+            type: string
+        - name: interval
+          required: false
+          in: query
+          description: >-
+            Granularità dei bucket per la timeseries. Default: "day" (gestito
+            dal service).
+          schema:
+            type: string
+            enum:
+              - day
+              - hour
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Numero massimo di righe per top-pages/referrers. Default: 10
+            (gestito dal service).
+          schema:
+            minimum: 1
+            maximum: 100
+            type: number
+      responses:
+        '200':
+          description: Righe ordinate per conteggio decrescente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AnalyticsReferrerDto'
+      security:
+        - access-token: []
+      summary: Classifica dei referrer nell'intervallo ("direct" se assente)
+      tags:
+        - Analytics
+  /api/v1/analytics/devices:
+    get:
+      operationId: AnalyticsController_getDeviceStats
+      parameters:
+        - name: from
+          required: false
+          in: query
+          description: Data iniziale inclusa (YYYY-MM-DD)
+          schema:
+            type: string
+        - name: to
+          required: false
+          in: query
+          description: Data finale inclusa (YYYY-MM-DD)
+          schema:
+            type: string
+        - name: interval
+          required: false
+          in: query
+          description: >-
+            Granularità dei bucket per la timeseries. Default: "day" (gestito
+            dal service).
+          schema:
+            type: string
+            enum:
+              - day
+              - hour
+        - name: limit
+          required: false
+          in: query
+          description: >-
+            Numero massimo di righe per top-pages/referrers. Default: 10
+            (gestito dal service).
+          schema:
+            minimum: 1
+            maximum: 100
+            type: number
+      responses:
+        '200':
+          description: Distribuzione device/browser
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsDeviceStatsDto'
+      security:
+        - access-token: []
+      summary: Distribuzione percentuale per device e per browser
       tags:
         - Analytics
 info:
@@ -4140,71 +4336,132 @@ components:
         - version
         - createdAt
         - updatedAt
-    IngestPageviewDto:
+    AnalyticsOverviewDto:
       type: object
       properties:
-        path:
-          type: string
-          description: Percorso canonico della pagina HTML pubblicata
-          example: /chi-siamo
-      required:
-        - path
-    AnalyticsSeriesPointDto:
-      type: object
-      properties:
-        date:
-          type: string
-          example: '2026-08-28'
-        visits:
+        totalViews:
+          type: number
+          example: 4820
+          description: Numero totale di pageview nel range
+        uniqueVisitors:
+          type: number
+          example: 1230
+          description: Visitatori unici (hash distinti) nel range
+        pagesWithTraffic:
           type: number
           example: 42
+          description: Numero di percorsi distinti con almeno una pageview nel range
+        trendPercentage:
+          type: object
+          example: 12.5
+          description: >-
+            Variazione percentuale di totalViews vs il periodo immediatamente
+            precedente di pari durata (null se il periodo precedente non ha
+            traffico)
+          nullable: true
+      required:
+        - totalViews
+        - uniqueVisitors
+        - pagesWithTraffic
+        - trendPercentage
+    AnalyticsTimeseriesPointDto:
+      type: object
+      properties:
+        bucket:
+          type: string
+          example: '2026-08-28T00:00:00.000Z'
+          description: Inizio del bucket (ISO 8601)
+        views:
+          type: number
+          example: 320
+        uniqueVisitors:
+          type: number
+          example: 95
+      required:
+        - bucket
+        - views
+        - uniqueVisitors
+    AnalyticsTimeseriesDto:
+      type: object
+      properties:
+        interval:
+          type: string
+          enum:
+            - day
+            - hour
+          example: day
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsTimeseriesPointDto'
+      required:
+        - interval
+        - points
+    AnalyticsTopPageDto:
+      type: object
+      properties:
         path:
           type: string
           example: /chi-siamo
+        views:
+          type: number
+          example: 640
+        uniqueVisitors:
+          type: number
+          example: 210
+        percentage:
+          type: number
+          example: 13.3
+          description: Percentuale sul totale delle view nel range
       required:
-        - date
-        - visits
-    SiteAnalyticsDto:
+        - path
+        - views
+        - uniqueVisitors
+        - percentage
+    AnalyticsReferrerDto:
       type: object
       properties:
-        totalVisits:
+        referrer:
+          type: string
+          example: https://www.google.com/
+        count:
           type: number
-          example: 420
-        series:
+          example: 340
+        percentage:
+          type: number
+          example: 27.4
+          description: Percentuale sul totale degli eventi nel range
+      required:
+        - referrer
+        - count
+        - percentage
+    AnalyticsDistributionRowDto:
+      type: object
+      properties:
+        label:
+          type: string
+          example: desktop
+        count:
+          type: number
+          example: 3100
+        percentage:
+          type: number
+          example: 64.3
+      required:
+        - label
+        - count
+        - percentage
+    AnalyticsDeviceStatsDto:
+      type: object
+      properties:
+        devices:
           type: array
           items:
-            $ref: '#/components/schemas/AnalyticsSeriesPointDto'
-      required:
-        - totalVisits
-        - series
-    AppAnalyticsDto:
-      type: object
-      properties:
-        registeredUsers:
-          type: number
-          example: 12
-        activeUsers:
-          type: number
-          example: 10
-        successfulLogins:
-          type: number
-          example: 84
-        loginSeries:
+            $ref: '#/components/schemas/AnalyticsDistributionRowDto'
+        browsers:
           type: array
           items:
-            $ref: '#/components/schemas/AnalyticsSeriesPointDto'
+            $ref: '#/components/schemas/AnalyticsDistributionRowDto'
       required:
-        - registeredUsers
-        - activeUsers
-        - successfulLogins
-        - loginSeries
-    AnalyticsResponseDto:
-      type: object
-      properties:
-        site:
-          $ref: '#/components/schemas/SiteAnalyticsDto'
-        app:
-          $ref: '#/components/schemas/AppAnalyticsDto'
-      required:
-        - site
-        - app
+        - devices
+        - browsers

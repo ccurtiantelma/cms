@@ -453,19 +453,70 @@ export const siteTemplateEntity = pgTable(
   ],
 );
 
-// ─── PUBLIC PAGEVIEW DAILY ───────────────────────────────────────────────────
-// Aggregato anonimo prodotto dal consumer SSR: nessun IP, cookie, user-agent o
-// identificatore personale. Le righe oltre 24 mesi vengono soft-deleted.
-export const publicPageviewDailyEntity = pgTable(
-  'public_pageview_daily',
+// ─── ANALYTICS EVENTS ─────────────────────────────────────────────────────────
+// Tabella APPEND-ONLY (una riga per pageview, scritta una sola volta dal
+// middleware di ingestion `AnalyticsIngestionMiddleware` e mai più toccata),
+// con UNA deviazione dichiarata dall'archetipo append-only di CLAUDE.md §
+// Database: `createdBy` è nullable invece di assente. Le righe append-only
+// "vere" (`audit_log`, `page_revisions`) sono scritte da un'azione autenticata
+// e non hanno bisogno di `createdBy` nullable; qui invece lo scrivente è
+// traffico pubblico anonimo (nessun `authInfo`), quindi non esiste un utente
+// da attribuire — stessa motivazione già usata dalla `publicPageviewDailyEntity`
+// ora rimossa per i suoi `createdBy`/`updatedBy` nullable. Nessun IP grezzo:
+// `visitorHash` è uno SHA-256 esadecimale di IP+user-agent salato con un salt
+// che ruota ogni giorno UTC (`visitor-hash.util.ts`), quindi non correlabile
+// tra giornate diverse — scelta intenzionale privacy-first (GDPR, zero cookie).
+export const analyticsEventEntity = pgTable(
+  'analytics_events',
   {
     id: serial().notNull().primaryKey(),
     guid: char('guid', { length: 16 })
       .notNull()
       .$defaultFn(() => Utils.randomString(16)),
-    eventDate: date('event_date', { mode: 'string' }).notNull(),
-    pagePath: varchar('page_path', { length: 2048 }).notNull(),
-    visits: integer('visits').notNull().default(0),
+    path: varchar('path', { length: 500 }).notNull(),
+    /** SHA-256 hex (64 char) di dailySalt+ip+userAgent — mai l'IP grezzo persistito. */
+    visitorHash: char('visitor_hash', { length: 64 }).notNull(),
+    /** 'desktop' | 'mobile' | 'tablet', da `user-agent-parser.util.ts`. */
+    device: varchar('device', { length: 20 }).notNull(),
+    browser: varchar('browser', { length: 50 }),
+    os: varchar('os', { length: 50 }),
+    referrer: varchar('referrer', { length: 500 }),
+    /** Nessuna dipendenza geo-IP disponibile: resta nullable finché non se ne aggiunge una (ADR dedicata). */
+    country: varchar('country', { length: 10 }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Nullable: scrittura anonima da middleware pubblico, vedi commento sopra la tabella. */
+    createdBy: integer('created_by').references(() => userEntity.id, {
+      onDelete: 'restrict',
+      onUpdate: 'restrict',
+    }),
+  },
+  (t) => [
+    index('analytics_events_created_path_idx').on(t.createdAt, t.path),
+    index('analytics_events_created_visitor_idx').on(t.createdAt, t.visitorHash),
+    index('analytics_events_path_idx').on(t.path),
+    uniqueIndex('analytics_events_guid_idx').on(t.guid),
+  ],
+);
+
+// ─── ANALYTICS DAILY ROLLUPS ──────────────────────────────────────────────────
+// Entità mutabile (struttura completa CLAUDE.md § Database): righe ricalcolate
+// incrementalmente dal repeatable job BullMQ `analytics-rollup-queue`
+// (oggi/ieri UTC a ogni esecuzione, `ON CONFLICT (date, path) DO UPDATE`).
+// `createdBy`/`updatedBy` nullable per lo stesso motivo di `analytics_events`:
+// la riga è scritta/aggiornata dal processor della coda, non da un'azione
+// utente autenticata.
+export const analyticsDailyRollupEntity = pgTable(
+  'analytics_daily_rollups',
+  {
+    id: serial().notNull().primaryKey(),
+    guid: char('guid', { length: 16 })
+      .notNull()
+      .$defaultFn(() => Utils.randomString(16)),
+    date: date('date', { mode: 'string' }).notNull(),
+    path: varchar('path', { length: 500 }).notNull(),
+    viewsCount: integer('views_count').notNull().default(0),
+    uniqueVisitorsCount: integer('unique_visitors_count').notNull().default(0),
+    /** Lock ottimistico: incrementato a ogni UPDATE del processor di rollup. */
     version: integer('version').notNull().default(1),
     isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -480,10 +531,8 @@ export const publicPageviewDailyEntity = pgTable(
     }),
   },
   (t) => [
-    uniqueIndex('public_pageview_daily_guid_idx').on(t.guid),
-    uniqueIndex('public_pageview_daily_date_path_uq').on(t.eventDate, t.pagePath),
-    index('public_pageview_daily_date_idx').on(t.eventDate, t.isActive),
-    index('public_pageview_daily_path_idx').on(t.pagePath),
+    uniqueIndex('analytics_daily_rollups_date_path_uq').on(t.date, t.path),
+    uniqueIndex('analytics_daily_rollups_guid_idx').on(t.guid),
   ],
 );
 
@@ -593,13 +642,20 @@ export const siteTemplatesRelations = relations(siteTemplateEntity, ({ one }) =>
   }),
 }));
 
-export const publicPageviewDailyRelations = relations(publicPageviewDailyEntity, ({ one }) => ({
+export const analyticsEventsRelations = relations(analyticsEventEntity, ({ one }) => ({
   createdByUser: one(userEntity, {
-    fields: [publicPageviewDailyEntity.createdBy],
+    fields: [analyticsEventEntity.createdBy],
+    references: [userEntity.id],
+  }),
+}));
+
+export const analyticsDailyRollupsRelations = relations(analyticsDailyRollupEntity, ({ one }) => ({
+  createdByUser: one(userEntity, {
+    fields: [analyticsDailyRollupEntity.createdBy],
     references: [userEntity.id],
   }),
   updatedByUser: one(userEntity, {
-    fields: [publicPageviewDailyEntity.updatedBy],
+    fields: [analyticsDailyRollupEntity.updatedBy],
     references: [userEntity.id],
   }),
 }));

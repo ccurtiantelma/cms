@@ -1,26 +1,21 @@
-/** Punto della serie analytics restituito dal backend. */
-export interface AnalyticsSeriesPoint {
-  date: string;
-  visits: number;
-  path?: string;
-}
+/**
+ * Tipi locali del modulo Analytics. I DTO generati da OpenAPI in
+ * `api.types.ts` (`components['schemas']['Analytics*Dto']`) restano la fonte
+ * primaria e vanno importati direttamente dove non serve correzione: qui
+ * vive solo il tipo corretto per `AnalyticsOverviewDto.trendPercentage`, che
+ * il generatore OpenAPI tipizza erroneamente (vedi `analytics.service.ts`).
+ */
+import type { components } from './api.types';
 
-/** Statistiche aggregate delle pageview del sito pubblico. */
-export interface SiteAnalytics {
-  totalVisits: number;
-  series: AnalyticsSeriesPoint[];
-}
-
-/** Statistiche aggregate sull'utilizzo dell'applicazione. */
-export interface AppAnalytics {
-  registeredUsers: number;
-  activeUsers: number;
-  successfulLogins: number;
-  loginSeries: AnalyticsSeriesPoint[];
-}
-
-/** Risposta di `GET /analytics`. */
-export interface AnalyticsResponse {
-  site: SiteAnalytics;
-  app: AppAnalytics;
+/**
+ * `AnalyticsOverviewDto` con `trendPercentage` corretto a `number | null`:
+ * a runtime è sempre un numero (o `null` se il periodo precedente non ha
+ * traffico), ma il generatore OpenAPI lo tipizza come `Record<string, never> | null`
+ * a causa dell'esempio numerico nello schema.
+ */
+export interface AnalyticsOverview extends Omit<
+  components['schemas']['AnalyticsOverviewDto'],
+  'trendPercentage'
+> {
+  trendPercentage: number | null;
 }

@@ -1,0 +1,1 @@
+DROP TABLE "public_pageview_daily" CASCADE;

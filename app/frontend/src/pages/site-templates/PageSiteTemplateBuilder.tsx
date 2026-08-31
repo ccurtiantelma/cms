@@ -57,7 +57,11 @@ import {
 import { getErrorMessage } from '../../utils/api.utils';
 import { update as updateSiteTemplate } from '../../services/site-templates.service';
 import { useSiteTemplatesStore } from '../../hooks/useSiteTemplatesStore';
-import type { ContentBlockNode, SiteTemplate, SiteTemplatesErrorData } from '../../types/site-templates.types';
+import type {
+  ContentBlockNode,
+  SiteTemplate,
+  SiteTemplatesErrorData,
+} from '../../types/site-templates.types';
 import {
   useActiveViewport,
   useBlockEditorStore,
@@ -353,8 +357,8 @@ export default function PageSiteTemplateBuilder(): JSX.Element {
           // Sopra la chrome full-screen del builder (z-index 1000).
           zIndex={1100}
         >
-          Le modifiche ai blocchi di questo Template di Sito non sono ancora state salvate:
-          uscendo ora vanno perse.
+          Le modifiche ai blocchi di questo Template di Sito non sono ancora state salvate: uscendo
+          ora vanno perse.
         </ConfirmModal>
       )}
     </>

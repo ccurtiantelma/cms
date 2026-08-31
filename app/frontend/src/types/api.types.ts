@@ -940,32 +940,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/analytics/ingest/pageview": {
+    "/api/v1/analytics/overview": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** KPI aggregati (view, visitatori unici, pagine con traffico, trend) */
+        get: operations["AnalyticsController_getOverview"];
         put?: never;
-        /** Ingest server-to-server di una pageview SSR riuscita */
-        post: operations["AnalyticsController_ingestPageview"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/analytics": {
+    "/api/v1/analytics/timeseries": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** KPI analytics sito pubblico e utilizzo app (Admin+) */
-        get: operations["AnalyticsController_getAnalytics"];
+        /** Serie temporale view/visitatori unici (bucket giorno o ora) */
+        get: operations["AnalyticsController_getTimeseries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/top-pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Classifica delle pagine più visitate nell'intervallo */
+        get: operations["AnalyticsController_getTopPages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/referrers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Classifica dei referrer nell'intervallo ("direct" se assente) */
+        get: operations["AnalyticsController_getReferrers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Distribuzione percentuale per device e per browser */
+        get: operations["AnalyticsController_getDeviceStats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2598,38 +2649,82 @@ export interface components {
              */
             updatedAt: string;
         };
-        IngestPageviewDto: {
+        AnalyticsOverviewDto: {
             /**
-             * @description Percorso canonico della pagina HTML pubblicata
-             * @example /chi-siamo
+             * @description Numero totale di pageview nel range
+             * @example 4820
              */
-            path: string;
+            totalViews: number;
+            /**
+             * @description Visitatori unici (hash distinti) nel range
+             * @example 1230
+             */
+            uniqueVisitors: number;
+            /**
+             * @description Numero di percorsi distinti con almeno una pageview nel range
+             * @example 42
+             */
+            pagesWithTraffic: number;
+            /**
+             * @description Variazione percentuale di totalViews vs il periodo immediatamente precedente di pari durata (null se il periodo precedente non ha traffico)
+             * @example 12.5
+             */
+            trendPercentage: Record<string, never> | null;
         };
-        AnalyticsSeriesPointDto: {
-            /** @example 2026-08-28 */
-            date: string;
-            /** @example 42 */
-            visits: number;
+        AnalyticsTimeseriesPointDto: {
+            /**
+             * @description Inizio del bucket (ISO 8601)
+             * @example 2026-08-28T00:00:00.000Z
+             */
+            bucket: string;
+            /** @example 320 */
+            views: number;
+            /** @example 95 */
+            uniqueVisitors: number;
+        };
+        AnalyticsTimeseriesDto: {
+            /**
+             * @example day
+             * @enum {string}
+             */
+            interval: "day" | "hour";
+            points: components["schemas"]["AnalyticsTimeseriesPointDto"][];
+        };
+        AnalyticsTopPageDto: {
             /** @example /chi-siamo */
-            path?: string;
+            path: string;
+            /** @example 640 */
+            views: number;
+            /** @example 210 */
+            uniqueVisitors: number;
+            /**
+             * @description Percentuale sul totale delle view nel range
+             * @example 13.3
+             */
+            percentage: number;
         };
-        SiteAnalyticsDto: {
-            /** @example 420 */
-            totalVisits: number;
-            series: components["schemas"]["AnalyticsSeriesPointDto"][];
+        AnalyticsReferrerDto: {
+            /** @example https://www.google.com/ */
+            referrer: string;
+            /** @example 340 */
+            count: number;
+            /**
+             * @description Percentuale sul totale degli eventi nel range
+             * @example 27.4
+             */
+            percentage: number;
         };
-        AppAnalyticsDto: {
-            /** @example 12 */
-            registeredUsers: number;
-            /** @example 10 */
-            activeUsers: number;
-            /** @example 84 */
-            successfulLogins: number;
-            loginSeries: components["schemas"]["AnalyticsSeriesPointDto"][];
+        AnalyticsDistributionRowDto: {
+            /** @example desktop */
+            label: string;
+            /** @example 3100 */
+            count: number;
+            /** @example 64.3 */
+            percentage: number;
         };
-        AnalyticsResponseDto: {
-            site: components["schemas"]["SiteAnalyticsDto"];
-            app: components["schemas"]["AppAnalyticsDto"];
+        AnalyticsDeviceStatsDto: {
+            devices: components["schemas"]["AnalyticsDistributionRowDto"][];
+            browsers: components["schemas"]["AnalyticsDistributionRowDto"][];
         };
     };
     responses: never;
@@ -4977,51 +5072,17 @@ export interface operations {
             };
         };
     };
-    AnalyticsController_ingestPageview: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Analytics-Secret": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["IngestPageviewDto"];
-            };
-        };
-        responses: {
-            /** @description Pageview accettata o già aggregata */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Secret assente o non valido */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Il percorso non identifica una pagina pubblicata */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AnalyticsController_getAnalytics: {
+    AnalyticsController_getOverview: {
         parameters: {
             query?: {
                 /** @description Data iniziale inclusa (YYYY-MM-DD) */
                 from?: string;
                 /** @description Data finale inclusa (YYYY-MM-DD) */
                 to?: string;
+                /** @description Granularità dei bucket per la timeseries. Default: "day" (gestito dal service). */
+                interval?: "day" | "hour";
+                /** @description Numero massimo di righe per top-pages/referrers. Default: 10 (gestito dal service). */
+                limit?: number;
             };
             header?: never;
             path?: never;
@@ -5029,13 +5090,129 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description KPI e serie giornaliere */
+            /** @description KPI dell'intervallo richiesto */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AnalyticsResponseDto"];
+                    "application/json": components["schemas"]["AnalyticsOverviewDto"];
+                };
+            };
+        };
+    };
+    AnalyticsController_getTimeseries: {
+        parameters: {
+            query?: {
+                /** @description Data iniziale inclusa (YYYY-MM-DD) */
+                from?: string;
+                /** @description Data finale inclusa (YYYY-MM-DD) */
+                to?: string;
+                /** @description Granularità dei bucket per la timeseries. Default: "day" (gestito dal service). */
+                interval?: "day" | "hour";
+                /** @description Numero massimo di righe per top-pages/referrers. Default: 10 (gestito dal service). */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Serie temporale ordinata crescente */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsTimeseriesDto"];
+                };
+            };
+        };
+    };
+    AnalyticsController_getTopPages: {
+        parameters: {
+            query?: {
+                /** @description Data iniziale inclusa (YYYY-MM-DD) */
+                from?: string;
+                /** @description Data finale inclusa (YYYY-MM-DD) */
+                to?: string;
+                /** @description Granularità dei bucket per la timeseries. Default: "day" (gestito dal service). */
+                interval?: "day" | "hour";
+                /** @description Numero massimo di righe per top-pages/referrers. Default: 10 (gestito dal service). */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Righe ordinate per view decrescenti */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsTopPageDto"][];
+                };
+            };
+        };
+    };
+    AnalyticsController_getReferrers: {
+        parameters: {
+            query?: {
+                /** @description Data iniziale inclusa (YYYY-MM-DD) */
+                from?: string;
+                /** @description Data finale inclusa (YYYY-MM-DD) */
+                to?: string;
+                /** @description Granularità dei bucket per la timeseries. Default: "day" (gestito dal service). */
+                interval?: "day" | "hour";
+                /** @description Numero massimo di righe per top-pages/referrers. Default: 10 (gestito dal service). */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Righe ordinate per conteggio decrescente */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsReferrerDto"][];
+                };
+            };
+        };
+    };
+    AnalyticsController_getDeviceStats: {
+        parameters: {
+            query?: {
+                /** @description Data iniziale inclusa (YYYY-MM-DD) */
+                from?: string;
+                /** @description Data finale inclusa (YYYY-MM-DD) */
+                to?: string;
+                /** @description Granularità dei bucket per la timeseries. Default: "day" (gestito dal service). */
+                interval?: "day" | "hour";
+                /** @description Numero massimo di righe per top-pages/referrers. Default: 10 (gestito dal service). */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Distribuzione device/browser */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsDeviceStatsDto"];
                 };
             };
         };

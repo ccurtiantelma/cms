@@ -195,12 +195,17 @@ const GENERIC_ICON_MAP: Record<string, Icon> = {
 };
 
 /** "Layout & Base": i tipi di blocco generici del registro, assegnabili a qualunque ruolo ammesso. */
-function genericBlockWidgets(addBlockAction: AddBlockAction, roleLevel: number | undefined): WidgetEntry[] {
+function genericBlockWidgets(
+  addBlockAction: AddBlockAction,
+  roleLevel: number | undefined,
+): WidgetEntry[] {
   return BLOCK_TYPES.filter(
     (descriptor) =>
       descriptor.enabled &&
       !descriptor.deprecated &&
-      (descriptor.minRole === undefined || roleLevel === undefined || roleLevel <= descriptor.minRole),
+      (descriptor.minRole === undefined ||
+        roleLevel === undefined ||
+        roleLevel <= descriptor.minRole),
   ).map((descriptor) => ({
     key: descriptor.type,
     label: descriptor.meta?.label ?? descriptor.type,
