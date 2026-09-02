@@ -103,14 +103,25 @@ test('drag & drop del widget Contenitore nel canvas e impostazione di flexDirect
   await createPageFromUi(page, { title: TITOLO_PAGINA, slug });
   await openContentTab(page);
 
-  // ─── 1. Canvas vuoto: la sidebar mostra già la scheda "Widgets" (stato di riposo dello
-  // store, `activeSidebarTab: 'widgets'`) ─────────────────────────────────────────────────
+  // ─── 1. La sidebar mostra già la scheda "Widgets" (stato di riposo dello store,
+  // `activeSidebarTab: 'widgets'`) ────────────────────────────────────────────────────────
+  // `CanvasAddSectionZone` resta montata in fondo al canvas indipendentemente da quanti
+  // blocchi ci siano già in radice (commento di testa di `EditorCanvas.tsx`), quindi questo
+  // testo resta visibile anche ora che la Pagina appena creata non parte da un canvas vuoto:
+  // il `templateSlug` di default ("empty", RFC-43) porta già una Sezione seed in radice
+  // (`page-blueprints.registry.ts`).
   await expect(page.getByText('Trascina il widget qui')).toBeVisible();
 
-  // La sola drop-zone `[data-over]` presente ad albero vuoto è `root-empty-dropzone`
-  // (`EditorCanvas.tsx`): nessun'altra zona nel DOM finché non c'è almeno un blocco.
-  const rootDropzone = page.locator('[data-over]');
-  await expect(rootDropzone).toHaveCount(1);
+  // Con la Sezione seed già in radice, `[data-over]` risolve a più elementi (le strisce
+  // `before`/`after` del suo `EditorBlockWrapper`, la sua `containerDropZone` interna, e i
+  // due `CanvasSectionInserter` — uno prima, uno dopo l'unico blocco radice esistente,
+  // `EditorCanvas.tsx`). `.last()`, non un conteggio secco a 1: `CanvasSectionInserter` con
+  // `index={rootIds.length}` (il "dopo l'ultimo blocco radice") è sempre l'ultimo elemento
+  // `[data-over]` nell'ordine del DOM, per costruzione — `EditorCanvas.tsx` lo monta dopo
+  // l'ultimo `EditorBlockWrapper` — quindi resta il bersaglio corretto per "aggiungi in coda
+  // alla radice", lo stesso ruolo che aveva `root-empty-dropzone` quando la radice partiva
+  // davvero da zero.
+  const rootDropzone = page.locator('[data-over]').last();
 
   // ─── 2. Trascino la tessera "Contenitore" della libreria widget nella drop-zone ───────
   await dragWidgetTileToZone(page, 'Inserisci il blocco Contenitore', rootDropzone);

@@ -38,6 +38,7 @@ import ResponsiveTable, { type ResponsiveTableColumn } from '../../components/Re
 import ColumnSelector from '../../components/ColumnSelector';
 import ConfirmModal from '../../components/ConfirmModal';
 import FormDrawer from '../../components/FormDrawer';
+import TemplateSelectorGrid from './components/TemplateSelectorGrid';
 
 /** Opzioni del filtro stato (vuoto = tutti). */
 const STATUS_FILTER_OPTIONS = [
@@ -61,13 +62,18 @@ interface CreatePageFormValues {
   slug: string;
   locale: string;
   parentGuid: string;
+  templateSlug: string;
 }
+
+/** `templateSlug` di default: Pagina Vuota — nessun blocco precompilato. */
+const DEFAULT_TEMPLATE_SLUG = 'empty';
 
 const EMPTY_CREATE_FORM: CreatePageFormValues = {
   title: '',
   slug: '',
   locale: 'it-IT',
   parentGuid: '',
+  templateSlug: DEFAULT_TEMPLATE_SLUG,
 };
 
 /** Formatta una data ISO nel formato locale italiano (data + ora). */
@@ -164,11 +170,15 @@ export default function PagePages(): JSX.Element {
         slug: values.slug.trim() || undefined,
         locale: values.locale.trim(),
         parentGuid: values.parentGuid.trim() || undefined,
+        templateSlug: values.templateSlug,
       };
       const created = await createPage(payload);
       notifications.show({ color: 'green', message: 'Pagina creata con successo' });
       closeCreate();
-      navigate(`/pages/${created.guid}`);
+      // `?tab=content` apre subito l'Editor Visivo a schermo intero: appena creata,
+      // l'unica cosa sensata da fare è iniziare a comporre il contenuto (stesso
+      // meccanismo di lettura una tantum di `activeTab` usato da `CreateTranslationModal`).
+      navigate(`/pages/${created.guid}?tab=content`);
     } catch (err) {
       notifications.show({
         color: 'red',
@@ -375,6 +385,15 @@ export default function PagePages(): JSX.Element {
             placeholder="lascia vuoto per una Pagina radice"
             {...form.getInputProps('parentGuid')}
           />
+          <div>
+            <Text size="sm" fw={500} mb={4}>
+              Template di partenza
+            </Text>
+            <TemplateSelectorGrid
+              value={form.values.templateSlug}
+              onChange={(slug) => form.setFieldValue('templateSlug', slug)}
+            />
+          </div>
         </Stack>
       </FormDrawer>
 

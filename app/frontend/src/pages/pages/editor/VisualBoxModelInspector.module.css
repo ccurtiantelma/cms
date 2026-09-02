@@ -74,6 +74,7 @@
 }
 
 .sideButton {
+  position: relative;
   min-width: 34px;
   padding: 3px 6px;
   border: 1px solid transparent;
@@ -84,6 +85,22 @@
   line-height: 1.4;
   text-align: center;
   cursor: pointer;
+}
+
+/*
+ * Indicatore di override per breakpoint (ADR-29 § 2), stesso invariante del pallino
+ * generico di `inspector/inspector.module.css` — qui in blu Mantine invece che in
+ * arancio, perché l'arancio è già il colore del gruppo Margine in questo widget
+ * (`.legendDotMargin`) e riusarlo per un significato diverso confonderebbe le due legende.
+ */
+.overrideDot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--mantine-color-blue-6);
 }
 
 .sideButton:hover {

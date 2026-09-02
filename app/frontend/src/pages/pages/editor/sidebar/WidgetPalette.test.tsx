@@ -12,11 +12,21 @@ describe('WidgetPalette', () => {
     useBlockEditorStore.getState().setActiveSidebarTab('widgets');
   });
 
-  it('mostra le categorie Layout e Base', () => {
+  it('mostra le categorie Base, Media, Struttura e Moduli', () => {
     renderWithProviders(<WidgetPalette />);
 
-    expect(screen.getByRole('button', { name: /layout/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /base/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /media/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /struttura/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /moduli/i })).toBeInTheDocument();
+  });
+
+  it('mostra i tre blocchi Form nella categoria Moduli', () => {
+    renderWithProviders(<WidgetPalette />);
+
+    expect(screen.getByRole('button', { name: /modulo di contatto/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /campo modulo/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /pulsante invio modulo/i })).toBeInTheDocument();
   });
 
   it('filtra i widget in tempo reale con la ricerca', async () => {

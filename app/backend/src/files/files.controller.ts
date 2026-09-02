@@ -11,7 +11,6 @@ import {
   Req,
   Res,
   UploadedFile,
-  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -27,7 +26,6 @@ import { Request, Response } from 'express';
 import { AppConstants } from '../common/app-constants';
 import { AuthInfo, FilesQueryParams } from '../common/types';
 import { Pagination } from '../common/pagination';
-import { GuardManager } from '../auth/guard';
 import { FilesService } from './files.service';
 import { FileMetadataDto } from './dto/file-metadata.dto';
 import { UploadFileDto } from './dto/upload-file.dto';
@@ -67,12 +65,13 @@ export class FilesController {
   }
 
   /**
-   * Lista paginata dei file attivi, più recenti prima — solo Admin/Editor
-   * (`GuardManager`, esclude il ruolo `User`, RFC-F09 § 1/T1).
+   * Lista paginata dei file attivi, più recenti prima — accessibile a ogni
+   * ruolo autenticato (solo JWT globale), senza predicato di ownership: i
+   * media editoriali sono risorsa condivisa mono-tenant (ADR-35, RFC-F09 §
+   * N3).
    */
   @Get()
-  @UseGuards(GuardManager)
-  @ApiOperation({ summary: 'Lista paginata dei file attivi (Admin/Editor)' })
+  @ApiOperation({ summary: 'Lista paginata dei file attivi' })
   @ApiQuery({ name: 'p', required: false, description: 'Pagina (default 1)' })
   @ApiQuery({ name: 'i', required: false, description: 'Elementi per pagina (default 20)' })
   @ApiQuery({ name: 'q', required: false, description: 'Ricerca su nome file originale' })

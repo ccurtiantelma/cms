@@ -66,20 +66,26 @@ test('undo → redo → salva: la modifica annullata e poi ripristinata sopravvi
   await expect(page.getByRole('button', { name: "Annulla l'ultima modifica" })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Ripristina la modifica annullata' })).toBeDisabled();
 
+  // La Pagina appena creata non parte da un canvas vuoto: il `templateSlug` di default
+  // ("empty", RFC-43) porta già una Sezione seed in radice (`page-blueprints.registry.ts`).
+  // Si legge il conteggio iniziale per calcolare il delta invece di assumere una radice che
+  // parte da zero — stesso principio di `page-editor-elementor.spec.ts`.
+  const initialSectionCount = await blockOfType(page, 'section').count();
+
   // Una modifica: aggiungo una section in radice.
   await addRootBlock(page, 'Sezione');
-  await expect(blockOfType(page, 'section')).toHaveCount(1);
+  await expect(blockOfType(page, 'section')).toHaveCount(initialSectionCount + 1);
   await expect(page.getByRole('button', { name: "Annulla l'ultima modifica" })).toBeEnabled();
 
   // Annullo: la section sparisce, "Ripristina" ora è disponibile.
   await undoLastChange(page);
-  await expect(blockOfType(page, 'section')).toHaveCount(0);
+  await expect(blockOfType(page, 'section')).toHaveCount(initialSectionCount);
   await expect(page.getByRole('button', { name: "Annulla l'ultima modifica" })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Ripristina la modifica annullata' })).toBeEnabled();
 
   // Ripristino: la section torna.
   await redoLastChange(page);
-  await expect(blockOfType(page, 'section')).toHaveCount(1);
+  await expect(blockOfType(page, 'section')).toHaveCount(initialSectionCount + 1);
   await expect(page.getByRole('button', { name: 'Ripristina la modifica annullata' })).toBeDisabled();
 
   // Salvo: nessun 400/409, e il contenuto ripristinato (non quello annullato) è ciò che
@@ -88,7 +94,7 @@ test('undo → redo → salva: la modifica annullata e poi ripristinata sopravvi
   await saveDraft(page);
   await page.reload();
   await openContentTab(page);
-  await expect(blockOfType(page, 'section')).toHaveCount(1);
+  await expect(blockOfType(page, 'section')).toHaveCount(initialSectionCount + 1);
 });
 
 test('inserimento posizionale: porto un blocco dentro il contenitore precedente e poi fuori di nuovo', async ({
@@ -115,8 +121,14 @@ test('inserimento posizionale: porto un blocco dentro il contenitore precedente 
   // è l'ancora su cui atterra l'"outdent": senza una riga di radice **dopo** la Sezione, non
   // c'è modo di far rientrare il Titolo esattamente dopo di lei (il trascinamento inserisce
   // sempre "prima della riga sorvolata", mai "in fondo alla lista" — stesso limite).
+  // La Pagina appena creata non parte da un canvas vuoto: il `templateSlug` di default
+  // ("empty", RFC-43) porta già una Sezione seed in radice, mai toccata da questo test
+  // (`page-blueprints.registry.ts`).
   await addRootBlock(page, 'Sezione');
-  const section = blockOfType(page, 'section');
+  // `.last()`: la Sezione seed la precede sempre nel DOM (mai spostata, resta prima in
+  // radice), quindi la Sezione di questo test è sempre l'ultima — stesso principio di
+  // `newSection` in `page-editor-navigator-layouts.spec.ts`.
+  const section = blockOfType(page, 'section').last();
   await addChildBlock(section, 'Testo');
   await addRootBlock(page, 'Titolo');
   await addRootBlock(page, 'Pulsante');
@@ -138,21 +150,23 @@ test('inserimento posizionale: porto un blocco dentro il contenitore precedente 
         .filter((node) => (node.parentElement?.closest('[data-block-type]') ?? null) === null)
         .map((node) => node.getAttribute('data-block-type')),
     );
-  await expect.poll(tipiDiRadice).toEqual(['section', 'heading', 'button']);
+  // La Sezione seed (mai toccata, sempre prima in radice) va come prefisso di ogni sequenza
+  // attesa — vedi il commento sopra `section`.
+  await expect.poll(tipiDiRadice).toEqual(['section', 'section', 'heading', 'button']);
   await expect(blockOfType(section, 'heading')).toHaveCount(0);
 
   // "Porta dentro": il titolo di radice entra nella Sezione, sorvolando (nel pannello
   // Struttura) la riga del suo figlio Testo già presente.
   await indentBlock(page, 'Titolo', 'Testo');
 
-  await expect.poll(tipiDiRadice).toEqual(['section', 'button']);
+  await expect.poll(tipiDiRadice).toEqual(['section', 'section', 'button']);
   await expect(blockOfType(section, 'heading')).toHaveCount(1);
 
   // "Porta fuori": lo riporto al livello di radice, sorvolando la riga del Pulsante — che
   // lo fa atterrare esattamente fra la Sezione e il Pulsante, cioè subito dopo la Sezione.
   await outdentBlock(page, 'Titolo', 'Pulsante');
 
-  await expect.poll(tipiDiRadice).toEqual(['section', 'heading', 'button']);
+  await expect.poll(tipiDiRadice).toEqual(['section', 'section', 'heading', 'button']);
   await expect(blockOfType(section, 'heading')).toHaveCount(0);
 
   // Compilo la prop richiesta (altrimenti il salvataggio è respinto per validazione, non
@@ -163,5 +177,5 @@ test('inserimento posizionale: porto un blocco dentro il contenitore precedente 
   await saveDraft(page);
   await page.reload();
   await openContentTab(page);
-  await expect.poll(tipiDiRadice).toEqual(['section', 'heading', 'button']);
+  await expect.poll(tipiDiRadice).toEqual(['section', 'section', 'heading', 'button']);
 });

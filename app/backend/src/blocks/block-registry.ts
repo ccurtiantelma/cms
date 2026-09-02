@@ -6,6 +6,9 @@ import { richTextBlock } from './types/rich-text.block';
 import { imageBlock } from './types/image.block';
 import { buttonBlock } from './types/button.block';
 import { containerBlock } from './types/container.block';
+import { formBlock } from './types/form.block';
+import { formFieldBlock } from './types/form-field.block';
+import { formSubmitBlock } from './types/form-submit.block';
 
 /**
  * Tipi ammessi come nodo di **radice** dell'albero. Dichiarato qui e mai
@@ -26,7 +29,8 @@ export const ROOT_ALLOWED: readonly string[] = [
 
 /**
  * I cinque tipi approvati uno per uno da ADR-21 § 5, più `container`
- * (sesto tipo, ADR-39). Tutti a `v: 1`, `enabled: true`, nessun `minRole`,
+ * (sesto tipo, ADR-39) e `form`/`form-field`/`form-submit` (settimo/ottavo/
+ * nono tipo, ADR-46 § 1). Tutti a `v: 1`, `enabled: true`, nessun `minRole`,
  * nessun `deprecated` (PLAN-F02 T2).
  */
 const BLOCK_DEFINITIONS: readonly BlockDefinition[] = [
@@ -36,6 +40,9 @@ const BLOCK_DEFINITIONS: readonly BlockDefinition[] = [
   imageBlock,
   buttonBlock,
   containerBlock,
+  formBlock,
+  formFieldBlock,
+  formSubmitBlock,
 ];
 
 /** Registro dei tipi, indicizzato per `type`. Fonte di verità del backend (ADR-21 § 2). */

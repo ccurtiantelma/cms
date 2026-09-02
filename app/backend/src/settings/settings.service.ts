@@ -6,6 +6,7 @@ import { AuditLogService } from '../common/audit-log.service';
 import { AppConstants } from '../common/app-constants';
 import { AuthInfo } from '../common/types';
 import { Utils } from '../common/utils';
+import { ExportService } from '../export/export.service';
 import {
   ThemeConfigDto,
   ThemeLengthUnit,
@@ -368,10 +369,15 @@ const LEGACY_DEFAULT_V5: LegacyThemeConfigV5 = (() => {
 export class SettingsService {
   private readonly logger = new Logger(SettingsService.name);
 
-  /** Inietta l'accesso al DB e l'audit log per i salvataggi del tema. */
+  /**
+   * Inietta l'accesso al DB, l'audit log per i salvataggi del tema e il
+   * produttore dell'export statico (RFC-44 Decisione 3: ogni salvataggio del
+   * tema accoda un full-site rebuild).
+   */
   constructor(
     private readonly db: DbService,
     private readonly auditLogService: AuditLogService,
+    private readonly exportService: ExportService,
   ) {}
 
   /**
@@ -516,6 +522,11 @@ export class SettingsService {
       authInfo.impersonatedBy,
       ip,
     );
+
+    // RFC-44 Decisione 3/4: cambio tema -> full-site rebuild, sempre
+    // asincrono/batched (mai sulla SLA dei 5s della singola pagina).
+    await this.exportService.enqueueFullSiteExport();
+
     return dto;
   }
 

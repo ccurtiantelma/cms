@@ -11,6 +11,8 @@ interface PreviewDocumentProps {
   /** Tema dell'installazione, `null` se il backend non ha risposto (vedi `ThemeStyleTag`). */
   themeConfig: ThemeConfigDto | null;
   cssHref: string;
+  /** Isola JS di submit dei Form (F10-04) — iniettata da `PageView` solo se la Pagina ne ha bisogno. */
+  formScriptHref?: string;
   /**
    * Sezioni Globali degli slot di layout (ADR-40) — presenti anche qui, e non
    * solo sulla pagina pubblica: l'anteprima mostra il markup che la pubblicazione
@@ -34,6 +36,7 @@ export default function PreviewDocument({
   page,
   themeConfig,
   cssHref,
+  formScriptHref,
   globalSections,
 }: PreviewDocumentProps) {
   return (
@@ -47,7 +50,7 @@ export default function PreviewDocument({
         <ThemeStyleTag themeConfig={themeConfig} />
       </head>
       <body>
-        <PageView content={page.content} globalSections={globalSections} />
+        <PageView content={page.content} globalSections={globalSections} formScriptHref={formScriptHref} />
       </body>
     </html>
   );

@@ -83,3 +83,9 @@ export interface SiteTemplatesQueryParams extends PaginationParams {
   language?: string;
   isPublished?: boolean;
 }
+
+/** Parametri di filtro per GET /app/forms/submissions (ADR-46 § 4). */
+export interface FormSubmissionsQueryParams extends PaginationParams {
+  /** Match esatto su `formKey`, opzionale (assente = tutti gli Invii). */
+  formKey?: string;
+}

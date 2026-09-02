@@ -58,6 +58,7 @@ export {
   asString,
   breakpointKey,
   effectiveScalarForViewport,
+  hasExplicitOverrideAtBreakpoint,
   propLabel,
   responsiveEnvelope,
   VIEWPORT_LABELS,

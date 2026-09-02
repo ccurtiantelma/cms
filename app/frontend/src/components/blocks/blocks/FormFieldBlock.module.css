@@ -1,0 +1,41 @@
+/*
+ * Markup semantico puro per il campo di un `form-field` (F10-03): nessun token Mantine, il
+ * componente è condiviso col sito pubblico via `BlockRenderer` (ADR-22 § 5). Stile minimo,
+ * coerente con l'assenza di props di stile dichiarate dal registro per questo tipo
+ * (ADR-46 § 1).
+ */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.required {
+  color: #dc2626;
+}
+
+.input,
+.textarea,
+.select {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background-color: #fff;
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}

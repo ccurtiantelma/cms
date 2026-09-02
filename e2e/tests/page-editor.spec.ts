@@ -69,9 +69,15 @@ test('percorso completo: creo, compongo, salvo, pubblico e ritrovo il contenuto 
   await expect(page.getByText('Trascina il widget qui')).toBeVisible();
 
   // ─── 3. Aggiungo una section in radice, con tre figli ─────────────────────
+  // La Pagina appena creata non parte da un canvas vuoto: il `templateSlug` di default
+  // ("empty", RFC-43) porta già una Sezione seed in radice (`page-blueprints.registry.ts`).
+  // Si calcola il delta rispetto al conteggio iniziale invece di assumere un unico blocco,
+  // e si individua la Sezione di questo test con `.last()` — "Aggiungi widget" inserisce
+  // sempre in coda alla radice (`addRootBlock`, commento di testa in `page-editor.ts`).
+  const initialSectionCount = await blockOfType(page, 'section').count();
   await addRootBlock(page, 'Sezione');
-  const section = blockOfType(page, 'section');
-  await expect(section).toHaveCount(1);
+  const section = blockOfType(page, 'section').last();
+  await expect(blockOfType(page, 'section')).toHaveCount(initialSectionCount + 1);
   await expect(section.getByText('Contenitore vuoto')).toBeVisible();
 
   // `addChildBlock` sceglie da sola il trigger giusto: il segnaposto "Contenitore vuoto"
@@ -141,7 +147,7 @@ test('percorso completo: creo, compongo, salvo, pubblico e ritrovo il contenuto 
   // Il contenuto sopravvive al reload: è persistito, non tenuto in memoria.
   await page.reload();
   await openContentTab(page);
-  await expect(blockOfType(page, 'section')).toHaveCount(1);
+  await expect(blockOfType(page, 'section')).toHaveCount(initialSectionCount + 1);
   await expect(page.getByText('Servizi & consulenza')).toBeVisible();
 
   // ─── 8. Pubblico dalla tendina di stato dell'intestazione ─────────────────

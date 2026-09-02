@@ -62,11 +62,25 @@
   border-color: #2271b1;
 }
 
-/* Un figlio sotto il cursore ha precedenza anche se il contenitore resta selezionato:
-   la chrome del genitore (handle tab di Sezione, badge di Colonna) si nasconde finché
-   dura, così le due non si sovrappongono mai sullo stesso angolo del canvas. */
-.selected:has(.hovered) > .sectionHandle,
-.selected:has(.hovered) > .columnBadge {
+/*
+  Un figlio sotto il cursore ha precedenza anche se il contenitore resta selezionato: la
+  chrome del genitore (overlay unico di `BlockHoverOverlay.tsx`, badge di Colonna) si
+  nasconde finché dura, così le due non si sovrappongono mai sullo stesso angolo del
+  canvas. `[data-block-overlay='true']` (non una classe di questo modulo): l'overlay
+  unico è un componente a sé con il proprio CSS Module (`components/
+  BlockHoverOverlay.module.css`), un selettore di classe locale a *questo* modulo non
+  potrebbe mai fare match sul suo hash — l'attributo, portato dal componente apposta per
+  questo aggancio, resta invece leggibile da qualunque foglio di stile. Tutti e tre i
+  bordi di categoria (`.hovered`/`.selected`/`.columnHovered`) contano come "figlio sotto
+  il cursore": ora che l'overlay è unico e nella stessa posizione per ogni tipo di
+  blocco, il rischio di sovrapposizione riguarda ogni categoria, non più la sola Sezione.
+*/
+.selected:has(.hovered) > [data-block-overlay='true'],
+.selected:has(.selected) > [data-block-overlay='true'],
+.selected:has(.columnHovered) > [data-block-overlay='true'],
+.selected:has(.hovered) > .columnBadge,
+.selected:has(.selected) > .columnBadge,
+.selected:has(.columnHovered) > .columnBadge {
   opacity: 0;
   visibility: hidden;
 }
@@ -212,10 +226,10 @@
   Ancoraggio di `InlineFormattingToolbar` (T-integrazione-toolbar): overlay fluttuante
   sopra il blocco, mostrato solo mentre il testo è effettivamente in editing/selezionato
   (`showRichTextFormattingToolbar`/`showHeadingLevelToolbar`, EditorBlockWrapper.tsx) —
-  solo su foglie (`richText`/`heading`), mai insieme a `.sectionHandle` (solo `section`),
-  quindi nessuna sovrapposizione possibile con quella. Resta comunque sopra `.editTab`
-  (z-index maggiore): in caso di blocco molto stretto, dove le due potessero toccarsi, la
-  barra di formattazione (azione attiva) prevale sulla linguetta passiva "Modifica".
+  solo su foglie (`richText`/`heading`), montato sopra il bordo superiore del blocco come
+  l'overlay unico (`BlockHoverOverlay.tsx`, `top: -12px`), ma più in alto (`-54px`): le
+  due non si sovrappongono mai, indipendentemente da quale delle due sia visibile in un
+  dato momento.
 */
 .formattingToolbarAnchor {
   position: absolute;
@@ -226,38 +240,15 @@
 }
 
 /*
-  Handle tab compatta delle Sezioni — restyle Elementor Pro (richiesta esplicita del
-  task, punto 4): **unico** elemento fluttuante, centrato sul bordo superiore del blocco,
-  con soli tre pulsanti ("+"/"::"/"x", vedi il JSX) — sostituisce integralmente la vecchia
-  Handle Bar (badge + 3 azioni, ancorata a sinistra su ogni tipo di blocco) e la barra da
-  10+ icone sottostante (`.toolbar`, rimossa). Valori di posizionamento letterali della
-  spec del task.
-*/
-.sectionHandle {
-  position: absolute;
-  top: -12px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
-  display: inline-flex;
-  align-items: center;
-  border-radius: 4px;
-  background: #2271b1;
-  pointer-events: auto;
-}
-
-.sectionHandleButton,
-.sectionHandleButton:hover,
-.sectionHandleButton:focus {
-  color: var(--mantine-color-white) !important;
-}
-
-/*
   Badge delle Colonne (`container`, ADR-39 — mappatura dichiarata in consegna): solo
-  identificazione (icona + nome del tipo), nessun pulsante — la spec riserva le azioni
-  rapide alla sola handle tab delle Sezioni. Angolo superiore sinistro *interno* al
-  wrapper (non fuori, a differenza di `.sectionHandle`/`.hiddenBadge`): valori letterali
-  della spec del task.
+  identificazione (icona + nome del tipo), nessun pulsante — le quattro azioni (drag/
+  duplica/elimina/modifica) vivono tutte nell'overlay unico (`BlockHoverOverlay.tsx`),
+  mai duplicate qui. Mantenuto accanto all'overlay unico (reversal esplicito, vedi il
+  commento di `EditorBlockWrapper.tsx`): senza questa etichetta un `container` in
+  hover/selezione perderebbe l'unica affordance visiva che lo distingue da una `section`
+  o da un widget foglia, dato che l'overlay unico non porta alcun nome di tipo. Angolo
+  superiore sinistro *interno* al wrapper (non fuori, a differenza di `.hiddenBadge`):
+  valori letterali della spec del task originario.
 */
 .columnBadge {
   position: absolute;
@@ -282,35 +273,15 @@
 }
 
 /*
-  Linguetta "Modifica" dei widget singoli (ogni foglia del registro: `heading`/
-  `richText`/`image`/`button`/…) — restyle Elementor Pro, valori letterali della spec:
-  solo l'icona matita, visibile solo su selezione (mai su hover, a differenza delle
-  Sezioni/Colonne sopra).
-*/
-.editTab {
-  position: absolute;
-  top: -10px;
-  right: 0;
-  z-index: 3;
-}
-
-.editTab,
-.editTab:hover,
-.editTab:focus {
-  background-color: #2271b1 !important;
-  color: var(--mantine-color-white) !important;
-}
-
-/*
-  Badge "Nascosto su [Device]" (ADR-37 § 3): sempre visibile (non solo su selezione, a
-  differenza di `.editTab` sopra) quando il nodo è nascosto sul dispositivo attivo del
-  Device Switcher — l'attenuazione del contenuto (`previewHidden`,
-  `style-tokens.module.css`) da sola non spiegherebbe perché il blocco appare sbiadito.
-  In alto a destra, sopra `.editTab` (`top: -32px`, non `-20px`: lascia libero lo spazio
-  che `.editTab` occupa fra `-10px` e `+10px` — un widget selezionato e nascosto sul
-  viewport attivo può mostrare entrambi insieme, mai sovrapposti). Colore d'allerta
-  (arancione), distinto dal blu di hover/selezione/modifica e dal rosso di `.invalid` —
-  segnali visivi diversi per stati diversi.
+  Badge "Nascosto su [Device]" (ADR-37 § 3): sempre visibile (non solo su hover/selezione,
+  a differenza dell'overlay unico di `BlockHoverOverlay.tsx` sopra) quando il nodo è
+  nascosto sul dispositivo attivo del Device Switcher — l'attenuazione del contenuto
+  (`previewHidden`, `style-tokens.module.css`) da sola non spiegherebbe perché il blocco
+  appare sbiadito. In alto a destra (`top: -32px`): l'overlay unico è centrato
+  (`left: 50%`, `BlockHoverOverlay.module.css`), quindi le due non si toccano mai anche
+  quando entrambe sono visibili insieme (blocco selezionato e nascosto sul viewport
+  attivo). Colore d'allerta (arancione), distinto dal blu di hover/selezione/modifica e
+  dal rosso di `.invalid` — segnali visivi diversi per stati diversi.
 */
 .hiddenBadge {
   position: absolute;

@@ -1,0 +1,57 @@
+/*
+ * Perimetro tratteggiato discreto del blocco `form` (F10-03): non un placeholder vuoto come
+ * `ContentPlaceholderBlock` (che segna un punto d'innesto ancora privo di contenuto reale) —
+ * qui il form ha sempre i propri campi dentro, il tratteggio serve solo a distinguere "questo
+ * gruppo di campi è un modulo" dal resto della pagina, sia nel Canvas che sul sito pubblico
+ * (componente condiviso, ADR-22 § 5). Solo CSS puro, nessun token Mantine.
+ */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px dashed #9ca3af;
+  border-radius: 8px;
+  padding: 16px;
+  position: relative;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/*
+ * Campo honeypot (F10-04, RFC-46 D6.1): fuori schermo via posizionamento assoluto, mai
+ * `display:none`/`opacity:0` letterali — un bot che ispeziona solo quelle due proprietà note
+ * lo tratterebbe come visibile e lo compilerebbe comunque, che è l'esito voluto. Un umano non
+ * lo vede e non ci arriva mai per tab (`tabIndex={-1}` nel componente).
+ */
+.honeypot {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/*
+ * Slot messaggio di esito (F10-04): popolato dall'isola JS di submit
+ * (`form-submit.js`), vuoto/`hidden` finché non c'è nulla da mostrare.
+ */
+.message {
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.message[data-variant='error'] {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.message[data-variant='success'] {
+  background-color: #dcfce7;
+  color: #166534;
+}

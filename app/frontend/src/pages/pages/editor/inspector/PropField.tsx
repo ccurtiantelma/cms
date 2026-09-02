@@ -59,6 +59,7 @@ import {
   VIEWPORT_LABELS,
   asString,
   effectiveScalarForViewport,
+  hasExplicitOverrideAtBreakpoint,
   propLabel,
   responsiveEnvelope,
   uxError,
@@ -79,6 +80,23 @@ const FLEX_DIRECTION_ICON: Record<string, Icon> = {
   column: IconArrowDown,
   'column-reverse': IconArrowUp,
 };
+
+/**
+ * Pallino d'override accanto all'etichetta di un campo `responsive` (ADR-29 § 2): visibile
+ * solo quando il breakpoint attivo porta un valore esplicito nell'envelope, mai su
+ * `default` (che non è mai un "override" — è la base della cascata). Il calcolo vive nel
+ * chiamante (`hasExplicitOverrideAtBreakpoint`, `inspector.utils.ts`): questo componente è
+ * solo la resa visiva, per restare riusabile identica nei tre rami di controllo responsive
+ * sotto (Slider/SegmentedControl/Select).
+ */
+function BreakpointOverrideDot({ show }: { show: boolean }): JSX.Element | null {
+  if (!show) return null;
+  return (
+    <Tooltip label="Valore specifico per questo breakpoint, non ereditato dal Desktop" withArrow>
+      <span className={styles.breakpointOverrideDot} data-testid="breakpoint-override-dot" />
+    </Tooltip>
+  );
+}
 
 export interface PropFieldProps {
   prop: BlockPropDescriptor;
@@ -140,6 +158,7 @@ export default function PropField({
         const displayValue = effectiveScalarForViewport(envelope, activeViewport);
         const fieldLabel =
           activeViewport === 'desktop' ? label : `${label} (${VIEWPORT_LABELS[activeViewport]})`;
+        const hasOverride = hasExplicitOverrideAtBreakpoint(prop, value, activeBreakpoint);
 
         if (SPACING_SLIDER_PROPS.has(prop.name)) {
           // Scala chiusa dichiarata dal registro (ADR-33 § 4): lo Slider lavora per
@@ -152,15 +171,18 @@ export default function PropField({
             onSetAndCommit({ ...envelope, [activeBreakpoint]: scale[index] ?? scale[0] });
           return (
             <div>
-              <Text size="sm" fw={500} mb={4}>
-                {fieldLabel}
-                {required && (
-                  <Text component="span" c="red" inherit>
-                    {' '}
-                    *
-                  </Text>
-                )}
-              </Text>
+              <Group gap={6} wrap="nowrap" mb={4}>
+                <Text size="sm" fw={500}>
+                  {fieldLabel}
+                  {required && (
+                    <Text component="span" c="red" inherit>
+                      {' '}
+                      *
+                    </Text>
+                  )}
+                </Text>
+                <BreakpointOverrideDot show={hasOverride} />
+              </Group>
               <Slider
                 min={0}
                 max={Math.max(scale.length - 1, 0)}
@@ -204,15 +226,18 @@ export default function PropField({
           });
           return (
             <div>
-              <Text size="sm" fw={500} mb={4}>
-                {fieldLabel}
-                {required && (
-                  <Text component="span" c="red" inherit>
-                    {' '}
-                    *
-                  </Text>
-                )}
-              </Text>
+              <Group gap={6} wrap="nowrap" mb={4}>
+                <Text size="sm" fw={500}>
+                  {fieldLabel}
+                  {required && (
+                    <Text component="span" c="red" inherit>
+                      {' '}
+                      *
+                    </Text>
+                  )}
+                </Text>
+                <BreakpointOverrideDot show={hasOverride} />
+              </Group>
               <SegmentedControl
                 fullWidth
                 data={segments}
@@ -230,7 +255,12 @@ export default function PropField({
 
         return (
           <Select
-            label={fieldLabel}
+            label={
+              <Group gap={6} wrap="nowrap" component="span">
+                <span>{fieldLabel}</span>
+                <BreakpointOverrideDot show={hasOverride} />
+              </Group>
+            }
             withAsterisk={required}
             allowDeselect={false}
             comboboxProps={{ zIndex: 1100 }}

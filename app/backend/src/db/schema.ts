@@ -536,6 +536,53 @@ export const analyticsDailyRollupEntity = pgTable(
   ],
 );
 
+// ─── FORM SUBMISSIONS ─────────────────────────────────────────────────────────
+// Entità mutabile a forma ibrida (ADR-46 § 3, RFC-46 D3): `isActive` per il
+// soft delete editoriale dell'Invio, ma `createdBy` è sempre `null` — la riga
+// nasce da una sottomissione pubblica anonima (`public/forms/:formId/submit`),
+// stesso pattern di `analytics_events` sopra. `updatedBy` si valorizza solo
+// quando un editore soft-elimina l'Invio (mai su scrittura pubblica). Nessuna
+// colonna `version`: gli Invii non sono mai riscritti concorrentemente, solo
+// disattivati. `formKey` è l'identificatore editoriale stabile della prop
+// `form.formKey` (RFC-46 D2) — mai l'`id` del nodo blocco, che
+// `duplicateSubtree` rigenera ad ogni duplicazione.
+export const formSubmissionEntity = pgTable(
+  'form_submissions',
+  {
+    id: serial().notNull().primaryKey(),
+    guid: char('guid', { length: 16 })
+      .notNull()
+      .$defaultFn(() => Utils.randomString(16)),
+    formKey: varchar('form_key', { length: 100 }).notNull(),
+    pageId: integer('page_id')
+      .references(() => pageEntity.id, { onDelete: 'restrict', onUpdate: 'restrict' })
+      .notNull(),
+    /** Valori sottomessi, chiave = `form-field.name`. Mai eseguito/interpretato (RFC-46 D3). */
+    payload: jsonb('payload').notNull(),
+    /** SHA-256 hex (64 char), stesso meccanismo di `analytics_events.visitor_hash` — mai l'IP grezzo. */
+    ipHash: char('ip_hash', { length: 64 }).notNull(),
+    userAgent: varchar('user_agent', { length: 500 }),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Sempre null: scrittura pubblica anonima. */
+    createdBy: integer('created_by').references(() => userEntity.id, {
+      onDelete: 'restrict',
+      onUpdate: 'restrict',
+    }),
+    /** Valorizzato solo dal soft delete editoriale dell'Invio. */
+    updatedBy: integer('updated_by').references(() => userEntity.id, {
+      onDelete: 'restrict',
+      onUpdate: 'restrict',
+    }),
+  },
+  (t) => [
+    index('form_submissions_form_key_idx').on(t.formKey, t.createdAt),
+    index('form_submissions_page_idx').on(t.pageId),
+    uniqueIndex('form_submissions_guid_idx').on(t.guid),
+  ],
+);
+
 // ─── RELATIONS ──────────────────────────────────────────────────────────────────
 
 export const usersRelations = relations(userEntity, ({ one, many }) => ({
@@ -656,6 +703,21 @@ export const analyticsDailyRollupsRelations = relations(analyticsDailyRollupEnti
   }),
   updatedByUser: one(userEntity, {
     fields: [analyticsDailyRollupEntity.updatedBy],
+    references: [userEntity.id],
+  }),
+}));
+
+export const formSubmissionsRelations = relations(formSubmissionEntity, ({ one }) => ({
+  page: one(pageEntity, {
+    fields: [formSubmissionEntity.pageId],
+    references: [pageEntity.id],
+  }),
+  createdByUser: one(userEntity, {
+    fields: [formSubmissionEntity.createdBy],
+    references: [userEntity.id],
+  }),
+  updatedByUser: one(userEntity, {
+    fields: [formSubmissionEntity.updatedBy],
     references: [userEntity.id],
   }),
 }));

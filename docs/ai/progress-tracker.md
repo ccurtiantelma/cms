@@ -519,3 +519,139 @@ foglia `theme-tokens.ts` priva di Mantine); e `reconcileThemeFromServer()`, dich
 § 4, non era invocata da nessuno — l'Editor tema si apriva sui default su un browser nuovo.
 
 Suite verde: frontend 31/31 suite (348 test), public-site 6/6 suite (20 test).
+
+---
+
+## RFC-45 — editing in-place nel Canvas, consuntivo e domanda aperta (2026-09-01)
+
+**Parte A (consuntivo)**: verificato che l'editing in-place nel Canvas richiesto da un task
+esterno — `contentEditable` su `heading`/`richText`/`button`, dispatch debounced verso
+`useBlockEditorStore`, preservazione del cursore, toolbar fluttuante — è **già interamente
+implementato**, non come costruzione nuova ma come round non pianificato: `PLAN-F04c-editor-
+maturo.md` § T9 (righe 397-439) lo documenta a consuntivo e conclude che non serve ADR, perché
+non tocca schema blocchi, `kind` né sanitizzazione server-side. `RFC-45`
+(`docs/ai/rfc/RFC-45-wysiwyg-canvas-editing.md`) verifica quella conclusione invece di
+riaprirla, e segnala due scarti puntuali dalla formulazione del task esterno, senza correggerli
+d'iniziativa: debounce reale **300ms** (`EDIT_DEBOUNCE_MS`, `EditorBlockWrapper.tsx:244`), non
+i 150ms richiesti; nessun controllo "Dimensione carattere" nella toolbar fluttuante, né in
+canvas né nell'ispettore (ADR-26 § 3).
+
+**Parte B (domanda aperta)**: l'unico pezzo realmente non costruito — formattazione ricca
+(Grassetto/Corsivo/Link) su `heading.text` e `button.label`, oggi `plainText` per ADR-21 § 5 —
+resta bloccato su una decisione umana. `InlineFloatingToolbar.tsx` non si monta su questi due
+tipi apposta (`EditorBlockWrapper.tsx:1364-1369`): cambiarne il `kind` è modifica di schema
+blocco, fuori dalla soglia che T9 ha rispettato. Tre opzioni restano aperte in RFC-45 (status
+quo, nuovo `kind` dedicato, riuso di `kind: 'richText'`), nessuna approvata.
+
+**Nota a margine, non corretta qui**: la riga F04 della tabella "Parte 2" (riga 72) descrive
+ADR-26 (WYSIWYG) come "ancora in attesa di firma, rinviata a F04d" — non più corrente: ADR-26
+risulta **Approvata il 2026-08-24** (`docs/ai/adr/ADR-26-wysiwyg-rich-text.md`) e la sua
+implementazione (`RichTextFieldEditor.tsx`, `@mantine/tiptap` in `app/frontend/package.json`)
+è presente nel repository. L'allineamento di quella riga non è oggetto di questo task e non
+viene toccato qui (stesso principio di "Scarti documentali segnalati e non corretti qui" già
+in uso in `PLAN-F04c-editor-maturo.md`).
+
+---
+
+## RFC-44 — Static Site Export Engine, redazione (2026-09-01)
+
+Un task esterno ha chiesto un motore SSG (`StaticExportModule` NestJS/BullMQ, TTFB < 15ms,
+`app/public-site` ridotto a server di anteprima) per eliminare l'esposizione runtime di
+Node/Database sul sito pubblico. Redatta `docs/ai/rfc/RFC-44-static-site-export-engine.md`,
+**in discussione**, nessuna decisione umana ancora registrata.
+
+Il controllo documentale preliminare ha trovato che la proposta tocca direttamente tre ADR
+già approvate il 2026-08-17, non territorio vergine: ADR-22 aveva già esaminato e **scartato
+per nome** l'opzione "SSG a build time" (motivazione: incompatibile con l'NFR di
+invalidazione a 5 secondi, superata dalla cache di ADR-23); il design letterale del task
+("StaticExportModule renderizza HTML riutilizzando i componenti React") violerebbe inoltre
+il divieto assoluto tolleranza-zero "rendering HTML nell'API" se il rendering finisse dentro
+`app/backend`. La RFC risolve questo mantenendo `app/public-site` come unico renderer
+(NestJS orchestra soltanto: accoda, chiama `app/public-site` via HTTP interno, scrive il
+risultato su file — mai un `import` React in `app/backend`), propone stato dell'export su
+manifest filesystem (zero migrazioni Postgres, coerente col vincolo dichiarato dal task
+stesso), trigger sugli stessi call-site che già invalidano la cache Redis di ADR-23
+(`pages.service.ts::changeStatus`, righe 385/472/553/679) invece di un event bus di dominio
+che non esiste nel repository, e Deployer Adapter con solo `LocalFolderDeployer` attivo —
+S3/Cloudflare Pages restano interfacce non implementate, provider esterno che richiede ADR
+e approvazione propria (`CLAUDE.md` § Ask first).
+
+Segnala esplicitamente un'alternativa più economica non richiesta dal task (reverse-proxy
+cache davanti alla SSR esistente, anticipata per iscritto da ADR-22 § 6) che raggiunge la
+sola prestazione senza l'isolamento Node/DB — presentata come opzione, non scelta al posto
+dell'umano. Sette punti di firma esplicita in RFC-44 § "Decisione umana" (N1–N7), incluso
+quale delle tre ADR toccate richiede una ADR conseguente propria o se un'unica ADR-45 le
+riconcilia tutte. `docs/roadmap.md` § F03 aggiornato con un rimando alla RFC, stesso formato
+già in uso per la decisione aperta di RFC-45 su F04.
+
+---
+
+## RFC-44 / ADR-45 — Ratifica umana e chiusura decisione (2026-09-01)
+
+Il Project Owner ha fornito firma umana esplicita su tutti i sette punti (N1–N7) di
+RFC-44 § "Decisione umana", registrata in sessione interattiva (non tramite processo di
+firma separato/out-of-band): esito **Approvato**, obiettivo primario isolamento (N1),
+`StaticExportModule` senza import React in `app/backend` (N2), SLA di invalidazione 5s
+invariata (N3), autorizzato il nuovo target TTFB < 15ms su
+`non-functional-requirements.md` (N4), solo `LocalFolderDeployer` in scope ora (N5),
+`app/public-site` resta raggiungibile pubblicamente solo per l'anteprima autenticata
+ADR-25 (N6), generazione di un'unica ADR conseguente invece di tre separate (N7).
+
+Redatta e persistita `docs/ai/adr/ADR-45-ssg-export-architecture.md` (Stato: Approvato),
+che reinterpreta ADR-22 (consumer HTML pubblico → `app/public-site` relegato a preview/
+worker di rendering interno) e ADR-23 (cache Redis → smette di servire il traffico
+pubblico anonimo, resta backend della coda BullMQ `static-export`), senza toccare
+`schema.ts`. `docs/ai/rfc/RFC-44-static-site-export-engine.md` aggiornata: Status
+Approvato, tutti i checkbox N1–N7 spuntati, Approvato da/Data compilati. `docs/roadmap.md`
+§ F03 aggiornato da "decisione aperta" a "decisione ratificata".
+
+**Prossimo passo**: pianificazione dell'implementazione (`StaticExportModule`, coda
+BullMQ, `LocalFolderDeployer`, tombstone, sincronizzazione media) — non coperta da questo
+task, di competenza backend-developer/frontend-developer su plan dedicato.
+
+---
+
+## RFC-46 — Dynamic Form Builder, redazione (2026-09-01)
+
+Un task esterno ha chiesto il motore di creazione Form (Canvas: campi `text`/`email`/
+`select`/`textarea`/`checkbox`/pulsante di invio) e l'elaborazione degli Invii, con un
+endpoint pubblico disaccoppiato `/api/public/forms/:formId/submit` per siti esportati
+staticamente. Redatta `docs/ai/rfc/RFC-46-dynamic-form-builder.md`, **in discussione**,
+nessuna decisione umana ancora registrata.
+
+Il controllo documentale preliminare ha trovato che F10 non è territorio vergine quanto il
+task lo presenta: `ADR-21` § 5 aveva già nominato *"il blocco form è di F10"*, e `ADR-22` §
+Conseguenza aveva già scritto per nome che *"il sito pubblico non ha JavaScript: ogni
+interattività futura (form di F10, chatbot di F11) è un'isola da introdurre con la sua
+decisione"* — la RFC tratta quella nota come vincolante, non come sfondo. Ne segue che la
+"marca temporale minima di compilazione" richiesta da `docs/business-rules.md` § Moduli di
+contatto (punto 5) non è implementabile nella sua forma classica sulla superficie statica
+di produzione (ADR-45, appena approvata in RFC-44/ADR-45): presuppone un render per-visita
+che un export statico non ha. La RFC non lo aggira: lo lascia come punto di firma (N6, tre
+opzioni) invece di ometterlo in silenzio.
+
+Propone tre tipi di blocco nuovi invece dei sei impliciti nel testo del task
+(`form`/`form-field`/`form-submit`, con `fieldType` come `enum` a coprire
+text/email/textarea/select/checkbox in un solo tipo — stesso principio di `container`,
+ADR-39, contro N tipi quasi identici), separa la composizione visiva del form (nel block
+tree, pubblica per costruzione) dalla configurazione operativa (destinatari e oggetto
+notifica, mai una prop di blocco — riuso di `app_settings` con chiave
+`form:<formKey>:settings`, per evitare che un indirizzo email finisca nella risposta JSON
+pubblica di `GET public/pages`), e riusa due pattern già approvati invece di introdurne di
+nuovi: `visitor-hash.util.ts`/salt giornaliero (ADR analytics) per `ip_hash` su
+`form_submissions`, ed `EmailQueueService`/coda `email-queue` esistente per la notifica —
+nessuna coda dedicata. L'anti-spam headless (honeypot a nome derivato via HMAC + firma HMAC
+del form, un solo secret nuovo `FORM_ANTISPAM_SECRET`) è dichiarato esplicitamente
+stateless e quindi non protetto da uno scraper mirato che replica l'HTML pubblicato — limite
+scritto in § Rischi, non nascosto. CORS resta scoped alla sola rotta di submit (`origin:
+'*'`, senza credenziali), la policy globale (`main.ts:40`) non viene toccata.
+
+Otto punti di firma esplicita in RFC-46 § "Decisione umana" (N1–N8), incluso se i tre tipi
+di blocco vanno approvati in un'unica ADR-46 (precedente ADR-21) o in tre ADR separate
+(precedente ADR-39). `docs/roadmap.md` § F10 aggiornato con un rimando alla RFC, stesso
+formato già in uso per le decisioni aperte di RFC-44 (F03) e RFC-45 (F04). Nessun link
+rotto verificato: i riferimenti a `ADR-18`, `ADR-21`, `ADR-22`, `ADR-25`, `ADR-39`, `ADR-45`
+citati nella RFC puntano tutti a file esistenti in `docs/ai/adr/`; i riferimenti di codice
+(`app-constants.ts`, `email.queue.service.ts`, `visitor-hash.util.ts`, `block-registry.ts`,
+`main.ts:40`, `schema.ts:103`/`:469`) verificati contro il repository al momento della
+stesura.

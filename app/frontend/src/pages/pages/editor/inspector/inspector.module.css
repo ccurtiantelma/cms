@@ -108,3 +108,19 @@
 [data-mantine-color-scheme='dark'] .colorTokenSwatch {
   border-color: var(--mantine-color-dark-3);
 }
+
+/*
+ * Indicatore di override per breakpoint (ADR-29 § 2): pallino pieno accanto all'etichetta
+ * di un campo `responsive` quando il breakpoint attivo (Tablet/Mobile) porta un valore
+ * esplicito nell'envelope, distinto dal valore ereditato in cascata dal default. Colore
+ * arancio Mantine — non il blu/rosso già usati per stato riposo/errore in questo pannello,
+ * né il blu/magenta fissi riservati al canvas (vedi commento di testa del file).
+ */
+.breakpointOverrideDot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--mantine-color-orange-6);
+}

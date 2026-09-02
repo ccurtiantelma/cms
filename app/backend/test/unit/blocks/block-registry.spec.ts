@@ -9,11 +9,12 @@ describe('block-registry (unit) — invarianti di ADR-29/ADR-30', () => {
   // ─── Token del registro invariato (ADR-29 § 5) ─────────────────────────
 
   it('il token del registro resta invariato rispetto al valore pre-round: nessun "v" o "migrations" toccato dalle sette props di stile', () => {
-    // Valore ricalcolato dopo ADR-39 (aggiunta di `container:1:0` al registro,
-    // sesto tipo — dipende solo da type/v/migrations.length, MAI dalle props):
-    // un cambiamento qui segnalerebbe un `v` incrementato per errore, non
-    // l'aggiunta di un tipo intero (attesa e coperta da questo aggiornamento).
-    expect(computeBlockRegistryToken(DEFAULT_BLOCK_REGISTRY)).toBe('808b3fb7');
+    // Valore ricalcolato dopo ADR-46 (aggiunta di `form:1:0`/`form-field:1:0`/
+    // `form-submit:1:0` al registro, settimo/ottavo/nono tipo — dipende solo
+    // da type/v/migrations.length, MAI dalle props): un cambiamento qui
+    // segnalerebbe un `v` incrementato per errore, non l'aggiunta di tre tipi
+    // interi (attesa e coperta da questo aggiornamento).
+    expect(computeBlockRegistryToken(DEFAULT_BLOCK_REGISTRY)).toBe('83bf8249');
   });
 
   // ─── Invariante metadati d'editor (ADR-30 § 4) ─────────────────────────

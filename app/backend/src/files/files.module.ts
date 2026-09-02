@@ -31,7 +31,9 @@ import { S3CompatibleDriver } from './storage/s3-compatible.driver';
   ],
   // STORAGE_DRIVER esportato per il job di cleanup blob orfani (ADR-11,
   // src/queues/files-cleanup-queue/), che riusa la stessa istanza di driver
-  // invece di istanziarne una propria.
-  exports: [STORAGE_DRIVER],
+  // invece di istanziarne una propria. PublicMediaService esportato per
+  // `ExportProcessor` (RFC-44 Decisione 6): riusa la stessa risoluzione
+  // GUID -> blob raster di ADR-27 invece di duplicarla.
+  exports: [STORAGE_DRIVER, PublicMediaService],
 })
 export class FilesModule {}

@@ -33,14 +33,17 @@ import {
 import styles from './WidgetPalette.module.css';
 import WidgetPaletteGrid from '../WidgetPaletteGrid';
 
-const CATEGORY_ORDER = ['Layout', 'Base'] as const;
+const CATEGORY_ORDER = ['Base', 'Media', 'Struttura', 'Moduli'] as const;
 const CATEGORY_BY_TYPE: Record<string, string> = {
-  section: 'Layout',
-  container: 'Layout',
   heading: 'Base',
   richText: 'Base',
   button: 'Base',
-  image: 'Base',
+  image: 'Media',
+  section: 'Struttura',
+  container: 'Struttura',
+  form: 'Moduli',
+  'form-field': 'Moduli',
+  'form-submit': 'Moduli',
 };
 
 function categoryFor(descriptor: BlockTypeDescriptor): string {
@@ -134,7 +137,12 @@ function clickInsertionTarget(selectedNode: { id: string; type: string } | undef
 /** Libreria dei tipi di blocco trascinabili — e cliccabili — con ricerca per etichetta. */
 export default function WidgetPalette(): JSX.Element {
   const [query, setQuery] = useState('');
-  const [openCategories, setOpenCategories] = useState<string[]>(['Layout', 'Base']);
+  const [openCategories, setOpenCategories] = useState<string[]>([
+    'Base',
+    'Media',
+    'Struttura',
+    'Moduli',
+  ]);
   const roleLevel = useAuthStore((state) => state.user?.role);
   const selectedId = useSelectedId();
   const selectedNode = useNodeById(selectedId);

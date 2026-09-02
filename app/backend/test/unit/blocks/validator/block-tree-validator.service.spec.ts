@@ -171,7 +171,7 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
           path: 'blocks[0].children[0]',
           type: 'section',
           parentType: 'section',
-          allowed: ['heading', 'richText', 'image', 'button', 'container'],
+          allowed: ['heading', 'richText', 'image', 'button', 'container', 'form'],
         },
       });
     });
@@ -303,10 +303,6 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
             'styleHideTablet',
             'styleHideMobile',
             'styleTextColorCustom',
-            'styleBackgroundColor',
-            'styleColor',
-            'backgroundColor',
-            'color',
             'styleFontSizeCustom',
             'styleBorder',
             'styleShadow',

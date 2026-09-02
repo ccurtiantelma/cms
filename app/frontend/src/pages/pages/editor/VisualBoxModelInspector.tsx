@@ -39,6 +39,7 @@ import {
   asString,
   breakpointKey,
   effectiveScalarForViewport,
+  hasExplicitOverrideAtBreakpoint,
   propLabel,
   responsiveEnvelope,
   VIEWPORT_LABELS,
@@ -100,6 +101,8 @@ interface SpacingSideControlProps {
   value: unknown;
   activeViewport: EditorViewport;
   side: BoxSide;
+  /** Vero se il breakpoint attivo porta un valore esplicito per questo lato (ADR-29 § 2). */
+  hasOverride: boolean;
   onChangeToken: (nextToken: string) => void;
 }
 
@@ -115,6 +118,7 @@ function SpacingSideControl({
   value,
   activeViewport,
   side,
+  hasOverride,
   onChangeToken,
 }: SpacingSideControlProps): JSX.Element {
   const [opened, setOpened] = useState(false);
@@ -124,6 +128,9 @@ function SpacingSideControl({
   const currentToken = asString(displayValue) || scale[0] || '0';
   const fieldLabel =
     activeViewport === 'desktop' ? label : `${label} (${VIEWPORT_LABELS[activeViewport]})`;
+  const ariaLabel = hasOverride
+    ? `${fieldLabel}: ${currentToken}px (valore specifico per questo breakpoint)`
+    : `${fieldLabel}: ${currentToken}px`;
 
   return (
     <Popover
@@ -138,10 +145,17 @@ function SpacingSideControl({
         <UnstyledButton
           type="button"
           className={`${styles.sideButton} ${styles[side]}`}
-          aria-label={`${fieldLabel}: ${currentToken}px`}
+          aria-label={ariaLabel}
           onClick={() => setOpened((current) => !current)}
         >
           {currentToken}px
+          {hasOverride && (
+            <span
+              className={styles.overrideDot}
+              data-testid="breakpoint-override-dot"
+              aria-hidden="true"
+            />
+          )}
         </UnstyledButton>
       </Popover.Target>
       <Popover.Dropdown>
@@ -214,6 +228,11 @@ export default function VisualBoxModelInspector({
   ): JSX.Element {
     const prop = spacingProps[descriptor.propName];
     const label = propLabel(prop, propsMeta);
+    const hasOverride = hasExplicitOverrideAtBreakpoint(
+      prop,
+      draft[descriptor.propName],
+      activeBreakpoint,
+    );
     return (
       <SpacingSideControl
         key={descriptor.propName}
@@ -222,6 +241,7 @@ export default function VisualBoxModelInspector({
         value={draft[descriptor.propName]}
         activeViewport={activeViewport}
         side={descriptor.side}
+        hasOverride={hasOverride}
         onChangeToken={(nextToken) => writeSide(descriptor.propName, nextToken, locked, groupSides)}
       />
     );

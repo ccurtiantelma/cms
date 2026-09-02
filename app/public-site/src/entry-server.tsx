@@ -40,7 +40,11 @@ async function buildLayoutContext(): Promise<{
  * Un'eccezione qui è un bug e deve propagare (→ `500` nel chiamante): nessun
  * Error Boundary gira in SSR, l'albero non servibile è già respinto a monte.
  */
-export async function renderPageDocument(page: PublicPageDto, cssHref: string): Promise<string> {
+export async function renderPageDocument(
+  page: PublicPageDto,
+  cssHref: string,
+  formScriptHref = '',
+): Promise<string> {
   const { themeConfig, globalSections } = await buildLayoutContext();
   return (
     DOCTYPE +
@@ -48,6 +52,7 @@ export async function renderPageDocument(page: PublicPageDto, cssHref: string): 
       <App
         page={page}
         cssHref={cssHref}
+        formScriptHref={formScriptHref}
         themeConfig={themeConfig}
         globalSections={globalSections}
       />,
@@ -72,7 +77,11 @@ export async function renderErrorDocument(status: number, message: string, cssHr
  * un'eccezione qui è un bug e deve propagare (→ `500` nel chiamante), stessa
  * garanzia di `renderPageDocument`.
  */
-export async function renderPreviewDocument(page: PagePreviewContentDto, cssHref: string): Promise<string> {
+export async function renderPreviewDocument(
+  page: PagePreviewContentDto,
+  cssHref: string,
+  formScriptHref = '',
+): Promise<string> {
   const { themeConfig, globalSections } = await buildLayoutContext();
   return (
     DOCTYPE +
@@ -80,6 +89,7 @@ export async function renderPreviewDocument(page: PagePreviewContentDto, cssHref
       <PreviewDocument
         page={page}
         cssHref={cssHref}
+        formScriptHref={formScriptHref}
         themeConfig={themeConfig}
         globalSections={globalSections}
       />,

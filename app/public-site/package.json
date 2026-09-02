@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build --ssr src/server.ts --outDir dist",
+    "build": "vite build --ssr src/server.ts --outDir dist && mkdir -p dist/assets && cp -f src/assets/*.js dist/assets/",
     "start": "node --require dotenv/config dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

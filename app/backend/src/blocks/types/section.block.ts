@@ -178,7 +178,7 @@ export const sectionBlock: BlockDefinition = {
       required: false,
     },
   },
-  children: { allow: ['heading', 'richText', 'image', 'button', 'container'] },
+  children: { allow: ['heading', 'richText', 'image', 'button', 'container', 'form'] },
   migrations: [],
   enabled: true,
   meta: {

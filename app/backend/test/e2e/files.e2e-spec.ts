@@ -29,6 +29,9 @@ describe('FilesController (integration)', () => {
   let app: INestApplication;
   let insertValuesMock: jest.Mock;
   let findFirstMock: jest.Mock;
+  let findManyMock: jest.Mock;
+  let countWhereMock: jest.Mock;
+  let publishedRevisionsJoinWhereMock: jest.Mock;
   let updateWhereMock: jest.Mock;
   let updateSetMock: jest.Mock;
   let storageUploadMock: jest.Mock;
@@ -83,6 +86,13 @@ describe('FilesController (integration)', () => {
       .fn()
       .mockReturnValue({ returning: jest.fn().mockResolvedValue([storedRow]) });
     findFirstMock = jest.fn().mockResolvedValue(storedRow);
+    findManyMock = jest.fn().mockResolvedValue([storedRow]);
+    // `FilesService.list()` fa `select({total: count()}).from(fileEntity).where(...)`.
+    countWhereMock = jest.fn().mockResolvedValue([{ total: 1 }]);
+    // `FilesService.assertNotReferencedByPublishedPage()` (softDelete, RFC-F09 N7) fa
+    // `select({content}).from(pageEntity).innerJoin(pageRevisionEntity, ...).where(...)`.
+    // Vuoto di default: nessuna Pagina pubblicata referenzia il file nei test di soft-delete.
+    publishedRevisionsJoinWhereMock = jest.fn().mockResolvedValue([]);
     updateWhereMock = jest.fn().mockResolvedValue(undefined);
     updateSetMock = jest.fn().mockReturnValue({ where: updateWhereMock });
     storageUploadMock = jest.fn().mockResolvedValue(undefined);
@@ -92,7 +102,13 @@ describe('FilesController (integration)', () => {
       db: {
         insert: jest.fn().mockReturnValue({ values: insertValuesMock }),
         update: jest.fn().mockReturnValue({ set: updateSetMock }),
-        query: { fileEntity: { findFirst: findFirstMock } },
+        select: jest.fn().mockReturnValue({
+          from: jest.fn().mockReturnValue({
+            where: countWhereMock,
+            innerJoin: jest.fn().mockReturnValue({ where: publishedRevisionsJoinWhereMock }),
+          }),
+        }),
+        query: { fileEntity: { findFirst: findFirstMock, findMany: findManyMock } },
       },
     };
 
@@ -194,6 +210,94 @@ describe('FilesController (integration)', () => {
         .expect(404);
 
       expect(res.body.message).toContain('non trovato');
+    });
+  });
+
+  describe('GET /app/files (list)', () => {
+    it('happy path: ruolo Manager+ riceve la lista paginata dei file attivi', async () => {
+      const auth = makeAuthFor(7, AppUserRoles.Manager);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/app/files')
+        .query({ p: 1, i: 20 })
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .expect(200);
+
+      expect(res.body).toMatchObject({
+        totalItems: 1,
+        currentPage: 1,
+        itemsPerPage: 20,
+      });
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0].guid).toBe(storedRow.guid);
+      expect(res.body.items[0].storageKey).toBeUndefined();
+      expect(res.body.items[0].checksumSha256).toBeUndefined();
+      expect(findManyMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('errore: senza JWT → 401 dal middleware globale', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/app/files')
+        .query({ p: 1, i: 20 })
+        .expect(401);
+
+      expect(findManyMock).not.toHaveBeenCalled();
+    });
+
+    it('ruolo User riceve la lista paginata (nessun predicato di ownership, ADR-35)', async () => {
+      const auth = makeAuthFor(7, AppUserRoles.User);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/app/files')
+        .query({ p: 1, i: 20 })
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .expect(200);
+
+      expect(res.body).toMatchObject({
+        totalItems: 1,
+        currentPage: 1,
+        itemsPerPage: 20,
+      });
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0].guid).toBe(storedRow.guid);
+    });
+  });
+
+  describe('GET /app/files/:guid/metadata', () => {
+    it('happy path: restituisce i metadata senza storageKey/checksumSha256', async () => {
+      const auth = makeAuthFor(7, AppUserRoles.User);
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/app/files/${storedRow.guid}/metadata`)
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .expect(200);
+
+      expect(res.body.guid).toBe(storedRow.guid);
+      expect(res.body.originalName).toBe(storedRow.originalName);
+      expect(res.body.storageKey).toBeUndefined();
+      expect(res.body.checksumSha256).toBeUndefined();
+    });
+
+    it('errore: guid inesistente o soft-eliminato → 404', async () => {
+      findFirstMock.mockResolvedValue(undefined);
+      const auth = makeAuthFor(7, AppUserRoles.User);
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/app/files/guid-inesistente/metadata')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .expect(404);
+
+      expect(res.body.message).toContain('non trovato');
+    });
+
+    it('errore: senza JWT → 401 dal middleware globale', async () => {
+      await request(app.getHttpServer())
+        .get(`/api/v1/app/files/${storedRow.guid}/metadata`)
+        .expect(401);
     });
   });
 

@@ -111,13 +111,15 @@
   cursor: grab;
   transition:
     border-color 120ms ease,
-    box-shadow 120ms ease;
+    box-shadow 120ms ease,
+    transform 120ms ease;
 }
 
 .tile:hover,
 .tile:focus-visible {
-  border-color: #b0b0b0;
+  border-color: #2271b1;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
   outline: none;
 }
 

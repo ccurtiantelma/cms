@@ -26,6 +26,8 @@ import { PreviewPagesModule } from './preview-pages/preview-pages.module';
 import { GlobalSectionsModule } from './global-sections/global-sections.module';
 import { SiteTemplatesModule } from './site-templates/site-templates.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { FormsModule } from './forms/forms.module';
+import { FormsCorsMiddleware } from './forms/forms-cors.middleware';
 
 @Module({
   imports: [
@@ -46,6 +48,10 @@ import { AnalyticsModule } from './analytics/analytics.module';
         // Rotazione giornaliera del salt di anonimizzazione visitatore
         // (AppConstants.analyticsSaltSecret, GDPR/zero-cookie).
         ANALYTICS_SALT_SECRET: Joi.string().default('change_me_analytics_salt'),
+        // Anti-spam headless dei Form (AppConstants.formAntispamSecret, ADR-46 § 3):
+        // honeypot a nome derivato + firma HMAC del form, dedicato e distinto
+        // da ANALYTICS_SALT_SECRET.
+        FORM_ANTISPAM_SECRET: Joi.string().default('change_me_form_antispam'),
         COOKIE_SECRET: Joi.string().default('change_me_cookie_secret'),
         COOKIE_DOMAIN: Joi.string().default('localhost'),
         // Allineato ad AppConstants.jwtExpiration (fix: entrambi i default devono coincidere).
@@ -136,6 +142,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     GlobalSectionsModule,
     SiteTemplatesModule,
     AnalyticsModule,
+    FormsModule,
     // TODO: aggiungere qui i moduli applicativi del CMS man mano che vengono creati.
   ],
   controllers: [],
@@ -180,5 +187,13 @@ export class AppModule {
     consumer
       .apply(AnalyticsIngestionMiddleware)
       .forRoutes({ path: 'public/*path', method: RequestMethod.GET });
+
+    // CORS scoped alla sola rotta di submit dei Form (ADR-46 § 5, RFC-46 D5):
+    // la policy globale di `main.ts` resta l'allowlist fissa, mai un
+    // wildcard su `app/*`. Applicato anche a OPTIONS (preflight) e POST.
+    consumer.apply(FormsCorsMiddleware).forRoutes({
+      path: 'public/forms/:formId/submit',
+      method: RequestMethod.ALL,
+    });
   }
 }

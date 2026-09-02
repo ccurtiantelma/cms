@@ -13,7 +13,7 @@
  * `DATABASE_URL` punta a `cms_db_test` e `REDIS_URL` al DB Redis logico #1,
  * come richiesto dalle guardie `assertTestDatabase` / `assertTestRedisDb`.
  *
- * Host/porte allineate a docker-compose.yml di questo progetto (55432/56379 —
+ * Host/porte allineate a docker-compose.yml di questo progetto (55432/56380 —
  * porte host non standard di proposito, il progetto gira sempre in parallelo
  * con altri stack sulla stessa macchina, vedi il commento di testa di
  * docker-compose.yml).
@@ -22,7 +22,7 @@
 process.env.NODE_ENV = 'test';
 process.env.DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://cms:cms@localhost:55432/cms_db_test';
-process.env.REDIS_URL = process.env.REDIS_URL || 'redis://localhost:56379/1';
+process.env.REDIS_URL = process.env.REDIS_URL || 'redis://localhost:56380/1';
 process.env.SECURITY_KEY =
   process.env.SECURITY_KEY || 'e2e_test_security_key_min_32_characters_long';
 process.env.PAGE_PREVIEW_TOKEN_SECRET =

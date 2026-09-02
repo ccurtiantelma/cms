@@ -11,6 +11,8 @@ interface AppProps {
   /** Tema dell'installazione, `null` se il backend non ha risposto (vedi `ThemeStyleTag`). */
   themeConfig: ThemeConfigDto | null;
   cssHref: string;
+  /** Isola JS di submit dei Form (F10-04) — iniettata da `PageView` solo se la Pagina ne ha bisogno. */
+  formScriptHref?: string;
   /**
    * Sezioni Globali assegnate a `header`/`footer` (ADR-40), risolte da
    * `entry-server.tsx`. Assenti o con slot `null` ⇒ il documento contiene i soli
@@ -29,7 +31,7 @@ interface AppProps {
  * `style-tokens.module.css`) vince l'ultima regola dichiarata, quindi il tema
  * dell'Editor sovrascrive i valori statici di fabbrica dei token `--cms-*`.
  */
-export default function App({ page, themeConfig, cssHref, globalSections }: AppProps) {
+export default function App({ page, themeConfig, cssHref, formScriptHref, globalSections }: AppProps) {
   return (
     <html lang={page.locale}>
       <head>
@@ -40,7 +42,7 @@ export default function App({ page, themeConfig, cssHref, globalSections }: AppP
         <ThemeStyleTag themeConfig={themeConfig} />
       </head>
       <body>
-        <PageView content={page.content} globalSections={globalSections} />
+        <PageView content={page.content} globalSections={globalSections} formScriptHref={formScriptHref} />
       </body>
     </html>
   );

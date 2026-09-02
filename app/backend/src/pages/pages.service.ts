@@ -26,11 +26,18 @@ import { BlockPropSanitizerService } from '../common/sanitizer/block-prop-saniti
 import { BLOCK_REGISTRY_TOKEN, BlockRegistry } from '../blocks/block-registry';
 import { BlockTreeValidatorService } from '../blocks/validator/block-tree-validator.service';
 import { PublicPageCacheService } from './public-page-cache.service';
+import { ExportService } from '../export/export.service';
 import { ValidatableBlockNode } from '../blocks/validator/validatable-node.types';
 import { migrateEnvelope, ENVELOPE_VERSION } from '../blocks/migration/envelope-migration.engine';
 import { migrateBlockTree } from '../blocks/migration/block-tree-migration.engine';
 import { MigratableBlockNode } from '../blocks/migration/block-migration.types';
-import { assertValidContentTreeShape, assertPayloadWithinLimit, ContentTree } from './content-tree';
+import {
+  assertValidContentTreeShape,
+  assertPayloadWithinLimit,
+  BlockNode,
+  ContentTree,
+} from './content-tree';
+import { getPageBlueprint } from './blueprints/page-blueprints.registry';
 import { isReservedSlug, normalizeSlug } from './slug.util';
 import {
   isTransitionAllowed,
@@ -135,6 +142,7 @@ export class PagesService {
     @Inject(BLOCK_REGISTRY_TOKEN) private readonly blockRegistry: BlockRegistry,
     private readonly publicPageCache: PublicPageCacheService,
     private readonly settingsService: SettingsService,
+    private readonly exportService: ExportService,
   ) {}
 
   /** Lista paginata delle Pagine attive. Un `User` vede solo le proprie (ADR-18 § D6). */
@@ -185,7 +193,9 @@ export class PagesService {
     const slug = this.normalizeAndValidateSlug(dto.slug ?? dto.title);
     const parent = dto.parentGuid ? await this.loadActiveParentOrThrow(dto.parentGuid) : null;
 
-    const contentInput = dto.draftContent ?? { version: ENVELOPE_VERSION, blocks: [] };
+    const contentInput = dto.templateSlug
+      ? this.resolveBlueprintContent(dto.templateSlug)
+      : (dto.draftContent ?? { version: ENVELOPE_VERSION, blocks: [] });
     const content = this.runWriteContentPipeline(contentInput, authInfo);
     const seo = this.toPlainSeo(dto.draftSeo);
 
@@ -375,6 +385,25 @@ export class PagesService {
 
     if (staleLocations.length > 0) {
       await this.publicPageCache.invalidateLocations(staleLocations, authInfo.userId);
+
+      // RFC-44 Decisione 5: la Pagina resta pubblicata ma cambia percorso —
+      // il vecchio file statico va rimosso e il nuovo generato, non solo la
+      // cache invalidata.
+      if (row.status === 'published') {
+        await Promise.all(
+          staleLocations.map((stale) =>
+            this.exportService.enqueuePageTombstone(row.guid, stale.locale, stale.path),
+          ),
+        );
+        const newLocation = await this.publicPageCache.resolveLocation(updatedRow.id);
+        if (newLocation) {
+          await this.exportService.enqueuePageExport(
+            row.guid,
+            newLocation.locale,
+            newLocation.path,
+          );
+        }
+      }
     }
 
     return this.toDtoWithContentIssues(updatedRow, parentGuid);
@@ -462,6 +491,16 @@ export class PagesService {
 
     if (staleLocations.length > 0) {
       await this.publicPageCache.invalidateLocations(staleLocations, authInfo.userId);
+
+      // RFC-44 Decisione 5: il soft delete su Postgres non deve mai lasciare
+      // raggiungibile da Nginx il file statico di una Pagina (ex-)pubblicata.
+      if (row.status === 'published') {
+        await Promise.all(
+          staleLocations.map((stale) =>
+            this.exportService.enqueuePageTombstone(row.guid, stale.locale, stale.path),
+          ),
+        );
+      }
     }
 
     this.logger.log(`Pagina eliminata (guid=${guid}).`);
@@ -543,6 +582,19 @@ export class PagesService {
     // toccato. Invalidazione incondizionata: su una Pagina mai pubblicata è
     // un `DEL` a vuoto, innocuo.
     await this.publicPageCache.invalidatePage(row.id, authInfo.userId);
+
+    // RFC-44 Decisione 5: `toStatus === 'published'` è già intercettato sopra
+    // (delegato a `publishTransactionally`), quindi qui si arriva solo per
+    // transizioni che lasciano `published` (tombstone) o che restano fuori
+    // da `published` (nessun file statico esisteva, no-op innocuo se accodato
+    // comunque — ma si evita per non generare rumore su transizioni che non
+    // hanno mai avuto un export).
+    if (fromStatus === 'published') {
+      const location = await this.publicPageCache.resolveLocation(row.id);
+      if (location) {
+        await this.exportService.enqueuePageTombstone(row.guid, location.locale, location.path);
+      }
+    }
 
     this.logger.log(`Pagina guid=${guid}: transizione di stato ${fromStatus} -> ${toStatus}.`);
     await this.auditLogService.log(
@@ -669,6 +721,13 @@ export class PagesService {
     // Dopo il commit (ADR-23 § 4): una lettura concorrente prima di questo
     // punto ripopolerebbe la chiave con lo stato pre-pubblicazione.
     await this.publicPageCache.invalidatePage(finalRow.id, authInfo.userId);
+
+    // RFC-44 Decisione 1/4: job di export a singola pagina, stesso percorso
+    // appena invalidato in cache, priorità alta/SLA 5s (ExportService).
+    const location = await this.publicPageCache.resolveLocation(finalRow.id);
+    if (location) {
+      await this.exportService.enqueuePageExport(row.guid, location.locale, location.path);
+    }
 
     this.logger.log(`Pagina pubblicata (guid=${row.guid}).`);
     return this.toDtoWithContentIssues(finalRow, row.parent?.guid ?? null);
@@ -1096,6 +1155,39 @@ export class PagesService {
   // ─── Pipeline blocchi (F02/T5, ADR-21 § 3) ────────────────────────────────
 
   /**
+   * Risolve `templateSlug` (RFC-43) nel registro dei Template di partenza e
+   * ne clona l'albero blocchi con `id` rigenerati (evita collisioni fra
+   * Pagine nate dallo stesso blueprint). Il risultato ha la stessa forma di
+   * un `draftContent` client, quindi attraversa invariata
+   * {@link runWriteContentPipeline}. `400` se lo slug non è registrato.
+   */
+  private resolveBlueprintContent(templateSlug: string): ContentTree {
+    const blueprint = getPageBlueprint(templateSlug);
+    if (!blueprint) {
+      throw new BadRequestException({
+        message: `Template di partenza sconosciuto: ${templateSlug}.`,
+        code: 'PAGE_TEMPLATE_UNKNOWN',
+        details: { templateSlug },
+      });
+    }
+    return {
+      version: blueprint.content.version,
+      blocks: blueprint.content.blocks.map((block) => this.cloneBlockNodeWithFreshIds(block)),
+    };
+  }
+
+  /** Copia profonda ricorsiva di un nodo blocco: `id` sempre rigenerato con `Utils.randomString(16)`, `type`/`v`/`props` copiati, `children` clonati alla stessa regola. */
+  private cloneBlockNodeWithFreshIds(node: BlockNode): BlockNode {
+    return {
+      id: Utils.randomString(16),
+      type: node.type,
+      v: node.v,
+      props: structuredClone(node.props),
+      children: node.children.map((child) => this.cloneBlockNodeWithFreshIds(child)),
+    };
+  }
+
+  /**
    * Pipeline di **scrittura**, applicata a un payload client fresco
    * (`POST`/`PATCH`): forma envelope (`v` obbligatorio per nodo, limiti di
    * profondità/numero di nodi/payload in ingresso) → migrazione → validazione
@@ -1124,7 +1216,10 @@ export class PagesService {
    * l'operazione con lo stesso `400` di una scrittura: non si
    * pubblica/scrive un albero non valido.
    */
-  private runPersistedContentPipeline(rawEnvelope: unknown, authInfo: AuthInfo): PersistableContent {
+  private runPersistedContentPipeline(
+    rawEnvelope: unknown,
+    authInfo: AuthInfo,
+  ): PersistableContent {
     const envelope = this.asEnvelopeRecord(rawEnvelope);
     const fromVersion = typeof envelope.version === 'number' ? envelope.version : 1;
     const blocksInput = this.migrateEnvelopeOrThrow(envelope, fromVersion);
@@ -1224,7 +1319,10 @@ export class PagesService {
       throw this.blockErrorToBadRequest(sanitized.errors[0]);
     }
 
-    const resultEnvelope: PersistableContent = { version: ENVELOPE_VERSION, blocks: sanitized.tree };
+    const resultEnvelope: PersistableContent = {
+      version: ENVELOPE_VERSION,
+      blocks: sanitized.tree,
+    };
     assertPayloadWithinLimit(resultEnvelope, 'persist');
     return resultEnvelope;
   }

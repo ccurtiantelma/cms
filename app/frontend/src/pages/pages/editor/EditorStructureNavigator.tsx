@@ -29,7 +29,7 @@
  * visibilità è lo stesso stato UI effimero `hiddenInCanvasIds` che `EditorBlockWrapper`
  * traduce in un `display: none` reale — mai una seconda fonte di verità.
  */
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { ActionIcon, Group, NavLink, ScrollArea, Text, Tooltip } from '@mantine/core';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -130,6 +130,7 @@ interface StructureNodeProps {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onRequestDelete: (id: string) => void;
+  onHoverChange: (id: string | null) => void;
 }
 
 /**
@@ -147,6 +148,7 @@ function StructureNode({
   selectedId,
   onSelect,
   onRequestDelete,
+  onHoverChange,
 }: StructureNodeProps): JSX.Element {
   const label = nodeLabel(node);
   const Icon = blockIcon(blockIconName(node.type));
@@ -180,6 +182,8 @@ function StructureNode({
         className={styles.row}
         data-rejected={isRejected}
         style={{ paddingLeft: depth * 12 }}
+        onMouseEnter={() => onHoverChange(node.id)}
+        onMouseLeave={() => onHoverChange(null)}
       >
         <Tooltip label="Trascina per riordinare" withArrow>
           <ActionIcon
@@ -247,6 +251,7 @@ function StructureNode({
           selectedId={selectedId}
           onSelect={onSelect}
           onRequestDelete={onRequestDelete}
+          onHoverChange={onHoverChange}
         />
       ))}
     </div>
@@ -260,6 +265,7 @@ export default function EditorStructureNavigator(): JSX.Element {
   const selectNode = useBlockEditorStore((state) => state.selectNode);
   const removeBlockAction = useBlockEditorStore((state) => state.removeBlockAction);
   const moveNodeToAction = useBlockEditorStore((state) => state.moveNodeToAction);
+  const setHoveredId = useBlockEditorStore((state) => state.setHoveredId);
 
   /** Id del nodo per cui è aperta la conferma di eliminazione, `null` se nessuna è aperta. */
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -271,6 +277,11 @@ export default function EditorStructureNavigator(): JSX.Element {
   // canvas (`FullScreenEditorLayout.tsx`).
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const sortableIds = useMemo(() => flattenIds(roots), [roots]);
+
+  // Il pannello può chiudersi (o smontarsi) mentre il puntatore è ancora su una riga: senza
+  // questo cleanup l'ultimo `hoveredId` resterebbe scritto nello store e un blocco nel
+  // canvas apparirebbe evidenziato "da solo", senza nessun puntatore sopra a spiegarlo.
+  useEffect(() => () => setHoveredId(null), [setHoveredId]);
 
   /** Seleziona il nodo e lo porta in vista nel canvas — mai l'uno senza l'altro da qui. */
   function handleSelect(id: string): void {
@@ -312,6 +323,7 @@ export default function EditorStructureNavigator(): JSX.Element {
                   selectedId={selectedId}
                   onSelect={handleSelect}
                   onRequestDelete={setPendingDeleteId}
+                  onHoverChange={setHoveredId}
                 />
               ))}
             </SortableContext>

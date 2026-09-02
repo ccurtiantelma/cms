@@ -105,7 +105,8 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
       "richText",
       "image",
       "button",
-      "container"
+      "container",
+      "form"
     ],
     "props": [
       {
@@ -252,6 +253,21 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
       },
       {
         "name": "styleBackgroundColor",
+        "kind": "color",
+        "required": false
+      },
+      {
+        "name": "styleColor",
+        "kind": "color",
+        "required": false
+      },
+      {
+        "name": "backgroundColor",
+        "kind": "color",
+        "required": false
+      },
+      {
+        "name": "color",
         "kind": "color",
         "required": false
       },
@@ -535,6 +551,21 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Colore di sfondo",
           "tab": "style",
           "order": 11
+        },
+        "styleColor": {
+          "label": "Colore testo",
+          "tab": "style",
+          "order": 12
+        },
+        "backgroundColor": {
+          "label": "Colore di sfondo (fallback)",
+          "tab": "style",
+          "order": 13
+        },
+        "color": {
+          "label": "Colore testo (fallback)",
+          "tab": "style",
+          "order": 14
         },
         "stylePaddingTop": {
           "label": "Padding superiore",
@@ -1053,6 +1084,26 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "required": false
       },
       {
+        "name": "styleBackgroundColor",
+        "kind": "color",
+        "required": false
+      },
+      {
+        "name": "styleColor",
+        "kind": "color",
+        "required": false
+      },
+      {
+        "name": "backgroundColor",
+        "kind": "color",
+        "required": false
+      },
+      {
+        "name": "color",
+        "kind": "color",
+        "required": false
+      },
+      {
         "name": "styleFontSizeCustom",
         "kind": "unitValue",
         "required": false,
@@ -1150,6 +1201,26 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "tab": "style",
           "order": 13,
           "help": "Colore libero (esadecimale). Ha priorità su \"Colore testo\" se impostato."
+        },
+        "styleBackgroundColor": {
+          "label": "Colore di sfondo",
+          "tab": "style",
+          "order": 19
+        },
+        "styleColor": {
+          "label": "Colore testo",
+          "tab": "style",
+          "order": 20
+        },
+        "backgroundColor": {
+          "label": "Colore di sfondo (fallback)",
+          "tab": "style",
+          "order": 21
+        },
+        "color": {
+          "label": "Colore testo (fallback)",
+          "tab": "style",
+          "order": 22
         },
         "styleFontSizeCustom": {
           "label": "Dimensione testo personalizzata",
@@ -1421,6 +1492,26 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "responsive": true
       },
       {
+        "name": "styleBackgroundColor",
+        "kind": "color",
+        "required": false
+      },
+      {
+        "name": "styleColor",
+        "kind": "color",
+        "required": false
+      },
+      {
+        "name": "backgroundColor",
+        "kind": "color",
+        "required": false
+      },
+      {
+        "name": "color",
+        "kind": "color",
+        "required": false
+      },
+      {
         "name": "styleFontSize",
         "kind": "enum",
         "required": false,
@@ -1534,6 +1625,26 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Colore testo",
           "tab": "style",
           "order": 5
+        },
+        "styleBackgroundColor": {
+          "label": "Colore di sfondo",
+          "tab": "style",
+          "order": 15
+        },
+        "styleColor": {
+          "label": "Colore testo personalizzato",
+          "tab": "style",
+          "order": 16
+        },
+        "backgroundColor": {
+          "label": "Colore di sfondo (fallback)",
+          "tab": "style",
+          "order": 17
+        },
+        "color": {
+          "label": "Colore testo (fallback)",
+          "tab": "style",
+          "order": 18
         },
         "styleFontSize": {
           "label": "Dimensione testo",
@@ -1684,6 +1795,26 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         ],
         "min": 0,
         "max": 100
+      },
+      {
+        "name": "styleBackgroundColor",
+        "kind": "color",
+        "required": false
+      },
+      {
+        "name": "styleColor",
+        "kind": "color",
+        "required": false
+      },
+      {
+        "name": "backgroundColor",
+        "kind": "color",
+        "required": false
+      },
+      {
+        "name": "color",
+        "kind": "color",
+        "required": false
       },
       {
         "name": "stylePaddingTop",
@@ -1904,6 +2035,26 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "tab": "style",
           "order": 7
         },
+        "styleBackgroundColor": {
+          "label": "Colore di sfondo",
+          "tab": "style",
+          "order": 12
+        },
+        "styleColor": {
+          "label": "Colore testo",
+          "tab": "style",
+          "order": 13
+        },
+        "backgroundColor": {
+          "label": "Colore di sfondo (fallback)",
+          "tab": "style",
+          "order": 14
+        },
+        "color": {
+          "label": "Colore testo (fallback)",
+          "tab": "style",
+          "order": 15
+        },
         "stylePaddingTop": {
           "label": "Padding superiore",
           "tab": "style",
@@ -1955,6 +2106,146 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "tab": "advanced",
           "order": 17,
           "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
+        }
+      }
+    }
+  },
+  {
+    "type": "form",
+    "v": 1,
+    "enabled": true,
+    "childrenAllow": [
+      "form-field",
+      "form-submit"
+    ],
+    "props": [
+      {
+        "name": "formKey",
+        "kind": "plainText",
+        "required": true,
+        "maxLength": 100,
+        "nonEmpty": true
+      }
+    ],
+    "meta": {
+      "label": "Modulo di contatto",
+      "category": "form",
+      "icon": "forms",
+      "props": {
+        "formKey": {
+          "label": "Chiave del modulo",
+          "order": 1,
+          "help": "Identificatore stabile del modulo: collega questo blocco alla configurazione dei destinatari (app_settings) e agli Invii storici. Non cambia duplicando il blocco."
+        }
+      }
+    }
+  },
+  {
+    "type": "form-field",
+    "v": 1,
+    "enabled": true,
+    "childrenAllow": [],
+    "props": [
+      {
+        "name": "fieldType",
+        "kind": "enum",
+        "required": true,
+        "values": [
+          "text",
+          "email",
+          "textarea",
+          "select",
+          "checkbox"
+        ]
+      },
+      {
+        "name": "name",
+        "kind": "plainText",
+        "required": true,
+        "maxLength": 100,
+        "nonEmpty": true
+      },
+      {
+        "name": "label",
+        "kind": "plainText",
+        "required": true,
+        "maxLength": 200
+      },
+      {
+        "name": "required",
+        "kind": "boolean",
+        "required": false,
+        "default": false
+      },
+      {
+        "name": "placeholder",
+        "kind": "plainText",
+        "required": false,
+        "maxLength": 200
+      },
+      {
+        "name": "options",
+        "kind": "plainText",
+        "required": false,
+        "maxLength": 1000
+      }
+    ],
+    "meta": {
+      "label": "Campo modulo",
+      "category": "form",
+      "icon": "input-search",
+      "props": {
+        "fieldType": {
+          "label": "Tipo campo",
+          "order": 1
+        },
+        "name": {
+          "label": "Nome campo",
+          "order": 2,
+          "help": "Identificatore stabile nel payload di sottomissione: non cambia duplicando il blocco."
+        },
+        "label": {
+          "label": "Etichetta",
+          "order": 3
+        },
+        "required": {
+          "label": "Obbligatorio",
+          "order": 4
+        },
+        "placeholder": {
+          "label": "Placeholder",
+          "order": 5
+        },
+        "options": {
+          "label": "Opzioni (solo per \"Select\")",
+          "order": 6,
+          "help": "Elenco separato da virgola, es. \"Nord,Centro,Sud\"."
+        }
+      }
+    }
+  },
+  {
+    "type": "form-submit",
+    "v": 1,
+    "enabled": true,
+    "childrenAllow": [],
+    "props": [
+      {
+        "name": "label",
+        "kind": "plainText",
+        "required": false,
+        "default": "Invia",
+        "maxLength": 80
+      }
+    ],
+    "meta": {
+      "label": "Pulsante invio modulo",
+      "category": "form",
+      "icon": "send",
+      "props": {
+        "label": {
+          "label": "Etichetta",
+          "order": 1
         }
       }
     }

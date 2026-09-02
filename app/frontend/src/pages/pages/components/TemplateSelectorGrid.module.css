@@ -1,0 +1,35 @@
+/* Griglia di card selezionabili per il Template di partenza (TemplateSelectorGrid.tsx). */
+
+.cardButton {
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
+.card {
+  position: relative;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.cardSelected {
+  border-color: var(--mantine-primary-color-filled);
+  background-color: var(--mantine-primary-color-light);
+}
+
+.selectedBadge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 0;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+}
+
+.icon {
+  color: var(--mantine-color-dimmed);
+}
+
+.cardSelected .icon {
+  color: var(--mantine-primary-color-filled);
+}

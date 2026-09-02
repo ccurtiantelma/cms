@@ -12,11 +12,14 @@ import { ActionIcon, Button, Menu, Tooltip } from '@mantine/core';
 import {
   IconAlignLeft,
   IconBox,
+  IconForms,
   IconHandClick,
   IconHeading,
+  IconInputSearch,
   IconLayoutBoard,
   IconPhoto,
   IconPlus,
+  IconSend,
   type Icon,
 } from '@tabler/icons-react';
 import { BLOCK_TYPES, type BlockTypeDescriptor } from '../../../types/blocks.types';
@@ -45,6 +48,9 @@ const ICON_MAP: Record<string, Icon> = {
   'align-left': IconAlignLeft,
   photo: IconPhoto,
   'hand-click': IconHandClick,
+  forms: IconForms,
+  'input-search': IconInputSearch,
+  send: IconSend,
 };
 
 /** Icona generica per un `meta.icon` assente o non presente in {@link ICON_MAP}. */

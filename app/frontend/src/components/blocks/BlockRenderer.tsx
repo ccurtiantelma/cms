@@ -23,6 +23,9 @@ import Heading from './blocks/Heading';
 import RichText from './blocks/RichText';
 import Image from './blocks/Image';
 import Button from './blocks/Button';
+import FormBlock from './blocks/FormBlock';
+import FormFieldBlock from './blocks/FormFieldBlock';
+import FormSubmitBlock from './blocks/FormSubmitBlock';
 import ContentPlaceholderBlock, { CONTENT_AREA_BLOCK_ID } from './blocks/ContentPlaceholderBlock';
 
 const KNOWN_TYPES = new Map(BLOCK_TYPES.map((descriptor) => [descriptor.type, descriptor]));
@@ -50,24 +53,46 @@ interface BlockEditingProps {
   onLabelInput?: (nextLabel: string) => void;
 }
 
+/**
+ * Dati di sottomissione di un `form` (F10-04, ADR-46 § 3/§ 4, N8): honeypot
+ * a nome derivato, firma HMAC e URL di destinazione, calcolati per `formKey`
+ * da chi monta `BlockRenderer` — mai qui. Pass-through opzionale come
+ * `editing`: valorizzato solo da `app/public-site` (`PageView.tsx`, unico
+ * punto con accesso al secret/all'origine browser-facing del backend); il
+ * Canvas admin non lo passa mai, quindi il blocco `form` vi resta senza
+ * honeypot/firma/azione — coerente con l'essere lì solo composizione
+ * visiva, mai un invio reale.
+ */
+interface FormSubmissionData {
+  honeypotFieldName: string;
+  signature: string;
+  submitUrl: string;
+}
+
 interface BlockRendererProps {
   node: RenderableBlockNode;
   /** Vedi {@link BlockEditingProps} e il commento di testa del file. */
   editing?: BlockEditingProps;
+  /** Vedi {@link FormSubmissionData}. */
+  formSubmission?: (formKey: string) => FormSubmissionData;
 }
 
 /** Renderizza un nodo dell'albero e, ricorsivamente, i suoi figli ammessi. */
-export default function BlockRenderer({ node, editing }: BlockRendererProps) {
+export default function BlockRenderer({ node, editing, formSubmission }: BlockRendererProps) {
   const descriptor = KNOWN_TYPES.get(node.type);
 
   if (!descriptor || !descriptor.enabled) {
     return null;
   }
 
-  return <BlockErrorBoundary>{renderNode(node, editing)}</BlockErrorBoundary>;
+  return <BlockErrorBoundary>{renderNode(node, editing, formSubmission)}</BlockErrorBoundary>;
 }
 
-function renderNode(node: RenderableBlockNode, editing: BlockEditingProps | undefined) {
+function renderNode(
+  node: RenderableBlockNode,
+  editing: BlockEditingProps | undefined,
+  formSubmission: ((formKey: string) => FormSubmissionData) | undefined,
+) {
   switch (node.type) {
     case 'section':
       return (
@@ -98,7 +123,7 @@ function renderNode(node: RenderableBlockNode, editing: BlockEditingProps | unde
           styleHideMobile={node.props.styleHideMobile}
         >
           {node.children.map((child) => (
-            <BlockRenderer key={child.id} node={child} />
+            <BlockRenderer key={child.id} node={child} formSubmission={formSubmission} />
           ))}
         </Section>
       );
@@ -112,7 +137,7 @@ function renderNode(node: RenderableBlockNode, editing: BlockEditingProps | unde
         return (
           <ContentPlaceholderBlock>
             {node.children.map((child) => (
-              <BlockRenderer key={child.id} node={child} />
+              <BlockRenderer key={child.id} node={child} formSubmission={formSubmission} />
             ))}
           </ContentPlaceholderBlock>
         );
@@ -132,7 +157,7 @@ function renderNode(node: RenderableBlockNode, editing: BlockEditingProps | unde
           customElementId={node.props.customElementId}
         >
           {node.children.map((child) => (
-            <BlockRenderer key={child.id} node={child} />
+            <BlockRenderer key={child.id} node={child} formSubmission={formSubmission} />
           ))}
         </Container>
       );
@@ -219,6 +244,31 @@ function renderNode(node: RenderableBlockNode, editing: BlockEditingProps | unde
         />
       );
     }
+    case 'form': {
+      const formKey = node.props.formKey;
+      const submission =
+        typeof formKey === 'string' && formKey ? formSubmission?.(formKey) : undefined;
+      return (
+        <FormBlock formKey={formKey} submission={submission}>
+          {node.children.map((child) => (
+            <BlockRenderer key={child.id} node={child} />
+          ))}
+        </FormBlock>
+      );
+    }
+    case 'form-field':
+      return (
+        <FormFieldBlock
+          fieldType={node.props.fieldType}
+          name={node.props.name}
+          label={node.props.label}
+          required={node.props.required}
+          placeholder={node.props.placeholder}
+          options={node.props.options}
+        />
+      );
+    case 'form-submit':
+      return <FormSubmitBlock label={node.props.label} />;
     default:
       return null;
   }

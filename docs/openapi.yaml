@@ -650,124 +650,6 @@ paths:
         log)
       tags:
         - Settings
-  /api/v1/health:
-    get:
-      operationId: HealthController_check
-      parameters: []
-      responses:
-        '200':
-          description: |-
-            Tutte le dipendenze esterne sono raggiungibili
-
-            The Health Check is successful
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: ok
-                  info:
-                    type: object
-                    example:
-                      database:
-                        status: up
-                    additionalProperties:
-                      type: object
-                      required:
-                        - status
-                      properties:
-                        status:
-                          type: string
-                      additionalProperties: true
-                    nullable: true
-                  error:
-                    type: object
-                    example: {}
-                    additionalProperties:
-                      type: object
-                      required:
-                        - status
-                      properties:
-                        status:
-                          type: string
-                      additionalProperties: true
-                    nullable: true
-                  details:
-                    type: object
-                    example:
-                      database:
-                        status: up
-                    additionalProperties:
-                      type: object
-                      required:
-                        - status
-                      properties:
-                        status:
-                          type: string
-                      additionalProperties: true
-        '503':
-          description: |-
-            Almeno una dipendenza esterna non è raggiungibile
-
-            The Health Check is not successful
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: error
-                  info:
-                    type: object
-                    example:
-                      database:
-                        status: up
-                    additionalProperties:
-                      type: object
-                      required:
-                        - status
-                      properties:
-                        status:
-                          type: string
-                      additionalProperties: true
-                    nullable: true
-                  error:
-                    type: object
-                    example:
-                      redis:
-                        status: down
-                        message: Could not connect
-                    additionalProperties:
-                      type: object
-                      required:
-                        - status
-                      properties:
-                        status:
-                          type: string
-                      additionalProperties: true
-                    nullable: true
-                  details:
-                    type: object
-                    example:
-                      database:
-                        status: up
-                      redis:
-                        status: down
-                        message: Could not connect
-                    additionalProperties:
-                      type: object
-                      required:
-                        - status
-                      properties:
-                        status:
-                          type: string
-                      additionalProperties: true
-      summary: Health check applicativo (verifica connettività DB, Redis e coda BullMQ)
-      tags:
-        - Health
   /api/v1/app/files:
     post:
       operationId: FilesController_upload
@@ -912,6 +794,124 @@ paths:
       summary: Serve il blob di un media editoriale pubblicato (immagine)
       tags:
         - Public Media
+  /api/v1/health:
+    get:
+      operationId: HealthController_check
+      parameters: []
+      responses:
+        '200':
+          description: |-
+            Tutte le dipendenze esterne sono raggiungibili
+
+            The Health Check is successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  info:
+                    type: object
+                    example:
+                      database:
+                        status: up
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+                    nullable: true
+                  error:
+                    type: object
+                    example: {}
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+                    nullable: true
+                  details:
+                    type: object
+                    example:
+                      database:
+                        status: up
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+        '503':
+          description: |-
+            Almeno una dipendenza esterna non è raggiungibile
+
+            The Health Check is not successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  info:
+                    type: object
+                    example:
+                      database:
+                        status: up
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+                    nullable: true
+                  error:
+                    type: object
+                    example:
+                      redis:
+                        status: down
+                        message: Could not connect
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+                    nullable: true
+                  details:
+                    type: object
+                    example:
+                      database:
+                        status: up
+                      redis:
+                        status: down
+                        message: Could not connect
+                    additionalProperties:
+                      type: object
+                      required:
+                        - status
+                      properties:
+                        status:
+                          type: string
+                      additionalProperties: true
+      summary: Health check applicativo (verifica connettività DB, Redis e coda BullMQ)
+      tags:
+        - Health
   /api/v1/app/notifications:
     get:
       operationId: NotificationsController_findAll
@@ -2036,6 +2036,68 @@ paths:
       summary: Distribuzione percentuale per device e per browser
       tags:
         - Analytics
+  /api/v1/app/forms/submissions:
+    get:
+      operationId: FormsController_listSubmissions
+      parameters:
+        - name: p
+          required: false
+          in: query
+          description: Pagina (default 1)
+          schema:
+            type: string
+        - name: i
+          required: false
+          in: query
+          description: Elementi per pagina (default 20)
+          schema:
+            type: string
+        - name: d
+          required: false
+          in: query
+          description: Direzione ordinamento per createdAt (asc|desc, default desc)
+          schema:
+            type: string
+        - name: formKey
+          required: false
+          in: query
+          description: Filtro per chiave editoriale del modulo
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista Invii paginata
+      security:
+        - access-token: []
+      summary: Lista paginata degli Invii (Manager+)
+      tags:
+        - Forms
+  /api/v1/public/forms/{formId}/submit:
+    post:
+      operationId: PublicFormsController_submit
+      parameters:
+        - name: formId
+          required: true
+          in: path
+          description: Chiave editoriale del modulo (form.formKey)
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitFormDto'
+      responses:
+        '200':
+          description: 'Sempre 200: esito reale mai rivelato al chiamante'
+        '400':
+          description: Valori non conformi ai form-field realmente pubblicati
+        '404':
+          description: Nessun blocco form pubblicato con questo formKey
+      summary: Elabora la sottomissione di un Form pubblicato
+      tags:
+        - Public Forms
 info:
   title: CMS API
   description: >-
@@ -3598,6 +3660,9 @@ components:
           description: Metadati SEO/GEO iniziali
           allOf:
             - $ref: '#/components/schemas/PageSeoDto'
+        templateSlug:
+          type: string
+          example: landing-page
       required:
         - title
         - locale
@@ -4465,3 +4530,24 @@ components:
       required:
         - devices
         - browsers
+    SubmitFormDto:
+      type: object
+      properties:
+        signature:
+          type: string
+          description: >-
+            Firma HMAC-SHA256(formKey, FORM_ANTISPAM_SECRET) calcolata dal
+            renderer al momento del render/export e restituita invariata dal
+            client (ADR-46 § 3, RFC-46 D6.2). Non è un token di sessione:
+            nessuno stato, nessuna scadenza.
+          example: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2
+        values:
+          type: object
+          description: >-
+            Valori dei campi realmente sottomessi, chiave = form-field.name. La
+            whitelist dei nomi ammessi è fatta dal service contro i form-field
+            realmente pubblicati (RFC-46 D4.3), mai da questa DTO.
+          additionalProperties: true
+      required:
+        - signature
+        - values

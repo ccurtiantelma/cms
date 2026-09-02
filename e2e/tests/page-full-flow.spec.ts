@@ -56,8 +56,7 @@ test('slug nidificato, section a due colonne, editing inline e prop responsive m
 
   // ─── 1. Pagina genitore, creata e lasciata in bozza (vedi commento di testa) ──────────────
   const parentSlug = uniqueSlug('test-parent');
-  await createPageFromUi(page, { title: TITOLO_GENITORE, slug: parentSlug });
-  const parentGuid = page.url().split('/').pop() as string;
+  const parentGuid = await createPageFromUi(page, { title: TITOLO_GENITORE, slug: parentSlug });
 
   // ─── 2. Pagina figlia, annidata sotto il genitore in bozza (drawer "Nuova Pagina", campo
   // "Pagina genitore (guid)") ─────────────────────────────────────────────────────────────
@@ -70,8 +69,15 @@ test('slug nidificato, section a due colonne, editing inline e prop responsive m
   // `section` non ha alcuna prop `tab:'content'` nel registro (solo le sette di stile,
   // ADR-29/ADR-31): l'ispettore mostra un unico elenco, senza schede — "Colonne" è
   // raggiungibile subito dopo la selezione, senza cliccare "Stile".
+  // La Pagina figlia appena creata non parte da un canvas vuoto: il `templateSlug` di
+  // default ("empty", RFC-43) porta già una Sezione seed in radice
+  // (`page-blueprints.registry.ts`), mai toccata da questo test. `.last()`: la Sezione seed
+  // la precede sempre nel DOM, quindi la Sezione di questo test — quella su cui si imposta
+  // `columns`/`stylePadding` sotto — è sempre l'ultima, stesso principio di `newSection` in
+  // `page-editor-navigator-layouts.spec.ts`. Senza questo scoping `selectBlock`
+  // (`.first()` interno) selezionerebbe la Sezione seed invece di quella appena composta.
   await addRootBlock(page, 'Sezione');
-  const section = blockOfType(page, 'section');
+  const section = blockOfType(page, 'section').last();
   await selectBlock(section, 'Sezione');
   await selectProp(page, 'columns', '2');
 

@@ -109,6 +109,17 @@ export class AppConstants {
    * dal middleware su `public/*path`).
    */
   static readonly analyticsSaltSecret = str('ANALYTICS_SALT_SECRET', 'change_me_analytics_salt');
+  /**
+   * Segreto **dedicato** dell'anti-spam headless dei Form (ADR-46 § 3,
+   * RFC-46 D6): usato per derivare sia il nome del campo honeypot
+   * (`HMAC-SHA256(formKey, secret)` troncato — mai una stringa fissa
+   * riconoscibile) sia la firma HMAC iniettata nell'HTML esportato/
+   * renderizzato e verificata a submit. Non è un token di sessione, nessuna
+   * scadenza. Volutamente distinto da `analyticsSaltSecret`: nessun
+   * beneficio a condividerlo, un secret in più da poter ruotare
+   * indipendentemente (RFC-46 § Alternative valutate).
+   */
+  static readonly formAntispamSecret = str('FORM_ANTISPAM_SECRET', 'change_me_form_antispam');
 
   static readonly frontendUrl = str('FRONTEND_URL', 'http://localhost:55173');
   /**
@@ -199,4 +210,14 @@ export class AppConstants {
   static readonly sentryTracesSampleRate = num('SENTRY_TRACES_SAMPLE_RATE', 0);
   /** Espone `GET /metrics` (formato Prometheus, `prom-client`). Disattivato di default: nessun endpoint registrato se `false`. */
   static readonly metricsEnabled = bool('METRICS_ENABLED', false);
+
+  /**
+   * Cartella fisica dell'export statico (RFC-44 § Decisione 2/8), destinata
+   * a essere servita da Nginx via bind mount (`LocalFolderDeployer`, unico
+   * deployer implementato). Contiene sia l'HTML esportato per `locale`/
+   * `path` sia `manifest.json`.
+   */
+  static readonly staticExportPath = str('STATIC_EXPORT_PATH', 'dist/static-site');
+  /** Dimensione dei batch di fan-out del full-site rebuild (RFC-44 § Decisione 4): backpressure, mai tutto in un solo giro. */
+  static readonly staticExportFullSiteBatchSize = num('STATIC_EXPORT_FULL_SITE_BATCH_SIZE', 50);
 }

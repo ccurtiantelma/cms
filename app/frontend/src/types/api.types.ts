@@ -469,23 +469,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Health check applicativo (verifica connettività DB, Redis e coda BullMQ) */
-        get: operations["HealthController_check"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/app/files": {
         parameters: {
             query?: never;
@@ -548,6 +531,23 @@ export interface paths {
         };
         /** Serve il blob di un media editoriale pubblicato (immagine) */
         get: operations["PublicMediaController_getMedia"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Health check applicativo (verifica connettività DB, Redis e coda BullMQ) */
+        get: operations["HealthController_check"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1019,6 +1019,40 @@ export interface paths {
         get: operations["AnalyticsController_getDeviceStats"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/app/forms/submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista paginata degli Invii (Manager+) */
+        get: operations["FormsController_listSubmissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/forms/{formId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Elabora la sottomissione di un Form pubblicato */
+        post: operations["PublicFormsController_submit"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2114,6 +2148,8 @@ export interface components {
             };
             /** @description Metadati SEO/GEO iniziali */
             draftSeo?: components["schemas"]["PageSeoDto"];
+            /** @example landing-page */
+            templateSlug?: string;
         };
         PageDto: {
             /**
@@ -2725,6 +2761,17 @@ export interface components {
         AnalyticsDeviceStatsDto: {
             devices: components["schemas"]["AnalyticsDistributionRowDto"][];
             browsers: components["schemas"]["AnalyticsDistributionRowDto"][];
+        };
+        SubmitFormDto: {
+            /**
+             * @description Firma HMAC-SHA256(formKey, FORM_ANTISPAM_SECRET) calcolata dal renderer al momento del render/export e restituita invariata dal client (ADR-46 § 3, RFC-46 D6.2). Non è un token di sessione: nessuno stato, nessuna scadenza.
+             * @example a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2
+             */
+            signature: string;
+            /** @description Valori dei campi realmente sottomessi, chiave = form-field.name. La whitelist dei nomi ammessi è fatta dal service contro i form-field realmente pubblicati (RFC-46 D4.3), mai da questa DTO. */
+            values: {
+                [key: string]: unknown;
+            };
         };
     };
     responses: never;
@@ -3712,132 +3759,6 @@ export interface operations {
             };
         };
     };
-    HealthController_check: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /**
-             * @description Tutte le dipendenze esterne sono raggiungibili
-             *
-             *     The Health Check is successful
-             */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example ok */
-                        status?: string;
-                        /**
-                         * @example {
-                         *       "database": {
-                         *         "status": "up"
-                         *       }
-                         *     }
-                         */
-                        info?: {
-                            [key: string]: {
-                                status: string;
-                            } & {
-                                [key: string]: unknown;
-                            };
-                        } | null;
-                        /** @example {} */
-                        error?: {
-                            [key: string]: {
-                                status: string;
-                            } & {
-                                [key: string]: unknown;
-                            };
-                        } | null;
-                        /**
-                         * @example {
-                         *       "database": {
-                         *         "status": "up"
-                         *       }
-                         *     }
-                         */
-                        details?: {
-                            [key: string]: {
-                                status: string;
-                            } & {
-                                [key: string]: unknown;
-                            };
-                        };
-                    };
-                };
-            };
-            /**
-             * @description Almeno una dipendenza esterna non è raggiungibile
-             *
-             *     The Health Check is not successful
-             */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example error */
-                        status?: string;
-                        /**
-                         * @example {
-                         *       "database": {
-                         *         "status": "up"
-                         *       }
-                         *     }
-                         */
-                        info?: {
-                            [key: string]: {
-                                status: string;
-                            } & {
-                                [key: string]: unknown;
-                            };
-                        } | null;
-                        /**
-                         * @example {
-                         *       "redis": {
-                         *         "status": "down",
-                         *         "message": "Could not connect"
-                         *       }
-                         *     }
-                         */
-                        error?: {
-                            [key: string]: {
-                                status: string;
-                            } & {
-                                [key: string]: unknown;
-                            };
-                        } | null;
-                        /**
-                         * @example {
-                         *       "database": {
-                         *         "status": "up"
-                         *       },
-                         *       "redis": {
-                         *         "status": "down",
-                         *         "message": "Could not connect"
-                         *       }
-                         *     }
-                         */
-                        details?: {
-                            [key: string]: {
-                                status: string;
-                            } & {
-                                [key: string]: unknown;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
     FilesController_findAll: {
         parameters: {
             query?: {
@@ -4011,6 +3932,132 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    HealthController_check: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description Tutte le dipendenze esterne sono raggiungibili
+             *
+             *     The Health Check is successful
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example ok */
+                        status?: string;
+                        /**
+                         * @example {
+                         *       "database": {
+                         *         "status": "up"
+                         *       }
+                         *     }
+                         */
+                        info?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        } | null;
+                        /** @example {} */
+                        error?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        } | null;
+                        /**
+                         * @example {
+                         *       "database": {
+                         *         "status": "up"
+                         *       }
+                         *     }
+                         */
+                        details?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+            /**
+             * @description Almeno una dipendenza esterna non è raggiungibile
+             *
+             *     The Health Check is not successful
+             */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example error */
+                        status?: string;
+                        /**
+                         * @example {
+                         *       "database": {
+                         *         "status": "up"
+                         *       }
+                         *     }
+                         */
+                        info?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        } | null;
+                        /**
+                         * @example {
+                         *       "redis": {
+                         *         "status": "down",
+                         *         "message": "Could not connect"
+                         *       }
+                         *     }
+                         */
+                        error?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        } | null;
+                        /**
+                         * @example {
+                         *       "database": {
+                         *         "status": "up"
+                         *       },
+                         *       "redis": {
+                         *         "status": "down",
+                         *         "message": "Could not connect"
+                         *       }
+                         *     }
+                         */
+                        details?: {
+                            [key: string]: {
+                                status: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
     };
@@ -5214,6 +5261,72 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AnalyticsDeviceStatsDto"];
                 };
+            };
+        };
+    };
+    FormsController_listSubmissions: {
+        parameters: {
+            query?: {
+                /** @description Pagina (default 1) */
+                p?: string;
+                /** @description Elementi per pagina (default 20) */
+                i?: string;
+                /** @description Direzione ordinamento per createdAt (asc|desc, default desc) */
+                d?: string;
+                /** @description Filtro per chiave editoriale del modulo */
+                formKey?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista Invii paginata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicFormsController_submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Chiave editoriale del modulo (form.formKey) */
+                formId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitFormDto"];
+            };
+        };
+        responses: {
+            /** @description Sempre 200: esito reale mai rivelato al chiamante */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Valori non conformi ai form-field realmente pubblicati */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Nessun blocco form pubblicato con questo formKey */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

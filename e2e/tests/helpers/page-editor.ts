@@ -68,8 +68,12 @@ export async function createPageFromUi(
   }
   await drawer.getByRole('button', { name: 'Salva' }).click();
 
-  await expect(page).toHaveURL(/\/pages\/[0-9a-f]{16}$/);
-  const guid = page.url().split('/').pop() as string;
+  // `?tab=content` in coda: comportamento applicativo reale osservato dopo la creazione
+  // (non più il solo `/pages/{guid}` di quando questo helper è stato scritto) — la regex
+  // e l'estrazione del guid tollerano la query string invece di dipendere dalla forma
+  // esatta dell'URL post-navigazione.
+  await expect(page).toHaveURL(/\/pages\/[0-9a-f]{16}(\?.*)?$/);
+  const guid = page.url().match(/\/pages\/([0-9a-f]{16})/)?.[1] as string;
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
   return guid;
 }
@@ -515,9 +519,33 @@ export async function dragTreeNodeOnto(page: Page, sourceLabel: string, targetRo
   // alla destinazione reale, stesso principio di `dragWidgetTileToZone`
   // (`container-flexbox.spec.ts`).
   await page.mouse.move(startX + 6, startY + 6, { steps: 5 });
-  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, {
-    steps: 10,
-  });
+  await page.waitForTimeout(150);
+
+  // Tragitto in tanti piccoli passi, ciascuno seguito da un'attesa reale — non un singolo
+  // `mouse.move({ steps })`, che interpola le coordinate ma le invia tutte "a raffica" senza
+  // lasciare tempo al ciclo di render di React fra l'una e l'altra. `closestCenter` di
+  // dnd-kit ricalcola la collisione a ogni `pointermove` sulla base delle posizioni **misurate
+  // nel DOM in quel momento** (non della coordinata target finale): con più righe sopra il
+  // bersaglio (Sezione seed inclusa, vedi i commenti dei chiamanti) il tragitto è più lungo, e
+  // inviare tutte le coordinate intermedie senza attese reali fa perdere a dnd-kit gli
+  // aggiornamenti intermedi — **verificato empiricamente**: lo stesso gesto, con lo stesso
+  // punto di partenza e arrivo, rilasciava il nodo su se stesso (nessun movimento) quando
+  // inviato "a raffica", e lo spostava correttamente quando scandito con `waitForTimeout` fra
+  // un micro-passo e l'altro.
+  const targetX = targetBox.x + targetBox.width / 2;
+  const targetY = targetBox.y + targetBox.height / 2;
+  const fromX = startX + 6;
+  const fromY = startY + 6;
+  const microSteps = 20;
+  for (let step = 1; step <= microSteps; step += 1) {
+    await page.mouse.move(
+      fromX + ((targetX - fromX) * step) / microSteps,
+      fromY + ((targetY - fromY) * step) / microSteps,
+    );
+    await page.waitForTimeout(30);
+  }
+
+  await page.waitForTimeout(150);
   await page.mouse.up();
 }
 

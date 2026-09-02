@@ -362,6 +362,24 @@ export function effectiveScalarForViewport(
   return envelope.default;
 }
 
+/**
+ * Vero se una prop `responsive` porta un valore esplicito per il breakpoint attivo — cioè
+ * la chiave esiste nell'envelope (ADR-29 § 2), non che coincida col valore in cascata: un
+ * `tablet` esplicito uguale al `default` resta comunque un override (`{ ...valore,
+ * default: nuovo }`, mai la cancellazione della chiave). `default` non è mai un
+ * "override": è la base su cui gli altri due breakpoint cascano, quindi `false` a
+ * prescindere dal valore quando `breakpoint === 'default'`.
+ */
+export function hasExplicitOverrideAtBreakpoint(
+  prop: BlockPropDescriptor,
+  value: unknown,
+  breakpoint: 'default' | 'tablet' | 'mobile',
+): boolean {
+  if (!prop.responsive || breakpoint === 'default') return false;
+  const envelope = responsiveEnvelope(prop, value);
+  return envelope[breakpoint] !== undefined;
+}
+
 /** Messaggio di errore UX per una prop, o `undefined` se il valore è accettabile. */
 export function uxError(prop: BlockPropDescriptor, value: unknown): string | undefined {
   // `unitValue`/`border`/`shadow` sono valori a oggetto, mai testo (ADR-38 § 2/§ 3/§ 4):

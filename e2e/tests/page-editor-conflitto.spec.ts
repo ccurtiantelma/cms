@@ -33,10 +33,19 @@ const TITOLO_PAGINA = 'Due sessioni — E2E F04';
 const TESTO_DI_A = 'Titolo scritto dalla sessione A';
 const TESTO_DI_B = 'Titolo scritto dalla sessione B';
 
-/** Aggiunge una `section` con un `heading` compilato: la modifica minima di una sessione. */
+/**
+ * Aggiunge una `section` con un `heading` compilato: la modifica minima di una sessione.
+ *
+ * La Pagina appena creata non parte da un canvas vuoto: il `templateSlug` di default
+ * ("empty", RFC-43) porta già una Sezione seed in radice (`page-blueprints.registry.ts`).
+ * `.last()`: la Sezione seed la precede sempre nel DOM, quindi la Sezione appena aggiunta
+ * qui è sempre l'ultima — senza questo scoping `addChildBlock` (che sceglie il trigger
+ * "Contenitore vuoto" ambiguo fra le due Sezioni vuote) rischierebbe di comporre dentro
+ * quella sbagliata.
+ */
 async function comporreTitolo(page: Page, testo: string): Promise<void> {
   await addRootBlock(page, 'Sezione');
-  const section = blockOfType(page, 'section');
+  const section = blockOfType(page, 'section').last();
   await addChildBlock(section, 'Titolo');
   await selectBlock(blockOfType(section, 'heading'), 'Titolo');
   await fillProp(page, 'text', testo);

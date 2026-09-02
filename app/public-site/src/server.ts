@@ -47,7 +47,23 @@ function loadCss(): { href: string; content: string } {
   };
 }
 
+/**
+ * Isola JS di submit dei Form (F10-04): asset statico non hashato — a
+ * differenza del CSS non deriva dal contenuto dei blocchi, è un file scritto
+ * a mano e copiato in `dist/assets/` dallo script `build` (`package.json`).
+ * Nessun `Cache-Control: immutable` (il nome file non cambia a ogni deploy
+ * come invece garantisce l'hash del CSS).
+ */
+function loadFormSubmitScript(): { href: string; content: string } {
+  const fileName = 'form-submit.js';
+  return {
+    href: `/assets/${fileName}`,
+    content: readFileSync(join(currentDir, 'assets', fileName), 'utf-8'),
+  };
+}
+
 const css = loadCss();
+const formSubmitScript = loadFormSubmitScript();
 
 async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -74,6 +90,15 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     return;
   }
 
+  if (url.pathname === formSubmitScript.href) {
+    res.writeHead(200, {
+      'Content-Type': 'text/javascript; charset=utf-8',
+      'Cache-Control': 'public, max-age=3600',
+    });
+    res.end(isHead ? undefined : formSubmitScript.content);
+    return;
+  }
+
   if (url.pathname.startsWith(PREVIEW_PATH_PREFIX)) {
     await handlePreviewRequest(url.pathname, isHead, res);
     return;
@@ -83,7 +108,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
 
   switch (resolution.kind) {
     case 'ok': {
-      const html = isHead ? undefined : await renderPageDocument(resolution.page, css.href);
+      const html = isHead ? undefined : await renderPageDocument(resolution.page, css.href, formSubmitScript.href);
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(html);
       if (!isHead) ingestPageview(url.pathname);
@@ -133,7 +158,7 @@ async function handlePreviewRequest(pathname: string, isHead: boolean, res: Serv
 
     switch (resolution.kind) {
       case 'ok': {
-        const html = isHead ? undefined : await renderPreviewDocument(resolution.page, css.href);
+        const html = isHead ? undefined : await renderPreviewDocument(resolution.page, css.href, formSubmitScript.href);
         res.writeHead(200, {
           'Content-Type': 'text/html; charset=utf-8',
           'X-Robots-Tag': PREVIEW_ROBOTS_HEADER,

@@ -65,6 +65,15 @@ lettura, solo `published`, rate limiting proprio, cache Redis con invalidazione 
 
 **Richiede ADR**: strategia di caching e invalidazione del contenuto pubblico.
 
+**Decisione ratificata (2026-09-01)**: `docs/ai/rfc/RFC-44-static-site-export-engine.md` —
+**Approvato** dal Project Owner (N1–N7 firmati). Il servizio pubblico si disaccoppia da
+Node/Database con un motore di export statico (SSG) sopra la SSR a richiesta già costruita
+(ADR-22/23/24), con `app/public-site` ridotto a server di sola anteprima per i redattori.
+Decisione conseguente registrata in `docs/ai/adr/ADR-45-ssg-export-architecture.md`
+(Approvata, riconcilia ADR-22 e ADR-23 in un'unica ADR, ADR-24 resta valida a tempo di
+build). Implementazione (`StaticExportModule`, adapter locale, tombstone, media) da
+pianificare.
+
 ---
 
 ### F04 — Editor visivo (page builder)
@@ -78,6 +87,12 @@ presenza di altri editor via Socket.io.
 **Richiede ADR**: eventuale libreria drag & drop (vincolo Mantine v7 esclusivo).
 **Rischio principale**: è la feature con il maggior potenziale di over-engineering.
 Va costruita per incrementi, partendo da un set minimo di blocchi.
+
+**Decisione aperta**: `docs/ai/rfc/RFC-45-wysiwyg-canvas-editing.md` — se estendere la
+formattazione ricca (Grassetto/Corsivo/Link) del Canvas a `heading`/`button`, oggi
+`plainText` per ADR-21 § 5. L'editing in-place di base (digitazione diretta nel Canvas,
+sync debounced, toolbar fluttuante su `richText`) è già costruito — vedi
+`docs/ai/progress-tracker.md` (voce F04) per lo stato reale, non riportato qui.
 
 ---
 
@@ -146,6 +161,18 @@ referenziati, verifica MIME reale.
 Definizione dei campi, blocco form, validazione server-side, persistenza degli Invii
 prima della notifica, notifiche via coda BullMQ, anti-spam (rate limit + honeypot +
 marca temporale), consultazione ed export degli Invii.
+
+**Decisione aperta (2026-09-01)**: `docs/ai/rfc/RFC-46-dynamic-form-builder.md` — in
+discussione. Propone tre nuovi tipi di blocco (`form`/`form-field`/`form-submit`, ADR-21 §
+5 aveva già nominato "il blocco form è di F10"), destinatari/notifica in `app_settings`
+anziché in una nuova tabella "Modulo", `form_submissions` come unica tabella nuova,
+endpoint pubblico disaccoppiato compatibile con l'export statico di ADR-45 (CORS scoped
+alla sola rotta, honeypot a nome derivato + firma HMAC in luogo di CSRF/sessione). Segnala
+un conflitto non risolto in autonomia: la "marca temporale minima di compilazione" delle
+business rules presuppone un render per-visita che una pagina esportata staticamente non
+ha (ADR-22 § Conseguenza, "il sito pubblico non ha JavaScript" — il form è la prima
+"isola" che quella nota anticipava) — tre opzioni proposte, nessuna scelta senza firma
+umana.
 
 ---
 

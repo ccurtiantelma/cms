@@ -1,0 +1,47 @@
+info:
+  name: List Files
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{baseUrl}}/app/files?p=1&i=20"
+  params:
+    - name: p
+      value: "1"
+      type: query
+    - name: i
+      value: "20"
+      type: query
+    - name: q
+      value: ""
+      type: query
+      disabled: true
+    - name: mimeType
+      value: "image/png"
+      type: query
+      disabled: true
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 200 (ruolo Manager+) o 403 (ruolo User, GuardManager)", function() {
+    expect(res.getStatus()).to.be.oneOf([200, 403]);
+  });
+
+  test("se 200, risposta è paginata di FileMetadataDto (mai storageKey/checksumSha256)", function() {
+    if (res.getStatus() !== 200) return;
+    const body = res.getBody();
+    expect(body).to.have.all.keys("items", "totalItems", "totalPages", "currentPage", "itemsPerPage");
+    body.items.forEach((item) => {
+      expect(item).to.not.have.property("storageKey");
+      expect(item).to.not.have.property("checksumSha256");
+    });
+  });

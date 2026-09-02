@@ -196,6 +196,17 @@ interface BlockEditorState {
    */
   hiddenInCanvasIds: ReadonlySet<string>;
   /**
+   * Id del nodo sotto il puntatore nel pannello Struttura/Navigator
+   * (`EditorStructureNavigator.tsx`), `null` altrimenti — stato UI puramente effimero,
+   * mai persistito. A differenza dell'hover del canvas (`isHovered` locale a
+   * `EditorBlockWrapper.tsx`, mai promosso allo store perché nessun altro componente lo
+   * consultava), questo hover nasce fuori dal wrapper del blocco e deve raggiungerlo per
+   * evidenziare la riga corrispondente nel canvas — da qui la promozione a Zustand, letta
+   * per id con {@link useIsHoveredFromNavigator} così l'hover su una riga non ri-renderizza
+   * i wrapper degli altri nodi.
+   */
+  hoveredId: string | null;
+  /**
    * Global Design Tokens correnti (F04 step 1, `libs/globalTokensCompiler.ts`) — palette
    * di brand, font di base, unità di spaziatura, esposti come variabili CSS al canvas.
    * `null` finché nessuno li ha impostati in questa sessione: né persistenza né UI di
@@ -278,6 +289,8 @@ interface BlockEditorState {
    * contenuto — annullarla con "Ctrl+Z" sorprenderebbe più di quanto aiuterebbe.
    */
   toggleHiddenInCanvas: (id: string) => void;
+  /** Imposta il nodo sotto il puntatore nel pannello Struttura/Navigator, o `null` per sgombrare l'hover. */
+  setHoveredId: (id: string | null) => void;
   /** Disfa l'ultimo comando applicato, se presente. */
   undo: () => void;
   /** Rifà l'ultimo comando disfatto, se presente. */
@@ -409,6 +422,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   historyIndex: -1,
   savePoint: CLEAN_SAVE_POINT,
   hiddenInCanvasIds: new Set(),
+  hoveredId: null,
   globalTokens: null,
   containerResize: null,
   styleClipboard: null,
@@ -426,6 +440,9 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       // Stato UI del canvas legato alla sessione di editing precedente: un nodo
       // "nascosto" nella bozza appena sostituita non ha più motivo di restarlo qui.
       hiddenInCanvasIds: new Set(),
+      // Stesso principio: un hover del navigator legato alla sessione precedente non ha
+      // più un nodo a cui riferirsi.
+      hoveredId: null,
       // Stesso principio per un ridimensionamento eventualmente rimasto aperto: l'albero
       // sotto di lui non esiste più.
       containerResize: null,
@@ -685,6 +702,9 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       return { hiddenInCanvasIds: next };
     }),
 
+  setHoveredId: (id) =>
+    set((state) => (state.hoveredId === id ? {} : { hoveredId: id })),
+
   undo: () => {
     set((state) => {
       if (state.undoStack.length === 0) return {};
@@ -917,6 +937,17 @@ export function useRootBlocks(): BlockNode[] {
  */
 export function useIsHiddenInCanvas(id: string): boolean {
   return useBlockEditorStore((state) => state.hiddenInCanvasIds.has(id));
+}
+
+/**
+ * Selettore granulare: il nodo `id` è sotto il puntatore nel pannello Struttura/Navigator
+ * (vedi {@link BlockEditorState.hoveredId}). Sottoscrive solo l'uguaglianza con questo id,
+ * non `hoveredId` intero: l'hover che si sposta da una riga all'altra del navigator
+ * ri-renderizza solo i due wrapper coinvolti (quello lasciato e quello raggiunto), non ogni
+ * blocco del canvas.
+ */
+export function useIsHoveredFromNavigator(id: string): boolean {
+  return useBlockEditorStore((state) => state.hoveredId === id);
 }
 
 /** Selettore granulare: c'è almeno un comando da annullare. */

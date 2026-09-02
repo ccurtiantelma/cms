@@ -138,6 +138,16 @@ export class PublicPageCacheService {
     return [location];
   }
 
+  /**
+   * Risolve `locale`+`path` canonici di una Pagina (stesso calcolo di
+   * {@link invalidatePage}, esposto qui perché `ExportModule` (RFC-44) ne ha
+   * bisogno per accodare l'export/tombstone con lo stesso percorso che
+   * questa cache invalida — mai un secondo calcolo divergente).
+   */
+  async resolveLocation(pageId: number): Promise<CacheableLocation | null> {
+    return this.resolveOwnLocation(pageId);
+  }
+
   private async resolveOwnLocation(pageId: number): Promise<CacheableLocation | null> {
     const page = await this.db.db.query.pageEntity.findFirst({
       where: eq(pageEntity.id, pageId),

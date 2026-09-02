@@ -51,4 +51,10 @@ export class CreatePageDto {
   @ValidateNested()
   @Type(() => PageSeoDto)
   draftSeo?: PageSeoDto;
+
+  @ApiProperty({ example: 'landing-page', required: false })
+  @IsString({ message: 'templateSlug deve essere una stringa.' })
+  @IsOptional()
+  @MaxLength(100, { message: 'templateSlug non può superare i 100 caratteri.' })
+  templateSlug?: string;
 }

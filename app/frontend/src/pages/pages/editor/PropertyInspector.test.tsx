@@ -257,6 +257,203 @@ describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
 
     expect(screen.getByRole('textbox', { name: 'Spazio prima (Mobile)' })).toHaveValue('sm');
   });
+
+  /**
+   * T8 (SPEC-F04-grid-responsive-engine.md § 6, gap 4): stesso invariante già coperto sopra
+   * per `styleSpaceBefore`, replicato sulle tre props di layout a colonne di ADR-31
+   * (`section.columns`/`gap`/`alignItems`) — anch'esse un `Select` responsive generico
+   * (ramo `enum` di `PropField.tsx`, nessuna delle tre è in `SPACING_SLIDER_PROPS` né in
+   * `CONTAINER_FLEX_SEGMENTED_PROPS`).
+   */
+  it('section.columns: modificare il controllo desktop lascia intatti tablet e mobile', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(
+      node('sec-columns', 'section', {
+        columns: { default: '1', tablet: '2', mobile: '1' },
+      }),
+    );
+
+    const select = screen.getByRole('textbox', { name: 'Colonne' });
+    await user.click(select);
+    await user.click(screen.getByRole('option', { name: '3' }));
+
+    expect(propsInStore('sec-columns').columns).toEqual({
+      default: '3',
+      tablet: '2',
+      mobile: '1',
+    });
+  });
+
+  it('section.gap: modificare il controllo desktop lascia intatti tablet e mobile', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(
+      node('sec-gap', 'section', {
+        gap: { default: 'none', tablet: 'sm', mobile: 'lg' },
+      }),
+    );
+
+    const select = screen.getByRole('textbox', { name: 'Spaziatura tra colonne' });
+    await user.click(select);
+    await user.click(screen.getByRole('option', { name: 'md' }));
+
+    expect(propsInStore('sec-gap').gap).toEqual({
+      default: 'md',
+      tablet: 'sm',
+      mobile: 'lg',
+    });
+  });
+
+  /**
+   * `alignItems` è riconosciuta per **nome** da `CONTAINER_FLEX_SEGMENTED_PROPS`
+   * (`inspector.utils.ts`), non per tipo di blocco: `section.alignItems` condivide quindi il
+   * ramo `SegmentedControl` con `container.alignItems`, non il `Select` generico — a
+   * differenza di `columns`/`gap` sopra, che restano estranee a quell'insieme.
+   */
+  it('section.alignItems (SegmentedControl, stesso nome di container.alignItems): modificare il controllo desktop lascia intatti tablet e mobile', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(
+      node('sec-align', 'section', {
+        alignItems: { default: 'stretch', tablet: 'center', mobile: 'flex-end' },
+      }),
+    );
+
+    const flexStartRadio = screen.getByRole('radio', { name: 'flex-start' });
+    await user.click(flexStartRadio);
+
+    expect(propsInStore('sec-align').alignItems).toEqual({
+      default: 'flex-start',
+      tablet: 'center',
+      mobile: 'flex-end',
+    });
+  });
+
+  /**
+   * Stesso invariante T8, sul ramo `SegmentedControl` di `container`
+   * (`CONTAINER_FLEX_SEGMENTED_PROPS`, `inspector.utils.ts`): il controllo scrive `{
+   * ...envelope, [breakpointKey]: next }`, mai una sovrascrittura dell'intero oggetto — qui
+   * verificato su `flexDirection`, una delle quattro props del set (`justifyContent`/
+   * `alignItems`/`wrap` condividono lo stesso ramo di `PropField.tsx`).
+   */
+  it('container.flexDirection (SegmentedControl): modificare il controllo desktop lascia intatti tablet e mobile', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(
+      node('cont-flex', 'container', {
+        flexDirection: { default: 'row', tablet: 'column', mobile: 'column-reverse' },
+      }),
+    );
+
+    const rowReverseRadio = screen.getByRole('radio', { name: 'row-reverse' });
+    await user.click(rowReverseRadio);
+
+    expect(propsInStore('cont-flex').flexDirection).toEqual({
+      default: 'row-reverse',
+      tablet: 'column',
+      mobile: 'column-reverse',
+    });
+  });
+
+  it('container.flexDirection (SegmentedControl): con lo Switcher su Tablet scrive solo la chiave tablet', async () => {
+    const user = userEvent.setup();
+    useBlockEditorStore.getState().setActiveViewport('tablet');
+    renderInspectorWith(
+      node('cont-flex-tablet', 'container', {
+        flexDirection: { default: 'row', mobile: 'column-reverse' },
+      }),
+    );
+
+    const columnRadio = screen.getByRole('radio', { name: 'column' });
+    await user.click(columnRadio);
+
+    expect(propsInStore('cont-flex-tablet').flexDirection).toEqual({
+      default: 'row',
+      tablet: 'column',
+      mobile: 'column-reverse',
+    });
+  });
+});
+
+/**
+ * Indicatore di override per breakpoint (ADR-29 § 2, RFC-F04c): un pallino accanto
+ * all'etichetta di un campo `responsive` quando il breakpoint attivo dello Switcher porta
+ * un valore esplicito nell'envelope, distinto dal valore mostrato per cascata. `default`
+ * non è mai un "override" — è la base della cascata, quindi mai un pallino su Desktop.
+ */
+describe('PropertyInspector — indicatore di override per breakpoint (RFC-F04c)', () => {
+  const DOT_TESTID = 'breakpoint-override-dot';
+
+  it('su Desktop nessun pallino, anche quando tablet e mobile hanno valori espliciti', () => {
+    renderInspectorWith(
+      node('sec-1', 'section', {
+        styleSpaceBefore: { default: 'none', tablet: 'sm', mobile: 'lg' },
+      }),
+    );
+
+    expect(screen.queryByTestId(DOT_TESTID)).not.toBeInTheDocument();
+  });
+
+  it('su Tablet il pallino compare quando la prop porta un valore esplicito per tablet (Select generico)', () => {
+    useBlockEditorStore.getState().setActiveViewport('tablet');
+    renderInspectorWith(
+      node('sec-1', 'section', {
+        styleSpaceBefore: { default: 'none', tablet: 'sm' },
+      }),
+    );
+
+    expect(screen.getByTestId(DOT_TESTID)).toBeInTheDocument();
+  });
+
+  it('su Tablet nessun pallino quando tablet non è ancora scritto (il campo mostra solo il valore in cascata dal default)', () => {
+    useBlockEditorStore.getState().setActiveViewport('tablet');
+    renderInspectorWith(
+      node('sec-1', 'section', {
+        styleSpaceBefore: { default: 'none' },
+      }),
+    );
+
+    expect(screen.queryByTestId(DOT_TESTID)).not.toBeInTheDocument();
+  });
+
+  it('su Mobile il pallino compare solo quando mobile è esplicito, non quando eredita da tablet', () => {
+    useBlockEditorStore.getState().setActiveViewport('mobile');
+    renderInspectorWith(
+      node('sec-1', 'section', {
+        styleSpaceBefore: { default: 'none', tablet: 'sm' },
+      }),
+    );
+
+    expect(screen.queryByTestId(DOT_TESTID)).not.toBeInTheDocument();
+  });
+
+  it('ramo SegmentedControl (alignItems): il pallino segue lo stesso invariante su Tablet', () => {
+    useBlockEditorStore.getState().setActiveViewport('tablet');
+    renderInspectorWith(
+      node('sec-align', 'section', {
+        alignItems: { default: 'stretch', tablet: 'center' },
+      }),
+    );
+
+    expect(screen.getByTestId(DOT_TESTID)).toBeInTheDocument();
+  });
+
+  /**
+   * Le otto prop di spaziatura per lato di `section`/`container` non passano dal ramo
+   * Slider di `PropField.tsx` (`SPACING_SLIDER_PROPS`): `StyleTab.tsx` le raggruppa tutte e
+   * otto in `VisualBoxModelInspector` (ADR-33 § 4/ADR-41 § 5), che porta il proprio
+   * indicatore d'override — stesso invariante, componente diverso.
+   */
+  it('VisualBoxModelInspector (stylePaddingTop di section): il pallino segue lo stesso invariante su Mobile, solo sul lato esplicito', () => {
+    useBlockEditorStore.getState().setActiveViewport('mobile');
+    renderInspectorWith(
+      node('sec-padding', 'section', {
+        stylePaddingTop: { default: '0', mobile: '16' },
+        stylePaddingRight: { default: '0', tablet: '8' },
+      }),
+    );
+
+    // Un solo lato porta un override esplicito su Mobile (`stylePaddingTop`): l'altro lato
+    // valorizzato (`stylePaddingRight`, esplicito solo su tablet) non deve accenderne uno.
+    expect(screen.getAllByTestId(DOT_TESTID)).toHaveLength(1);
+  });
 });
 
 describe('PropertyInspector — i sette kind del registro', () => {

@@ -1,6 +1,8 @@
 import BlockRenderer from '@blocks/BlockRenderer';
 import type { RenderableBlockNode } from '@blocks/types';
 import type { components } from '@api-types';
+import { computeFormHoneypotFieldName, computeFormSignature } from './form-antispam';
+import { PublicSiteConfig } from './config';
 
 type PublicPageContent = components['schemas']['PublicPageDto']['content'];
 type PublicActiveGlobalSectionsDto = components['schemas']['PublicActiveGlobalSectionsDto'];
@@ -15,6 +17,35 @@ interface PageViewProps {
    * del layout e non contenuto (vedi `fetchActiveGlobalSections`).
    */
   globalSections?: PublicActiveGlobalSectionsDto;
+  /**
+   * URL dell'isola JS di submit dei Form (F10-04, `server.ts`/`entry-server.tsx`).
+   * Iniettata come `<script defer>` solo se l'albero contiene almeno un blocco
+   * `form` (vedi {@link hasFormBlock}): il sito pubblico resta senza JavaScript
+   * per ogni Pagina che non ne ha bisogno (ADR-22 § 2), la deroga vale solo dove
+   * serve davvero un invio reale.
+   */
+  formScriptHref?: string;
+}
+
+/**
+ * Honeypot/firma HMAC per `formKey` (RFC-46 D6), calcolati qui — unico punto
+ * con accesso al secret lato renderer pubblico (`form-antispam.ts`) — e l'URL
+ * di destinazione del submit, sull'origine **rivolta al browser** del backend
+ * (`PublicSiteConfig.publicApiBrowserBaseUrl`, mai quella server-to-server usata
+ * per le fetch SSR). Passata a `BlockRenderer` come pass-through opzionale
+ * (F10-04, N8): il Canvas admin non la passa mai.
+ */
+function resolveFormSubmission(formKey: string) {
+  return {
+    honeypotFieldName: computeFormHoneypotFieldName(formKey),
+    signature: computeFormSignature(formKey),
+    submitUrl: `${PublicSiteConfig.publicApiBrowserBaseUrl}/api/v1/public/forms/${encodeURIComponent(formKey)}/submit`,
+  };
+}
+
+/** Cerca ricorsivamente un nodo `type: 'form'` nell'albero, per decidere se iniettare l'isola JS di submit. */
+function hasFormBlock(nodes: readonly RenderableBlockNode[]): boolean {
+  return nodes.some((node) => node.type === 'form' || hasFormBlock(node.children));
 }
 
 /**
@@ -44,7 +75,7 @@ function GlobalSectionSlot({
   return (
     <Tag style={stickyStyle}>
       {blocks.map((block) => (
-        <BlockRenderer key={block.id} node={block} />
+        <BlockRenderer key={block.id} node={block} formSubmission={resolveFormSubmission} />
       ))}
     </Tag>
   );
@@ -62,18 +93,23 @@ function GlobalSectionSlot({
  * indipendenti: se nessuna Sezione è assegnata (o se l'endpoint non ha
  * risposto), resta esattamente il `<main>` di prima, senza errori.
  */
-export default function PageView({ content, globalSections }: PageViewProps) {
+export default function PageView({ content, globalSections, formScriptHref = '' }: PageViewProps) {
   const blocks = blocksOf(content);
+  const headerBlocks = blocksOf(globalSections?.header?.content);
+  const footerBlocks = blocksOf(globalSections?.footer?.content);
+  const needsFormScript =
+    hasFormBlock(blocks) || hasFormBlock(headerBlocks) || hasFormBlock(footerBlocks);
 
   return (
     <>
       <GlobalSectionSlot section={globalSections?.header} as="header" />
       <main>
         {blocks.map((block) => (
-          <BlockRenderer key={block.id} node={block} />
+          <BlockRenderer key={block.id} node={block} formSubmission={resolveFormSubmission} />
         ))}
       </main>
       <GlobalSectionSlot section={globalSections?.footer} as="footer" />
+      {needsFormScript ? <script src={formScriptHref} defer /> : null}
     </>
   );
 }
