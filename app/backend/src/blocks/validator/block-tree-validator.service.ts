@@ -234,7 +234,7 @@ export class BlockTreeValidatorService {
   ): void {
     const invalid = (
       reason: BlockPropInvalidReason,
-      extra?: { constraint?: number | string[]; actual?: number },
+      extra?: { constraint?: number | string[] | [number, number]; actual?: number },
     ): void => {
       errors.push({
         code: 'BLOCK_PROP_INVALID',
@@ -260,6 +260,15 @@ export class BlockTreeValidatorService {
       }
       case 'number': {
         if (typeof value !== 'number' || Number.isNaN(value)) return invalid('type');
+        // `min`/`max` opzionali (ADR-47 § "Decisione"): assenti, nessun
+        // vincolo di range — comportamento invariato per ogni prop `number`
+        // senza intervallo dichiarato. Dichiarati sempre insieme (unico uso
+        // reale a oggi, `section.styleOverlayOpacity`, `0 ≤ x ≤ 1`).
+        if (spec.min !== undefined && spec.max !== undefined) {
+          if (value < spec.min || value > spec.max) {
+            return invalid('range', { constraint: [spec.min, spec.max], actual: value });
+          }
+        }
         return;
       }
       case 'boolean': {

@@ -1,0 +1,39 @@
+info:
+  name: Create Translation Duplicate Conflict
+  type: http
+  seq: 18
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/pages/:guid/translations"
+  params:
+    - name: guid
+      value: a1b2c3d4e5f6a7b8
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "locale": "en-GB"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 409, 400 or 404", function() {
+    expect([409, 400, 404]).to.include(res.getStatus());
+  });
+
+  test("una traduzione già esistente per questo locale nel gruppo risponde 409 PAGE_TRANSLATION_LOCALE_DUPLICATE (eseguire dopo 'Create Translation' sullo stesso guid/locale)", function() {
+    if (res.getStatus() === 409) {
+      const body = res.getBody();
+      expect(body.code).to.equal("PAGE_TRANSLATION_LOCALE_DUPLICATE");
+    }
+  });

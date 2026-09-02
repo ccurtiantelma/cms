@@ -47,6 +47,7 @@ import {
   IconCirclePlus,
   IconExternalLink,
   IconEye,
+  IconGitCompare,
   IconHistory,
   IconRefresh,
   IconRestore,
@@ -82,6 +83,7 @@ import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { PUBLIC_SITE_URL, usePublicPageUrl } from '../../hooks/usePublicPageUrl';
 import { usePublicSiteHealth } from '../../hooks/usePublicSiteHealth';
 import BlockEditorPanel from './editor/BlockEditorPanel';
+import RevisionDiffModal from './editor/RevisionDiffModal';
 import PageHeader from '../../components/PageHeader';
 import PageNotFound from '../../components/PageNotFound';
 import ContentCard from '../../components/ContentCard';
@@ -218,6 +220,7 @@ export default function PagePageDetail(): JSX.Element {
   const [restoreTarget, setRestoreTarget] = useState<PageRevisionSummary | null>(null);
   const [viewRevision, setViewRevision] = useState<PageRevisionDetail | null>(null);
   const [viewRevisionLoading, setViewRevisionLoading] = useState(false);
+  const [diffModalOpened, setDiffModalOpened] = useState(false);
   const saveDraftRef = useRef<(() => Promise<PageRecord | null>) | null>(null);
 
   /**
@@ -935,6 +938,16 @@ export default function PagePageDetail(): JSX.Element {
           {/* --- Cronologia Revisioni + ripristino --- */}
           <Tabs.Panel value="revisions" pt="md">
             <Stack gap="sm">
+              <Group justify="flex-end">
+                <Button
+                  variant="default"
+                  leftSection={<IconGitCompare size={16} />}
+                  onClick={() => setDiffModalOpened(true)}
+                  disabled={revisions.length < 2}
+                >
+                  Confronta Revisioni
+                </Button>
+              </Group>
               <ListToolbar
                 state={{
                   page: revisionsPage,
@@ -1102,6 +1115,20 @@ export default function PagePageDetail(): JSX.Element {
           </Stack>
         )}
       </Modal>
+
+      {/* Modal confronto strutturale fra due Revisioni (F07-02). */}
+      {page && (
+        <RevisionDiffModal
+          opened={diffModalOpened}
+          onClose={() => setDiffModalOpened(false)}
+          pageGuid={page.guid}
+          revisions={revisions}
+          onRestore={(revision) => {
+            setRestoreTarget(revision);
+            setDiffModalOpened(false);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -12,6 +12,7 @@ import type {
   PagePreviewToken,
   PageRecord,
   PageRevisionDetail,
+  PageRevisionDiff,
   PageRevisionSummary,
   PagesQueryParams,
   PageTranslationSummary,
@@ -120,6 +121,18 @@ export async function restorePageRevision(guid: string, revisionGuid: string): P
   const { data } = await api.post<PageRecord>(
     `${PAGES_PREFIX}/${guid}/revisions/${revisionGuid}/restore`,
   );
+  return data;
+}
+
+/** `GET /app/pages/:guid/revisions/diff` — confronto strutturale fra due Revisioni. */
+export async function fetchPageRevisionDiff(
+  guid: string,
+  revA: string,
+  revB: string,
+): Promise<PageRevisionDiff> {
+  const { data } = await api.get<PageRevisionDiff>(`${PAGES_PREFIX}/${guid}/revisions/diff`, {
+    params: { revA, revB },
+  });
   return data;
 }
 

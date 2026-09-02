@@ -7,7 +7,7 @@
  * L'API applica già ownership per riga (ADR-18): un `User` vede solo le
  * proprie Pagine, nessun filtro di ruolo è reimplementato qui lato client.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Badge, Group, ScrollArea, Select, Stack, Text, TextInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
@@ -21,9 +21,11 @@ import {
   createPage,
   deletePage,
   fetchPage,
+  fetchPageTranslations,
   fetchPages,
   issuePagePreviewToken,
 } from '../../services/pages.service';
+import { getMultilingualConfigApi } from '../../services/settings.service';
 import type {
   CreatePagePayload,
   PageRecord,
@@ -76,6 +78,17 @@ const EMPTY_CREATE_FORM: CreatePageFormValues = {
   templateSlug: DEFAULT_TEMPLATE_SLUG,
 };
 
+/**
+ * Bandiera del Locale, derivata dal sottotag regione (es. `it-IT` → 🇮🇹) — stessa logica di
+ * `LocaleSwitcher.tsx`, duplicata qui perché non esposta come utility condivisa.
+ */
+function localeFlag(locale: string): string {
+  const region = locale.split('-')[1];
+  if (!region || region.length !== 2) return '🌐';
+  const codePoints = [...region.toUpperCase()].map((char) => 127397 + char.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
+}
+
 /** Formatta una data ISO nel formato locale italiano (data + ora). */
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('it-IT');
@@ -119,6 +132,29 @@ export default function PagePages(): JSX.Element {
   const [submitting, setSubmitting] = useState(false);
   /** Guid della riga per cui "Mostra Pagina" è in corso: evita doppio click concorrente. */
   const [showPageLoadingGuid, setShowPageLoadingGuid] = useState<string | null>(null);
+  /** Locale attivi (`GET app/settings/multilingual`), per il filtro a tendina e i badge. */
+  const [activeLocales, setActiveLocales] = useState<string[]>([]);
+  /** Locale delle traduzioni sorelle per `translationGroupId`, popolato lazy per le righe visibili. */
+  const [groupLocales, setGroupLocales] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    getMultilingualConfigApi()
+      .then((config) => {
+        if (!cancelled) setActiveLocales(config.active);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          notifications.show({
+            color: 'red',
+            message: getErrorMessage(err, 'Errore nel caricamento dei Locale attivi'),
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const extraParams: Partial<PagesQueryParams> = {
     status: statusFilter ? (statusFilter as PageStatus) : undefined,
@@ -143,6 +179,49 @@ export default function PagePages(): JSX.Element {
     errorMessage: 'Errore nel caricamento delle Pagine',
     extraParams,
   });
+
+  // Badge lingua per riga: un gruppo di traduzione con una sola riga (nessuna
+  // traduzione ancora creata) non genera una chiamata — solo i gruppi con più
+  // di una riga fra quelle visibili in questa pagina di risultati vengono
+  // interrogati, e ogni translationGroupId è richiesto una sola volta anche
+  // se compare su più righe.
+  useEffect(() => {
+    const groupCounts = new Map<string, number>();
+    for (const row of records) {
+      groupCounts.set(row.translationGroupId, (groupCounts.get(row.translationGroupId) ?? 0) + 1);
+    }
+    const toLoad = records.filter(
+      (row) =>
+        (groupCounts.get(row.translationGroupId) ?? 0) > 1 &&
+        !(row.translationGroupId in groupLocales),
+    );
+    if (toLoad.length === 0) return;
+
+    let cancelled = false;
+    Promise.all(
+      toLoad.map((row) =>
+        fetchPageTranslations(row.guid).then((siblings) => ({
+          groupId: row.translationGroupId,
+          locales: Array.from(new Set([row.locale, ...siblings.map((s) => s.locale)])),
+        })),
+      ),
+    )
+      .then((results) => {
+        if (cancelled) return;
+        setGroupLocales((prev) => {
+          const next = { ...prev };
+          for (const { groupId, locales } of results) next[groupId] = locales;
+          return next;
+        });
+      })
+      .catch(() => {
+        // Silenzioso: i badge lingua sono un'informazione consultiva, non
+        // bloccante — la colonna "Lingua" resta comunque leggibile.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [records, groupLocales]);
 
   const form = useForm<CreatePageFormValues>({
     mode: 'controlled',
@@ -255,7 +334,33 @@ export default function PagePages(): JSX.Element {
   const columns: ResponsiveTableColumn<PageRecord>[] = [
     { key: 'title', label: 'Titolo' },
     { key: 'slug', label: 'Slug', hideInCard: true },
-    { key: 'locale', label: 'Lingua', hideInCard: true },
+    {
+      key: 'locale',
+      label: 'Lingua',
+      render: (row) => {
+        const siblings = groupLocales[row.translationGroupId];
+        if (!siblings) {
+          return (
+            <Badge variant="filled" size="sm">
+              {localeFlag(row.locale)} {row.locale}
+            </Badge>
+          );
+        }
+        return (
+          <Group gap={4} wrap="wrap">
+            {siblings.map((locale) => (
+              <Badge
+                key={locale}
+                variant={locale === row.locale ? 'filled' : 'light'}
+                size="sm"
+              >
+                {localeFlag(locale)} {locale}
+              </Badge>
+            ))}
+          </Group>
+        );
+      },
+    },
     {
       key: 'status',
       label: 'Stato',
@@ -301,14 +406,22 @@ export default function PagePages(): JSX.Element {
                 w={180}
                 allowDeselect={false}
               />
-              <TextInput
-                placeholder="es. it-IT"
+              <Select
+                data={[
+                  { value: '', label: 'Tutte le lingue' },
+                  ...activeLocales.map((locale) => ({
+                    value: locale,
+                    label: `${localeFlag(locale)} ${locale}`,
+                  })),
+                ]}
                 value={localeFilter}
-                onChange={(e) => {
-                  setLocaleFilter(e.currentTarget.value);
+                onChange={(value) => {
+                  setLocaleFilter(value ?? '');
                   setPage(1);
                 }}
-                w={140}
+                w={180}
+                allowDeselect={false}
+                aria-label="Filtra per lingua"
               />
             </Group>
           }

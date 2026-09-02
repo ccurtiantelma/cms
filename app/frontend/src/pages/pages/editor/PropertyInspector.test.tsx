@@ -8,11 +8,11 @@
  * continuerebbero a passare guardando un componente ormai vuoto — per questo il file
  * verifica anche che il registro reale sia interamente coperto (vedi ultimo `describe`).
  *
- * Il registro reale non usa `boolean` né `number` in nessuno dei cinque tipi approvati:
- * per non lasciarli scoperti si affianca ai tipi veri un descrittore sintetico, iniettato
- * mockando il **modulo generato** `types/blocks.types`. È il registro che viene esteso,
- * non il componente: esattamente il gesto che il criterio di Done di T5 dichiara che deve
- * bastare ("aggiungere una prop nel registro non richiede toccare questo file").
+ * Il registro reale non copre da solo tutti i kind del contratto (`BlockPropDescriptor`):
+ * per non lasciare scoperto ciò che manca si affianca ai tipi veri un descrittore sintetico,
+ * iniettato mockando il **modulo generato** `types/blocks.types`. È il registro che viene
+ * esteso, non il componente: esattamente il gesto che il criterio di Done di T5 dichiara che
+ * deve bastare ("aggiungere una prop nel registro non richiede toccare questo file").
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
@@ -879,7 +879,8 @@ describe('PropertyInspector — copertura del registro reale', () => {
     // `boolean` è in uso reale da ADR-37 (styleHideDesktop/Tablet/Mobile). `border`,
     // `cssClassName`, `htmlId`, `shadow`, `unitValue` sono in uso reale da ADR-38
     // (`styleBorder`/`styleShadow`/`customCssClass`/`customElementId`/`styleFontSizeCustom`).
-    // `number` resta l'unico kind assente dai tipi approvati, coperto dal solo tipo sintetico.
+    // `number` è in uso reale da ADR-47 (`section.styleOverlayOpacity`): non è più l'unico
+    // kind assente dai tipi approvati, non c'è più bisogno del tipo sintetico per coprirlo.
     expect([...kindsNelRegistro].sort()).toEqual(
       [
         'border',
@@ -889,6 +890,7 @@ describe('PropertyInspector — copertura del registro reale', () => {
         'enum',
         'htmlId',
         'mediaRef',
+        'number',
         'plainText',
         'richText',
         'shadow',

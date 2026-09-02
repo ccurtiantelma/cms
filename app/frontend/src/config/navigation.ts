@@ -7,6 +7,7 @@ import {
   IconFileText,
   IconLayoutDashboard,
   IconLayoutNavbar,
+  IconPalette,
   IconTemplate,
   IconUsers,
 } from '@tabler/icons-react';
@@ -37,6 +38,12 @@ export const navigationItems: NavigationItem[] = [
     icon: IconFileText,
     // Nessuna restrizione di ruolo: l'API applica ownership per riga (ADR-18),
     // un `User` vede/gestisce solo le proprie Pagine in `draft`.
+  },
+  {
+    label: 'Editor tema',
+    path: '/theme-editor',
+    icon: IconPalette,
+    roles: [AppUserRoles.SuperAdmin],
   },
   {
     label: 'Sezioni Globali',

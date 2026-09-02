@@ -52,8 +52,10 @@ import { UpdatePageDto } from './dto/update-page.dto';
 import { ChangeStatusDto } from './dto/change-status.dto';
 import { PageDto } from './dto/page.dto';
 import { PageRevisionDetailDto, PageRevisionSummaryDto } from './dto/page-revision.dto';
+import { PageRevisionDiffResponseDto } from './dto/page-revision-diff.dto';
 import { PageTranslationDto } from './dto/page-translation.dto';
 import { PagePreviewTokenDto } from './dto/page-preview-token.dto';
+import { BlockDiffEngineService } from './diff/block-diff-engine.service';
 
 type PageRow = typeof pageEntity.$inferSelect;
 type PageRowWithParent = PageRow & { parent: { guid: string } | null };
@@ -143,6 +145,7 @@ export class PagesService {
     private readonly publicPageCache: PublicPageCacheService,
     private readonly settingsService: SettingsService,
     private readonly exportService: ExportService,
+    private readonly blockDiffEngine: BlockDiffEngineService,
   ) {}
 
   /** Lista paginata delle Pagine attive. Un `User` vede solo le proprie (ADR-18 § D6). */
@@ -229,7 +232,11 @@ export class PagesService {
    * gruppo ha già una riga in quel `locale` — mai una `SELECT` preventiva,
    * il vincolo DB (`pages_translation_group_locale_uq`) arriva da
    * {@link mapPgError}. Nessuna ownership diversa da `create()`: chiunque
-   * possa creare una Pagina può creare una traduzione.
+   * possa creare una Pagina può creare una traduzione. `draftContent.blocks`
+   * è clonato nodo per nodo con {@link cloneBlockNodeWithFreshIds}, non
+   * `structuredClone` diretto: gli `id` dei nodi sono rigenerati per
+   * prevenire collisioni d'identità fra la Pagina sorgente e la traduzione
+   * (due righe DB distinte non possono condividere lo stesso `id` di nodo).
    */
   async createTranslation(
     guid: string,
@@ -250,7 +257,7 @@ export class PagesService {
       locale: dto.locale,
       parentId: null,
       translationGroupId: source.translationGroupId,
-      draftContent: structuredClone(source.draftContent),
+      draftContent: this.cloneContentTreeWithFreshIds(source.draftContent as ContentTree),
       draftSeo: structuredClone(source.draftSeo),
       createdBy: authInfo.userId,
       updatedBy: authInfo.userId,
@@ -797,6 +804,44 @@ export class PagesService {
   }
 
   /**
+   * Confronto strutturale fra due Revisioni della stessa Pagina (F07-01,
+   * business-rules.md § Revisioni, regola 4). Identificatori sempre `guid`
+   * (mai `id` numerico in URL, CLAUDE.md § Divieti assoluti): `revA`/`revB`
+   * sono i `guid` delle due Revisioni, non i loro `id` di riga. Stessa
+   * visibilità di {@link getRevision}. Confronta la forma **migrata** del
+   * contenuto ({@link migrateContentForRead}, come già in lettura per
+   * `contentIssues`), non il payload grezzo persistito: due snapshot scritti
+   * da versioni di schema diverse restano comparabili sullo stesso schema
+   * corrente.
+   */
+  async diffRevisions(
+    guid: string,
+    revA: string,
+    revB: string,
+    authInfo: AuthInfo,
+  ): Promise<PageRevisionDiffResponseDto> {
+    const row = await this.loadActiveByGuid(guid);
+    assertRowOwnership(
+      authInfo,
+      row,
+      OWNERSHIP_ELEVATED_THRESHOLD,
+      'Non puoi visualizzare le revisioni di una pagina di un altro utente.',
+    );
+
+    const [sourceRevision, targetRevision] = await Promise.all([
+      this.loadRevisionOrThrow(row.id, revA),
+      this.loadRevisionOrThrow(row.id, revB),
+    ]);
+
+    const sourceBlocks = this.migrateContentForRead(sourceRevision.content).content
+      .blocks as BlockNode[];
+    const targetBlocks = this.migrateContentForRead(targetRevision.content).content
+      .blocks as BlockNode[];
+
+    return this.blockDiffEngine.compareTrees(sourceBlocks, targetBlocks);
+  }
+
+  /**
    * Ripristina una Revisione: crea una **nuova bozza** a partire dallo
    * snapshot scelto (`draftContent`/`draftSeo`), senza toccare la Revisione
    * (immutabile, ADR-19) né lo stato della Pagina né la ripubblicazione, che
@@ -1170,9 +1215,14 @@ export class PagesService {
         details: { templateSlug },
       });
     }
+    return this.cloneContentTreeWithFreshIds(blueprint.content);
+  }
+
+  /** Copia profonda di un {@link ContentTree}: `version` invariato, ogni nodo di `blocks` clonato via {@link cloneBlockNodeWithFreshIds}. */
+  private cloneContentTreeWithFreshIds(content: ContentTree): ContentTree {
     return {
-      version: blueprint.content.version,
-      blocks: blueprint.content.blocks.map((block) => this.cloneBlockNodeWithFreshIds(block)),
+      version: content.version,
+      blocks: content.blocks.map((block) => this.cloneBlockNodeWithFreshIds(block)),
     };
   }
 

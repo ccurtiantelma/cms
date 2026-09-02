@@ -1,0 +1,64 @@
+info:
+  name: Create Page - Colori ADR-47 Validi
+  type: http
+  seq: 15
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/pages"
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Landing con overlay e pulsante colorati",
+        "locale": "it-IT",
+        "draftContent": {
+          "version": 1,
+          "blocks": [
+            {
+              "id": "sec1",
+              "type": "section",
+              "v": 1,
+              "props": {
+                "styleOverlayColor": "#000000",
+                "styleOverlayOpacity": 0.5
+              },
+              "children": [
+                {
+                  "id": "h1",
+                  "type": "heading",
+                  "v": 1,
+                  "props": { "level": "h2", "text": "Titolo", "styleTextAlign": "center" },
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 201 (props opzionali ADR-47 valide: color a 6 cifre, opacity in range, enum di allineamento)", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("risposta contiene guid/version", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("guid");
+    expect(body).to.have.property("version", 1);
+  });
+
+  test("contentIssues è vuoto su un albero integro (SPEC-F02-blocchi.md § 4.3)", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("contentIssues");
+    expect(body.contentIssues).to.deep.equal([]);
+  });

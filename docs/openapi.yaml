@@ -706,7 +706,7 @@ paths:
           description: Lista file paginata
       security:
         - access-token: []
-      summary: Lista paginata dei file attivi (Admin/Editor)
+      summary: Lista paginata dei file attivi
       tags:
         - Files
   /api/v1/app/files/{guid}:
@@ -1313,6 +1313,43 @@ paths:
       security:
         - access-token: []
       summary: Elenco paginato delle Revisioni di una Pagina
+      tags:
+        - Pages
+  /api/v1/app/pages/{guid}/revisions/diff:
+    get:
+      operationId: PagesController_diffRevisions
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: revA
+          required: true
+          in: query
+          description: guid della prima Revisione
+          schema:
+            type: string
+        - name: revB
+          required: true
+          in: query
+          description: guid della seconda Revisione
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Diff calcolato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageRevisionDiffResponseDto'
+        '403':
+          description: La Pagina esiste ma non è del chiamante
+        '404':
+          description: Pagina o una delle due Revisioni non trovate
+      security:
+        - access-token: []
+      summary: Confronto strutturale fra due Revisioni
       tags:
         - Pages
   /api/v1/app/pages/{guid}/revisions/{revisionGuid}:
@@ -3865,6 +3902,55 @@ components:
           example: '2026-09-01T09:00:00.000Z'
       required:
         - status
+    PropertyDiffDto:
+      type: object
+      properties:
+        field:
+          type: string
+          description: Campo variato
+          example: props.styleTextColor
+        before:
+          type: object
+          description: Valore nella prima Revisione
+          additionalProperties: true
+        after:
+          type: object
+          description: Valore nella seconda Revisione
+          additionalProperties: true
+      required:
+        - field
+        - before
+        - after
+    PageRevisionDiffResponseDto:
+      type: object
+      properties:
+        added:
+          description: Id dei nodi presenti solo nella seconda Revisione
+          type: array
+          items:
+            type: string
+        removed:
+          description: Id dei nodi presenti solo nella prima Revisione
+          type: array
+          items:
+            type: string
+        modified:
+          type: object
+          description: Variazioni per nodo modificato, chiave = id del nodo
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/PropertyDiffDto'
+        unchanged:
+          description: Id dei nodi identici in entrambe le Revisioni
+          type: array
+          items:
+            type: string
+      required:
+        - added
+        - removed
+        - modified
+        - unchanged
     PageRevisionDetailDto:
       type: object
       properties:

@@ -1,0 +1,58 @@
+info:
+  name: Create Translation
+  type: http
+  seq: 17
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/pages/:guid/translations"
+  params:
+    - name: guid
+      value: a1b2c3d4e5f6a7b8
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "locale": "en-GB",
+        "title": "Contact Us EN"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 201, 400, 404 or 409", function() {
+    expect([201, 400, 404, 409]).to.include(res.getStatus());
+  });
+
+  test("su successo, la traduzione condivide il translationGroupId della sorgente ed è in draft", function() {
+    if (res.getStatus() === 201) {
+      const body = res.getBody();
+      expect(body).to.have.property("guid");
+      expect(body).to.have.property("translationGroupId");
+      expect(body.locale).to.equal("en-GB");
+      expect(body.status).to.equal("draft");
+      expect(body.parentGuid).to.equal(null);
+    }
+  });
+
+  test("un 400 segnala un locale non fra i Locale attivi", function() {
+    if (res.getStatus() === 400) {
+      const body = res.getBody();
+      expect(body.message).to.contain("Locale attivi");
+    }
+  });
+
+  test("un 409 porta il code dedicato PAGE_TRANSLATION_LOCALE_DUPLICATE", function() {
+    if (res.getStatus() === 409) {
+      const body = res.getBody();
+      expect(body.code).to.equal("PAGE_TRANSLATION_LOCALE_DUPLICATE");
+    }
+  });

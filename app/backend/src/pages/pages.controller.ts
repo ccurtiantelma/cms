@@ -24,6 +24,7 @@ import { UpdatePageDto } from './dto/update-page.dto';
 import { ChangeStatusDto } from './dto/change-status.dto';
 import { PageDto } from './dto/page.dto';
 import { PageRevisionDetailDto, PageRevisionSummaryDto } from './dto/page-revision.dto';
+import { PageRevisionDiffResponseDto } from './dto/page-revision-diff.dto';
 import { PageTranslationDto } from './dto/page-translation.dto';
 import { PagePreviewTokenDto } from './dto/page-preview-token.dto';
 
@@ -251,6 +252,29 @@ export class PagesController {
       i: i ? parseInt(i, 10) : 20,
     };
     return this.pagesService.listRevisions(guid, authInfo, params);
+  }
+
+  /**
+   * Confronto strutturale fra due Revisioni (F07-01, business-rules.md §
+   * Revisioni, regola 4). Route letterale registrata prima di
+   * `:guid/revisions/:revisionGuid`: altrimenti Express catturerebbe `diff`
+   * come valore di `revisionGuid`.
+   */
+  @Get(':guid/revisions/diff')
+  @ApiOperation({ summary: 'Confronto strutturale fra due Revisioni' })
+  @ApiQuery({ name: 'revA', required: true, description: 'guid della prima Revisione' })
+  @ApiQuery({ name: 'revB', required: true, description: 'guid della seconda Revisione' })
+  @ApiResponse({ status: 200, description: 'Diff calcolato', type: PageRevisionDiffResponseDto })
+  @ApiResponse({ status: 403, description: 'La Pagina esiste ma non è del chiamante' })
+  @ApiResponse({ status: 404, description: 'Pagina o una delle due Revisioni non trovate' })
+  async diffRevisions(
+    @Param('guid') guid: string,
+    @Query('revA') revA: string,
+    @Query('revB') revB: string,
+    @Req() req: Request,
+  ): Promise<PageRevisionDiffResponseDto> {
+    const authInfo = req['authInfo'] as AuthInfo;
+    return this.pagesService.diffRevisions(guid, revA, revB, authInfo);
   }
 
   /** Dettaglio di una Revisione, snapshot completo incluso. */

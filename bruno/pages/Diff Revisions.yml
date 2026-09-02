@@ -1,0 +1,52 @@
+info:
+  name: Diff Revisions
+  type: http
+  seq: 10
+
+http:
+  method: GET
+  url: "{{baseUrl}}/app/pages/:guid/revisions/diff?revA=a1b2c3d4e5f6a7b8&revB=b2c3d4e5f6a7b8c9"
+  params:
+    - name: guid
+      value: a1b2c3d4e5f6a7b8
+      type: path
+    - name: revA
+      value: a1b2c3d4e5f6a7b8
+      type: query
+    - name: revB
+      value: b2c3d4e5f6a7b8c9
+      type: query
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 200, 403 or 404", function() {
+    expect([200, 403, 404]).to.include(res.getStatus());
+  });
+
+  test("su successo il body espone added, removed, modified, unchanged", function() {
+    if (res.getStatus() === 200) {
+      const body = res.getBody();
+      expect(body).to.have.property("added");
+      expect(body).to.have.property("removed");
+      expect(body).to.have.property("modified");
+      expect(body).to.have.property("unchanged");
+      expect(body.added).to.be.an("array");
+      expect(body.removed).to.be.an("array");
+      expect(body.unchanged).to.be.an("array");
+    }
+  });
+
+  test("un 403/404 espone message, mai overwrite silenzioso del contratto", function() {
+    if (res.getStatus() === 403 || res.getStatus() === 404) {
+      const body = res.getBody();
+      expect(body).to.have.property("message");
+    }
+  });

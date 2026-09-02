@@ -55,6 +55,15 @@ export type PageTranslationSummary = components['schemas']['PageTranslationDto']
 export type PageRevisionDetail = components['schemas']['PageRevisionDetailDto'];
 
 /**
+ * Confronto strutturale fra due Revisioni (`GET /app/pages/:guid/revisions/diff`) — riuso
+ * diretto. Lavora per id di nodo, non restituisce label/tipo di blocco leggibile.
+ */
+export type PageRevisionDiff = components['schemas']['PageRevisionDiffResponseDto'];
+
+/** Singola variazione di proprietà di un nodo modificato — riuso diretto. */
+export type PropertyDiff = components['schemas']['PropertyDiffDto'];
+
+/**
  * Token di anteprima (`POST /app/pages/:guid/preview-token`, ADR-25) — riuso diretto.
  * `token` va aperto in `{PUBLIC_SITE_URL}/__preview/:token`, mai persistito lato client.
  */

@@ -63,14 +63,17 @@ export interface PlainTextPropSpec extends BasePropSpec {
 }
 
 /**
- * Numero. Nessuna prop dei cinque tipi del primo rilascio lo usa
- * (SPEC-F02 § 3.7). Nessun vincolo di intervallo: l'insieme chiuso dei
- * `reason` di `BLOCK_PROP_INVALID` (SPEC-F02 § 4.1) non ne prevede uno per un
- * range numerico, quindi il descrittore non lo dichiara — aggiungerlo
- * richiederebbe un nuovo `reason` e quindi una revisione della spec.
+ * Numero. `min`/`max` sono opzionali (ADR-47 § "Decisione": primo uso reale
+ * con intervallo dichiarato è `section.styleOverlayOpacity`, `0 ≤ x ≤ 1`) —
+ * assenti, nessun vincolo di range è applicato, comportamento invariato per
+ * ogni prop `number` precedente. Il `reason: 'range'` di `BLOCK_PROP_INVALID`
+ * è già nell'insieme chiuso (ADR-38 § 2/§ 3/§ 4, per `unitValue`/`border`/
+ * `shadow`): questo descrittore lo riusa, non ne introduce uno nuovo.
  */
 export interface NumberPropSpec extends BasePropSpec {
   kind: 'number';
+  min?: number;
+  max?: number;
 }
 
 /** Booleano. Nessuna prop dei cinque tipi del primo rilascio lo usa (SPEC-F02 § 3.7). */

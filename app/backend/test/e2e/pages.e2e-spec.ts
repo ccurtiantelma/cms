@@ -919,7 +919,15 @@ describe('PagesController (e2e, DB/Redis reali)', () => {
       expect(res.body.slug).toBe('chi-siamo');
       expect(res.body.title).toBe('Chi siamo');
       expect(res.body.parentGuid).toBeNull();
-      expect(res.body.draftContent).toEqual(source.draftContent);
+      // Struttura/testi copiati dalla sorgente, ma l'`id` del nodo è rigenerato
+      // (previene collisioni d'identità fra le due righe DB, F05-02).
+      const sourceBlocks = (source.draftContent as { blocks: { id: string }[] }).blocks;
+      const translatedBlocks = (res.body.draftContent as { blocks: { id: string }[] }).blocks;
+      expect(translatedBlocks).toHaveLength(sourceBlocks.length);
+      expect(translatedBlocks[0].id).not.toBe(sourceBlocks[0].id);
+      expect(translatedBlocks.map((b) => ({ ...b, id: undefined }))).toEqual(
+        sourceBlocks.map((b) => ({ ...b, id: undefined })),
+      );
 
       const db = getTestDb();
       const rows = await db.query.pageEntity.findMany({

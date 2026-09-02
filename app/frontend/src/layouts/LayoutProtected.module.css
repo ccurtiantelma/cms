@@ -56,26 +56,27 @@ nav.navbarSurface {
   flex-shrink: 0;
 }
 
+.brand :global(.mantine-Popover-root) {
+  margin-left: auto;
+}
+
 .brandCollapsed {
   justify-content: center;
+  gap: 4px;
   padding: 0;
 }
 
-/* Box logo testuale placeholder (quadrato arrotondato con iniziali). */
-.logoBox {
+/* Logo dell'installazione, mantenuto in una dimensione stabile nella sidebar. */
+.logoImage {
   width: 40px;
   height: 40px;
-  border-radius: 11px;
-  background: var(--mantine-primary-color-filled);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  object-fit: contain;
   flex-shrink: 0;
-  color: var(--mantine-color-white);
-  font-weight: 800;
-  font-size: 13px;
-  letter-spacing: 0.5px;
-  box-shadow: var(--mantine-shadow-sm);
+}
+
+.brandCollapsed .logoImage {
+  width: 30px;
+  height: 30px;
 }
 
 .brandText {
@@ -156,15 +157,6 @@ nav.navbarSurface {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* --- Azioni rapide in basso: notifica + editor tema --- */
-.customizerSection {
-  flex-shrink: 0;
-  padding: 0 12px 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
 }
 
 /* --- Sezione utente in basso --- */

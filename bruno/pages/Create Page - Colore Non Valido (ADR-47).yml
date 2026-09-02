@@ -1,0 +1,53 @@
+info:
+  name: Create Page - Colore Non Valido (ADR-47)
+  type: http
+  seq: 14
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/pages"
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Pagina con colore overlay non valido",
+        "locale": "it-IT",
+        "draftContent": {
+          "version": 1,
+          "blocks": [
+            {
+              "id": "b1",
+              "type": "section",
+              "v": 1,
+              "props": { "styleOverlayColor": "rgb(0,0,0)" },
+              "children": []
+            }
+          ]
+        }
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 400 (kind color, pattern esadecimale, ADR-47/ADR-33 § 3)", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+
+  test("code e path del nodo colpevole in details (CLAUDE.md § Error handling)", function() {
+    const body = res.getBody();
+    expect(body.code).to.equal("BLOCK_PROP_INVALID");
+    expect(body.details).to.have.property("path", "blocks[0].props.styleOverlayColor");
+    expect(body.details).to.have.property("reason", "format");
+  });
+
+  test("nessuna Pagina viene creata: l'albero non valido respinge l'intero salvataggio", function() {
+    const body = res.getBody();
+    expect(body).to.not.have.property("guid");
+  });

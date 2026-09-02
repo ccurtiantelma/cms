@@ -109,6 +109,11 @@ export const headingBlock: BlockDefinition = {
       kind: 'htmlId',
       required: false,
     },
+    styleTextAlign: {
+      kind: 'enum',
+      required: false,
+      values: ['left', 'center', 'right', 'justify'],
+    },
   },
   children: { allow: [] },
   migrations: [],
@@ -155,6 +160,11 @@ export const headingBlock: BlockDefinition = {
         tab: 'advanced',
         order: 18,
         help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
+      },
+      styleTextAlign: {
+        label: 'Allineamento testo',
+        tab: 'style',
+        order: 19,
       },
     },
   },

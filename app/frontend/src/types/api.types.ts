@@ -476,7 +476,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lista paginata dei file attivi (Admin/Editor) */
+        /** Lista paginata dei file attivi */
         get: operations["FilesController_findAll"];
         put?: never;
         /** Carica un documento (multipart/form-data, campo "file") */
@@ -722,6 +722,23 @@ export interface paths {
         };
         /** Elenco paginato delle Revisioni di una Pagina */
         get: operations["PagesController_listRevisions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/app/pages/{guid}/revisions/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Confronto strutturale fra due Revisioni */
+        get: operations["PagesController_diffRevisions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2301,6 +2318,33 @@ export interface components {
              * @example 2026-09-01T09:00:00.000Z
              */
             scheduledAt?: string;
+        };
+        PropertyDiffDto: {
+            /**
+             * @description Campo variato
+             * @example props.styleTextColor
+             */
+            field: string;
+            /** @description Valore nella prima Revisione */
+            before: {
+                [key: string]: unknown;
+            };
+            /** @description Valore nella seconda Revisione */
+            after: {
+                [key: string]: unknown;
+            };
+        };
+        PageRevisionDiffResponseDto: {
+            /** @description Id dei nodi presenti solo nella seconda Revisione */
+            added: string[];
+            /** @description Id dei nodi presenti solo nella prima Revisione */
+            removed: string[];
+            /** @description Variazioni per nodo modificato, chiave = id del nodo */
+            modified: {
+                [key: string]: components["schemas"]["PropertyDiffDto"][];
+            };
+            /** @description Id dei nodi identici in entrambe le Revisioni */
+            unchanged: string[];
         };
         PageRevisionDetailDto: {
             /**
@@ -4540,6 +4584,47 @@ export interface operations {
                 content?: never;
             };
             /** @description Pagina non trovata o eliminata */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PagesController_diffRevisions: {
+        parameters: {
+            query: {
+                /** @description guid della prima Revisione */
+                revA: string;
+                /** @description guid della seconda Revisione */
+                revB: string;
+            };
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Diff calcolato */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageRevisionDiffResponseDto"];
+                };
+            };
+            /** @description La Pagina esiste ma non è del chiamante */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pagina o una delle due Revisioni non trovate */
             404: {
                 headers: {
                     [name: string]: unknown;

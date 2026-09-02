@@ -27,7 +27,7 @@
  * (undo/redo, cambio di pagina, contenuto ri-sanitizzato dal server dopo il salvataggio)
  * resta scritto normalmente, perché in quei casi il DOM e la prop divergono davvero.
  */
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, type CSSProperties } from 'react';
 import styles from './Heading.module.css';
 import tokenStyles from '../style-tokens.module.css';
 import {
@@ -36,12 +36,18 @@ import {
   resolveResponsiveClassNames,
 } from '../style-tokens';
 
+/** `styleTextAlign` è già validato server-side contro l'enum del registro (ADR-47 § 1). */
+function isTextAlign(value: unknown): value is 'left' | 'center' | 'right' | 'justify' {
+  return typeof value === 'string' && ['left', 'center', 'right', 'justify'].includes(value);
+}
+
 interface HeadingProps {
   level: 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
   text: string;
   styleSpaceBefore?: unknown;
   styleSpaceAfter?: unknown;
   styleTextColor?: unknown;
+  styleTextColorCustom?: unknown;
   styleFontSize?: unknown;
   styleFontWeight?: unknown;
   styleFontFamily?: unknown;
@@ -49,6 +55,8 @@ interface HeadingProps {
   styleHideDesktop?: unknown;
   styleHideTablet?: unknown;
   styleHideMobile?: unknown;
+  /** ADR-47 § 1: `left | center | right | justify`, applicato come `text-align` inline. */
+  styleTextAlign?: unknown;
   /** Editing in-place attivo (solo editor, solo nodo selezionato — mai sul sito pubblico). */
   editable?: boolean;
   /** Commit del testo modificato — chiamato su `blur`. */
@@ -63,6 +71,7 @@ export default function Heading({
   styleSpaceBefore,
   styleSpaceAfter,
   styleTextColor,
+  styleTextColorCustom,
   styleFontSize,
   styleFontWeight,
   styleFontFamily,
@@ -70,6 +79,7 @@ export default function Heading({
   styleHideDesktop,
   styleHideTablet,
   styleHideMobile,
+  styleTextAlign,
   editable = false,
   onTextChange,
   onTextInput,
@@ -106,8 +116,23 @@ export default function Heading({
     .filter(Boolean)
     .join(' ');
 
+  // Il colore/allineamento arrivano dal JSON già validato server-side e vengono applicati
+  // al nodo principale (stesso pattern di `Section.tsx` per `styleBackgroundColor`), con
+  // priorità sul token `styleTextColor` a parità di specificità inline vs. classe.
+  const inlineStyle: CSSProperties = {
+    ...(typeof styleTextColorCustom === 'string' && styleTextColorCustom
+      ? { color: styleTextColorCustom }
+      : {}),
+    ...(isTextAlign(styleTextAlign) ? { textAlign: styleTextAlign } : {}),
+  };
+  const resolvedInlineStyle = Object.keys(inlineStyle).length > 0 ? inlineStyle : undefined;
+
   if (!editable) {
-    return <Level className={className}>{text}</Level>;
+    return (
+      <Level className={className} style={resolvedInlineStyle}>
+        {text}
+      </Level>
+    );
   }
 
   // `text` non viene ri-scritto nell'elemento mentre l'utente digita (nessun `value`
@@ -131,6 +156,7 @@ export default function Heading({
     <Level
       ref={elementRef}
       className={className}
+      style={resolvedInlineStyle}
       contentEditable
       suppressContentEditableWarning
       data-placeholder={placeholder}

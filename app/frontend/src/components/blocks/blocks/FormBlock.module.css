@@ -1,17 +1,7 @@
-/*
- * Perimetro tratteggiato discreto del blocco `form` (F10-03): non un placeholder vuoto come
- * `ContentPlaceholderBlock` (che segna un punto d'innesto ancora privo di contenuto reale) —
- * qui il form ha sempre i propri campi dentro, il tratteggio serve solo a distinguere "questo
- * gruppo di campi è un modulo" dal resto della pagina, sia nel Canvas che sul sito pubblico
- * (componente condiviso, ADR-22 § 5). Solo CSS puro, nessun token Mantine.
- */
 .form {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  border: 1px dashed #9ca3af;
-  border-radius: 8px;
-  padding: 16px;
   position: relative;
 }
 

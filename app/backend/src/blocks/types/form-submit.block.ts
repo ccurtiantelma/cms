@@ -18,6 +18,14 @@ export const formSubmitBlock: BlockDefinition = {
       maxLength: 80,
       default: 'Invia',
     },
+    styleBackgroundColor: {
+      kind: 'color',
+      required: false,
+    },
+    styleTextColor: {
+      kind: 'color',
+      required: false,
+    },
   },
   children: { allow: [] },
   migrations: [],
@@ -28,6 +36,8 @@ export const formSubmitBlock: BlockDefinition = {
     icon: 'send',
     props: {
       label: { label: 'Etichetta', order: 1 },
+      styleBackgroundColor: { label: 'Colore di sfondo', tab: 'style', order: 2 },
+      styleTextColor: { label: 'Colore testo', tab: 'style', order: 3 },
     },
   },
 };

@@ -18,3 +18,23 @@
   display: grid;
   position: relative;
 }
+
+/*
+ * Overlay su immagine di sfondo (ADR-47 § 1): `.overlay` è un `<div>` assoluto, escluso
+ * per costruzione dal flusso Grid (un elemento `position: absolute` non partecipa al
+ * posizionamento delle celle). `.withOverlay > *:not(.overlay)` solleva lo z-index dei
+ * figli reali sopra l'overlay entro lo stesso contesto di stacking creato da
+ * `.section { position: relative }` — senza questa regola i figli "statici" verrebbero
+ * comunque dipinti sotto un elemento posizionato, indipendentemente dall'ordine nel DOM.
+ */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.withOverlay > *:not(.overlay) {
+  position: relative;
+  z-index: 1;
+}

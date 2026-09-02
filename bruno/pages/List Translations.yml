@@ -1,0 +1,39 @@
+info:
+  name: List Translations
+  type: http
+  seq: 16
+
+http:
+  method: GET
+  url: "{{baseUrl}}/app/pages/:guid/translations"
+  params:
+    - name: guid
+      value: a1b2c3d4e5f6a7b8
+      type: path
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 200 or 404", function() {
+    expect([200, 404]).to.include(res.getStatus());
+  });
+
+  test("su successo, il body è l'array delle righe del gruppo di traduzione (sorgente inclusa)", function() {
+    if (res.getStatus() === 200) {
+      const body = res.getBody();
+      expect(body).to.be.an("array");
+      body.forEach(function (row) {
+        expect(row).to.have.property("guid");
+        expect(row).to.have.property("locale");
+        expect(row).to.have.property("title");
+        expect(row).to.have.property("status");
+      });
+    }
+  });

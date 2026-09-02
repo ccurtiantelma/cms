@@ -488,6 +488,23 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "name": "customElementId",
         "kind": "htmlId",
         "required": false
+      },
+      {
+        "name": "styleBackgroundImageRef",
+        "kind": "mediaRef",
+        "required": false
+      },
+      {
+        "name": "styleOverlayColor",
+        "kind": "color",
+        "required": false
+      },
+      {
+        "name": "styleOverlayOpacity",
+        "kind": "number",
+        "required": false,
+        "min": 0,
+        "max": 1
       }
     ],
     "meta": {
@@ -648,6 +665,24 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "tab": "advanced",
           "order": 27,
           "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
+        },
+        "styleBackgroundImageRef": {
+          "label": "Immagine di sfondo",
+          "tab": "style",
+          "order": 28,
+          "help": "Riferimento a un file della media library."
+        },
+        "styleOverlayColor": {
+          "label": "Colore overlay",
+          "tab": "style",
+          "order": 29,
+          "help": "Colore esadecimale sovrapposto all'immagine di sfondo."
+        },
+        "styleOverlayOpacity": {
+          "label": "Opacità overlay",
+          "tab": "style",
+          "order": 30,
+          "help": "Valore da 0 (trasparente) a 1 (opaco)."
         }
       }
     }
@@ -838,6 +873,17 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "name": "customElementId",
         "kind": "htmlId",
         "required": false
+      },
+      {
+        "name": "styleTextAlign",
+        "kind": "enum",
+        "required": false,
+        "values": [
+          "left",
+          "center",
+          "right",
+          "justify"
+        ]
       }
     ],
     "meta": {
@@ -936,6 +982,11 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "tab": "advanced",
           "order": 18,
           "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
+        },
+        "styleTextAlign": {
+          "label": "Allineamento testo",
+          "tab": "style",
+          "order": 19
         }
       }
     }
@@ -2236,6 +2287,16 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "required": false,
         "default": "Invia",
         "maxLength": 80
+      },
+      {
+        "name": "styleBackgroundColor",
+        "kind": "color",
+        "required": false
+      },
+      {
+        "name": "styleTextColor",
+        "kind": "color",
+        "required": false
       }
     ],
     "meta": {
@@ -2246,6 +2307,16 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "label": {
           "label": "Etichetta",
           "order": 1
+        },
+        "styleBackgroundColor": {
+          "label": "Colore di sfondo",
+          "tab": "style",
+          "order": 2
+        },
+        "styleTextColor": {
+          "label": "Colore testo",
+          "tab": "style",
+          "order": 3
         }
       }
     }

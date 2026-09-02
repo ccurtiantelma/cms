@@ -272,6 +272,9 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
               'styleShadow',
               'customCssClass',
               'customElementId',
+              'styleBackgroundImageRef',
+              'styleOverlayColor',
+              'styleOverlayOpacity',
             ],
           },
         },
@@ -308,6 +311,7 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
             'styleShadow',
             'customCssClass',
             'customElementId',
+            'styleTextAlign',
           ],
         },
       });
@@ -1290,6 +1294,326 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
           constraint: ['none', 'sm', 'md', 'lg'],
         },
       });
+    });
+  });
+
+  // ─── ADR-47 — estensioni section/heading/form-submit (allineamento, overlay, colore) ─
+
+  describe('kind "color" (ADR-47, riuso del kind esistente ADR-33 § 3/ADR-38 — pattern 3 o 6 cifre hex)', () => {
+    it.each(['#ffffff', '#d90000', '#0f172a', '#000000', '#fff', '#abc', '#ABC123'])(
+      'section.styleOverlayColor = %j è accettato (esadecimale a 3 o 6 cifre, maiuscole/minuscole)',
+      (styleOverlayColor) => {
+        const result = validator.validateTree([
+          node({ type: 'section', props: { styleOverlayColor } }),
+        ]);
+        expect(result.valid).toBe(true);
+      },
+    );
+
+    it.each(['#ffffff', '#fff'])(
+      'formSubmit.styleBackgroundColor/styleTextColor = %j sono accettati (stesso kind color riusato su form-submit, form-submit non è ROOT_ALLOWED: annidato in section > form)',
+      (color) => {
+        const result = validator.validateTree([
+          node({
+            id: 'sec',
+            type: 'section',
+            props: {},
+            children: [
+              node({
+                id: 'frm',
+                type: 'form',
+                props: { formKey: 'contatti' },
+                children: [
+                  node({
+                    id: 'submit',
+                    type: 'form-submit',
+                    props: { styleBackgroundColor: color, styleTextColor: color },
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ]);
+        expect(result.valid).toBe(true);
+      },
+    );
+
+    it.each([
+      'red',
+      'rgb(0,0,0)',
+      'url(javascript:alert(1))',
+      'inherit',
+      'currentColor',
+      'red;}</style><script>alert(1)</script>',
+      '#gggggg',
+      '#12345',
+      '',
+    ])(
+      'section.styleOverlayColor = %j è respinto con reason "format" (mai rgb()/nomi CSS/keyword/breakout)',
+      (styleOverlayColor) => {
+        const result = validator.validateTree([
+          node({ type: 'section', props: { styleOverlayColor } }),
+        ]);
+
+        expect(result.errors).toContainEqual({
+          code: 'BLOCK_PROP_INVALID',
+          details: {
+            path: 'blocks[0].props.styleOverlayColor',
+            type: 'section',
+            prop: 'styleOverlayColor',
+            kind: 'color',
+            reason: 'format',
+          },
+        });
+      },
+    );
+
+    it('formSubmit.styleBackgroundColor con tentativo di injection è respinto con reason "format", mai persistito', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'sec',
+          type: 'section',
+          props: {},
+          children: [
+            node({
+              id: 'frm',
+              type: 'form',
+              props: { formKey: 'contatti' },
+              children: [
+                node({
+                  id: 'submit',
+                  type: 'form-submit',
+                  props: { styleBackgroundColor: 'url(javascript:alert(1))' },
+                }),
+              ],
+            }),
+          ],
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].children[0].children[0].props.styleBackgroundColor',
+          type: 'form-submit',
+          prop: 'styleBackgroundColor',
+          kind: 'color',
+          reason: 'format',
+        },
+      });
+    });
+
+    it('section.styleOverlayColor con tipo non stringa produce reason "type", non "format"', () => {
+      const result = validator.validateTree([
+        node({ type: 'section', props: { styleOverlayColor: 16777215 } }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleOverlayColor',
+          type: 'section',
+          prop: 'styleOverlayColor',
+          kind: 'color',
+          reason: 'type',
+        },
+      });
+    });
+  });
+
+  describe('kind "enum" — heading.styleTextAlign (ADR-47, non responsive)', () => {
+    it.each(['left', 'center', 'right', 'justify'])(
+      'heading.styleTextAlign = %j è accettato',
+      (styleTextAlign) => {
+        const result = validator.validateTree([
+          node({ type: 'heading', props: { level: 'h2', text: 'T', styleTextAlign } }),
+        ]);
+        expect(result.valid).toBe(true);
+      },
+    );
+
+    it.each(['top', 'middle', '', 'CENTER'])(
+      'heading.styleTextAlign = %j (fuori dall\'elenco chiuso) è respinto con reason "enum"',
+      (styleTextAlign) => {
+        const result = validator.validateTree([
+          node({ type: 'heading', props: { level: 'h2', text: 'T', styleTextAlign } }),
+        ]);
+
+        expect(result.errors).toContainEqual({
+          code: 'BLOCK_PROP_INVALID',
+          details: {
+            path: 'blocks[0].props.styleTextAlign',
+            type: 'heading',
+            prop: 'styleTextAlign',
+            kind: 'enum',
+            reason: 'enum',
+            constraint: ['left', 'center', 'right', 'justify'],
+          },
+        });
+      },
+    );
+
+    it('heading assente styleTextAlign resta valido: prop opzionale, nessun bump di v (ADR-47)', () => {
+      const result = validator.validateTree([
+        node({ type: 'heading', props: { level: 'h2', text: 'Titolo' } }),
+      ]);
+      expect(result.valid).toBe(true);
+    });
+  });
+
+  describe('kind "number" — section.styleOverlayOpacity (ADR-47, range [0,1])', () => {
+    it.each([0, 0.5, 1])('section.styleOverlayOpacity = %j è accettato', (styleOverlayOpacity) => {
+      const result = validator.validateTree([
+        node({ type: 'section', props: { styleOverlayOpacity } }),
+      ]);
+      expect(result.valid).toBe(true);
+    });
+
+    it.each([1.5, -0.1, 2, -1])(
+      'section.styleOverlayOpacity = %j (fuori da [0,1]) è respinto con reason "range"',
+      (styleOverlayOpacity) => {
+        const result = validator.validateTree([
+          node({ type: 'section', props: { styleOverlayOpacity } }),
+        ]);
+
+        expect(result.errors).toContainEqual({
+          code: 'BLOCK_PROP_INVALID',
+          details: {
+            path: 'blocks[0].props.styleOverlayOpacity',
+            type: 'section',
+            prop: 'styleOverlayOpacity',
+            kind: 'number',
+            reason: 'range',
+            constraint: [0, 1],
+            actual: styleOverlayOpacity,
+          },
+        });
+      },
+    );
+
+    it('section.styleOverlayOpacity non numerico produce reason "type"', () => {
+      const result = validator.validateTree([
+        node({ type: 'section', props: { styleOverlayOpacity: '0.5' } }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleOverlayOpacity',
+          type: 'section',
+          prop: 'styleOverlayOpacity',
+          kind: 'number',
+          reason: 'type',
+        },
+      });
+    });
+  });
+
+  describe('kind "mediaRef" — section.styleBackgroundImageRef (ADR-47)', () => {
+    it('section.styleBackgroundImageRef con guid valido (16 hex) è accettato', () => {
+      const result = validator.validateTree([
+        node({ type: 'section', props: { styleBackgroundImageRef: '0123456789abcdef' } }),
+      ]);
+      expect(result.valid).toBe(true);
+    });
+
+    it('section.styleBackgroundImageRef malformato è respinto con reason "guidFormat"', () => {
+      const result = validator.validateTree([
+        node({ type: 'section', props: { styleBackgroundImageRef: 'troppo-corto' } }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleBackgroundImageRef',
+          type: 'section',
+          prop: 'styleBackgroundImageRef',
+          kind: 'mediaRef',
+          reason: 'guidFormat',
+        },
+      });
+    });
+  });
+
+  describe('albero con una sola prop ADR-47 non valida in mezzo a molte valide: respinto per intero (mai salvataggio parziale)', () => {
+    it('section con styleOverlayColor valido ma heading annidato con styleTextAlign non valido produce un solo errore e result.valid false', () => {
+      const tree: ValidatableBlockNode[] = [
+        node({
+          id: 'sec',
+          type: 'section',
+          props: { styleOverlayColor: '#123456', styleOverlayOpacity: 0.8 },
+          children: [
+            node({
+              id: 'h',
+              type: 'heading',
+              props: { level: 'h2', text: 'Titolo', styleTextAlign: 'diagonal' },
+            }),
+          ],
+        }),
+      ];
+
+      const result = validator.validateTree(tree);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toEqual([
+        {
+          code: 'BLOCK_PROP_INVALID',
+          details: {
+            path: 'blocks[0].children[0].props.styleTextAlign',
+            type: 'heading',
+            prop: 'styleTextAlign',
+            kind: 'enum',
+            reason: 'enum',
+            constraint: ['left', 'center', 'right', 'justify'],
+          },
+        },
+      ]);
+    });
+
+    it('un albero con più nodi ADR-47 dove un solo colore è malformato colleziona quell\'errore e nessun altro, senza fermarsi (regola 4)', () => {
+      const tree: ValidatableBlockNode[] = [
+        node({
+          id: 'sec1',
+          type: 'section',
+          props: { styleOverlayColor: '#ffffff' },
+          children: [],
+        }),
+        node({
+          id: 'sec2',
+          type: 'section',
+          props: {},
+          children: [
+            node({
+              id: 'frm',
+              type: 'form',
+              props: { formKey: 'contatti' },
+              children: [
+                node({
+                  id: 'submit',
+                  type: 'form-submit',
+                  props: { styleBackgroundColor: 'not-a-color', styleTextColor: '#000000' },
+                }),
+              ],
+            }),
+          ],
+        }),
+      ];
+
+      const result = validator.validateTree(tree);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toEqual([
+        {
+          code: 'BLOCK_PROP_INVALID',
+          details: {
+            path: 'blocks[1].children[0].children[0].props.styleBackgroundColor',
+            type: 'form-submit',
+            prop: 'styleBackgroundColor',
+            kind: 'color',
+            reason: 'format',
+          },
+        },
+      ]);
     });
   });
 });

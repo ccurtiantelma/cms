@@ -121,6 +121,9 @@ function renderNode(
           styleHideDesktop={node.props.styleHideDesktop}
           styleHideTablet={node.props.styleHideTablet}
           styleHideMobile={node.props.styleHideMobile}
+          styleBackgroundImageRef={node.props.styleBackgroundImageRef}
+          styleOverlayColor={node.props.styleOverlayColor}
+          styleOverlayOpacity={node.props.styleOverlayOpacity}
         >
           {node.children.map((child) => (
             <BlockRenderer key={child.id} node={child} formSubmission={formSubmission} />
@@ -171,6 +174,7 @@ function renderNode(
           styleSpaceBefore={node.props.styleSpaceBefore}
           styleSpaceAfter={node.props.styleSpaceAfter}
           styleTextColor={node.props.styleTextColor}
+          styleTextColorCustom={node.props.styleTextColorCustom}
           styleFontSize={node.props.styleFontSize}
           styleFontWeight={node.props.styleFontWeight}
           styleFontFamily={node.props.styleFontFamily}
@@ -178,6 +182,7 @@ function renderNode(
           styleHideDesktop={node.props.styleHideDesktop}
           styleHideTablet={node.props.styleHideTablet}
           styleHideMobile={node.props.styleHideMobile}
+          styleTextAlign={node.props.styleTextAlign}
           editable={editing?.editable}
           onTextChange={editing?.onTextChange}
           onTextInput={editing?.onTextInput}
@@ -268,7 +273,13 @@ function renderNode(
         />
       );
     case 'form-submit':
-      return <FormSubmitBlock label={node.props.label} />;
+      return (
+        <FormSubmitBlock
+          label={node.props.label}
+          styleBackgroundColor={node.props.styleBackgroundColor}
+          styleTextColor={node.props.styleTextColor}
+        />
+      );
     default:
       return null;
   }

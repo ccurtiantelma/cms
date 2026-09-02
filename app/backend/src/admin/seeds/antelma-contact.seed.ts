@@ -63,17 +63,16 @@ function sortKeysDeep(value: unknown): unknown {
  * Adattamenti dichiarati rispetto al brief grafico originale (nessun
  * equivalente nel registro attuale, quindi omessi anziché inventati):
  * - `Heading.level` è `h2`, mai `h1` (registro `heading.block.ts`).
- * - Nessun `background-image`/gradiente sull'Hero: `section` espone solo
- *   `styleBackgroundColor` (colore esadecimale piatto), non un layer immagine.
+ * - Nessun `background-image` sull'Hero: `styleOverlayColor`/`styleOverlayOpacity`
+ *   (ADR-47) sono dichiarate per un layer sopra `styleBackgroundImageRef`, ma qui
+ *   restano impostate senza immagine di sfondo — l'overlay si applica comunque
+ *   sopra `styleBackgroundColor` per coerenza col tono scuro richiesto dal brief.
  * - Spaziature in pixel del brief proiettate sul token più vicino fra
  *   `stylePaddingTop/Right/Bottom/Left` (`'0'..'96'`), non un valore libero.
- * - `Heading` non ha una prop di allineamento testo: il centraggio del titolo
- *   Hero non è rappresentabile nel registro attuale.
  * - `container` non ha `columns`/`maxWidth`: il vincolo di larghezza del form
  *   (760px, centrato) è espresso da `section.maxWidth`/`contentWidth`, non dal
  *   `container` che lo racchiude (che resta comunque presente, come da brief).
- * - `form` ha solo `formKey` (niente `formTitle`); `form-submit` ha solo
- *   `label` (nessuna prop di stile).
+ * - `form` ha solo `formKey` (niente `formTitle`).
  *
  * Nessun header/footer qui: sono cromatura di layout, non contenuto di
  * Pagina (ADR-40) — vive nelle Sezioni Globali `header`/`footer`
@@ -88,6 +87,8 @@ function buildAntelmaContactBlocks(): BlockNode[] {
     v: 1,
     props: {
       styleBackgroundColor: '#0f172a',
+      styleOverlayColor: '#0f172a',
+      styleOverlayOpacity: 0.65,
       stylePaddingTop: { default: '96' },
       stylePaddingBottom: { default: '96' },
       stylePaddingLeft: { default: '24' },
@@ -104,6 +105,7 @@ function buildAntelmaContactBlocks(): BlockNode[] {
           level: 'h2',
           text: 'RICHIEDI UN CONTATTO ANTELMA',
           styleTextColorCustom: '#ffffff',
+          styleTextAlign: 'center',
           styleFontSizeCustom: { value: 36, unit: 'px' },
           styleFontWeight: { default: 'bold' },
         },
@@ -172,7 +174,11 @@ function buildAntelmaContactBlocks(): BlockNode[] {
                 id: 'antelma-contatti-form-submit',
                 type: 'form-submit',
                 v: 1,
-                props: { label: 'INVIA RICHIESTA' },
+                props: {
+                  label: 'INVIA RICHIESTA',
+                  styleBackgroundColor: '#d90000',
+                  styleTextColor: '#ffffff',
+                },
                 children: [],
               },
             ],

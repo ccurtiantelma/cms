@@ -24,10 +24,8 @@ import { useDisclosure, useMediaQuery } from '@mantine/hooks';
 import {
   IconLogout,
   IconHelp,
-  IconLayoutDashboard,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
-  IconPalette,
 } from '@tabler/icons-react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../hooks/useAuth';
@@ -163,16 +161,15 @@ export default function LayoutProtected(): JSX.Element {
             data-tour="sidebar-nav"
             className={classes.navbarSurface}
           >
-            {/* Branding — placeholder testuale, nessun logo immagine (vedi CLAUDE.md). */}
+            {/* Branding della sidebar. */}
             <div className={`${classes.brand} ${isCollapsed ? classes.brandCollapsed : ''}`}>
-              <div className={classes.logoBox} aria-hidden="true">
-                SK
-              </div>
+              <img className={classes.logoImage} src="/logo.png" alt="CMS" />
               {!isCollapsed && (
                 <div className={classes.brandText}>
                   <span className={classes.brandName}>CMS</span>
                 </div>
               )}
+              <NotificationBell />
             </div>
 
             {/* Voci di navigazione — sull'Editor tema diventano ancore alle sezioni
@@ -251,56 +248,6 @@ export default function LayoutProtected(): JSX.Element {
                   <div>{helpButton}</div>
                 ))}
             </ScrollArea>
-
-            {/* Azioni rapide in basso: notifica prima dell'Editor tema, poi profilo utente. */}
-            <div className={classes.customizerSection}>
-              <NotificationBell />
-
-              {user?.role === AppUserRoles.SuperAdmin && (
-                <>
-                  {isCollapsed ? (
-                    <Tooltip
-                      label={isThemeEditorRoute ? 'Chiudi editor tema' : 'Editor tema'}
-                      position="right"
-                      withArrow
-                    >
-                      <button
-                        type="button"
-                        className={`${classes.navItem} ${classes.navItemCollapsed}`}
-                        onClick={() => goTo(isThemeEditorRoute ? '/dashboard' : '/theme-editor')}
-                        aria-label={isThemeEditorRoute ? 'Chiudi editor tema' : 'Editor tema'}
-                      >
-                        <span className={classes.navIcon}>
-                          {isThemeEditorRoute ? (
-                            <IconLayoutDashboard size={20} />
-                          ) : (
-                            <IconPalette size={20} />
-                          )}
-                        </span>
-                      </button>
-                    </Tooltip>
-                  ) : (
-                    <button
-                      type="button"
-                      className={classes.navItem}
-                      onClick={() => goTo(isThemeEditorRoute ? '/dashboard' : '/theme-editor')}
-                      aria-label={isThemeEditorRoute ? 'Chiudi editor tema' : 'Editor tema'}
-                    >
-                      <span className={classes.navIcon}>
-                        {isThemeEditorRoute ? (
-                          <IconLayoutDashboard size={20} />
-                        ) : (
-                          <IconPalette size={20} />
-                        )}
-                      </span>
-                      <span className={classes.navLabel}>
-                        {isThemeEditorRoute ? 'Chiudi editor tema' : 'Editor tema'}
-                      </span>
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
 
             <div
               className={`${classes.userSection} ${isCollapsed ? classes.userSectionCollapsed : ''}`}
