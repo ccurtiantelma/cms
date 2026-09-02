@@ -4,6 +4,8 @@ import { userEntity } from '../db/schema';
 import { Utils } from '../common/utils';
 import { AppConstants } from '../common/app-constants';
 import { AppUserRoles } from '../common/enums';
+import { antelmaContactSeed } from './seeds/antelma-contact.seed';
+import { antelmaGlobalSectionsSeed } from './seeds/antelma-global-sections.seed';
 
 /** Password demo fissa per gli utenti Admin/Manager/User creati dal seed (documentata nel log). */
 const DEMO_PASSWORD = 'CmsDemo#2026';
@@ -22,6 +24,31 @@ export class SeedService {
 
   /** Inietta il servizio di accesso al DB. */
   constructor(private readonly dbService: DbService) {}
+
+  /**
+   * Punto di ingresso unico del seed (`npm run seed` via `db/seed.ts`,
+   * endpoint `POST /app/admin/system/seed-demo` via `AdminService.seedDemo()`):
+   * utenti demo, poi la pagina "Antelma - Richiedi un Contatto" (che referenzia
+   * l'utente SuperAdmin appena creato/garantito come `createdBy`/`updatedBy`
+   * delle proprie righe). L'ordine non è intercambiabile.
+   */
+  async run(): Promise<Record<string, number>> {
+    const usersSummary = await this.seedDemo();
+    const pageSummary = await antelmaContactSeed(this.dbService);
+    const globalSectionsSummary = await antelmaGlobalSectionsSeed(this.dbService);
+    return {
+      ...usersSummary,
+      'pages.contatti-antelma.created': pageSummary.created,
+      'pages.contatti-antelma.updated': pageSummary.updated,
+      'pages.contatti-antelma.unchanged': pageSummary.unchanged,
+      'globalSections.header.created': globalSectionsSummary.header.created,
+      'globalSections.header.updated': globalSectionsSummary.header.updated,
+      'globalSections.header.unchanged': globalSectionsSummary.header.unchanged,
+      'globalSections.footer.created': globalSectionsSummary.footer.created,
+      'globalSections.footer.updated': globalSectionsSummary.footer.updated,
+      'globalSections.footer.unchanged': globalSectionsSummary.footer.unchanged,
+    };
+  }
 
   /**
    * Crea (o aggiorna, se già presenti) gli utenti demo, uno per ruolo.

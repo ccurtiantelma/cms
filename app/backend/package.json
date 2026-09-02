@@ -9,7 +9,7 @@
     "start:prod": "node dist/main",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "seed": "tsx src/db/seed.ts",
+    "seed": "ts-node src/db/seed.ts",
     "openapi:export": "ts-node export-openapi.ts",
     "blocks:export": "ts-node export-blocks.ts",
     "test": "jest",

@@ -65,7 +65,7 @@ export class AdminService {
   /** Carica i dati demo richiamando la stessa logica usata da `npm run seed`. */
   async seedDemo(authInfo: AuthInfo, ip?: string): Promise<Record<string, number>> {
     this.logger.log('Avvio caricamento dati demo da endpoint admin.');
-    const summary = await this.seedService.seedDemo();
+    const summary = await this.seedService.run();
     await this.auditLogService.log(
       authInfo.userId,
       'system.seed-demo',
