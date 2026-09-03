@@ -537,7 +537,10 @@ export class SettingsService {
    */
   async getMultilingualConfig(): Promise<MultilingualConfigDto> {
     const row = await this.db.db.query.appSettingEntity.findFirst({
-      where: and(eq(appSettingEntity.key, MULTILINGUAL_SETTING_KEY), eq(appSettingEntity.isActive, true)),
+      where: and(
+        eq(appSettingEntity.key, MULTILINGUAL_SETTING_KEY),
+        eq(appSettingEntity.isActive, true),
+      ),
     });
     if (!row) {
       return DEFAULT_MULTILINGUAL_CONFIG;

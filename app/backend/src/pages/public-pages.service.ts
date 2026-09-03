@@ -141,8 +141,7 @@ export class PublicPagesService {
     // Caso radice (ADR-52 § 4): nessun antenato e slug = home → segmento
     // proprio omesso, la home resta raggiungibile da "/" (o dal proprio
     // prefisso di lingua, sotto).
-    const segments: string[] =
-      page.slug === HOME_SLUG && page.parentId === null ? [] : [page.slug];
+    const segments: string[] = page.slug === HOME_SLUG && page.parentId === null ? [] : [page.slug];
 
     let parentId = page.parentId;
     let lookups = 0;

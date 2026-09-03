@@ -55,8 +55,7 @@ export const navMenuItemBlock: BlockDefinition = {
       pageGuid: {
         label: 'Pagina collegata',
         order: 2,
-        help:
-          'Pagina interna a cui la voce rimanda. Se è impostato anche un URL, l\'URL vince.',
+        help: "Pagina interna a cui la voce rimanda. Se è impostato anche un URL, l'URL vince.",
       },
       url: {
         label: 'URL',

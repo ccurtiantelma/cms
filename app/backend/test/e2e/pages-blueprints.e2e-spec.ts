@@ -140,7 +140,7 @@ describe('PagesController — creazione da Template (e2e, DB/Redis reali)', () =
   // ─── a) Creazione con template 'landing-page' ──────────────────────────
 
   describe("Creazione con templateSlug 'landing-page'", () => {
-    it('201: draftContent riflette l\'albero del blueprint e tutti i blocchi hanno GUID univoci', async () => {
+    it("201: draftContent riflette l'albero del blueprint e tutti i blocchi hanno GUID univoci", async () => {
       const manager = await seedAuth(AppUserRoles.Manager, 'bp-landing1');
 
       const res = await authedRequest('post', '/api/v1/app/pages', manager)
@@ -208,7 +208,11 @@ describe('PagesController — creazione da Template (e2e, DB/Redis reali)', () =
       const manager = await seedAuth(AppUserRoles.Manager, 'bp-invalid1');
 
       const res = await authedRequest('post', '/api/v1/app/pages', manager)
-        .send({ title: 'Pagina da template inesistente', locale: 'it-IT', templateSlug: 'invalid-template' })
+        .send({
+          title: 'Pagina da template inesistente',
+          locale: 'it-IT',
+          templateSlug: 'invalid-template',
+        })
         .expect(400);
 
       expect(res.body.code).toBe('PAGE_TEMPLATE_UNKNOWN');
@@ -224,7 +228,7 @@ describe('PagesController — creazione da Template (e2e, DB/Redis reali)', () =
   // ─── d) Creazione senza templateSlug ───────────────────────────────────
 
   describe('Creazione senza templateSlug', () => {
-    it('201: nessun errore, draftContent risultante è l\'albero vuoto di default (nessun draftContent fornito)', async () => {
+    it("201: nessun errore, draftContent risultante è l'albero vuoto di default (nessun draftContent fornito)", async () => {
       // NOTA (Test Engineer, comportamento osservato non corretto): l'assenza di
       // `templateSlug` NON risolve il blueprint `empty` dal registro
       // (`page-blueprints.registry.ts`, che avrebbe un blocco `section-root`) —
@@ -254,7 +258,15 @@ describe('PagesController — creazione da Template (e2e, DB/Redis reali)', () =
           locale: 'it-IT',
           draftContent: {
             version: 1,
-            blocks: [{ id: 'b1', type: 'heading', v: 1, props: { level: 'h2', text: 'Ciao' }, children: [] }],
+            blocks: [
+              {
+                id: 'b1',
+                type: 'heading',
+                v: 1,
+                props: { level: 'h2', text: 'Ciao' },
+                children: [],
+              },
+            ],
           },
         })
         .expect(201);

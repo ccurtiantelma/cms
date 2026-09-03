@@ -1,4 +1,7 @@
-import { computeBlockRegistryToken, DEFAULT_BLOCK_REGISTRY } from '../../../src/blocks/block-registry';
+import {
+  computeBlockRegistryToken,
+  DEFAULT_BLOCK_REGISTRY,
+} from '../../../src/blocks/block-registry';
 
 /**
  * Copertura di registro (ADR-29/ADR-30, PLAN-F04c-editor-maturo.md T3):

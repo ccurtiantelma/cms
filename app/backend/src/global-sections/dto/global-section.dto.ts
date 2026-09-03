@@ -15,7 +15,7 @@ export class GlobalSectionDto {
   @ApiProperty({ description: 'Slot di layout pubblico', enum: GlobalSectionLayoutSlot })
   layoutSlot!: GlobalSectionLayoutSlot;
 
-  @ApiProperty({ description: 'Se l\'header è sticky sul viewport', example: true })
+  @ApiProperty({ description: "Se l'header è sticky sul viewport", example: true })
   isSticky!: boolean;
 
   @ApiProperty({

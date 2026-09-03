@@ -727,7 +727,10 @@ describe('SettingsController (integration)', () => {
   describe('PUT /app/settings/multilingual', () => {
     it('happy path: Admin salva il registro Locale → upsert + audit log + echo', async () => {
       const auth = makeAuthFor(AppUserRoles.Admin, 9);
-      const payload: MultilingualConfigDto = { active: ['it-IT', 'en-GB', 'fr-FR'], default: 'it-IT' };
+      const payload: MultilingualConfigDto = {
+        active: ['it-IT', 'en-GB', 'fr-FR'],
+        default: 'it-IT',
+      };
 
       const res = await request(app.getHttpServer())
         .put('/api/v1/app/settings/multilingual')
@@ -919,7 +922,10 @@ describe('SettingsController (integration)', () => {
 
     it('errore: colore di palette non hex → 400, nessuna scrittura', async () => {
       const auth = makeAuthFor(AppUserRoles.Admin);
-      const payload = { ...validGlobalTokens, palette: { ...validGlobalTokens.palette, primary: 'red' } };
+      const payload = {
+        ...validGlobalTokens,
+        palette: { ...validGlobalTokens.palette, primary: 'red' },
+      };
 
       const res = await request(app.getHttpServer())
         .put('/api/v1/app/settings/global-tokens')
@@ -986,7 +992,10 @@ describe('SettingsController (integration)', () => {
 
     it('errore: campo extra nel payload → 400 (forbidNonWhitelisted)', async () => {
       const auth = makeAuthFor(AppUserRoles.Admin);
-      const payload = { ...validGlobalTokens, palette: { ...validGlobalTokens.palette, evil: '#000000' } };
+      const payload = {
+        ...validGlobalTokens,
+        palette: { ...validGlobalTokens.palette, evil: '#000000' },
+      };
 
       await request(app.getHttpServer())
         .put('/api/v1/app/settings/global-tokens')

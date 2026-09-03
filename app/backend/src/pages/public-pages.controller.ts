@@ -98,7 +98,10 @@ export class PublicPagesController {
   @ApiOperation({
     summary: 'Risolve il guid di una Pagina pubblicata al proprio percorso pubblico canonico',
   })
-  @ApiParam({ name: 'guid', description: 'Identificatore amministrativo della Pagina (16 esadecimali)' })
+  @ApiParam({
+    name: 'guid',
+    description: 'Identificatore amministrativo della Pagina (16 esadecimali)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Percorso pubblico canonico della Pagina pubblicata',

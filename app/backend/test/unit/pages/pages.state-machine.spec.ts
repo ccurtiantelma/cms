@@ -25,7 +25,7 @@ describe('pages.state-machine', () => {
       expect(PAGE_STATUS_TRANSITIONS.published).toHaveLength(3);
     });
 
-    it('richiede ancora la soglia elevata (Manager+): nessuna eccezione introdotta per l\'auto-transizione', () => {
+    it("richiede ancora la soglia elevata (Manager+): nessuna eccezione introdotta per l'auto-transizione", () => {
       expect(statusTransitionRequiresElevation('published')).toBe(true);
     });
 

@@ -143,7 +143,7 @@ export class FilesController {
    * per questa risorsa in ADR-49/ADR-35.
    */
   @Patch(':guid/focal-point')
-  @ApiOperation({ summary: "Aggiorna il focal point editoriale (percentuale 0-100) di un asset" })
+  @ApiOperation({ summary: 'Aggiorna il focal point editoriale (percentuale 0-100) di un asset' })
   @ApiResponse({ status: 200, description: 'Metadati aggiornati del file', type: FileMetadataDto })
   @ApiResponse({ status: 400, description: 'focalX/focalY fuori dal range 0-100' })
   @ApiResponse({ status: 404, description: 'File non trovato o eliminato' })

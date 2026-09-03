@@ -199,7 +199,11 @@ describe('PagesController (e2e, DB/Redis reali)', () => {
   }
 
   /** Registra il registro Locale attivi (RFC-F05 § 1) come farebbe un Admin da UI. */
-  async function setActiveLocales(admin: Auth, active: string[], defaultLocale: string): Promise<void> {
+  async function setActiveLocales(
+    admin: Auth,
+    active: string[],
+    defaultLocale: string,
+  ): Promise<void> {
     await authedRequest('put', '/api/v1/app/settings/multilingual', admin)
       .send({ active, default: defaultLocale })
       .expect(200);
@@ -355,15 +359,18 @@ describe('PagesController (e2e, DB/Redis reali)', () => {
       const newRevision = revisions.find((r) => r.id === afterRepublish!.publishedRevisionId);
       expect(newRevision).toBeDefined();
       expect(newRevision!.revisionNumber).toBe(2);
-      expect((newRevision!.content as { blocks: Array<{ props: { text: string } }> }).blocks[0].props.text).toBe(
-        'Contenuto v2',
-      );
+      expect(
+        (newRevision!.content as { blocks: Array<{ props: { text: string } }> }).blocks[0].props
+          .text,
+      ).toBe('Contenuto v2');
     });
 
     it('un User non elevato riceve 403 anche su published -> published (nessuna eccezione alla soglia di elevazione)', async () => {
       const manager = await seedAuth(AppUserRoles.Manager, 'republish2mgr');
       const user = await seedAuth(AppUserRoles.User, 'republish2user');
-      const page = await createDraftPage(manager, { title: 'Pagina published, User prova a ripubblicare' });
+      const page = await createDraftPage(manager, {
+        title: 'Pagina published, User prova a ripubblicare',
+      });
       await changeStatus(manager, page.guid, 'published').expect(200);
 
       const res = await changeStatus(user, page.guid, 'published');
@@ -1053,11 +1060,14 @@ describe('PagesController (e2e, DB/Redis reali)', () => {
       expect(res.body.code).toBe('PAGE_TRANSLATION_LOCALE_DUPLICATE');
     });
 
-    it('nessuna ownership sulla creazione: un User diverso dall\'autore della sorgente può comunque creare la traduzione', async () => {
+    it("nessuna ownership sulla creazione: un User diverso dall'autore della sorgente può comunque creare la traduzione", async () => {
       const author = await seedAuth(AppUserRoles.User, 'transl8a');
       const admin = await seedAuth(AppUserRoles.Admin, 'transl8b');
       await setActiveLocales(admin, ['it-IT', 'en-GB'], 'it-IT');
-      const source = await createDraftPage(author, { title: 'Pagina altrui', slug: 'pagina-altrui' });
+      const source = await createDraftPage(author, {
+        title: 'Pagina altrui',
+        slug: 'pagina-altrui',
+      });
 
       const other = await seedAuth(AppUserRoles.User, 'transl8c');
       await authedRequest('post', `/api/v1/app/pages/${source.guid}/translations`, other)

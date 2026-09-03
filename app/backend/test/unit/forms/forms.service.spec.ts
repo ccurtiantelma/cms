@@ -5,7 +5,10 @@ import { EmailQueueService } from '../../../src/queues/email-queue/email.queue.s
 import { BlockTreeValidatorService } from '../../../src/blocks/validator/block-tree-validator.service';
 import { DEFAULT_BLOCK_REGISTRY } from '../../../src/blocks/block-registry';
 import { ENVELOPE_VERSION } from '../../../src/blocks/migration/envelope-migration.engine';
-import { computeFormHoneypotFieldName, computeFormSignature } from '../../../src/forms/form-antispam.util';
+import {
+  computeFormHoneypotFieldName,
+  computeFormSignature,
+} from '../../../src/forms/form-antispam.util';
 import { SubmitFormDto } from '../../../src/forms/dto/submit-form.dto';
 
 /**
@@ -109,7 +112,7 @@ describe('FormsService (unit)', () => {
     );
   });
 
-  it('persiste l\'Invio e accoda la notifica con destinatari letti da app_settings (happy path)', async () => {
+  it("persiste l'Invio e accoda la notifica con destinatari letti da app_settings (happy path)", async () => {
     dbMock.query.appSettingEntity.findFirst.mockResolvedValue({
       value: { recipients: ['a@example.com', 'b@example.com'], notifySubject: 'Nuovo contatto' },
     });
@@ -125,7 +128,11 @@ describe('FormsService (unit)', () => {
 
     expect(dbMock.insert).toHaveBeenCalledTimes(1);
     expect(insertValuesMock).toHaveBeenCalledWith(
-      expect.objectContaining({ formKey: FORM_KEY, pageId: PAGE_ROW.id, payload: { nome: 'Mario' } }),
+      expect.objectContaining({
+        formKey: FORM_KEY,
+        pageId: PAGE_ROW.id,
+        payload: { nome: 'Mario' },
+      }),
     );
     expect(emailQueueService.enqueueEmail).toHaveBeenCalledTimes(1);
     expect(emailQueueService.enqueueEmail).toHaveBeenCalledWith(
@@ -146,7 +153,13 @@ describe('FormsService (unit)', () => {
     // campo extra, non silenziosamente ignorato — verifichiamo comunque che,
     // isolando solo i campi attesi, l'email non abbia mai potuto raggiungerlo.
     await expect(
-      service.submitForm(FORM_KEY, dto, { signature: dto.signature, values: dto.values }, '1.2.3.4', 'ua'),
+      service.submitForm(
+        FORM_KEY,
+        dto,
+        { signature: dto.signature, values: dto.values },
+        '1.2.3.4',
+        'ua',
+      ),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(emailQueueService.enqueueEmail).not.toHaveBeenCalled();
   });
@@ -171,7 +184,13 @@ describe('FormsService (unit)', () => {
     dto.values = { nome: 'Mario' };
 
     await expect(
-      service.submitForm(FORM_KEY, dto, { signature: dto.signature, values: dto.values }, '1.2.3.4', 'ua'),
+      service.submitForm(
+        FORM_KEY,
+        dto,
+        { signature: dto.signature, values: dto.values },
+        '1.2.3.4',
+        'ua',
+      ),
     ).resolves.toBeUndefined();
 
     expect(dbMock.insert).not.toHaveBeenCalled();
@@ -182,7 +201,13 @@ describe('FormsService (unit)', () => {
     const dto = buildDto({});
 
     await expect(
-      service.submitForm(FORM_KEY, dto, { signature: dto.signature, values: dto.values }, '1.2.3.4', 'ua'),
+      service.submitForm(
+        FORM_KEY,
+        dto,
+        { signature: dto.signature, values: dto.values },
+        '1.2.3.4',
+        'ua',
+      ),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(dbMock.insert).not.toHaveBeenCalled();
   });
@@ -191,7 +216,13 @@ describe('FormsService (unit)', () => {
     const dto = buildDto({ nome: 'Mario', campoInventato: 'x' });
 
     await expect(
-      service.submitForm(FORM_KEY, dto, { signature: dto.signature, values: dto.values }, '1.2.3.4', 'ua'),
+      service.submitForm(
+        FORM_KEY,
+        dto,
+        { signature: dto.signature, values: dto.values },
+        '1.2.3.4',
+        'ua',
+      ),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(dbMock.insert).not.toHaveBeenCalled();
   });
@@ -201,7 +232,13 @@ describe('FormsService (unit)', () => {
     const dto = buildDto({ nome: 'Mario' });
 
     await expect(
-      service.submitForm(FORM_KEY, dto, { signature: dto.signature, values: dto.values }, '1.2.3.4', 'ua'),
+      service.submitForm(
+        FORM_KEY,
+        dto,
+        { signature: dto.signature, values: dto.values },
+        '1.2.3.4',
+        'ua',
+      ),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(dbMock.insert).not.toHaveBeenCalled();
   });

@@ -194,7 +194,11 @@ describe('PagesController — Multilingua/i18n (e2e, DB/Redis reali)', () => {
   }
 
   /** Registra il registro Locale attivi (RFC-F05 § 1) come farebbe un Admin da UI. */
-  async function setActiveLocales(admin: Auth, active: string[], defaultLocale: string): Promise<void> {
+  async function setActiveLocales(
+    admin: Auth,
+    active: string[],
+    defaultLocale: string,
+  ): Promise<void> {
     await authedRequest('put', '/api/v1/app/settings/multilingual', admin)
       .send({ active, default: defaultLocale })
       .expect(200);
@@ -228,7 +232,9 @@ describe('PagesController — Multilingua/i18n (e2e, DB/Redis reali)', () => {
       ).expect(200);
 
       expect(res.body).toHaveLength(2);
-      const guids = (res.body as { guid: string; translationGroupId?: string }[]).map((r) => r.guid);
+      const guids = (res.body as { guid: string; translationGroupId?: string }[]).map(
+        (r) => r.guid,
+      );
       expect(guids).toEqual(expect.arrayContaining([source.guid, translationEn.body.guid]));
 
       // PageTranslationDto è volutamente leggero (guid/locale/title/status):
@@ -265,11 +271,9 @@ describe('PagesController — Multilingua/i18n (e2e, DB/Redis reali)', () => {
 
     it('404: guid sorgente inesistente', async () => {
       const manager = await seedAuth(AppUserRoles.Manager, 'i18n-list-404');
-      await authedRequest(
-        'get',
-        '/api/v1/app/pages/0000000000000000/translations',
-        manager,
-      ).expect(404);
+      await authedRequest('get', '/api/v1/app/pages/0000000000000000/translations', manager).expect(
+        404,
+      );
     });
   });
 
@@ -313,13 +317,11 @@ describe('PagesController — Multilingua/i18n (e2e, DB/Redis reali)', () => {
 
       // Testi/props copiati verbatim: solo l'id cambia, il contenuto no.
       const sourceTexts = (
-        (source.draftContent as { blocks: { children: { props: { text: string } }[] }[] }).blocks[0]
-          .children
-      ).map((c) => c.props.text);
+        source.draftContent as { blocks: { children: { props: { text: string } }[] }[] }
+      ).blocks[0].children.map((c) => c.props.text);
       const translatedTexts = (
-        (res.body.draftContent as { blocks: { children: { props: { text: string } }[] }[] }).blocks[0]
-          .children
-      ).map((c) => c.props.text);
+        res.body.draftContent as { blocks: { children: { props: { text: string } }[] }[] }
+      ).blocks[0].children.map((c) => c.props.text);
       expect(translatedTexts).toEqual(sourceTexts);
     });
   });
@@ -343,9 +345,11 @@ describe('PagesController — Multilingua/i18n (e2e, DB/Redis reali)', () => {
 
       await changeStatus(manager, source.guid, 'published').expect(200);
 
-      const sourceAfter = await authedRequest('get', `/api/v1/app/pages/${source.guid}`, manager).expect(
-        200,
-      );
+      const sourceAfter = await authedRequest(
+        'get',
+        `/api/v1/app/pages/${source.guid}`,
+        manager,
+      ).expect(200);
       const translationAfter = await authedRequest(
         'get',
         `/api/v1/app/pages/${translation.body.guid}`,
@@ -372,9 +376,11 @@ describe('PagesController — Multilingua/i18n (e2e, DB/Redis reali)', () => {
 
       await changeStatus(manager, translation.body.guid, 'published').expect(200);
 
-      const sourceAfter = await authedRequest('get', `/api/v1/app/pages/${source.guid}`, manager).expect(
-        200,
-      );
+      const sourceAfter = await authedRequest(
+        'get',
+        `/api/v1/app/pages/${source.guid}`,
+        manager,
+      ).expect(200);
       const translationAfter = await authedRequest(
         'get',
         `/api/v1/app/pages/${translation.body.guid}`,

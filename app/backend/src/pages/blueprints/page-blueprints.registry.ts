@@ -141,7 +141,9 @@ const contactPageBlueprintBlocks: BlockNode[] = [
         id: 'contact-intro-richtext',
         type: 'richText',
         v: 1,
-        props: { html: '<p>Compila il modulo o scrivici direttamente per qualsiasi informazione.</p>' },
+        props: {
+          html: '<p>Compila il modulo o scrivici direttamente per qualsiasi informazione.</p>',
+        },
         children: [],
       },
     ],

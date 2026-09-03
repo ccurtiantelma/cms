@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { BlockDefinition } from '../block-definition.types';
 import { BlockRegistry, DEFAULT_BLOCK_REGISTRY } from '../block-registry';
 import {
-  BorderPropSpec,
   BorderStyle,
   EnumPropSpec,
   LengthUnit,
@@ -10,7 +9,6 @@ import {
   PropSpec,
   RESPONSIVE_BREAKPOINTS,
   ResponsiveBreakpointName,
-  ShadowPropSpec,
   UnitValuePropSpec,
 } from '../prop-spec.types';
 import { ValidatableBlockNode } from './validatable-node.types';
@@ -281,7 +279,8 @@ export class BlockTreeValidatorService {
           return;
         }
         if (typeof value !== 'string') return invalid('type');
-        if (!isEnumTokenAllowed(value, spec.values)) return invalid('enum', { constraint: [...spec.values] });
+        if (!isEnumTokenAllowed(value, spec.values))
+          return invalid('enum', { constraint: [...spec.values] });
         return;
       }
       case 'url': {
@@ -369,7 +368,9 @@ export class BlockTreeValidatorService {
       value !== null &&
       !Array.isArray(value) &&
       Object.prototype.hasOwnProperty.call(value, 'default') &&
-      Object.keys(value).every((key) => RESPONSIVE_BREAKPOINTS.includes(key as ResponsiveBreakpointName));
+      Object.keys(value).every((key) =>
+        RESPONSIVE_BREAKPOINTS.includes(key as ResponsiveBreakpointName),
+      );
 
     if (!isEnvelopeShapeValid) {
       errors.push({
@@ -408,7 +409,10 @@ export class BlockTreeValidatorService {
     reason: BlockPropInvalidReason,
     extra?: { constraint?: number | string[] | [number, number]; actual?: number },
   ): void {
-    errors.push({ code: 'BLOCK_PROP_INVALID', details: { path, type, prop, kind, reason, ...extra } });
+    errors.push({
+      code: 'BLOCK_PROP_INVALID',
+      details: { path, type, prop, kind, reason, ...extra },
+    });
   }
 
   /**

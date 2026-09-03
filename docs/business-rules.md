@@ -323,6 +323,17 @@ Regole di sistema:
 
 ## Menu di navigazione
 
+> **DEPRECATA (2026-09-03)**: l'entità `Menu`/tabella SQL `menus` descritta sotto non è mai
+> stata costruita (era ancora "da approvare" in `CLAUDE.md` § Database). `ADR-52-blocco-navigazione-navmenu.md`
+> (Approvata) scioglie la tensione con la navigazione **a blocchi**: `navMenu`/`navMenuItem`
+> nel registro Blocchi, nessuna tabella dedicata. Le regole 1 e 3 restano vincolanti nella
+> loro sostanza (albero ordinato di voci verso Pagina/URL esterna, mai `id` numerico; per
+> Locale) ma si applicano ora ai blocchi `navMenu`/`navMenuItem`, non a righe di `menus`. La
+> regola 2 (voce verso Pagina non più pubblicata nascosta, mai link rotto) è soddisfatta da
+> `resolvePageGuidsToPaths`/`fetchPagePathByGuid` in `app/public-site/src/public-api-client.ts`:
+> un `pageGuid` non risolvibile (404/errore) produce `null`, la voce resta un'etichetta senza
+> `href`, mai un link rotto — non una segnalazione in area amministrativa, che resta assente.
+
 1. Un Menu è un albero ordinato di voci; ogni voce punta a una Pagina interna o a una URL
    esterna, mai a un `id` numerico.
 2. Una voce che punta a una Pagina non più pubblicata viene **nascosta dal sito pubblico**

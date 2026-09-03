@@ -7,7 +7,10 @@ import { IsOptional, IsString, MaxLength } from 'class-validator';
  * questo DTO, è deciso dal service in base al `guid` in path.
  */
 export class CreateTranslationDto {
-  @ApiProperty({ description: 'Locale della nuova traduzione (deve essere fra i Locale attivi)', example: 'en-GB' })
+  @ApiProperty({
+    description: 'Locale della nuova traduzione (deve essere fra i Locale attivi)',
+    example: 'en-GB',
+  })
   @IsString({ message: 'Il locale deve essere una stringa.' })
   @MaxLength(10, { message: 'Il locale non può superare i 10 caratteri.' })
   locale!: string;

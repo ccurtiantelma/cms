@@ -38,9 +38,7 @@ describe('PublicPagesController (unit)', () => {
   });
 
   it('risponde 200 con la configurazione del tema senza autenticazione', async () => {
-    const response = await request(app.getHttpServer())
-      .get('/public/settings/theme')
-      .expect(200);
+    const response = await request(app.getHttpServer()).get('/public/settings/theme').expect(200);
 
     expect(response.body).toEqual(theme);
     expect(getThemeConfig).toHaveBeenCalledTimes(1);

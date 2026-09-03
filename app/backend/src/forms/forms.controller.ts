@@ -26,8 +26,16 @@ export class FormsController {
   @ApiOperation({ summary: 'Lista paginata degli Invii (Manager+)' })
   @ApiQuery({ name: 'p', required: false, description: 'Pagina (default 1)' })
   @ApiQuery({ name: 'i', required: false, description: 'Elementi per pagina (default 20)' })
-  @ApiQuery({ name: 'd', required: false, description: 'Direzione ordinamento per createdAt (asc|desc, default desc)' })
-  @ApiQuery({ name: 'formKey', required: false, description: 'Filtro per chiave editoriale del modulo' })
+  @ApiQuery({
+    name: 'd',
+    required: false,
+    description: 'Direzione ordinamento per createdAt (asc|desc, default desc)',
+  })
+  @ApiQuery({
+    name: 'formKey',
+    required: false,
+    description: 'Filtro per chiave editoriale del modulo',
+  })
   @ApiResponse({ status: 200, description: 'Lista Invii paginata' })
   async listSubmissions(
     @Query('p') p: string,

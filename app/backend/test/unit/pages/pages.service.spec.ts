@@ -19,12 +19,14 @@ describe('PagesService — clonazione albero blocchi con id rigenerati (F05-02)'
     // Accesso al metodo privato: coerente con la scelta di non esporre
     // `cloneContentTreeWithFreshIds`/`cloneBlockNodeWithFreshIds` come API
     // pubblica, riusata sia da `createTranslation` sia dai blueprint.
-    return (service as unknown as {
-      cloneContentTreeWithFreshIds(c: ContentTree): ContentTree;
-    }).cloneContentTreeWithFreshIds(content);
+    return (
+      service as unknown as {
+        cloneContentTreeWithFreshIds(c: ContentTree): ContentTree;
+      }
+    ).cloneContentTreeWithFreshIds(content);
   }
 
-  it('rigenera l\'id di ogni nodo, a ogni livello di annidamento', () => {
+  it("rigenera l'id di ogni nodo, a ogni livello di annidamento", () => {
     const service = buildService();
     const source: ContentTree = {
       version: 1,
@@ -35,8 +37,20 @@ describe('PagesService — clonazione albero blocchi con id rigenerati (F05-02)'
           v: 1,
           props: {},
           children: [
-            { id: 'child-1', type: 'heading', v: 1, props: { level: 'h2', text: 'Titolo' }, children: [] },
-            { id: 'child-2', type: 'heading', v: 1, props: { level: 'h3', text: 'Sottotitolo' }, children: [] },
+            {
+              id: 'child-1',
+              type: 'heading',
+              v: 1,
+              props: { level: 'h2', text: 'Titolo' },
+              children: [],
+            },
+            {
+              id: 'child-2',
+              type: 'heading',
+              v: 1,
+              props: { level: 'h3', text: 'Sottotitolo' },
+              children: [],
+            },
           ],
         },
       ],
@@ -53,11 +67,19 @@ describe('PagesService — clonazione albero blocchi con id rigenerati (F05-02)'
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('preserva type/v/props/struttura, solo l\'id cambia', () => {
+  it("preserva type/v/props/struttura, solo l'id cambia", () => {
     const service = buildService();
     const source: ContentTree = {
       version: 1,
-      blocks: [{ id: 'b1', type: 'heading', v: 1, props: { level: 'h2', text: 'Testo originale' }, children: [] }],
+      blocks: [
+        {
+          id: 'b1',
+          type: 'heading',
+          v: 1,
+          props: { level: 'h2', text: 'Testo originale' },
+          children: [],
+        },
+      ],
     };
 
     const cloned = cloneContentTree(service, source);
@@ -72,7 +94,15 @@ describe('PagesService — clonazione albero blocchi con id rigenerati (F05-02)'
     const service = buildService();
     const source: ContentTree = {
       version: 1,
-      blocks: [{ id: 'b1', type: 'heading', v: 1, props: { level: 'h2', text: 'Testo originale' }, children: [] }],
+      blocks: [
+        {
+          id: 'b1',
+          type: 'heading',
+          v: 1,
+          props: { level: 'h2', text: 'Testo originale' },
+          children: [],
+        },
+      ],
     };
 
     const cloned = cloneContentTree(service, source);

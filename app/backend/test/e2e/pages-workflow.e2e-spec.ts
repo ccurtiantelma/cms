@@ -145,7 +145,13 @@ describe('PagesController — Workflow editoriale + RBAC ownership (e2e, DB/Redi
           v: 1,
           props: {},
           children: [
-            { id: 'heading-1', type: 'heading', v: 1, props: { level: 'h2', text: headingText }, children: [] },
+            {
+              id: 'heading-1',
+              type: 'heading',
+              v: 1,
+              props: { level: 'h2', text: headingText },
+              children: [],
+            },
           ],
         },
       ],
@@ -201,7 +207,9 @@ describe('PagesController — Workflow editoriale + RBAC ownership (e2e, DB/Redi
 
     it('2) lo stesso User (proprietario) tenta review -> published direttamente: 403, nessun effetto a database', async () => {
       const author = await seedAuth(AppUserRoles.User, 'flow2author');
-      const page = await createDraftPage(author, { title: 'Pagina workflow — User review->published' });
+      const page = await createDraftPage(author, {
+        title: 'Pagina workflow — User review->published',
+      });
 
       const toReview = await changeStatus(author, page.guid, 'review').expect(200);
       expect(toReview.body.status).toBe('review');

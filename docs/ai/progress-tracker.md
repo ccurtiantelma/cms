@@ -4,7 +4,9 @@
 > Le AI non lo modificano autonomamente: lo stato viene aggiornato a fine feature, su
 > richiesta esplicita.
 >
-> Ultima revisione: 2026-08-20 — **round F04c (editor maturo) chiuso**: T1–T8 di
+> Ultima revisione: 2026-09-03 — **F06 e F10 chiuse, registro Blocchi a undici tipi**: vedi
+> § "F06/F10/ADR-52 — chiusura e allineamento registro Blocchi (2026-09-03)" più sotto.
+> Precedente: 2026-08-20 — **round F04c (editor maturo) chiuso**: T1–T8 di
 > `PLAN-F04c-editor-maturo.md` completati, quattro ADR firmate (ADR-27/28/29/30), copertura
 > di test chiusa da `test-engineer`. Chiude anche le voci 1.12 e 3.10 di `docs/TODO.md`.
 > ADR-26 (WYSIWYG) resta aperta, rinviata a **F04d**. Vedi § "F04c — editor maturo,
@@ -71,11 +73,11 @@
 | F03 | Superficie pubblica di lettura + cache | 2, 7 | specs/SPEC-F03-superficie-pubblica.md · plans/PLAN-F03-superficie-pubblica.md | ✅ Done (2026-08-19) |
 | F04 | Editor visivo (page builder) | 1 | plans/PLAN-F04-editor-visivo.md · plans/PLAN-F04c-editor-maturo.md | ✅ Done (2026-08-19). Anteprima bozza (voce 1.10 di `docs/TODO.md`) chiusa lo stesso giorno — `plans/PLAN-anteprima-bozza.md`, ADR-25. Round **F04b (upgrade editor)** ✅ Done (2026-08-20): undo/redo + guardia + inserimento posizionale + `moveNodeTo` coperti da test (voce 3.11). Round **F04c (editor maturo)** ✅ Done (2026-08-20), T1–T8 di `plans/PLAN-F04c-editor-maturo.md`: props di stile responsive (ADR-29), metadati d'editor nel registro + ispettore a schede/etichette (ADR-30, chiude la voce 3.10), lettura pubblica dei media (ADR-27, chiude la voce 1.12), duplicazione blocco + drag & drop via `dnd-kit` (ADR-28). Quattro ADR di questo round tutte firmate. Copertura di test chiusa da `test-engineer` (voce 3.12). WYSIWYG (ADR-26) resta l'unica decisione ancora in attesa di firma, confermata fuori scope, rinviata a **F04d** |
 | F05 | Multilingua | 4 | — | ⏳ Pending |
-| F06 | Template e Sezioni globali | 1 | — | ⏳ Pending |
+| F06 | Template e Sezioni globali | 1 | `GlobalSectionsModule` (`app/backend/src/global-sections/`) · ADR-40-sezioni-globali-e-layout.md | ✅ Done |
 | F07 | SEO per pagina | 2 | — | ⏳ Pending |
 | F08 | GEO per pagina | 2 | — | ⏳ Pending |
 | F09 | Media editoriali | 6 | — | ⏳ Pending |
-| F10 | Moduli di contatto | 3 | — | ⏳ Pending |
+| F10 | Moduli di contatto | 3 | `FormsModule` (`app/backend/src/forms/`) · RFC-46-dynamic-form-builder.md · ADR-46-dynamic-form-builder.md | ✅ Done |
 | F11 | Chatbot integrato | 7 | — | ⏳ Pending |
 | F12 | Dashboard editoriale | 5 | — | ⏳ Pending |
 
@@ -655,3 +657,40 @@ citati nella RFC puntano tutti a file esistenti in `docs/ai/adr/`; i riferimenti
 (`app-constants.ts`, `email.queue.service.ts`, `visitor-hash.util.ts`, `block-registry.ts`,
 `main.ts:40`, `schema.ts:103`/`:469`) verificati contro il repository al momento della
 stesura.
+
+---
+
+## F06/F10/ADR-52 — chiusura e allineamento registro Blocchi (2026-09-03)
+
+**F06 — Template e Sezioni globali**: ✅ Done. `GlobalSectionsModule` implementato in
+`app/backend/src/global-sections/` (`global-sections.controller.ts`/`.service.ts`,
+`public-global-sections.controller.ts`, `public-global-sections-cache.service.ts`),
+decisione di riferimento ADR-40-sezioni-globali-e-layout.md (Approvata).
+
+**F10 — Moduli di contatto**: ✅ Done. RFC-46 ratificata, `ADR-46-dynamic-form-builder.md`
+approvata; `FormsModule` implementato in `app/backend/src/forms/` (`forms.controller.ts`/
+`.service.ts`, `public-forms.controller.ts`, `form-antispam.util.ts`,
+`forms-cors.middleware.ts`). `FORM_ANTISPAM_SECRET` aggiunto a `.env.example` (root e
+`app/backend/`), coerente con RFC-46 § Rischi.
+
+**Registro Blocchi — undici tipi reali**: `ADR-52-blocco-navigazione-navmenu.md` approvata
+(2026-09-03), aggiunge `navMenu`/`navMenuItem` (nuovo `kind: 'pageRef'` in `PropKind`) al
+registro. `DEFAULT_BLOCK_REGISTRY` (`app/backend/src/blocks/block-registry.ts`) conta ora
+undici tipi: `section`, `heading`, `richText`, `image`, `button`, `container`, `form`,
+`form-field`, `form-submit`, `navMenu`, `navMenuItem`. `PropertyInspector.test.tsx` copre
+`pageRef` nell'elenco dei kind attesi (test "copertura del registro reale" verde, 62/62).
+
+**Export statico (ADR-45)**: ✅ confermato Done — `ExportModule` in
+`app/backend/src/export/` (`export.service.ts`, `manifest.service.ts`,
+`export.processor.ts`) implementa `StaticExportModule` di RFC-44/ADR-45.
+`STATIC_EXPORT_PATH`/`STATIC_EXPORT_FULL_SITE_BATCH_SIZE` aggiunti a `.env.example`
+(root e `app/backend/`), allineati ai default di `app-constants.ts`.
+
+**Debito tecnico bonificato nella stessa sessione**: 152 errori Prettier/ESLint
+autofixati in `app/backend`, import morti `BorderPropSpec`/`ShadowPropSpec` rimossi da
+`block-tree-validator.service.ts`, due variabili di test inutilizzate corrette, JSDoc dei
+quattro costruttori del modulo F06 completati. `npm run lint --workspace=app/backend` a
+zero errori (restano 7 warning `no-explicit-any` preesistenti, fuori scope).
+
+`docs/business-rules.md` § "Menu di navigazione" marcata deprecata a favore dell'approccio
+AST a blocchi di ADR-52 (vedi nota nel documento stesso).

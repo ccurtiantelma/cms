@@ -33,6 +33,9 @@ import { GlobalSectionDto } from './dto/global-section.dto';
 @Controller('app/global-sections')
 @UseGuards(GuardManager)
 export class GlobalSectionsController {
+  /**
+   * Inietta il service di dominio delle Sezioni Globali.
+   */
   constructor(private readonly globalSectionsService: GlobalSectionsService) {}
 
   /** Lista paginata delle Sezioni Globali. */

@@ -218,9 +218,8 @@ describe('PagesController (e2e) — round-trip di props di stile responsive (ADR
     // persistito porta i tre breakpoint intatti, non solo ciò che l'API restituisce.
     const db = getTestDb();
     const row = await db.query.pageEntity.findFirst({ where: eq(pageEntity.guid, guid) });
-    const persistedBlocks = (
-      row!.draftContent as { blocks: Array<Record<string, unknown>> }
-    ).blocks;
+    const persistedBlocks = (row!.draftContent as { blocks: Array<Record<string, unknown>> })
+      .blocks;
     expect((persistedBlocks[0].props as Record<string, unknown>).styleSpaceBefore).toEqual(
       RESPONSIVE_ENVELOPE,
     );
@@ -237,7 +236,13 @@ describe('PagesController (e2e) — round-trip di props di stile responsive (ADR
         draftContent: {
           version: 1,
           blocks: [
-            { id: 'head-1', type: 'heading', v: 1, props: { level: 'h2', text: 'Titolo' }, children: [] },
+            {
+              id: 'head-1',
+              type: 'heading',
+              v: 1,
+              props: { level: 'h2', text: 'Titolo' },
+              children: [],
+            },
           ],
         },
       })

@@ -1,6 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDefined, IsIn, IsInt, IsNumber, Matches, Max, Min, ValidateNested } from 'class-validator';
+import {
+  IsDefined,
+  IsIn,
+  IsInt,
+  IsNumber,
+  Matches,
+  Max,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import { THEME_FONT_FAMILY_IDS } from './theme-config.dto';
 
 /**

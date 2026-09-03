@@ -35,8 +35,7 @@ export const formBlock: BlockDefinition = {
       formKey: {
         label: 'Chiave del modulo',
         order: 1,
-        help:
-          'Identificatore stabile del modulo: collega questo blocco alla configurazione dei destinatari (app_settings) e agli Invii storici. Non cambia duplicando il blocco.',
+        help: 'Identificatore stabile del modulo: collega questo blocco alla configurazione dei destinatari (app_settings) e agli Invii storici. Non cambia duplicando il blocco.',
       },
     },
   },

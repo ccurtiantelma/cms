@@ -1,13 +1,18 @@
 import { createHash } from 'crypto';
 import { readFile } from 'fs/promises';
 import * as path from 'path';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { DbService } from '../../db/db.service';
-import { fileEntity, globalSectionEntity, userEntity } from '../../db/schema';
+import { fileEntity, globalSectionEntity, pageEntity, userEntity } from '../../db/schema';
 import { AppConstants } from '../../common/app-constants';
 import { AppUserRoles, GlobalSectionLayoutSlot } from '../../common/enums';
 import { Utils } from '../../common/utils';
-import { BlockNode, ContentTree, assertPayloadWithinLimit, assertValidContentTreeShape } from '../../pages/content-tree';
+import {
+  BlockNode,
+  ContentTree,
+  assertPayloadWithinLimit,
+  assertValidContentTreeShape,
+} from '../../pages/content-tree';
 import { DEFAULT_BLOCK_REGISTRY } from '../../blocks/block-registry';
 import { ENVELOPE_VERSION } from '../../blocks/migration/envelope-migration.engine';
 import { migrateBlockTree } from '../../blocks/migration/block-tree-migration.engine';
@@ -26,13 +31,18 @@ import { StorageDriver } from '../../files/storage/storage-driver.interface';
  * (F15-02, 2026-09-03): `app/frontend/public/logo.png`, registrato come file
  * editoriale con `guid` fisso {@link LOGO_FILE_GUID}, stesso principio di
  * {@link HERO_IMAGE_FILE_GUID} in `antelma-contact.seed.ts` — un `mediaRef`
- * valida solo la forma del guid (16 hex), non un percorso statico. Nessun
- * blocco di navigazione con sottomenu/dropdown nel registro: le voci di menu
- * restano etichette `richText` non cliccabili, non `button` — stesso
- * principio già dichiarato in `antelma-contact.seed.ts` per i link di
- * footer, "nessuna pagina/rotta con quei percorsi è confermata in docs/".
- * L'unico link reale è il CTA "Contattaci" verso `/contatti-antelma`, rotta
- * già pubblicata da questo stesso seed set.
+ * valida solo la forma del guid (16 hex), non un percorso statico.
+ *
+ * La riga di navigazione dell'Header è un blocco `navMenu` con tre
+ * `navMenuItem` (F17-01, ADR-52): Home/Chi Siamo/Contatti, ciascuno con
+ * `pageGuid` risolto per `slug` dalle pagine già seedate da
+ * `antelma-home-page.seed.ts`/`antelma-chi-siamo-page.seed.ts`/
+ * `antelma-contact.seed.ts` (`resolvePageGuid` sotto) — mai un `guid`
+ * letterale: la colonna `pages.guid` è `char(16)` esadecimale generata da
+ * `Utils.randomString` (`db/schema.ts`), non un valore scelto in anticipo.
+ * L'ordine di esecuzione in `SeedService.run()` non è intercambiabile: le tre
+ * Pagine devono esistere prima che questo seed giri. Il CTA "Contattaci"
+ * resta un `button` verso `/contatti-antelma`, invariato.
  */
 const HEADER_SLUG = 'header-principale';
 const HEADER_TITLE = 'Header principale';
@@ -74,7 +84,9 @@ async function ensureAntelmaLogoFile(dbService: DbService, authorId: number): Pr
   const buffer = await readFile(LOGO_ASSET_PATH);
   const mimeType = detectRasterMimeType(buffer);
   if (!mimeType) {
-    throw new Error(`Seed sezioni globali: "${LOGO_ASSET_PATH}" non riconosciuto come immagine raster.`);
+    throw new Error(
+      `Seed sezioni globali: "${LOGO_ASSET_PATH}" non riconosciuto come immagine raster.`,
+    );
   }
 
   const storageKey = `seed-${LOGO_FILE_GUID}`;
@@ -94,7 +106,14 @@ async function ensureAntelmaLogoFile(dbService: DbService, authorId: number): Pr
   });
 }
 
-function buildHeaderBlocks(): BlockNode[] {
+/** `pageGuid` delle tre Pagine collegate dal `navMenu` dell'Header (F17-01, ADR-52). */
+interface NavMenuPageGuids {
+  home: string;
+  chiSiamo: string;
+  contatti: string;
+}
+
+function buildHeaderBlocks(navMenuPageGuids: NavMenuPageGuids): BlockNode[] {
   return [
     {
       id: 'antelma-gs-header-section',
@@ -162,30 +181,29 @@ function buildHeaderBlocks(): BlockNode[] {
               },
               children: [
                 {
+                  // navMenu (F17-01, ADR-52 § 1): contenitore dedicato, tre `navMenuItem`
+                  // come figli — composizione a children, non prop-array (ADR-52 § 1).
                   id: 'antelma-gs-header-nav',
-                  type: 'container',
+                  type: 'navMenu',
                   v: 1,
-                  props: {
-                    flexDirection: { default: 'row' },
-                    gap: { default: 'lg' },
-                    alignItems: { default: 'center' },
-                    wrap: { default: 'wrap' },
-                  },
+                  props: {},
                   children: [
-                    'Chi Siamo',
-                    'Le Nostre Soluzioni',
-                    'Assistenza IT &amp; TLC Certificata',
-                    'News Tech &amp; IT',
-                  ].map((label, index) => ({
-                    id: `antelma-gs-header-nav-${index}`,
-                    type: 'richText',
-                    v: 1,
-                    props: {
-                      html: `<p>${label}</p>`,
-                      styleFontSize: { default: 'sm' },
-                      styleFontWeight: { default: 'medium' },
-                      styleTextColorCustom: BRAND_NAVY,
+                    { id: 'antelma-gs-header-nav-home', label: 'Home', pageGuid: navMenuPageGuids.home },
+                    {
+                      id: 'antelma-gs-header-nav-chi-siamo',
+                      label: 'Chi Siamo',
+                      pageGuid: navMenuPageGuids.chiSiamo,
                     },
+                    {
+                      id: 'antelma-gs-header-nav-contatti',
+                      label: 'Contatti',
+                      pageGuid: navMenuPageGuids.contatti,
+                    },
+                  ].map(({ id, label, pageGuid }) => ({
+                    id,
+                    type: 'navMenuItem',
+                    v: 1,
+                    props: { label, pageGuid },
                     children: [],
                   })),
                 },
@@ -290,7 +308,10 @@ function buildFooterBlocks(): BlockNode[] {
             },
           ],
         },
-        footerColumn('antelma-gs-footer-col-gruppo', 'GRUPPO ANTELMA', ['Chi Siamo', 'Lavora Con Noi']),
+        footerColumn('antelma-gs-footer-col-gruppo', 'GRUPPO ANTELMA', [
+          'Chi Siamo',
+          'Lavora Con Noi',
+        ]),
         footerColumn('antelma-gs-footer-col-soluzioni', 'SOLUZIONI', [
           'Rete &amp; Connettività',
           'Voice &amp; Collaboration',
@@ -360,26 +381,45 @@ function buildPersistableContentTree(blocks: BlockNode[]): ContentTree {
   const rawTree: ContentTree = { version: ENVELOPE_VERSION, blocks };
   assertValidContentTreeShape(rawTree);
 
-  const migration = migrateBlockTree(rawTree.blocks as unknown as MigratableBlockNode[], DEFAULT_BLOCK_REGISTRY);
+  const migration = migrateBlockTree(
+    rawTree.blocks as unknown as MigratableBlockNode[],
+    DEFAULT_BLOCK_REGISTRY,
+  );
   if (migration.errors.length > 0) {
-    throw new Error(`Seed sezioni globali: migrazione fallita — ${JSON.stringify(migration.errors[0])}`);
+    throw new Error(
+      `Seed sezioni globali: migrazione fallita — ${JSON.stringify(migration.errors[0])}`,
+    );
   }
 
   const validator = new BlockTreeValidatorService();
-  const validation = validator.validateTree(migration.blocks as ValidatableBlockNode[], DEFAULT_BLOCK_REGISTRY, {
-    roleLevel: AppUserRoles.SuperAdmin,
-  });
+  const validation = validator.validateTree(
+    migration.blocks as ValidatableBlockNode[],
+    DEFAULT_BLOCK_REGISTRY,
+    {
+      roleLevel: AppUserRoles.SuperAdmin,
+    },
+  );
   if (!validation.valid) {
-    throw new Error(`Seed sezioni globali: albero non valido — ${JSON.stringify(validation.errors[0])}`);
+    throw new Error(
+      `Seed sezioni globali: albero non valido — ${JSON.stringify(validation.errors[0])}`,
+    );
   }
 
   const sanitizer = new BlockPropSanitizerService();
-  const sanitized = sanitizer.sanitizeTree(migration.blocks as ValidatableBlockNode[], DEFAULT_BLOCK_REGISTRY);
+  const sanitized = sanitizer.sanitizeTree(
+    migration.blocks as ValidatableBlockNode[],
+    DEFAULT_BLOCK_REGISTRY,
+  );
   if (sanitized.errors.length > 0) {
-    throw new Error(`Seed sezioni globali: sanitizzazione fallita — ${JSON.stringify(sanitized.errors[0])}`);
+    throw new Error(
+      `Seed sezioni globali: sanitizzazione fallita — ${JSON.stringify(sanitized.errors[0])}`,
+    );
   }
 
-  const persistable: ContentTree = { version: ENVELOPE_VERSION, blocks: sanitized.tree as unknown as BlockNode[] };
+  const persistable: ContentTree = {
+    version: ENVELOPE_VERSION,
+    blocks: sanitized.tree as unknown as BlockNode[],
+  };
   assertPayloadWithinLimit(persistable, 'persist');
   return persistable;
 }
@@ -418,7 +458,10 @@ async function upsertGlobalSection(
   const db = dbService.db;
 
   const existing = await db.query.globalSectionEntity.findFirst({
-    where: and(eq(globalSectionEntity.layoutSlot, layoutSlot), eq(globalSectionEntity.isActive, true)),
+    where: and(
+      eq(globalSectionEntity.layoutSlot, layoutSlot),
+      eq(globalSectionEntity.isActive, true),
+    ),
   });
 
   if (!existing) {
@@ -448,7 +491,12 @@ async function upsertGlobalSection(
       updatedAt: new Date(),
       updatedBy: authorId,
     })
-    .where(and(eq(globalSectionEntity.id, existing.id), eq(globalSectionEntity.version, existing.version)))
+    .where(
+      and(
+        eq(globalSectionEntity.id, existing.id),
+        eq(globalSectionEntity.version, existing.version),
+      ),
+    )
     .returning();
 
   if (!locked) {
@@ -461,11 +509,33 @@ async function upsertGlobalSection(
 }
 
 /**
+ * Risolve il `guid` (16 hex, stabile dopo la prima creazione — mai un
+ * letterale, `db/schema.ts`) della Pagina root attiva per `slug`+`locale`
+ * (F17-01, ADR-52 § 3: `pageGuid` di `navMenuItem` è una forma, non una
+ * verifica di esistenza a scrittura — qui invece la Pagina deve esistere
+ * davvero, perché il seed la crea nello stesso processo). SELECT preventiva
+ * deliberata, stesso principio di `antelmaContactSeed` (script mono-processo).
+ */
+async function resolvePageGuid(dbService: DbService, slug: string, locale: string): Promise<string> {
+  const page = await dbService.db.query.pageEntity.findFirst({
+    where: and(eq(pageEntity.slug, slug), eq(pageEntity.locale, locale), isNull(pageEntity.parentId)),
+  });
+  if (!page) {
+    throw new Error(
+      `Seed sezioni globali: Pagina "${slug}" non trovata — eseguire prima i seed delle Pagine (F17-01).`,
+    );
+  }
+  return page.guid;
+}
+
+/**
  * Sostituisce il contenuto placeholder di test ("HEADER GLOBALE"/"PIEDE
  * GLOBALE — (c) 2026") delle Sezioni Globali `header`/`footer` già attive
  * (righe id=1/id=2, precedenti a questo seed) con un blueprint di brand,
  * idempotente per `layoutSlot` (indice unico sulle righe attive). Non tocca
- * `isSticky`/`title`/`slug` di righe esistenti: solo `content`.
+ * `isSticky`/`title`/`slug` di righe esistenti: solo `content`. Dipende dalle
+ * tre Pagine di F17-01 (Home/Chi Siamo/Contatti) già seedate — l'ordine in
+ * `SeedService.run()` non è intercambiabile.
  */
 export async function antelmaGlobalSectionsSeed(dbService: DbService): Promise<{
   header: GlobalSectionSeedResult;
@@ -476,12 +546,21 @@ export async function antelmaGlobalSectionsSeed(dbService: DbService): Promise<{
     where: eq(userEntity.role, AppUserRoles.SuperAdmin),
   });
   if (!author) {
-    throw new Error('Seed sezioni globali: nessun utente SuperAdmin trovato — eseguire prima il seed utenti.');
+    throw new Error(
+      'Seed sezioni globali: nessun utente SuperAdmin trovato — eseguire prima il seed utenti.',
+    );
   }
 
   await ensureAntelmaLogoFile(dbService, author.id);
 
-  const headerContent = buildPersistableContentTree(buildHeaderBlocks());
+  const locale = AppConstants.defaultLocale;
+  const navMenuPageGuids = {
+    home: await resolvePageGuid(dbService, 'home', locale),
+    chiSiamo: await resolvePageGuid(dbService, 'chi-siamo', locale),
+    contatti: await resolvePageGuid(dbService, 'contatti-antelma', locale),
+  };
+
+  const headerContent = buildPersistableContentTree(buildHeaderBlocks(navMenuPageGuids));
   const footerContent = buildPersistableContentTree(buildFooterBlocks());
 
   const header = await upsertGlobalSection(

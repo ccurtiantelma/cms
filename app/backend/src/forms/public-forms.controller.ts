@@ -1,4 +1,13 @@
-import { Body, Controller, HttpCode, HttpStatus, Param, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { plainToInstance } from 'class-transformer';
@@ -46,7 +55,10 @@ export class PublicFormsController {
   @ApiParam({ name: 'formId', description: 'Chiave editoriale del modulo (form.formKey)' })
   @ApiBody({ type: SubmitFormDto })
   @ApiResponse({ status: 200, description: 'Sempre 200: esito reale mai rivelato al chiamante' })
-  @ApiResponse({ status: 400, description: 'Valori non conformi ai form-field realmente pubblicati' })
+  @ApiResponse({
+    status: 400,
+    description: 'Valori non conformi ai form-field realmente pubblicati',
+  })
   @ApiResponse({ status: 404, description: 'Nessun blocco form pubblicato con questo formKey' })
   async submit(
     @Param('formId') formId: string,

@@ -82,7 +82,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
     } else if (status >= HttpStatus.BAD_REQUEST) {
       this.logger.warn(
         `[${request.method} ${request.url}] ${JSON.stringify(errorResponse.message)}` +
-          (errorResponse.details !== undefined ? ` details=${JSON.stringify(errorResponse.details)}` : ''),
+          (errorResponse.details !== undefined
+            ? ` details=${JSON.stringify(errorResponse.details)}`
+            : ''),
       );
     }
 

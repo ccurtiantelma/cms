@@ -23,7 +23,11 @@ import { ValidatableBlockNode } from '../blocks/validator/validatable-node.types
 import { migrateEnvelope, ENVELOPE_VERSION } from '../blocks/migration/envelope-migration.engine';
 import { migrateBlockTree } from '../blocks/migration/block-tree-migration.engine';
 import { MigratableBlockNode } from '../blocks/migration/block-migration.types';
-import { assertValidContentTreeShape, assertPayloadWithinLimit, ContentTree } from '../pages/content-tree';
+import {
+  assertValidContentTreeShape,
+  assertPayloadWithinLimit,
+  ContentTree,
+} from '../pages/content-tree';
 import { normalizeSlug, isReservedSlug } from '../pages/slug.util';
 import { PublicGlobalSectionsCacheService } from './public-global-sections-cache.service';
 import { CreateGlobalSectionDto } from './dto/create-global-section.dto';
@@ -55,6 +59,9 @@ const ORDERABLE_COLUMNS: Record<string, PgColumn> = {
 export class GlobalSectionsService {
   private readonly logger = new Logger(GlobalSectionsService.name);
 
+  /**
+   * Inietta le dipendenze di persistenza e invalidazione cache del modulo.
+   */
   constructor(
     private readonly db: DbService,
     private readonly auditLogService: AuditLogService,
@@ -93,7 +100,12 @@ export class GlobalSectionsService {
       this.db.db.select({ total: count() }).from(globalSectionEntity).where(where),
     ]);
 
-    return new Pagination(rows.map((row) => this.toDto(row)), total, page, perPage);
+    return new Pagination(
+      rows.map((row) => this.toDto(row)),
+      total,
+      page,
+      perPage,
+    );
   }
 
   /** Dettaglio di una Sezione Globale attiva. `404` se inesistente o soft-eliminata. */
@@ -153,7 +165,9 @@ export class GlobalSectionsService {
     const targetSlot = dto.layoutSlot ?? row.layoutSlot;
     if (dto.layoutSlot !== undefined || dto.isSticky !== undefined) {
       values.isSticky =
-        targetSlot === GlobalSectionLayoutSlot.Header ? Boolean(dto.isSticky ?? row.isSticky) : false;
+        targetSlot === GlobalSectionLayoutSlot.Header
+          ? Boolean(dto.isSticky ?? row.isSticky)
+          : false;
     }
     if (dto.content !== undefined) values.content = this.runWriteContentPipeline(dto.content);
 
@@ -365,7 +379,10 @@ export class GlobalSectionsService {
       throw this.blockErrorToBadRequest(sanitized.errors[0]);
     }
 
-    const resultEnvelope: PersistableContent = { version: ENVELOPE_VERSION, blocks: sanitized.tree };
+    const resultEnvelope: PersistableContent = {
+      version: ENVELOPE_VERSION,
+      blocks: sanitized.tree,
+    };
     assertPayloadWithinLimit(resultEnvelope, 'persist');
     return resultEnvelope;
   }

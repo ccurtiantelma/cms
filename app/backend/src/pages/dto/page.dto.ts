@@ -76,7 +76,7 @@ export class PageDto {
 
   @ApiPropertyOptional({
     description:
-      'Nodi dell\'albero blocchi che falliscono migrazione o validazione in lettura (mai un\'eccezione: il nodo resta esposto come persistito). Assente solo dove non calcolato per costo (liste); array vuoto quando l\'albero è integro.',
+      "Nodi dell'albero blocchi che falliscono migrazione o validazione in lettura (mai un'eccezione: il nodo resta esposto come persistito). Assente solo dove non calcolato per costo (liste); array vuoto quando l'albero è integro.",
     type: 'array',
     items: {
       type: 'object',

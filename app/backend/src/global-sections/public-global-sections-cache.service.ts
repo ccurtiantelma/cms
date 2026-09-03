@@ -20,6 +20,9 @@ export class PublicGlobalSectionsCacheService {
   private readonly logger = new Logger(PublicGlobalSectionsCacheService.name);
   private readonly registryToken: string;
 
+  /**
+   * Inietta il client Redis e calcola il token di registro per la chiave di cache.
+   */
   constructor(
     private readonly redis: RedisService,
     private readonly auditLogService: AuditLogService,
@@ -62,7 +65,9 @@ export class PublicGlobalSectionsCacheService {
   async invalidate(actingUserId: number): Promise<void> {
     const key = this.buildKey();
     if (!this.redis.isReady()) {
-      this.logger.error(`Redis irraggiungibile: invalidazione cache sezioni globali saltata (${key}).`);
+      this.logger.error(
+        `Redis irraggiungibile: invalidazione cache sezioni globali saltata (${key}).`,
+      );
       return;
     }
     try {

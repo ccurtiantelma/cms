@@ -66,7 +66,9 @@ describe('PublicMediaController (integration) — ADR-27', () => {
       // `ThrottlerGuard` sulla rotta (stesso registro di `app.module.ts`, throttler
       // "public"): senza questo modulo la DI del guard non risolve, indipendentemente
       // dal fatto che i test qui non esercitino il rate limit stesso.
-      imports: [ThrottlerModule.forRoot({ throttlers: [{ name: 'public', ttl: 60_000, limit: 300 }] })],
+      imports: [
+        ThrottlerModule.forRoot({ throttlers: [{ name: 'public', ttl: 60_000, limit: 300 }] }),
+      ],
       controllers: [PublicMediaController],
       providers: [
         PublicMediaService,

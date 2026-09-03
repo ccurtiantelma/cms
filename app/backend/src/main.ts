@@ -38,7 +38,10 @@ async function bootstrap(): Promise<void> {
     !!origin && /^(https?:\/\/)(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
 
   app.enableCors({
-    origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) => {
       if (!origin || allowedOrigins.includes(origin) || isLocalDevOrigin(origin)) {
         callback(null, true);
         return;

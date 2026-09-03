@@ -54,7 +54,7 @@ export class PageRevisionDetailDto extends PageRevisionSummaryDto {
 
   @ApiProperty({
     description:
-      'Nodi dell\'albero blocchi che falliscono migrazione o validazione in lettura (mai un\'eccezione: il nodo resta esposto come persistito, mai migrato a metà). Array vuoto quando l\'albero è integro (SPEC-F02-blocchi.md § 4.3).',
+      "Nodi dell'albero blocchi che falliscono migrazione o validazione in lettura (mai un'eccezione: il nodo resta esposto come persistito, mai migrato a metà). Array vuoto quando l'albero è integro (SPEC-F02-blocchi.md § 4.3).",
     type: 'array',
     items: {
       type: 'object',

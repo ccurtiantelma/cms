@@ -39,7 +39,7 @@ export class FileMetadataDto {
 
   @ApiPropertyOptional({
     description:
-      'Larghezza in pixel, letta dagli header raster all\'upload. `null` per i non-raster e per le righe caricate prima che questo campo esistesse (RFC-F09 § 3, colonna non ancora in schema — sempre `null` finché N2 non è firmata).',
+      "Larghezza in pixel, letta dagli header raster all'upload. `null` per i non-raster e per le righe caricate prima che questo campo esistesse (RFC-F09 § 3, colonna non ancora in schema — sempre `null` finché N2 non è firmata).",
     example: null,
     nullable: true,
   })
@@ -55,7 +55,7 @@ export class FileMetadataDto {
 
   @ApiPropertyOptional({
     description:
-      "URL pubblico derivato server-side (`api/v1/public/media/:guid`), valorizzato solo se `entity` è `page-media` (ADR-27 § 2/§ 6). `null` altrimenti — non implica che il blob sia effettivamente servibile: la verifica del formato raster reale avviene in lettura su quella rotta (ADR-27 § 3, § 4).",
+      'URL pubblico derivato server-side (`api/v1/public/media/:guid`), valorizzato solo se `entity` è `page-media` (ADR-27 § 2/§ 6). `null` altrimenti — non implica che il blob sia effettivamente servibile: la verifica del formato raster reale avviene in lettura su quella rotta (ADR-27 § 3, § 4).',
     example: 'api/v1/public/media/a1b2c3d4e5f6a7b8',
     nullable: true,
   })

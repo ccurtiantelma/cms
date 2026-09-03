@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: '0.0.0.0',
     // Porta host non standard di proposito: il progetto gira sempre in
     // parallelo con altri stack sulla stessa macchina, vedi il commento di
     // testa di docker-compose.yml (root).

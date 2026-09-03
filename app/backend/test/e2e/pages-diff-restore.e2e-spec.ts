@@ -138,7 +138,13 @@ describe('PagesController — Diff + Restore Revisioni (e2e, DB/Redis reali)', (
           v: 1,
           props: {},
           children: [
-            { id: 'heading-1', type: 'heading', v: 1, props: { level: 'h2', text: headingText }, children: [] },
+            {
+              id: 'heading-1',
+              type: 'heading',
+              v: 1,
+              props: { level: 'h2', text: headingText },
+              children: [],
+            },
           ],
         },
       ],
@@ -161,8 +167,20 @@ describe('PagesController — Diff + Restore Revisioni (e2e, DB/Redis reali)', (
           v: 1,
           props: {},
           children: [
-            { id: 'heading-1', type: 'heading', v: 1, props: { level: 'h2', text: headingText }, children: [] },
-            { id: 'heading-2', type: 'heading', v: 1, props: { level: 'h3', text: 'Sottotitolo nuovo' }, children: [] },
+            {
+              id: 'heading-1',
+              type: 'heading',
+              v: 1,
+              props: { level: 'h2', text: headingText },
+              children: [],
+            },
+            {
+              id: 'heading-2',
+              type: 'heading',
+              v: 1,
+              props: { level: 'h3', text: 'Sottotitolo nuovo' },
+              children: [],
+            },
           ],
         },
       ],
@@ -220,7 +238,7 @@ describe('PagesController — Diff + Restore Revisioni (e2e, DB/Redis reali)', (
     page: { guid: string; version: number },
     draftContent: Record<string, unknown>,
   ): Promise<RevisionRow> {
-    const patchRes = await authedRequest('patch', `/api/v1/app/pages/${page.guid}`, manager)
+    await authedRequest('patch', `/api/v1/app/pages/${page.guid}`, manager)
       .send({ version: page.version, draftContent })
       .expect(200);
 
@@ -295,7 +313,7 @@ describe('PagesController — Diff + Restore Revisioni (e2e, DB/Redis reali)', (
       }>;
       const childrenDiff = sectionDiff.find((d) => d.field === 'children');
       expect(childrenDiff).toBeDefined();
-      expect((childrenDiff!.after as string[])).toEqual(['heading-1', 'heading-2']);
+      expect(childrenDiff!.after as string[]).toEqual(['heading-1', 'heading-2']);
       // Il nodo radice `section-1` compare fra i modificati (children cambiati), quindi
       // non fra gli invariati.
       expect(diffRes.body.unchanged).not.toContain('section-1');
@@ -320,7 +338,12 @@ describe('PagesController — Diff + Restore Revisioni (e2e, DB/Redis reali)', (
         blocks: [
           expect.objectContaining({
             id: 'section-1',
-            children: [expect.objectContaining({ id: 'heading-1', props: { level: 'h2', text: 'Titolo v1' } })],
+            children: [
+              expect.objectContaining({
+                id: 'heading-1',
+                props: { level: 'h2', text: 'Titolo v1' },
+              }),
+            ],
           }),
         ],
       });
@@ -435,7 +458,11 @@ describe('PagesController — Diff + Restore Revisioni (e2e, DB/Redis reali)', (
     it('404: Revisione inesistente per una Pagina reale', async () => {
       const manager = await seedAuth(AppUserRoles.Manager, 'restoreerr2');
       const page = await createDraftPage(manager, { title: 'Pagina per restore error' });
-      await publishNewRevision(manager, { guid: page.guid, version: page.version }, contentTreeV2());
+      await publishNewRevision(
+        manager,
+        { guid: page.guid, version: page.version },
+        contentTreeV2(),
+      );
 
       await authedRequest(
         'post',
@@ -454,7 +481,9 @@ describe('PagesController — Diff + Restore Revisioni (e2e, DB/Redis reali)', (
       // per ottenere un guid di Revisione sintatticamente valido da passare
       // nella richiesta del User: la 403 di GuardManager scatta comunque
       // prima di qualunque lookup di ownership sulla riga.
-      const managerPage = await createDraftPage(managerHelper, { title: 'Pagina Manager per guid revisione' });
+      const managerPage = await createDraftPage(managerHelper, {
+        title: 'Pagina Manager per guid revisione',
+      });
       const revision = await publishNewRevision(
         managerHelper,
         { guid: managerPage.guid, version: managerPage.version },

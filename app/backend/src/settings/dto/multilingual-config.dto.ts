@@ -22,7 +22,10 @@ export class MultilingualConfigDto {
   active: string[];
 
   /** Deve comparire in `active` — verificato nel service, non qui (cross-field). */
-  @ApiProperty({ description: 'Locale di default (senza prefisso nelle URL pubbliche, ADR-24 § 5)', example: 'it-IT' })
+  @ApiProperty({
+    description: 'Locale di default (senza prefisso nelle URL pubbliche, ADR-24 § 5)',
+    example: 'it-IT',
+  })
   @IsString()
   @MinLength(1)
   default: string;

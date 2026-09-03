@@ -40,6 +40,8 @@ describe('AnalyticsService (unit/integration)', () => {
       views: 1,
       uniqueVisitors: 1,
     });
-    expect(result.points[0].bucket).toMatch(/^2026-08-14T22:00:00\.000Z|2026-08-15T00:00:00\.000Z$/);
+    expect(result.points[0].bucket).toMatch(
+      /^2026-08-14T22:00:00\.000Z|2026-08-15T00:00:00\.000Z$/,
+    );
   });
 });

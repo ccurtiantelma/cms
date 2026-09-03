@@ -15,6 +15,9 @@ import { PublicActiveGlobalSectionsDto } from './dto/public-active-global-sectio
 @Controller('public/global-sections')
 @UseGuards(ThrottlerGuard)
 export class PublicGlobalSectionsController {
+  /**
+   * Inietta il service di dominio delle Sezioni Globali.
+   */
   constructor(private readonly globalSectionsService: GlobalSectionsService) {}
 
   /** Sezioni assegnate a `header`/`footer`, per il rendering SSR del layout pubblico. */

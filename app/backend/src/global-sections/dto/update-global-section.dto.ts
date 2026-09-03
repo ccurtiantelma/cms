@@ -50,7 +50,7 @@ export class UpdateGlobalSectionDto {
   layoutSlot?: GlobalSectionLayoutSlot;
 
   @ApiPropertyOptional({
-    description: 'Rende l\'header sticky sul viewport quando lo slot è `header`.',
+    description: "Rende l'header sticky sul viewport quando lo slot è `header`.",
     example: true,
   })
   @IsOptional()

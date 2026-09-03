@@ -29,15 +29,24 @@ export class FormSubmissionDto {
   })
   payload!: Record<string, unknown>;
 
-  @ApiProperty({ description: 'Hash SHA-256 del visitatore (mai IP grezzo)', example: 'a1b2...c3d4' })
+  @ApiProperty({
+    description: 'Hash SHA-256 del visitatore (mai IP grezzo)',
+    example: 'a1b2...c3d4',
+  })
   ipHash!: string;
 
-  @ApiPropertyOptional({ description: 'User-Agent del client al momento della sottomissione', nullable: true })
+  @ApiPropertyOptional({
+    description: 'User-Agent del client al momento della sottomissione',
+    nullable: true,
+  })
   userAgent!: string | null;
 
   @ApiProperty({ description: 'Data di sottomissione' })
   createdAt!: Date;
 
-  @ApiProperty({ description: "Falso se l'Invio è stato soft-eliminato da un editore", example: true })
+  @ApiProperty({
+    description: "Falso se l'Invio è stato soft-eliminato da un editore",
+    example: true,
+  })
   isActive!: boolean;
 }

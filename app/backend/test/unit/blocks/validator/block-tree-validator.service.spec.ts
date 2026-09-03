@@ -613,7 +613,7 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
       });
     });
 
-    it('heading.styleFontSizeCustom con una chiave estranea nell\'oggetto è respinto per intero (nessuna chiave oltre value/unit)', () => {
+    it("heading.styleFontSizeCustom con una chiave estranea nell'oggetto è respinto per intero (nessuna chiave oltre value/unit)", () => {
       const result = validator.validateTree([
         node({
           type: 'heading',
@@ -788,7 +788,9 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
     it.each(['hero-title', 'hero_title', '_hero', 'hero title'])(
       'section.customCssClass = %j (1-3 token validi) è accettato',
       (customCssClass) => {
-        const result = validator.validateTree([node({ type: 'section', props: { customCssClass } })]);
+        const result = validator.validateTree([
+          node({ type: 'section', props: { customCssClass } }),
+        ]);
         expect(result.valid).toBe(true);
       },
     );
@@ -1197,7 +1199,10 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
       );
 
       expect(result.errors).toEqual([
-        { code: 'BLOCK_TYPE_UNKNOWN', details: { path: 'blocks[0].children[0]', type: 'richText' } },
+        {
+          code: 'BLOCK_TYPE_UNKNOWN',
+          details: { path: 'blocks[0].children[0]', type: 'richText' },
+        },
       ]);
     });
 
@@ -1225,7 +1230,10 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
       );
 
       expect(result.errors).toEqual([
-        { code: 'BLOCK_TYPE_UNKNOWN', details: { path: 'blocks[0].children[0]', type: 'richText' } },
+        {
+          code: 'BLOCK_TYPE_UNKNOWN',
+          details: { path: 'blocks[0].children[0]', type: 'richText' },
+        },
       ]);
     });
   });
@@ -1575,7 +1583,7 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
       ]);
     });
 
-    it('un albero con più nodi ADR-47 dove un solo colore è malformato colleziona quell\'errore e nessun altro, senza fermarsi (regola 4)', () => {
+    it("un albero con più nodi ADR-47 dove un solo colore è malformato colleziona quell'errore e nessun altro, senza fermarsi (regola 4)", () => {
       const tree: ValidatableBlockNode[] = [
         node({
           id: 'sec1',

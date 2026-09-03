@@ -173,17 +173,21 @@ describe('PagesController (e2e) — round-trip lettura/scrittura di contenuto pr
 
       // La riga a database non ha mai `v` sul nodo: verifica diretta del setup.
       const db = getTestDb();
-      const rowBeforeGet = await db.query.pageEntity.findFirst({ where: eq(pageEntity.guid, guid) });
+      const rowBeforeGet = await db.query.pageEntity.findFirst({
+        where: eq(pageEntity.guid, guid),
+      });
       expect(rowBeforeGet).toBeDefined();
-      const persistedBlocks = (rowBeforeGet!.draftContent as { blocks: Array<Record<string, unknown>> })
-        .blocks;
+      const persistedBlocks = (
+        rowBeforeGet!.draftContent as { blocks: Array<Record<string, unknown>> }
+      ).blocks;
       expect(persistedBlocks[0].v).toBeUndefined();
 
       // 1) GET: la proiezione di lettura riempie `v` per ogni nodo, senza
       // toccare la riga a database (verificato più sotto).
       const getRes = await authedRequest('get', `/api/v1/app/pages/${guid}`, manager).expect(200);
-      const returnedBlocks = (getRes.body.draftContent as { blocks: Array<Record<string, unknown>> })
-        .blocks;
+      const returnedBlocks = (
+        getRes.body.draftContent as { blocks: Array<Record<string, unknown>> }
+      ).blocks;
       expect(returnedBlocks[0].v).toBe(1);
       expect(returnedBlocks[0].props).toEqual({ html: 'contenuto pre-F02' });
 
@@ -213,7 +217,9 @@ describe('PagesController (e2e) — round-trip lettura/scrittura di contenuto pr
 
       // Verifica a database, non solo sulla risposta HTTP: la scrittura reale
       // ha persistito `v` sul nodo (la pipeline di scrittura lo richiede).
-      const rowAfterPatch = await db.query.pageEntity.findFirst({ where: eq(pageEntity.guid, guid) });
+      const rowAfterPatch = await db.query.pageEntity.findFirst({
+        where: eq(pageEntity.guid, guid),
+      });
       const persistedAfterPatch = (
         rowAfterPatch!.draftContent as { blocks: Array<Record<string, unknown>> }
       ).blocks;

@@ -100,10 +100,18 @@ describe('BlockDiffEngineService (unit) — confronto strutturale fra Revisioni 
 
   it('riconosce la variazione di una prop di stile (styleTextColor)', () => {
     const source = [
-      node({ id: 'heading-1', type: 'heading', props: { text: 'Titolo', styleTextColor: '#000000' } }),
+      node({
+        id: 'heading-1',
+        type: 'heading',
+        props: { text: 'Titolo', styleTextColor: '#000000' },
+      }),
     ];
     const target = [
-      node({ id: 'heading-1', type: 'heading', props: { text: 'Titolo', styleTextColor: '#ff0000' } }),
+      node({
+        id: 'heading-1',
+        type: 'heading',
+        props: { text: 'Titolo', styleTextColor: '#ff0000' },
+      }),
     ];
 
     const result = engine.compareTrees(source, target);
@@ -117,10 +125,18 @@ describe('BlockDiffEngineService (unit) — confronto strutturale fra Revisioni 
 
   it('riconosce la variazione del testo e riporta più variazioni sullo stesso nodo', () => {
     const source = [
-      node({ id: 'heading-1', type: 'heading', props: { text: 'Vecchio', styleTextColor: '#000000' } }),
+      node({
+        id: 'heading-1',
+        type: 'heading',
+        props: { text: 'Vecchio', styleTextColor: '#000000' },
+      }),
     ];
     const target = [
-      node({ id: 'heading-1', type: 'heading', props: { text: 'Nuovo', styleTextColor: '#ff0000' } }),
+      node({
+        id: 'heading-1',
+        type: 'heading',
+        props: { text: 'Nuovo', styleTextColor: '#ff0000' },
+      }),
     ];
 
     const result = engine.compareTrees(source, target);
@@ -140,7 +156,9 @@ describe('BlockDiffEngineService (unit) — confronto strutturale fra Revisioni 
 
     const result = engine.compareTrees(source, target);
 
-    expect(result.modified['n1']).toEqual([{ field: 'type', before: 'heading', after: 'richText' }]);
+    expect(result.modified['n1']).toEqual([
+      { field: 'type', before: 'heading', after: 'richText' },
+    ]);
   });
 
   it('riordinamento dei figli senza altre variazioni produce solo il diff su children', () => {

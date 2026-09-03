@@ -304,7 +304,7 @@ export const sectionBlock: BlockDefinition = {
         label: 'Colore overlay',
         tab: 'style',
         order: 29,
-        help: 'Colore esadecimale sovrapposto all\'immagine di sfondo.',
+        help: "Colore esadecimale sovrapposto all'immagine di sfondo.",
       },
       styleOverlayOpacity: {
         label: 'Opacità overlay',

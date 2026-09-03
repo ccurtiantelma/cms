@@ -166,7 +166,11 @@ describe('PublicPagesController (e2e, DB/Redis reali)', () => {
   }
 
   /** Registra il registro Locale attivi (RFC-F05 § 1) come farebbe un Admin da UI. */
-  async function setActiveLocales(admin: Auth, active: string[], defaultLocale: string): Promise<void> {
+  async function setActiveLocales(
+    admin: Auth,
+    active: string[],
+    defaultLocale: string,
+  ): Promise<void> {
     await request(app.getHttpServer())
       .put('/api/v1/app/settings/multilingual')
       .set('Authorization', admin.bearer)

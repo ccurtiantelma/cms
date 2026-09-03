@@ -48,7 +48,11 @@ export class SettingsController {
   @ApiOperation({
     summary: 'Registro Locale attivi (default di fabbrica se mai salvato)',
   })
-  @ApiResponse({ status: 200, description: 'Registro Locale corrente', type: MultilingualConfigDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Registro Locale corrente',
+    type: MultilingualConfigDto,
+  })
   async getMultilingual(): Promise<MultilingualConfigDto> {
     return this.settingsService.getMultilingualConfig();
   }
@@ -56,7 +60,9 @@ export class SettingsController {
   /** Salva il registro Locale attivi (Admin+, audit logged). */
   @Put('multilingual')
   @UseGuards(GuardAdmin)
-  @ApiOperation({ summary: 'Salva il registro Locale attivi (Admin+ only, registrato su audit log)' })
+  @ApiOperation({
+    summary: 'Salva il registro Locale attivi (Admin+ only, registrato su audit log)',
+  })
   @ApiResponse({ status: 200, description: 'Registro Locale salvato', type: MultilingualConfigDto })
   @ApiResponse({ status: 400, description: 'Il Locale di default non compare fra i Locale attivi' })
   @ApiResponse({ status: 403, description: 'Ruolo inferiore ad Admin' })

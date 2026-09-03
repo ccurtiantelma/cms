@@ -1,7 +1,12 @@
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { and, asc, count, desc, eq, SQL } from 'drizzle-orm';
 import { DbService } from '../db/db.service';
-import { appSettingEntity, formSubmissionEntity, pageEntity, pageRevisionEntity } from '../db/schema';
+import {
+  appSettingEntity,
+  formSubmissionEntity,
+  pageEntity,
+  pageRevisionEntity,
+} from '../db/schema';
 import { Utils } from '../common/utils';
 import { Pagination } from '../common/pagination';
 import { FormSubmissionsQueryParams } from '../common/types';
@@ -159,7 +164,9 @@ export class FormsService {
    * utente, sono una sottomissione pubblica anonima). Stesso pattern di
    * paginazione di `PagesService.findAll`.
    */
-  async listSubmissions(params: FormSubmissionsQueryParams): Promise<Pagination<FormSubmissionDto>> {
+  async listSubmissions(
+    params: FormSubmissionsQueryParams,
+  ): Promise<Pagination<FormSubmissionDto>> {
     const page = params.p && params.p > 0 ? params.p : 1;
     const perPage = params.i && params.i > 0 ? params.i : 20;
 
@@ -169,7 +176,9 @@ export class FormsService {
     }
     const where = and(...conditions);
     const orderBy =
-      params.d === 'asc' ? asc(formSubmissionEntity.createdAt) : desc(formSubmissionEntity.createdAt);
+      params.d === 'asc'
+        ? asc(formSubmissionEntity.createdAt)
+        : desc(formSubmissionEntity.createdAt);
 
     const [rows, [{ total }]] = await Promise.all([
       this.db.db.query.formSubmissionEntity.findMany({
@@ -253,7 +262,10 @@ export class FormsService {
    * `PublicPagesService.migrateAndValidateOrThrow` ma senza `404` (qui si
    * scansionano N Pagine, una sola non deve interrompere le altre).
    */
-  private migrateAndValidateTolerant(rawContent: unknown, pageGuid: string): ValidatableBlockNode[] | undefined {
+  private migrateAndValidateTolerant(
+    rawContent: unknown,
+    pageGuid: string,
+  ): ValidatableBlockNode[] | undefined {
     const envelope =
       rawContent !== null && typeof rawContent === 'object' && !Array.isArray(rawContent)
         ? (rawContent as Record<string, unknown>)
@@ -262,7 +274,9 @@ export class FormsService {
 
     const envelopeOutcome = migrateEnvelope(envelope, fromVersion);
     if (envelopeOutcome.unsupported) {
-      this.logger.warn(`Pagina guid=${pageGuid}: envelope non migrabile, saltata dalla ricerca form.`);
+      this.logger.warn(
+        `Pagina guid=${pageGuid}: envelope non migrabile, saltata dalla ricerca form.`,
+      );
       return undefined;
     }
 
@@ -271,7 +285,9 @@ export class FormsService {
       : [];
     const migration = migrateBlockTree(blocksInput, this.blockRegistry);
     if (migration.errors.length > 0) {
-      this.logger.warn(`Pagina guid=${pageGuid}: albero non migrabile, saltata dalla ricerca form.`);
+      this.logger.warn(
+        `Pagina guid=${pageGuid}: albero non migrabile, saltata dalla ricerca form.`,
+      );
       return undefined;
     }
 
@@ -288,7 +304,10 @@ export class FormsService {
   }
 
   /** Ricerca ricorsiva del primo nodo `type: 'form'` con `props.formKey` corrispondente. */
-  private findFormNode(nodes: ValidatableBlockNode[], formKey: string): ValidatableBlockNode | undefined {
+  private findFormNode(
+    nodes: ValidatableBlockNode[],
+    formKey: string,
+  ): ValidatableBlockNode | undefined {
     for (const node of nodes) {
       if (node.type === 'form' && node.props.formKey === formKey) {
         return node;
@@ -354,7 +373,9 @@ export class FormsService {
   }
 
   /** Legge la configurazione operativa `form:<formKey>:settings` da `app_settings` (RFC-46 D2). */
-  private async loadOperationalSettings(formKey: string): Promise<FormOperationalSettings | undefined> {
+  private async loadOperationalSettings(
+    formKey: string,
+  ): Promise<FormOperationalSettings | undefined> {
     const row = await this.db.db.query.appSettingEntity.findFirst({
       where: and(
         eq(appSettingEntity.key, `form:${formKey}:settings`),
@@ -366,7 +387,8 @@ export class FormsService {
     }
     const value = row.value as Partial<FormOperationalSettings> | null;
     const recipients = Array.isArray(value?.recipients) ? value!.recipients : [];
-    const notifySubject = typeof value?.notifySubject === 'string' ? value!.notifySubject : `Nuovo Invio: ${formKey}`;
+    const notifySubject =
+      typeof value?.notifySubject === 'string' ? value!.notifySubject : `Nuovo Invio: ${formKey}`;
     return { recipients, notifySubject };
   }
 
@@ -377,7 +399,10 @@ export class FormsService {
    */
   private renderNotificationHtml(formKey: string, values: Record<string, unknown>): string {
     const rows = Object.entries(values)
-      .map(([key, value]) => `<tr><td>${this.escapeHtml(key)}</td><td>${this.escapeHtml(String(value))}</td></tr>`)
+      .map(
+        ([key, value]) =>
+          `<tr><td>${this.escapeHtml(key)}</td><td>${this.escapeHtml(String(value))}</td></tr>`,
+      )
       .join('');
     return `<p>Nuovo Invio per il modulo "${this.escapeHtml(formKey)}":</p><table>${rows}</table>`;
   }

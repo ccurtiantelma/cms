@@ -95,7 +95,9 @@ export class BlockPropSanitizerService {
       for (const [propName, value] of Object.entries(node.props)) {
         const spec = definition.props[propName];
         if (!spec) {
-          if (BLOCK_COLOR_PROP_NAMES.includes(propName as (typeof BLOCK_COLOR_PROP_NAMES)[number])) {
+          if (
+            BLOCK_COLOR_PROP_NAMES.includes(propName as (typeof BLOCK_COLOR_PROP_NAMES)[number])
+          ) {
             props[propName] = value;
           }
           continue;

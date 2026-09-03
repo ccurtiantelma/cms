@@ -4,9 +4,7 @@ import { migrateBlockNode } from '../../../../src/blocks/migration/node-migratio
 import { migrateBlockTree } from '../../../../src/blocks/migration/block-tree-migration.engine';
 import { migrateEnvelope } from '../../../../src/blocks/migration/envelope-migration.engine';
 import { MigratableBlockNode } from '../../../../src/blocks/migration/block-migration.types';
-import {
-  sectionBlock,
-} from '../../../../src/blocks/types/section.block';
+import { sectionBlock } from '../../../../src/blocks/types/section.block';
 import { headingBlock } from '../../../../src/blocks/types/heading.block';
 import { richTextBlock } from '../../../../src/blocks/types/rich-text.block';
 import { imageBlock } from '../../../../src/blocks/types/image.block';
@@ -33,16 +31,19 @@ describe('motore di migrazione — cinque tipi reali (tutti v:1, catena vuota)',
     buttonBlock,
   ];
 
-  it.each(realDefinitions)('$type: passa attraverso senza trasformazioni, v assente ⇒ 1', (definition) => {
-    const props = { foo: 'bar' };
-    const input = node({ type: definition.type, props });
+  it.each(realDefinitions)(
+    '$type: passa attraverso senza trasformazioni, v assente ⇒ 1',
+    (definition) => {
+      const props = { foo: 'bar' };
+      const input = node({ type: definition.type, props });
 
-    const { node: migrated, unsupported } = migrateBlockNode(input, DEFAULT_BLOCK_REGISTRY);
+      const { node: migrated, unsupported } = migrateBlockNode(input, DEFAULT_BLOCK_REGISTRY);
 
-    expect(unsupported).toBeUndefined();
-    expect(migrated.v).toBe(1);
-    expect(migrated.props).toEqual(props);
-  });
+      expect(unsupported).toBeUndefined();
+      expect(migrated.v).toBe(1);
+      expect(migrated.props).toEqual(props);
+    },
+  );
 
   it('albero con i cinque tipi reali: migrateBlockTree non produce errori', () => {
     const tree: MigratableBlockNode[] = realDefinitions.map((definition, index) =>
@@ -70,9 +71,11 @@ describe('motore di migrazione — tipo fittizio a v:2 con un gradino v1→v2', 
   /** Simula una prop rinominata `oldTitle` → `title`, con default 'Senza titolo'. */
   function stepV1ToV2(props: Record<string, unknown>): Record<string, unknown> {
     const legacyTitle = props.oldTitle;
-    const title = typeof legacyTitle === 'string' && legacyTitle.length > 0 ? legacyTitle : 'Senza titolo';
+    const title =
+      typeof legacyTitle === 'string' && legacyTitle.length > 0 ? legacyTitle : 'Senza titolo';
     // Non muta l'oggetto ricevuto: costruisce un nuovo oggetto e scarta la chiave legacy.
-    const { oldTitle: _oldTitle, ...rest } = props;
+    const rest = { ...props };
+    delete rest.oldTitle;
     return { ...rest, title };
   }
 
@@ -114,7 +117,12 @@ describe('motore di migrazione — tipo fittizio a v:2 con un gradino v1→v2', 
   });
 
   it('(c) nodo a v3 (> corrente) produce BLOCK_VERSION_UNSUPPORTED con path, senza toccare le props, senza bloccare fratelli/figli', () => {
-    const futureNode = node({ id: 'future', type: 'fakeCard', v: 3, props: { title: 'Dal futuro' } });
+    const futureNode = node({
+      id: 'future',
+      type: 'fakeCard',
+      v: 3,
+      props: { title: 'Dal futuro' },
+    });
     const sibling = node({ id: 'sibling', type: 'fakeCard', props: { oldTitle: 'Fratello' } });
     const childOfFuture = node({ id: 'child', type: 'fakeCard', props: { oldTitle: 'Figlio' } });
     const futureWithChild: MigratableBlockNode = { ...futureNode, children: [childOfFuture] };
@@ -155,7 +163,7 @@ describe('motore di migrazione — tipo fittizio a v:2 con un gradino v1→v2', 
     expect(wrongTypeResult.node.props).toEqual({ title: 'Senza titolo' });
   });
 
-  it('(e) l\'oggetto props originale passato in input non viene mutato', () => {
+  it("(e) l'oggetto props originale passato in input non viene mutato", () => {
     const originalProps = Object.freeze({ oldTitle: 'Non toccarmi' });
     const input = node({ type: 'fakeCard', props: originalProps as Record<string, unknown> });
 
@@ -205,7 +213,7 @@ describe('motore di migrazione — envelope', () => {
     expect(result.unsupported).toBeUndefined();
   });
 
-  it('fromVersion superiore alla versione corrente produce un esito unsupported, mai un\'eccezione', () => {
+  it("fromVersion superiore alla versione corrente produce un esito unsupported, mai un'eccezione", () => {
     const envelope = { version: 2, blocks: [] };
 
     const result = migrateEnvelope(envelope, 2);

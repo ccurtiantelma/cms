@@ -5,6 +5,8 @@ import { Utils } from '../common/utils';
 import { AppConstants } from '../common/app-constants';
 import { AppUserRoles } from '../common/enums';
 import { antelmaContactSeed } from './seeds/antelma-contact.seed';
+import { antelmaHomePageSeed } from './seeds/antelma-home-page.seed';
+import { antelmaChiSiamoPageSeed } from './seeds/antelma-chi-siamo-page.seed';
 import { antelmaGlobalSectionsSeed } from './seeds/antelma-global-sections.seed';
 
 /** Password demo fissa per gli utenti Admin/Manager/User creati dal seed (documentata nel log). */
@@ -28,16 +30,27 @@ export class SeedService {
   /**
    * Punto di ingresso unico del seed (`npm run seed` via `db/seed.ts`,
    * endpoint `POST /app/admin/system/seed-demo` via `AdminService.seedDemo()`):
-   * utenti demo, poi la pagina "Antelma - Richiedi un Contatto" (che referenzia
-   * l'utente SuperAdmin appena creato/garantito come `createdBy`/`updatedBy`
-   * delle proprie righe). L'ordine non è intercambiabile.
+   * utenti demo, poi le tre Pagine aziendali interconnesse "v1.0 Demo
+   * Showcase" (F17-01: Home/Chi Siamo/Contatti — referenziano l'utente
+   * SuperAdmin appena creato/garantito come `createdBy`/`updatedBy` delle
+   * proprie righe), infine le Sezioni Globali (l'Header legge il `guid` delle
+   * tre Pagine appena seedate per il blocco `navMenu`, ADR-52). L'ordine non
+   * è intercambiabile.
    */
   async run(): Promise<Record<string, number>> {
     const usersSummary = await this.seedDemo();
+    const homeSummary = await antelmaHomePageSeed(this.dbService);
+    const chiSiamoSummary = await antelmaChiSiamoPageSeed(this.dbService);
     const pageSummary = await antelmaContactSeed(this.dbService);
     const globalSectionsSummary = await antelmaGlobalSectionsSeed(this.dbService);
     return {
       ...usersSummary,
+      'pages.home.created': homeSummary.created,
+      'pages.home.updated': homeSummary.updated,
+      'pages.home.unchanged': homeSummary.unchanged,
+      'pages.chi-siamo.created': chiSiamoSummary.created,
+      'pages.chi-siamo.updated': chiSiamoSummary.updated,
+      'pages.chi-siamo.unchanged': chiSiamoSummary.unchanged,
       'pages.contatti-antelma.created': pageSummary.created,
       'pages.contatti-antelma.updated': pageSummary.updated,
       'pages.contatti-antelma.unchanged': pageSummary.unchanged,

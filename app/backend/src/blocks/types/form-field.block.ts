@@ -92,7 +92,7 @@ export const formFieldBlock: BlockDefinition = {
       colSpan: {
         label: 'Larghezza campo',
         order: 7,
-        help: '50% per affiancare due campi sulla stessa riga, 100% per occupare l\'intera larghezza.',
+        help: "50% per affiancare due campi sulla stessa riga, 100% per occupare l'intera larghezza.",
       },
     },
   },

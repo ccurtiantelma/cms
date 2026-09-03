@@ -9,10 +9,18 @@ export class PropertyDiffDto {
   @ApiProperty({ description: 'Campo variato', example: 'props.styleTextColor' })
   field!: string;
 
-  @ApiProperty({ description: 'Valore nella prima Revisione', type: 'object', additionalProperties: true })
+  @ApiProperty({
+    description: 'Valore nella prima Revisione',
+    type: 'object',
+    additionalProperties: true,
+  })
   before!: unknown;
 
-  @ApiProperty({ description: 'Valore nella seconda Revisione', type: 'object', additionalProperties: true })
+  @ApiProperty({
+    description: 'Valore nella seconda Revisione',
+    type: 'object',
+    additionalProperties: true,
+  })
   after!: unknown;
 }
 

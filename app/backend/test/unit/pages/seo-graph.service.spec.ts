@@ -109,7 +109,7 @@ describe('SeoGraphService — generazione JSON-LD/OpenGraph (ADR-48)', () => {
     expect(withFaqBlocks.structuredData).toEqual(withoutBlocks.structuredData);
   });
 
-  it('single source of truth: il generato non sovrascrive mai una chiave già presente nell\'estensione manuale di structuredData', () => {
+  it("single source of truth: il generato non sovrascrive mai una chiave già presente nell'estensione manuale di structuredData", () => {
     const seo = emptySeo();
     seo.metaTitle = 'Titolo SEO';
     seo.structuredData = {
