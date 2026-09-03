@@ -102,21 +102,16 @@ export async function openContentTab(page: Page): Promise<void> {
 /**
  * Il pulsante che salva la bozza dell'editor full-screen (`Toolbar.tsx`).
  *
- * **Bug applicativo reale, segnalato nel report del test engineer, non corretto qui**: la
- * sua etichetta accessibile è **"Pubblica"** (icona `IconDeviceFloppy`, un dischetto), non
- * più "Salva bozza" — verificato sul DOM reale (`error-context.md` di un run fallito) e sul
- * sorgente: `Toolbar.tsx` renderizza `<Button onClick={onPublish}>Pubblica</Button>`, ma
- * `FullScreenEditorLayout.tsx` collega quella stessa prop `onPublish` a `onSaveDraft` — il
- * pulsante **salva la bozza**, non pubblica nulla (nessuna chiamata allo stato
- * `published` dietro questo click), ma il testo mostrato dice l'opposto. Un utente reale
- * leggerebbe "Pubblica" e crederebbe di star pubblicando. La pubblicazione vera resta,
+ * Etichetta accessibile **"Salva Bozza"** (icona `IconDeviceFloppy`, un dischetto) —
+ * verificato sul DOM reale. Il bug applicativo storicamente documentato qui (l'etichetta
+ * diceva "Pubblica" mentre il pulsante salvava solo la bozza, `onPublish`/`onSaveDraft`
+ * collegate alla stessa prop in `FullScreenEditorLayout.tsx`) non è più presente: il
+ * pulsante ora si chiama correttamente per quello che fa. La pubblicazione vera resta,
  * invariata, quella raggiunta da {@link publishFromStatusMenu} (tendina di stato, dialog
- * "Conferma cambio di stato"): nessuna ambiguità nel comportamento, solo nell'etichetta.
- * `exact: true` evita ambiguità con l'omonimo pulsante di quel dialog (scope diverso, mai
- * visibile insieme a questo).
+ * "Conferma cambio di stato").
  */
 function saveButton(page: Page): Locator {
-  return page.getByRole('button', { name: 'Pubblica', exact: true });
+  return page.getByRole('button', { name: 'Salva Bozza', exact: true });
 }
 
 /** Il wrapper di editing di un blocco, individuato dal tipo del registro. */
@@ -708,8 +703,8 @@ export async function saveDraft(page: Page): Promise<void> {
 
 /**
  * Pubblica la Pagina dalla tendina di stato dell'intestazione. La transizione è
- * una sola e vive lì: l'editor non ha un proprio pulsante di pubblicazione — men che meno
- * quello di {@link saveButton} ("Pubblica" di nome, ma solo di nome: vedi il suo commento).
+ * una sola e vive lì: l'editor non ha un proprio pulsante di pubblicazione — {@link saveButton}
+ * salva solo la bozza, non pubblica nulla.
  *
  * **Bug applicativo reale, segnalato nel report del test engineer, non corretto qui**:
  * `PagePageDetail.tsx` porta la tendina di stato a `style={{ zIndex: activeTab === 'content'

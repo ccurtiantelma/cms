@@ -25,6 +25,13 @@ interface PageViewProps {
    * serve davvero un invio reale.
    */
   formScriptHref?: string;
+  /**
+   * Risolve un `pageGuid` (`navMenuItem`, ADR-52) al percorso pubblico canonico della
+   * Pagina puntata — calcolato a monte da `entry-server.tsx` (`resolvePageGuidsToPaths`) e
+   * passato qui come pass-through opzionale a `BlockRenderer`, stesso principio di
+   * `formSubmission`. Assente solo se l'albero non referenzia alcun `navMenuItem`.
+   */
+  resolvePageUrl?: (pageGuid: string) => string | null | undefined;
 }
 
 /**
@@ -53,7 +60,7 @@ function hasFormBlock(nodes: readonly RenderableBlockNode[]): boolean {
  * Un `content` assente o senza `blocks` array dà un albero vuoto: uno slot con una
  * Sezione dal contenuto malformato non deve impedire il render della Pagina.
  */
-function blocksOf(content: { blocks?: unknown } | undefined): RenderableBlockNode[] {
+export function blocksOf(content: { blocks?: unknown } | undefined): RenderableBlockNode[] {
   return (Array.isArray(content?.blocks) ? content.blocks : []) as RenderableBlockNode[];
 }
 
@@ -65,9 +72,11 @@ function blocksOf(content: { blocks?: unknown } | undefined): RenderableBlockNod
 function GlobalSectionSlot({
   section,
   as: Tag,
+  resolvePageUrl,
 }: {
   section: PublicGlobalSectionDto | null | undefined;
   as: 'header' | 'footer';
+  resolvePageUrl?: (pageGuid: string) => string | null | undefined;
 }) {
   const blocks = blocksOf(section?.content);
   if (blocks.length === 0) return null;
@@ -75,7 +84,12 @@ function GlobalSectionSlot({
   return (
     <Tag style={stickyStyle}>
       {blocks.map((block) => (
-        <BlockRenderer key={block.id} node={block} formSubmission={resolveFormSubmission} />
+        <BlockRenderer
+          key={block.id}
+          node={block}
+          formSubmission={resolveFormSubmission}
+          resolvePageUrl={resolvePageUrl}
+        />
       ))}
     </Tag>
   );
@@ -93,7 +107,12 @@ function GlobalSectionSlot({
  * indipendenti: se nessuna Sezione è assegnata (o se l'endpoint non ha
  * risposto), resta esattamente il `<main>` di prima, senza errori.
  */
-export default function PageView({ content, globalSections, formScriptHref = '' }: PageViewProps) {
+export default function PageView({
+  content,
+  globalSections,
+  formScriptHref = '',
+  resolvePageUrl,
+}: PageViewProps) {
   const blocks = blocksOf(content);
   const headerBlocks = blocksOf(globalSections?.header?.content);
   const footerBlocks = blocksOf(globalSections?.footer?.content);
@@ -102,13 +121,18 @@ export default function PageView({ content, globalSections, formScriptHref = '' 
 
   return (
     <>
-      <GlobalSectionSlot section={globalSections?.header} as="header" />
+      <GlobalSectionSlot section={globalSections?.header} as="header" resolvePageUrl={resolvePageUrl} />
       <main>
         {blocks.map((block) => (
-          <BlockRenderer key={block.id} node={block} formSubmission={resolveFormSubmission} />
+          <BlockRenderer
+            key={block.id}
+            node={block}
+            formSubmission={resolveFormSubmission}
+            resolvePageUrl={resolvePageUrl}
+          />
         ))}
       </main>
-      <GlobalSectionSlot section={globalSections?.footer} as="footer" />
+      <GlobalSectionSlot section={globalSections?.footer} as="footer" resolvePageUrl={resolvePageUrl} />
       {needsFormScript ? <script src={formScriptHref} defer /> : null}
     </>
   );

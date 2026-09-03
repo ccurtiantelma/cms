@@ -1498,6 +1498,32 @@ paths:
       summary: Risolve un percorso pubblico alla Pagina pubblicata corrispondente
       tags:
         - Public Pages
+  /api/v1/public/pages/by-guid/{guid}:
+    get:
+      operationId: PublicPagesController_getPathByGuid
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          description: Identificatore amministrativo della Pagina (16 esadecimali)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Percorso pubblico canonico della Pagina pubblicata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicPageGuidResolutionDto'
+        '404':
+          description: >-
+            Pagina inesistente, non pubblicata, non attiva, guid malformato, o
+            catena di antenati non risolvibile
+      summary: >-
+        Risolve il guid di una Pagina pubblicata al proprio percorso pubblico
+        canonico
+      tags:
+        - Public Pages
   /api/v1/public/settings/global-tokens:
     get:
       operationId: PublicPagesController_getGlobalTokens
@@ -4209,6 +4235,17 @@ components:
         - locale
         - content
         - seo
+    PublicPageGuidResolutionDto:
+      type: object
+      properties:
+        path:
+          type: string
+          description: >-
+            Percorso pubblico canonico, locale-prefixed dove non è la lingua di
+            default, della Pagina pubblicata
+          example: /chi-siamo
+      required:
+        - path
     PagePreviewContentDto:
       type: object
       properties:

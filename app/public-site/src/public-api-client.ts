@@ -4,6 +4,7 @@ import type { ThemeConfigDto } from '../../frontend/src/utils/theme-css.utils';
 
 type PublicPageDto = components['schemas']['PublicPageDto'];
 type PublicActiveGlobalSectionsDto = components['schemas']['PublicActiveGlobalSectionsDto'];
+type PublicPageGuidResolutionDto = components['schemas']['PublicPageGuidResolutionDto'];
 
 export type PublicPageResolution =
   | { kind: 'ok'; page: PublicPageDto }
@@ -147,4 +148,50 @@ export async function fetchActiveGlobalSections(): Promise<PublicActiveGlobalSec
     console.error('public-site: errore di rete su global-sections/active, nessun header/footer', error);
     return NO_GLOBAL_SECTIONS;
   }
+}
+
+/**
+ * Risolve il `pageGuid` di un `navMenuItem` (ADR-52 § 4) al percorso pubblico canonico
+ * della Pagina puntata. Chiama `GET /api/v1/public/pages/by-guid/:guid` (stesso principio
+ * di `resolvePublicPage`, ADR-24): `404` uniforme quando la Pagina non è pubblicata o non
+ * esiste, mai un `403`, nessuna distinzione di causa.
+ *
+ * Tollerante ai guasti per costruzione, come `fetchThemeConfig`/`fetchActiveGlobalSections`:
+ * nessuna eccezione esce mai da questa funzione. Un guid non risolvibile (`404`, errore di
+ * rete, risposta malformata) produce `null` — la voce di menu resta un'etichetta senza
+ * `href`, mai un link rotto (`NavMenuItemBlock.tsx`).
+ */
+export async function fetchPagePathByGuid(guid: string): Promise<string | null> {
+  const url = `${PublicSiteConfig.apiBaseUrl}/api/v1/public/pages/by-guid/${encodeURIComponent(guid)}`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      // `404` è l'esito atteso per una Pagina non pubblicata/inesistente (ADR-24 § 3): non
+      // è un errore da loggare, solo un link che non c'è. Ogni altro status è comunque
+      // trattato allo stesso modo — nessuna distinzione di causa lato consumer.
+      return null;
+    }
+    const body = (await res.json()) as PublicPageGuidResolutionDto;
+    return body.path;
+  } catch (error: unknown) {
+    console.error('public-site: errore di rete su pages/by-guid, voce di menu senza link', error);
+    return null;
+  }
+}
+
+/**
+ * Risolve in parallelo (`Promise.all`) l'intero insieme di `pageGuid` referenziati dai
+ * `navMenuItem` di una Pagina (albero + Sezioni Globali header/footer, ADR-52 §
+ * Conseguenze): una `Map<guid, path | null>` — `null` per ogni guid non risolvibile, mai
+ * un'eccezione propagata (stesso principio di {@link fetchPagePathByGuid}). Nessuna cache
+ * dedicata (ADR-52 § Conseguenze): la stessa chiave di ADR-23/ADR-40, già invalidata per
+ * evento, copre indirettamente questa risoluzione a monte.
+ */
+export async function resolvePageGuidsToPaths(
+  guids: readonly string[],
+): Promise<Map<string, string | null>> {
+  const uniqueGuids = Array.from(new Set(guids));
+  const paths = await Promise.all(uniqueGuids.map((guid) => fetchPagePathByGuid(guid)));
+  return new Map(uniqueGuids.map((guid, index) => [guid, paths[index]]));
 }

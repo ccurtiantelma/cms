@@ -19,6 +19,8 @@ interface AppProps {
    * blocchi della Pagina, senza errori.
    */
   globalSections?: PublicActiveGlobalSectionsDto;
+  /** Vedi `PageView.tsx` — pass-through opzionale calcolato da `entry-server.tsx` (ADR-52). */
+  resolvePageUrl?: (pageGuid: string) => string | null | undefined;
 }
 
 /**
@@ -31,7 +33,14 @@ interface AppProps {
  * `style-tokens.module.css`) vince l'ultima regola dichiarata, quindi il tema
  * dell'Editor sovrascrive i valori statici di fabbrica dei token `--cms-*`.
  */
-export default function App({ page, themeConfig, cssHref, formScriptHref, globalSections }: AppProps) {
+export default function App({
+  page,
+  themeConfig,
+  cssHref,
+  formScriptHref,
+  globalSections,
+  resolvePageUrl,
+}: AppProps) {
   return (
     <html lang={page.locale}>
       <head>
@@ -42,7 +51,12 @@ export default function App({ page, themeConfig, cssHref, formScriptHref, global
         <ThemeStyleTag themeConfig={themeConfig} />
       </head>
       <body>
-        <PageView content={page.content} globalSections={globalSections} formScriptHref={formScriptHref} />
+        <PageView
+          content={page.content}
+          globalSections={globalSections}
+          formScriptHref={formScriptHref}
+          resolvePageUrl={resolvePageUrl}
+        />
       </body>
     </html>
   );

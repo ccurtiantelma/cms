@@ -1,0 +1,110 @@
+/*
+ * `container-type: inline-size` sul `<nav>` stesso: la container query sotto reagisce alla
+ * larghezza renderizzata di QUESTO elemento, non al viewport del browser. È la scelta
+ * deliberata di `NavMenuBlock.tsx` (vedi commento di testa) — nel Canvas dell'editor la vista
+ * mobile simulata ridimensiona un contenitore, non il viewport reale, e solo una container
+ * query lo intercetta. Sul sito pubblico, dove il nav occupa in genere l'intera larghezza
+ * della pagina, la stessa soglia coincide nella pratica con il viewport reale.
+ */
+.nav {
+  container-type: inline-size;
+  position: relative;
+}
+
+/* Checkbox di stato, non un controllo visibile: guida solo i selettori CSS sotto. */
+.toggleInput {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+/* Pulsante hamburger: nascosto su desktop (mostrato solo sotto la soglia mobile). */
+.toggleLabel {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  border-radius: var(--cms-radius-sm, 4px);
+}
+
+.toggleLabel:hover {
+  background-color: var(--cms-bg-subtle, rgba(0, 0, 0, 0.05));
+}
+
+.toggleBar {
+  display: block;
+  height: 2px;
+  width: 100%;
+  background-color: var(--cms-text-color-default, #1a1a1a);
+  border-radius: 1px;
+}
+
+/* Viewport Desktop (> 768px): lista orizzontale inline. */
+.list {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: block;
+}
+
+.link {
+  color: var(--cms-text-color-default, #1a1a1a);
+  font-size: var(--cms-font-size-md, 1rem);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.link:hover {
+  color: var(--cms-text-color-accent, #2b6cb0);
+}
+
+/* Viewport Mobile/Tablet (<= 768px): hamburger al posto della lista orizzontale, drawer a
+ * tendina aperto/chiuso dal checkbox nascosto sopra — nessun JavaScript. */
+@container (max-width: 768px) {
+  .toggleLabel {
+    display: flex;
+  }
+
+  .list {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    margin-top: var(--cms-space-xs, 0.25rem);
+    padding: var(--cms-padding-sm, 0.5rem) 0;
+    background-color: var(--cms-bg-inverse, #ffffff);
+    border-radius: var(--cms-radius-sm, 4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  }
+
+  .toggleInput:checked ~ .list {
+    display: flex;
+  }
+
+  .item {
+    width: 100%;
+  }
+
+  .link {
+    display: block;
+    padding: var(--cms-space-sm, 0.5rem) var(--cms-space-md, 1rem);
+    white-space: normal;
+  }
+}

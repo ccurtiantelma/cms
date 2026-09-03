@@ -832,6 +832,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/pages/by-guid/{guid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Risolve il guid di una Pagina pubblicata al proprio percorso pubblico canonico */
+        get: operations["PublicPagesController_getPathByGuid"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/settings/global-tokens": {
         parameters: {
             query?: never;
@@ -2506,6 +2523,13 @@ export interface components {
             seo: {
                 [key: string]: unknown;
             };
+        };
+        PublicPageGuidResolutionDto: {
+            /**
+             * @description Percorso pubblico canonico, locale-prefixed dove non è la lingua di default, della Pagina pubblicata
+             * @example /chi-siamo
+             */
+            path: string;
         };
         PagePreviewContentDto: {
             /**
@@ -4897,6 +4921,36 @@ export interface operations {
                 content?: never;
             };
             /** @description Nessuna Pagina pubblicata a questo percorso (inesistente, non pubblicata, o non servibile) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicPagesController_getPathByGuid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificatore amministrativo della Pagina (16 esadecimali) */
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Percorso pubblico canonico della Pagina pubblicata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicPageGuidResolutionDto"];
+                };
+            };
+            /** @description Pagina inesistente, non pubblicata, non attiva, guid malformato, o catena di antenati non risolvibile */
             404: {
                 headers: {
                     [name: string]: unknown;

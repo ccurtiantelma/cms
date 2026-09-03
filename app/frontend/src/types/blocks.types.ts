@@ -23,6 +23,7 @@ export interface BlockPropDescriptor {
     | 'enum'
     | 'url'
     | 'mediaRef'
+    | 'pageRef'
     | 'color'
     | 'unitValue'
     | 'border'
@@ -84,7 +85,8 @@ export const ROOT_ALLOWED = [
   "richText",
   "image",
   "button",
-  "container"
+  "container",
+  "navMenu"
 ] as const;
 
 /** Limiti dell'envelope (SPEC-F02-blocchi.md § 1): per avvisare prima del 400, non per applicarli. */
@@ -2414,6 +2416,80 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Colore testo",
           "tab": "style",
           "order": 3
+        }
+      }
+    }
+  },
+  {
+    "type": "navMenu",
+    "v": 1,
+    "enabled": true,
+    "childrenAllow": [
+      "navMenuItem"
+    ],
+    "props": [],
+    "meta": {
+      "label": "Menu di navigazione",
+      "category": "navigazione",
+      "icon": "menu-2"
+    }
+  },
+  {
+    "type": "navMenuItem",
+    "v": 1,
+    "enabled": true,
+    "childrenAllow": [],
+    "props": [
+      {
+        "name": "label",
+        "kind": "plainText",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "pageGuid",
+        "kind": "pageRef",
+        "required": false
+      },
+      {
+        "name": "url",
+        "kind": "url",
+        "required": false,
+        "maxLength": 2048
+      },
+      {
+        "name": "target",
+        "kind": "enum",
+        "required": false,
+        "default": "_self",
+        "values": [
+          "_self",
+          "_blank"
+        ]
+      }
+    ],
+    "meta": {
+      "label": "Voce di menu",
+      "category": "navigazione",
+      "icon": "link",
+      "props": {
+        "label": {
+          "label": "Etichetta",
+          "order": 1
+        },
+        "pageGuid": {
+          "label": "Pagina collegata",
+          "order": 2,
+          "help": "Pagina interna a cui la voce rimanda. Se è impostato anche un URL, l'URL vince."
+        },
+        "url": {
+          "label": "URL",
+          "order": 3,
+          "help": "Link esterno o assoluto. Se presente, vince sulla Pagina collegata."
+        },
+        "target": {
+          "label": "Apertura link",
+          "order": 4
         }
       }
     }

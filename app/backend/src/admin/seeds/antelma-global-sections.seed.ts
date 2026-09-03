@@ -1,6 +1,10 @@
+import { createHash } from 'crypto';
+import { readFile } from 'fs/promises';
+import * as path from 'path';
 import { and, eq } from 'drizzle-orm';
 import { DbService } from '../../db/db.service';
-import { globalSectionEntity, userEntity } from '../../db/schema';
+import { fileEntity, globalSectionEntity, userEntity } from '../../db/schema';
+import { AppConstants } from '../../common/app-constants';
 import { AppUserRoles, GlobalSectionLayoutSlot } from '../../common/enums';
 import { Utils } from '../../common/utils';
 import { BlockNode, ContentTree, assertPayloadWithinLimit, assertValidContentTreeShape } from '../../pages/content-tree';
@@ -11,15 +15,21 @@ import { MigratableBlockNode } from '../../blocks/migration/block-migration.type
 import { BlockTreeValidatorService } from '../../blocks/validator/block-tree-validator.service';
 import { ValidatableBlockNode } from '../../blocks/validator/validatable-node.types';
 import { BlockPropSanitizerService } from '../../common/sanitizer/block-prop-sanitizer.service';
+import { detectRasterMimeType } from '../../files/public-media/raster-mime-sniffer';
+import { LocalDiskDriver } from '../../files/storage/local-disk.driver';
+import { S3CompatibleDriver } from '../../files/storage/s3-compatible.driver';
+import { StorageDriver } from '../../files/storage/storage-driver.interface';
 
 /**
  * Contenuto di riferimento (screenshot forniti dall'utente in chat, brand
- * "Antelma Business Solutions", 2026-09-02): niente logo/foto reali — nessun
- * asset caricato in `files` corrisponde al logo o alle fotografie del sito
- * di riferimento, quindi il "logo" è un `heading` testuale, non un blocco
- * `image`. Nessun blocco di navigazione con sottomenu/dropdown nel registro:
- * le voci di menu sono etichette `richText` non cliccabili, non `button` —
- * stesso principio già dichiarato in `antelma-contact.seed.ts` per i link di
+ * "Antelma Business Solutions", 2026-09-02). Il logo è un blocco `image`
+ * (F15-02, 2026-09-03): `app/frontend/public/logo.png`, registrato come file
+ * editoriale con `guid` fisso {@link LOGO_FILE_GUID}, stesso principio di
+ * {@link HERO_IMAGE_FILE_GUID} in `antelma-contact.seed.ts` — un `mediaRef`
+ * valida solo la forma del guid (16 hex), non un percorso statico. Nessun
+ * blocco di navigazione con sottomenu/dropdown nel registro: le voci di menu
+ * restano etichette `richText` non cliccabili, non `button` — stesso
+ * principio già dichiarato in `antelma-contact.seed.ts` per i link di
  * footer, "nessuna pagina/rotta con quei percorsi è confermata in docs/".
  * L'unico link reale è il CTA "Contattaci" verso `/contatti-antelma`, rotta
  * già pubblicata da questo stesso seed set.
@@ -30,6 +40,59 @@ const FOOTER_SLUG = 'footer-principale';
 const FOOTER_TITLE = 'Footer principale';
 
 const BRAND_NAVY = '#13315c';
+
+/**
+ * `guid` fisso della riga `files` che referenzia il logo dell'Header
+ * (`mediaRef` su `image`) — `a1b2c3d4e5f60001`/`a1b2c3d4e5f60002` sono già
+ * occupati da `antelma-contact.seed.ts` (sfondo Hero/Sub-Footer), quindi il
+ * logo prende il prossimo guid libero della stessa sequenza.
+ */
+const LOGO_FILE_GUID = 'a1b2c3d4e5f60003';
+const LOGO_ASSET_PATH = path.resolve(__dirname, '../../../../frontend/public/logo.png');
+
+/** Sceglie l'implementazione di `StorageDriver` coerente con `AppConstants.storageDriver` — stesso criterio di `antelma-contact.seed.ts`. */
+function resolveStorageDriver(): StorageDriver {
+  return AppConstants.storageDriver === 's3' ? new S3CompatibleDriver() : new LocalDiskDriver();
+}
+
+/**
+ * Registra, in modo idempotente per `guid` fisso, `logo.png` come file
+ * editoriale (`entity: 'page-media'`) — stessa funzione di
+ * `ensureAntelmaHeroImageFile` in `antelma-contact.seed.ts`, duplicata qui
+ * perché i due seed set restano indipendenti (nessun modulo condiviso fra
+ * le due funzioni di seed). MIME dai byte reali, mai dall'estensione.
+ */
+async function ensureAntelmaLogoFile(dbService: DbService, authorId: number): Promise<void> {
+  const db = dbService.db;
+  const existing = await db.query.fileEntity.findFirst({
+    where: eq(fileEntity.guid, LOGO_FILE_GUID),
+  });
+  if (existing) {
+    return;
+  }
+
+  const buffer = await readFile(LOGO_ASSET_PATH);
+  const mimeType = detectRasterMimeType(buffer);
+  if (!mimeType) {
+    throw new Error(`Seed sezioni globali: "${LOGO_ASSET_PATH}" non riconosciuto come immagine raster.`);
+  }
+
+  const storageKey = `seed-${LOGO_FILE_GUID}`;
+  await resolveStorageDriver().upload(storageKey, buffer, mimeType);
+
+  await db.insert(fileEntity).values({
+    guid: LOGO_FILE_GUID,
+    originalName: 'logo.png',
+    mimeType,
+    sizeBytes: buffer.length,
+    storageDriver: AppConstants.storageDriver,
+    storageKey,
+    checksumSha256: createHash('sha256').update(buffer).digest('hex'),
+    entity: 'page-media',
+    createdBy: authorId,
+    updatedBy: authorId,
+  });
+}
 
 function buildHeaderBlocks(): BlockNode[] {
   return [
@@ -61,59 +124,85 @@ function buildHeaderBlocks(): BlockNode[] {
           },
           children: [
             {
-              id: 'antelma-gs-header-logo',
-              type: 'heading',
-              v: 1,
-              props: {
-                level: 'h3',
-                text: 'ANTELMA',
-                styleTextColorCustom: BRAND_NAVY,
-                styleFontWeight: { default: 'bold' },
-                styleFontSizeCustom: { value: 22, unit: 'px' },
-                styleFontFamily: { default: 'montserrat' },
-              },
-              children: [],
-            },
-            {
-              id: 'antelma-gs-header-nav',
+              // Colonna 1/12 — layout a 12 colonne (F15-02): 3/12 = 25% via
+              // `styleFlexBasis` su `container` (`colSpan` non esiste fuori da
+              // `form-field`, ADR-51 § ambito — nessuna prop inventata sul registro).
+              id: 'antelma-gs-header-logo-col',
               type: 'container',
               v: 1,
               props: {
-                flexDirection: { default: 'row' },
-                gap: { default: 'lg' },
+                styleFlexBasis: { value: 25, unit: '%' },
                 alignItems: { default: 'center' },
+              },
+              children: [
+                {
+                  id: 'antelma-gs-header-logo',
+                  type: 'image',
+                  v: 1,
+                  props: {
+                    mediaRef: LOGO_FILE_GUID,
+                    alt: 'Antelma Logo',
+                  },
+                  children: [],
+                },
+              ],
+            },
+            {
+              // Colonna 2/12 — 9/12 = 75%: nav + CTA "Contattaci" nello stesso gruppo.
+              id: 'antelma-gs-header-nav-col',
+              type: 'container',
+              v: 1,
+              props: {
+                styleFlexBasis: { value: 75, unit: '%' },
+                flexDirection: { default: 'row' },
+                justifyContent: { default: 'space-between' },
+                alignItems: { default: 'center' },
+                gap: { default: 'lg' },
                 wrap: { default: 'wrap' },
               },
               children: [
-                'Chi Siamo',
-                'Le Nostre Soluzioni',
-                'Assistenza IT &amp; TLC Certificata',
-                'News Tech &amp; IT',
-              ].map((label, index) => ({
-                id: `antelma-gs-header-nav-${index}`,
-                type: 'richText',
-                v: 1,
-                props: {
-                  html: `<p>${label}</p>`,
-                  styleFontSize: { default: 'sm' },
-                  styleFontWeight: { default: 'medium' },
-                  styleTextColorCustom: BRAND_NAVY,
+                {
+                  id: 'antelma-gs-header-nav',
+                  type: 'container',
+                  v: 1,
+                  props: {
+                    flexDirection: { default: 'row' },
+                    gap: { default: 'lg' },
+                    alignItems: { default: 'center' },
+                    wrap: { default: 'wrap' },
+                  },
+                  children: [
+                    'Chi Siamo',
+                    'Le Nostre Soluzioni',
+                    'Assistenza IT &amp; TLC Certificata',
+                    'News Tech &amp; IT',
+                  ].map((label, index) => ({
+                    id: `antelma-gs-header-nav-${index}`,
+                    type: 'richText',
+                    v: 1,
+                    props: {
+                      html: `<p>${label}</p>`,
+                      styleFontSize: { default: 'sm' },
+                      styleFontWeight: { default: 'medium' },
+                      styleTextColorCustom: BRAND_NAVY,
+                    },
+                    children: [],
+                  })),
                 },
-                children: [],
-              })),
-            },
-            {
-              id: 'antelma-gs-header-cta',
-              type: 'button',
-              v: 1,
-              props: {
-                label: 'Contattaci',
-                href: '/contatti-antelma',
-                styleBackgroundColor: BRAND_NAVY,
-                styleColor: '#ffffff',
-                styleFontWeight: { default: 'bold' },
-              },
-              children: [],
+                {
+                  id: 'antelma-gs-header-cta',
+                  type: 'button',
+                  v: 1,
+                  props: {
+                    label: 'Contattaci',
+                    href: '/contatti-antelma',
+                    styleBackgroundColor: BRAND_NAVY,
+                    styleColor: '#ffffff',
+                    styleFontWeight: { default: 'bold' },
+                  },
+                  children: [],
+                },
+              ],
             },
           ],
         },
@@ -169,7 +258,11 @@ function buildFooterBlocks(): BlockNode[] {
         stylePaddingRight: { default: '24' },
         columns: { default: '4' },
         gap: { default: 'md' },
-        contentWidth: 'boxed',
+        // full-width (F15-02): `boxed`/`maxWidth: 'md'` (default) limitava lo sfondo blu a
+        // 1140px centrati, lasciando bande bianche ai lati oltre quella soglia — lo sfondo
+        // deve coprire l'intero viewport, il padding laterale (righe 168-169 sopra) evita che
+        // il contenuto tocchi il bordo.
+        contentWidth: 'full-width',
       },
       children: [
         {
@@ -385,6 +478,8 @@ export async function antelmaGlobalSectionsSeed(dbService: DbService): Promise<{
   if (!author) {
     throw new Error('Seed sezioni globali: nessun utente SuperAdmin trovato — eseguire prima il seed utenti.');
   }
+
+  await ensureAntelmaLogoFile(dbService, author.id);
 
   const headerContent = buildPersistableContentTree(buildHeaderBlocks());
   const footerContent = buildPersistableContentTree(buildFooterBlocks());

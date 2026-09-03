@@ -26,6 +26,8 @@ import Button from './blocks/Button';
 import FormBlock from './blocks/FormBlock';
 import FormFieldBlock from './blocks/FormFieldBlock';
 import FormSubmitBlock from './blocks/FormSubmitBlock';
+import NavMenuBlock from './blocks/NavMenuBlock';
+import NavMenuItemBlock from './blocks/NavMenuItemBlock';
 import ContentPlaceholderBlock, { CONTENT_AREA_BLOCK_ID } from './blocks/ContentPlaceholderBlock';
 
 const KNOWN_TYPES = new Map(BLOCK_TYPES.map((descriptor) => [descriptor.type, descriptor]));
@@ -75,23 +77,35 @@ interface BlockRendererProps {
   editing?: BlockEditingProps;
   /** Vedi {@link FormSubmissionData}. */
   formSubmission?: (formKey: string) => FormSubmissionData;
+  /**
+   * Risolve un `pageGuid` (`navMenuItem`, ADR-52) al percorso pubblico canonico della Pagina
+   * puntata — `string` se risolto, `null` se la Pagina non è pubblicata/inesistente,
+   * `undefined` se il guid non è (ancora) conosciuto. Pass-through opzionale come
+   * `formSubmission`: valorizzato solo da `app/public-site` (`entry-server.tsx`, risoluzione
+   * a monte del render via `GET public/pages/by-guid/:guid`, ADR-24). Il Canvas admin non lo
+   * passa mai — `NavMenuItemBlock` vi risolve invece via `usePublicPageUrl` (client-side).
+   */
+  resolvePageUrl?: (pageGuid: string) => string | null | undefined;
 }
 
 /** Renderizza un nodo dell'albero e, ricorsivamente, i suoi figli ammessi. */
-export default function BlockRenderer({ node, editing, formSubmission }: BlockRendererProps) {
+export default function BlockRenderer({ node, editing, formSubmission, resolvePageUrl }: BlockRendererProps) {
   const descriptor = KNOWN_TYPES.get(node.type);
 
   if (!descriptor || !descriptor.enabled) {
     return null;
   }
 
-  return <BlockErrorBoundary>{renderNode(node, editing, formSubmission)}</BlockErrorBoundary>;
+  return (
+    <BlockErrorBoundary>{renderNode(node, editing, formSubmission, resolvePageUrl)}</BlockErrorBoundary>
+  );
 }
 
 function renderNode(
   node: RenderableBlockNode,
   editing: BlockEditingProps | undefined,
   formSubmission: ((formKey: string) => FormSubmissionData) | undefined,
+  resolvePageUrl: ((pageGuid: string) => string | null | undefined) | undefined,
 ) {
   switch (node.type) {
     case 'section':
@@ -126,7 +140,12 @@ function renderNode(
           styleOverlayOpacity={node.props.styleOverlayOpacity}
         >
           {node.children.map((child) => (
-            <BlockRenderer key={child.id} node={child} formSubmission={formSubmission} />
+            <BlockRenderer
+              key={child.id}
+              node={child}
+              formSubmission={formSubmission}
+              resolvePageUrl={resolvePageUrl}
+            />
           ))}
         </Section>
       );
@@ -140,7 +159,12 @@ function renderNode(
         return (
           <ContentPlaceholderBlock>
             {node.children.map((child) => (
-              <BlockRenderer key={child.id} node={child} formSubmission={formSubmission} />
+              <BlockRenderer
+                key={child.id}
+                node={child}
+                formSubmission={formSubmission}
+                resolvePageUrl={resolvePageUrl}
+              />
             ))}
           </ContentPlaceholderBlock>
         );
@@ -160,7 +184,12 @@ function renderNode(
           customElementId={node.props.customElementId}
         >
           {node.children.map((child) => (
-            <BlockRenderer key={child.id} node={child} formSubmission={formSubmission} />
+            <BlockRenderer
+              key={child.id}
+              node={child}
+              formSubmission={formSubmission}
+              resolvePageUrl={resolvePageUrl}
+            />
           ))}
         </Container>
       );
@@ -281,6 +310,34 @@ function renderNode(
           styleTextColor={node.props.styleTextColor}
         />
       );
+    case 'navMenu':
+      return (
+        <NavMenuBlock>
+          {node.children.map((child) => (
+            <BlockRenderer
+              key={child.id}
+              node={child}
+              resolvePageUrl={resolvePageUrl}
+            />
+          ))}
+        </NavMenuBlock>
+      );
+    case 'navMenuItem': {
+      const label = node.props.label;
+      const pageGuid = node.props.pageGuid;
+      const url = node.props.url;
+      const target = node.props.target;
+      const hasPageGuid = typeof pageGuid === 'string' && pageGuid.length > 0;
+      return (
+        <NavMenuItemBlock
+          label={typeof label === 'string' ? label : ''}
+          pageGuid={hasPageGuid ? pageGuid : undefined}
+          url={typeof url === 'string' ? url : undefined}
+          target={target === '_blank' ? '_blank' : '_self'}
+          resolvedUrl={hasPageGuid ? resolvePageUrl?.(pageGuid) : undefined}
+        />
+      );
+    }
     default:
       return null;
   }

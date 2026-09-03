@@ -9,6 +9,8 @@ import { containerBlock } from './types/container.block';
 import { formBlock } from './types/form.block';
 import { formFieldBlock } from './types/form-field.block';
 import { formSubmitBlock } from './types/form-submit.block';
+import { navMenuBlock } from './types/nav-menu.block';
+import { navMenuItemBlock } from './types/nav-menu-item.block';
 
 /**
  * Tipi ammessi come nodo di **radice** dell'albero. Dichiarato qui e mai
@@ -25,13 +27,15 @@ export const ROOT_ALLOWED: readonly string[] = [
   'image',
   'button',
   'container',
+  'navMenu',
 ];
 
 /**
  * I cinque tipi approvati uno per uno da ADR-21 § 5, più `container`
- * (sesto tipo, ADR-39) e `form`/`form-field`/`form-submit` (settimo/ottavo/
- * nono tipo, ADR-46 § 1). Tutti a `v: 1`, `enabled: true`, nessun `minRole`,
- * nessun `deprecated` (PLAN-F02 T2).
+ * (sesto tipo, ADR-39), `form`/`form-field`/`form-submit` (settimo/ottavo/
+ * nono tipo, ADR-46 § 1) e `navMenu`/`navMenuItem` (decimo/undicesimo tipo,
+ * ADR-52 § 1) — undici tipi in tutto. Tutti a `v: 1`, `enabled: true`,
+ * nessun `minRole`, nessun `deprecated` (PLAN-F02 T2).
  */
 const BLOCK_DEFINITIONS: readonly BlockDefinition[] = [
   sectionBlock,
@@ -43,6 +47,8 @@ const BLOCK_DEFINITIONS: readonly BlockDefinition[] = [
   formBlock,
   formFieldBlock,
   formSubmitBlock,
+  navMenuBlock,
+  navMenuItemBlock,
 ];
 
 /** Registro dei tipi, indicizzato per `type`. Fonte di verità del backend (ADR-21 § 2). */
@@ -62,7 +68,7 @@ export interface BlockRegistry {
   rootAllowed: readonly string[];
 }
 
-/** Registro di produzione: i cinque tipi approvati da ADR-21 § 5. */
+/** Registro di produzione: gli undici tipi approvati (ADR-21 § 5, ADR-39, ADR-46 § 1, ADR-52 § 1). */
 export const DEFAULT_BLOCK_REGISTRY: BlockRegistry = {
   definitions: BLOCK_REGISTRY,
   rootAllowed: ROOT_ALLOWED,

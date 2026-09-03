@@ -7,7 +7,9 @@
 /**
  * Insieme **chiuso** dei `kind` di prop: è anche il contratto di
  * sanitizzazione (ADR-21 § 4). Estenderlo è "nuovo schema di blocco" ai fini
- * di `CLAUDE.md` § Ask first — richiede firma, non si aggiunge qui.
+ * di `CLAUDE.md` § Ask first — richiede firma, non si aggiunge qui. Include
+ * `pageRef` (ADR-52 § 3): stessa forma di `mediaRef` ma semantica distinta
+ * (una Pagina ha stato di pubblicazione, un file no), firmata a sé.
  */
 export type PropKind =
   | 'richText'
@@ -17,6 +19,7 @@ export type PropKind =
   | 'enum'
   | 'url'
   | 'mediaRef'
+  | 'pageRef'
   | 'color'
   | 'unitValue'
   | 'border'
@@ -124,6 +127,19 @@ export interface MediaRefPropSpec extends BasePropSpec {
 }
 
 /**
+ * Riferimento a una Pagina: solo forma di `guid` (16 hex), nessuna verifica
+ * di esistenza o di stato di pubblicazione a scrittura — la risoluzione
+ * `pageGuid → slug` e il filtro "solo `published`" avvengono a valle, nella
+ * pipeline SSR (ADR-52 § 3/§ 4). Non è un riuso di `mediaRef`: un file non ha
+ * mai stato "non pubblicato", una Pagina sì — kind distinto perché in futuro
+ * potrebbe applicarsi una regola (es. hide-if-unpublished) che non riguarda
+ * `mediaRef`.
+ */
+export interface PageRefPropSpec extends BasePropSpec {
+  kind: 'pageRef';
+}
+
+/**
  * Colore libero (ADR-33 § 3), primo uso reale di questo `kind`. Validato da
  * un pattern **fisso e stretto**, non un campo `pattern` generico riusabile
  * altrove: solo esadecimale a 3 o 6 cifre, niente `rgb()`/`hsl()`/`url()`/
@@ -219,6 +235,7 @@ export type PropSpec =
   | EnumPropSpec
   | UrlPropSpec
   | MediaRefPropSpec
+  | PageRefPropSpec
   | ColorPropSpec
   | UnitValuePropSpec
   | BorderPropSpec

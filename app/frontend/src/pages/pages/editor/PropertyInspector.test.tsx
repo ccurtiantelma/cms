@@ -883,6 +883,7 @@ describe('PropertyInspector — copertura del registro reale', () => {
     // (`styleBorder`/`styleShadow`/`customCssClass`/`customElementId`/`styleFontSizeCustom`).
     // `number` è in uso reale da ADR-47 (`section.styleOverlayOpacity`): non è più l'unico
     // kind assente dai tipi approvati, non c'è più bisogno del tipo sintetico per coprirlo.
+    // `pageRef` è in uso reale da ADR-52 (`navMenuItem.pageGuid`).
     expect([...kindsNelRegistro].sort()).toEqual(
       [
         'border',
@@ -893,6 +894,7 @@ describe('PropertyInspector — copertura del registro reale', () => {
         'htmlId',
         'mediaRef',
         'number',
+        'pageRef',
         'plainText',
         'richText',
         'shadow',
@@ -902,7 +904,7 @@ describe('PropertyInspector — copertura del registro reale', () => {
     );
   });
 
-  it('i dodici kind del contratto sono tutti rappresentati fra tipi reali e sonda sintetica', () => {
+  it('i tredici kind del contratto sono tutti rappresentati fra tipi reali e sonda sintetica', () => {
     const coperti = new Set(
       BLOCK_TYPES.flatMap((descriptor) => descriptor.props).map((prop) => prop.kind),
     );
@@ -917,6 +919,7 @@ describe('PropertyInspector — copertura del registro reale', () => {
         'htmlId',
         'mediaRef',
         'number',
+        'pageRef',
         'plainText',
         'richText',
         'shadow',

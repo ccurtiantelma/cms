@@ -19,6 +19,7 @@ import type { DraggableSyntheticListeners } from '@dnd-kit/core';
 import {
   IconCopy,
   IconCornerLeftUp,
+  IconDeviceFloppy,
   IconGripVertical,
   IconPencil,
   IconTrash,
@@ -52,9 +53,18 @@ export interface BlockHoverOverlayProps {
    * l'overlay non gestisce un secondo modal di conferma, solo lo richiede.
    */
   onDelete: () => void;
+  /**
+   * Apre il modal "Salva come Preset Globale" già montato in `EditorBlockWrapper.tsx`
+   * (stesso `usePresetStore`/`BlockPresetManager` già usati da `AdvancedTab.tsx` per
+   * container/section): sesto controllo, mostrato solo quando il chiamante lo passa —
+   * oggi solo su `section` (F14-01). `undefined` sugli altri tipi: il pulsante non
+   * compare affatto, mai disabilitato, nessuna regola duplicata qui su quali tipi la
+   * offrono.
+   */
+  onSaveAsPreset?: () => void;
 }
 
-/** Overlay hover/selezione con i cinque controlli comuni a ogni tipo di blocco (trascina/genitore/duplica/modifica/elimina). */
+/** Overlay hover/selezione con i controlli comuni a ogni tipo di blocco (trascina/genitore/duplica/modifica/elimina), più "Salva come Preset Globale" quando offerto dal chiamante. */
 export default function BlockHoverOverlay({
   id,
   label,
@@ -62,6 +72,7 @@ export default function BlockHoverOverlay({
   attributes,
   listeners,
   onDelete,
+  onSaveAsPreset,
 }: BlockHoverOverlayProps): JSX.Element {
   const duplicateNodeAction = useBlockEditorStore((state) => state.duplicateNodeAction);
   const selectNode = useBlockEditorStore((state) => state.selectNode);
@@ -154,6 +165,23 @@ export default function BlockHoverOverlay({
           <IconTrash size={14} />
         </ActionIcon>
       </Tooltip>
+
+      {onSaveAsPreset && (
+        <Tooltip label="Salva come Preset Globale" withArrow>
+          <ActionIcon
+            variant="transparent"
+            size="xs"
+            className={styles.overlayButton}
+            aria-label={`Salva il blocco ${label} come Preset Globale`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSaveAsPreset();
+            }}
+          >
+            <IconDeviceFloppy size={14} />
+          </ActionIcon>
+        </Tooltip>
+      )}
     </Group>
   );
 }

@@ -32,6 +32,15 @@ export const HEX_COLOR_PATTERN = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
  */
 export const CSS_IDENTIFIER_TOKEN_PATTERN = /^[a-zA-Z_-][a-zA-Z0-9_-]{0,49}$/;
 
+/**
+ * Pattern del `guid` (16 esadecimali) per `kind: 'pageRef'` (ADR-52 § 3), ricalcato da
+ * `GUID_PATTERN` di `block-tree-validator.service.ts` (stessa forma di `mediaRef`). Duplicato
+ * qui solo per anticipare l'errore a chi scrive: il rifiuto autorevole resta quello del
+ * server — nessuna verifica di esistenza/pubblicazione della Pagina lato client (la
+ * risoluzione è a valle, nella pipeline SSR di `app/public-site`).
+ */
+export const PAGE_GUID_PATTERN = /^[0-9a-f]{16}$/;
+
 /** Lunghezza massima totale di `kind: 'cssClassName'` (somma di 1-3 token, ADR-38 § 5). */
 export const CSS_CLASS_NAME_MAX_LENGTH = 100;
 
@@ -402,6 +411,9 @@ export function uxError(prop: BlockPropDescriptor, value: unknown): string | und
   }
   if (prop.kind === 'htmlId' && text.trim() !== '' && !CSS_IDENTIFIER_TOKEN_PATTERN.test(text)) {
     return 'Ammesso un solo identificativo: lettere, cifre, trattino o underscore, mai una cifra iniziale — massimo 50 caratteri';
+  }
+  if (prop.kind === 'pageRef' && text.trim() !== '' && !PAGE_GUID_PATTERN.test(text)) {
+    return 'Ammesso solo un guid di 16 caratteri esadecimali';
   }
   if ((prop.required || prop.nonEmpty) && text.trim() === '') {
     return 'Obbligatoria: il salvataggio verrà rifiutato finché è vuota';

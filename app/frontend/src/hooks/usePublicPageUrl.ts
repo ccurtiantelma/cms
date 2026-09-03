@@ -13,6 +13,16 @@
  *
  * Un errore in risalita non produce un URL parziale: si restituisce `null` e il pulsante
  * non compare. Un link plausibile ma sbagliato sarebbe peggio della sua assenza.
+ *
+ * Accetta anche un `guid` nudo (stringa) invece di un `PageRecord` già in mano — caso del
+ * blocco `navMenu` (F16-01), che a differenza del dettaglio Pagina non ha già caricato la
+ * riga della pagina di destinazione: parte da un giro in più su `fetchPage(guid)` per
+ * conoscerne `slug`/`parentGuid`/`status`, poi risale gli antenati come nel caso `PageRecord`.
+ * Nota architetturale per chi consuma questo hook da un componente blocco condiviso con
+ * `app/public-site` (ADR-22 § 3): l'effetto non gira mai sotto `renderToStaticMarkup` (niente
+ * JS lato sito pubblico, ADR-22 § 2) — su quel percorso l'hook resta `null` per costruzione.
+ * Un `pageGuid` deve quindi arrivare già risolto in un `url` assoluto prima del render SSR;
+ * questo hook copre solo i contesti con JS attivo (canvas dell'editor).
  */
 import { useEffect, useState } from 'react';
 import { fetchPage } from '../services/pages.service';
@@ -38,16 +48,25 @@ const MAX_ANCESTOR_LOOKUPS = 20;
  * pubblicata (la superficie pubblica serve solo `published`, ADR-24), catena degli antenati
  * non risolvibile, o percorso oltre il guardrail del server.
  */
-export function usePublicPageUrl(page: PageRecord | null): string | null {
+export function usePublicPageUrl(page: PageRecord | string | null): string | null {
   const [url, setUrl] = useState<string | null>(null);
 
-  const guid = page?.guid;
-  const slug = page?.slug;
-  const parentGuid = page?.parentGuid ?? null;
-  const status = page?.status;
+  const isGuid = typeof page === 'string';
+  const guid = isGuid ? page : page?.guid;
+  // Con un `guid` nudo non si conosce ancora slug/status: si scoprono nell'effetto,
+  // con un giro in più su `fetchPage`. Con un `PageRecord` già in mano restano questi.
+  const knownSlug = isGuid ? undefined : page?.slug;
+  const knownParentGuid = isGuid ? undefined : (page?.parentGuid ?? null);
+  const knownStatus = isGuid ? undefined : page?.status;
 
   useEffect(() => {
-    if (!guid || !slug || status !== 'published') {
+    if (!guid) {
+      setUrl(null);
+      return;
+    }
+    // Fast-path solo quando lo stato è già noto (caso `PageRecord`): un `guid` nudo deve
+    // sempre passare da `fetchPage` per scoprirlo.
+    if (knownSlug !== undefined && knownStatus !== 'published') {
       setUrl(null);
       return;
     }
@@ -55,34 +74,44 @@ export function usePublicPageUrl(page: PageRecord | null): string | null {
     let cancelled = false;
 
     async function resolve(): Promise<void> {
-      const segments = [slug as string];
-      let ancestorGuid = parentGuid;
-      let lookups = 0;
-
       try {
+        let slug = knownSlug;
+        let ancestorGuid = knownParentGuid ?? null;
+
+        if (slug === undefined) {
+          const self = await fetchPage(guid as string);
+          if (self.status !== 'published') {
+            if (!cancelled) setUrl(null);
+            return;
+          }
+          slug = self.slug;
+          ancestorGuid = self.parentGuid ?? null;
+        }
+
+        const segments = [slug as string];
+        let lookups = 0;
         while (ancestorGuid && lookups < MAX_ANCESTOR_LOOKUPS) {
           const ancestor = await fetchPage(ancestorGuid);
           segments.unshift(ancestor.slug);
           ancestorGuid = ancestor.parentGuid;
           lookups += 1;
         }
-      } catch {
-        // Antenato non leggibile (eliminato, permessi): nessun URL, nessuna notifica —
-        // è un'informazione accessoria del dettaglio, non un'operazione fallita.
-        if (!cancelled) setUrl(null);
-        return;
-      }
 
-      if (cancelled) return;
-      // Catena ancora aperta dopo il tetto: il percorso sarebbe incompleto, quindi errato.
-      setUrl(ancestorGuid ? null : `${PUBLIC_SITE_URL}/${segments.join('/')}`);
+        if (cancelled) return;
+        // Catena ancora aperta dopo il tetto: il percorso sarebbe incompleto, quindi errato.
+        setUrl(ancestorGuid ? null : `${PUBLIC_SITE_URL}/${segments.join('/')}`);
+      } catch {
+        // Pagina o antenato non leggibile (eliminato, permessi): nessun URL, nessuna
+        // notifica — è un'informazione accessoria, non un'operazione fallita.
+        if (!cancelled) setUrl(null);
+      }
     }
 
     void resolve();
     return () => {
       cancelled = true;
     };
-  }, [guid, slug, parentGuid, status]);
+  }, [guid, knownSlug, knownParentGuid, knownStatus]);
 
   return url;
 }

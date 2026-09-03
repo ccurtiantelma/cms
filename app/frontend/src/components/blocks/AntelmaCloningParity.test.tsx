@@ -135,15 +135,24 @@ describe('AntelmaCloningParity — pagina "Antelma Contatti" (F13-03)', () => {
     });
   });
 
-  describe('Footer Section — 4 colonne e barra di copyright', () => {
-    it('applica la classe a 4 colonne e renderizza le quattro colonne editoriali', () => {
+  describe('Footer Section — 4 colonne e barra di copyright (F15-02)', () => {
+    it('applica la classe a 4 colonne, full-width e renderizza le quattro colonne editoriali', () => {
       const { html } = renderTree();
+      const footerHtml = sectionHtmlByIndex(html, 3);
 
-      expect(html).toContain('columns_default_4');
-      expect(html).toContain('Antelma Group');
-      expect(html).toContain('Gruppo Antelma');
-      expect(html).toContain('Soluzioni');
-      expect(html).toContain('Altre risorse');
+      expect(footerHtml).toContain('columns_default_4');
+      expect(footerHtml).toContain('contentWidth_full-width');
+      expect(footerHtml).toContain('ANTELMA');
+      expect(footerHtml).toContain('Partita Iva e Codice Fiscale');
+      expect(footerHtml).toContain('GRUPPO ANTELMA');
+      expect(footerHtml).toContain('Chi Siamo');
+      expect(footerHtml).toContain('Lavora Con Noi');
+      expect(footerHtml).toContain('SOLUZIONI');
+      expect(footerHtml).toContain('Rete');
+      expect(footerHtml).toContain('Connettività');
+      expect(footerHtml).toContain('ALTRE RISORSE');
+      expect(footerHtml).toContain('News');
+      expect(footerHtml).toContain('Contatti');
       expect(html).toContain('Tutti i diritti riservati');
     });
   });

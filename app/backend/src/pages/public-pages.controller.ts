@@ -3,15 +3,17 @@ import {
   Controller,
   Get,
   HttpStatus,
+  Param,
   Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { Response } from 'express';
 import { PublicPagesService } from './public-pages.service';
 import { PublicPageDto } from './dto/public-page.dto';
+import { PublicPageGuidResolutionDto } from './dto/public-page-guid-resolution.dto';
 import { canonicalizePublicPath } from './public-path.util';
 import { SettingsService } from '../settings/settings.service';
 import { GlobalTokensDto } from '../settings/dto/global-tokens.dto';
@@ -83,6 +85,32 @@ export class PublicPagesController {
 
     const dto = await this.publicPagesService.resolveByPath(canonicalPath);
     res.status(HttpStatus.OK).json(dto);
+  }
+
+  /**
+   * Risolve un `guid` di Pagina al proprio percorso pubblico canonico
+   * (ADR-52 § 4, direzione inversa di `?path=`): usata dalla pipeline SSR di
+   * `app/public-site` per trasformare il `pageGuid` persistito da un
+   * `navMenuItem` in un `href`, solo se la Pagina referenziata è pubblicata.
+   */
+  @Get('pages/by-guid/:guid')
+  @Throttle({ public: { limit: 300, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Risolve il guid di una Pagina pubblicata al proprio percorso pubblico canonico',
+  })
+  @ApiParam({ name: 'guid', description: 'Identificatore amministrativo della Pagina (16 esadecimali)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Percorso pubblico canonico della Pagina pubblicata',
+    type: PublicPageGuidResolutionDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description:
+      'Pagina inesistente, non pubblicata, non attiva, guid malformato, o catena di antenati non risolvibile',
+  })
+  async getPathByGuid(@Param('guid') guid: string): Promise<PublicPageGuidResolutionDto> {
+    return this.publicPagesService.resolveByGuid(guid);
   }
 
   /**

@@ -302,6 +302,14 @@ export class BlockTreeValidatorService {
         if (!GUID_PATTERN.test(value)) return invalid('guidFormat');
         return;
       }
+      case 'pageRef': {
+        // Stessa validazione di forma di `mediaRef` (16 hex): nessuna
+        // verifica di esistenza/pubblicazione della Pagina a scrittura, la
+        // risoluzione è a valle nella pipeline SSR (ADR-52 § 3/§ 4).
+        if (typeof value !== 'string') return invalid('type');
+        if (!GUID_PATTERN.test(value)) return invalid('guidFormat');
+        return;
+      }
       case 'color': {
         if (typeof value !== 'string') return invalid('type');
         if (!HEX_COLOR_PATTERN.test(value)) return invalid('format');

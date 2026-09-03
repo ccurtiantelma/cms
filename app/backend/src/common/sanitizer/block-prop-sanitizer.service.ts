@@ -56,8 +56,9 @@ export interface BlockTreeSanitizationResult {
  * accorciare la stringa (`sanitize-html`, rimozione caratteri di controllo):
  * per loro il `maxLength` si verifica **qui**, sul valore che verrà
  * effettivamente scritto — non nel validator (ADR-21 § 3, correzione T3).
- * `number`, `boolean`, `enum`, `mediaRef` non passano da `sanitize-html`
- * (SPEC-F02 § 2.3.4); `url` non è HTML e non è toccato da questo stadio
+ * `number`, `boolean`, `enum`, `mediaRef`, `pageRef` non passano da
+ * `sanitize-html` (SPEC-F02 § 2.3.4, ADR-52 § 3 per `pageRef`); `url` non è
+ * HTML e non è toccato da questo stadio
  * (SPEC-F02 § 2.3.7). `unitValue`/`border`/`shadow`/`cssClassName`/`htmlId`
  * (ADR-38) sono validati per forma/intervallo/pattern **solo** dal
  * validator, a monte di questo stadio: nessuno dei cinque è testo HTML,
@@ -156,9 +157,10 @@ export class BlockPropSanitizerService {
       return value;
     }
 
-    // Altri `kind` (`number`, `boolean`, `enum`, `mediaRef`, `cssClassName`,
-    // `htmlId`): nessuna trasformazione, nessun passaggio da `sanitize-html`
-    // (SPEC-F02 § 2.3.4). `unitValue`/`border`/`shadow` sono oggetti, non
+    // Altri `kind` (`number`, `boolean`, `enum`, `mediaRef`, `pageRef`,
+    // `cssClassName`, `htmlId`): nessuna trasformazione, nessun passaggio da
+    // `sanitize-html` (SPEC-F02 § 2.3.4, ADR-52 § 3 per `pageRef`).
+    // `unitValue`/`border`/`shadow` sono oggetti, non
     // stringhe: escono già dalla guardia `typeof value !== 'string'` in
     // testa al metodo, invariati — validati per forma solo dal validator
     // (ADR-38 § 7).

@@ -225,6 +225,9 @@ export const antelmaContattiTree: RenderableBlockNode[] = [
       columns: { default: '4' },
       gap: { default: 'lg' },
       styleBackground: { default: 'inverse' },
+      contentWidth: 'full-width',
+      stylePaddingLeft: { default: '24' },
+      stylePaddingRight: { default: '24' },
     },
     children: [
       {
@@ -235,13 +238,20 @@ export const antelmaContattiTree: RenderableBlockNode[] = [
           {
             id: 'footer-info-heading',
             type: 'heading',
-            props: { level: 'h4', text: 'Antelma Group', styleTextColor: { default: 'inverse' } },
+            props: { level: 'h4', text: 'ANTELMA', styleTextColor: { default: 'inverse' } },
             children: [],
           },
           {
             id: 'footer-info-text',
             type: 'richText',
-            props: { html: '<p>Informazioni societarie Antelma</p>' },
+            props: {
+              html:
+                '<p>© 2026 All Rights Reserved Antelma S.r.l. | Sede Legale: Via Gavinana, 3 – 21052 ' +
+                'Busto Arsizio (VA) | Partita Iva e Codice Fiscale N. 01814180129 | Società iscritta al ' +
+                'Registro delle Imprese di Varese al n. 01814180129 | Tel.: 0331 651.811 – Fax: 0331 651.888 ' +
+                '| email: info@antelma.it</p>',
+              styleFontSize: { default: 'sm' },
+            },
             children: [],
           },
         ],
@@ -254,13 +264,13 @@ export const antelmaContattiTree: RenderableBlockNode[] = [
           {
             id: 'footer-group-heading',
             type: 'heading',
-            props: { level: 'h4', text: 'Gruppo Antelma', styleTextColor: { default: 'inverse' } },
+            props: { level: 'h4', text: 'GRUPPO ANTELMA', styleTextColor: { default: 'inverse' } },
             children: [],
           },
           {
             id: 'footer-group-text',
             type: 'richText',
-            props: { html: '<p>Le aziende del Gruppo Antelma</p>' },
+            props: { html: '<p>Chi Siamo<br />Lavora Con Noi</p>' },
             children: [],
           },
         ],
@@ -273,13 +283,13 @@ export const antelmaContattiTree: RenderableBlockNode[] = [
           {
             id: 'footer-solutions-heading',
             type: 'heading',
-            props: { level: 'h4', text: 'Soluzioni', styleTextColor: { default: 'inverse' } },
+            props: { level: 'h4', text: 'SOLUZIONI', styleTextColor: { default: 'inverse' } },
             children: [],
           },
           {
             id: 'footer-solutions-text',
             type: 'richText',
-            props: { html: '<p>Le nostre soluzioni</p>' },
+            props: { html: '<p>Rete &amp; Connettività<br />Voice &amp; Collaboration</p>' },
             children: [],
           },
         ],
@@ -292,13 +302,13 @@ export const antelmaContattiTree: RenderableBlockNode[] = [
           {
             id: 'footer-resources-heading',
             type: 'heading',
-            props: { level: 'h4', text: 'Altre risorse', styleTextColor: { default: 'inverse' } },
+            props: { level: 'h4', text: 'ALTRE RISORSE', styleTextColor: { default: 'inverse' } },
             children: [],
           },
           {
             id: 'footer-resources-text',
             type: 'richText',
-            props: { html: '<p>Link utili</p>' },
+            props: { html: '<p>News<br />Contatti</p>' },
             children: [],
           },
         ],

@@ -772,6 +772,25 @@ export default function PropField({
         />
       );
 
+    case 'pageRef':
+      // ADR-52 § 3: stessa forma di `mediaRef` (guid di 16 esadecimali), ma nessuna Media
+      // Library per scegliere una Pagina — non esiste oggi un "Page Picker" equivalente nel
+      // codebase. Un `TextInput` col guid digitato/incollato a mano resta coerente con
+      // l'assenza di verifica di esistenza/pubblicazione a scrittura (la risoluzione è a
+      // valle, nella pipeline SSR pubblica): un guid inesistente o non pubblicato non è un
+      // errore di validazione, produce solo una voce senza `href` in lettura.
+      return (
+        <TextInput
+          label={label}
+          withAsterisk={required}
+          value={asString(value)}
+          error={error}
+          placeholder="Es. a1b2c3d4e5f6a7b8 (guid della Pagina)"
+          onChange={(event) => onLocal(event.currentTarget.value)}
+          onBlur={() => onCommit(asString(value))}
+        />
+      );
+
     case 'richText':
       return (
         <RichTextFieldEditor

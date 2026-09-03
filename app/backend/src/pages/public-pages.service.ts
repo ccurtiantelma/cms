@@ -114,6 +114,72 @@ export class PublicPagesService {
   }
 
   /**
+   * Risolve un `guid` amministrativo di Pagina al proprio percorso pubblico
+   * canonico (ADR-52 § 4, direzione inversa di {@link resolveByPath}): usata
+   * dalla pipeline SSR di `app/public-site` per trasformare il `pageGuid`
+   * persistito da un `navMenuItem` in un `href`. `404` uniforme per ogni
+   * motivo di rifiuto (inesistente, soft-eliminata, non `published`, `guid`
+   * malformato, catena di antenati incoerente/oltre il guardrail) — mai
+   * `403`, stesso principio di {@link resolveByPath} (ADR-24 § 3). Nessuna
+   * cache dedicata (ADR-52 § Conseguenze): lettura diretta dal database ad
+   * ogni chiamata, la stessa chiave di cache di {@link resolveByPath} resta
+   * l'unica invalidata per evento (ADR-23/ADR-40).
+   *
+   * Non legge `content`/revisione: l'unico scopo è produrre il percorso, non
+   * riesporre il payload della Pagina (già coperto da `?path=`).
+   */
+  async resolveByGuid(guid: string): Promise<{ path: string }> {
+    const page = await this.db.db.query.pageEntity.findFirst({
+      where: and(eq(pageEntity.guid, guid), eq(pageEntity.isActive, true)),
+    });
+    if (!page || page.status !== 'published') {
+      throw new NotFoundException();
+    }
+
+    const multilingualConfig = await this.settingsService.getMultilingualConfig();
+
+    // Caso radice (ADR-52 § 4): nessun antenato e slug = home → segmento
+    // proprio omesso, la home resta raggiungibile da "/" (o dal proprio
+    // prefisso di lingua, sotto).
+    const segments: string[] =
+      page.slug === HOME_SLUG && page.parentId === null ? [] : [page.slug];
+
+    let parentId = page.parentId;
+    let lookups = 0;
+    while (parentId !== null) {
+      if (lookups >= MAX_PUBLIC_PATH_SEGMENTS) {
+        // Catena di antenati oltre il guardrail anti-abuso (dato
+        // incoerente/ciclico): non risolvibile, stesso principio di
+        // `resolvePageRow` sul lato discesa.
+        throw new NotFoundException();
+      }
+      const ancestor = await this.loadActiveById(parentId);
+      segments.unshift(ancestor.slug);
+      parentId = ancestor.parentId;
+      lookups += 1;
+    }
+
+    if (page.locale !== multilingualConfig.default) {
+      // Inverso di `extractLocalePrefix` (ADR-24 § 5): la lingua di default
+      // non ha mai prefisso, ogni altra lo porta come primo segmento.
+      segments.unshift(page.locale);
+    }
+
+    return { path: segments.length > 0 ? `/${segments.join('/')}` : '/' };
+  }
+
+  /** Una singola lettura per `id` fra le righe attive, per la risalita degli antenati; `404` se assente. */
+  private async loadActiveById(id: number): Promise<PageRow> {
+    const row = await this.db.db.query.pageEntity.findFirst({
+      where: and(eq(pageEntity.id, id), eq(pageEntity.isActive, true)),
+    });
+    if (!row) {
+      throw new NotFoundException();
+    }
+    return row;
+  }
+
+  /**
    * Risoluzione iterativa per segmenti (ADR-24 § 1): scende un segmento alla
    * volta su `(locale, parentId, slug)` fra le righe attive, stesso predicato
    * dei due indici parziali `pages_slug_locale_root_uq`/`_child_uq`. `/`

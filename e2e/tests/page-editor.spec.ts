@@ -19,6 +19,18 @@ import {
 } from './helpers/page-editor';
 
 /**
+ * Etichette accessibili dei tre controlli di `ViewportSelector.tsx`
+ * (`aria-label={`Viewport ${label}, ${width}`}`): Desktop resta fluido (`100%`, tetto
+ * `1280px`), Tablet/Mobile sono un device frame a larghezza fissa — stessi tre valori
+ * letterali del componente, non riderivati qui.
+ */
+const VIEWPORT_BUTTON = {
+  desktop: 'Viewport Desktop, 100%',
+  tablet: 'Viewport Tablet, 768px',
+  mobile: 'Viewport Mobile, 375px',
+} as const;
+
+/**
  * E2E del **criterio di Done di F04**, per intero e nell'ordine in cui è scritto
  * (`docs/ai/plans/PLAN-F04-editor-visivo.md`): si crea una Pagina reale
  * dall'inizio alla fine senza mai toccare `curl` o l'API a mano — creazione,
@@ -181,4 +193,72 @@ test('percorso completo: creo, compongo, salvo, pubblico e ritrovo il contenuto 
   // L'ordine è quello lasciato dal riordino: prima il testo, poi il titolo.
   expect(html.indexOf('Primo paragrafo')).toBeGreaterThan(-1);
   expect(html.indexOf('Primo paragrafo')).toBeLessThan(html.indexOf('Servizi &amp; consulenza'));
+});
+
+/**
+ * Stress test dello switcher di viewport responsive (`ViewportSelector.tsx`, F14-02):
+ * Desktop → Tablet → Mobile, con verifica che il contenitore simulato
+ * (`.viewportContainer`/`data-viewport`, `FullScreenEditorLayout.tsx`) cambi davvero
+ * larghezza e che la toolbar di selezione di un blocco (`BlockHoverOverlay.tsx`) resti
+ * ancorata e cliccabile a ogni passaggio, senza eccezioni JS in console.
+ *
+ * `data-viewport` non pilota una media query propria (il rendering responsive dei
+ * blocchi passa da `container-type: inline-size`, letto dalle `@container` di
+ * `style-tokens.module.css`): resta comunque l'aggancio dichiarativo pensato apposta per
+ * selettori E2E sul breakpoint simulato (commento di testa in `FullScreenEditorLayout.tsx`).
+ */
+test('switcher di viewport responsive: Desktop → Tablet → Mobile, canvas e toolbar di selezione restano coerenti', async ({
+  page,
+}) => {
+  test.slow();
+
+  const jsErrors: string[] = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') jsErrors.push(msg.text());
+  });
+  page.on('pageerror', (error) => jsErrors.push(error.message));
+
+  const slug = uniqueSlug('viewport-e2e');
+  await createPageFromUi(page, { title: TITOLO_PAGINA, slug });
+  await openContentTab(page);
+
+  await addRootBlock(page, 'Sezione');
+  const section = blockOfType(page, 'section').last();
+  await addChildBlock(section, 'Titolo');
+  const heading = blockOfType(section, 'heading');
+  await selectBlock(heading, 'Titolo');
+
+  const viewportContainer = page.locator('[data-viewport]');
+  // Stesso controllo dell'overlay a ogni passaggio: un click rieseleziona lo stesso nodo
+  // già selezionato (`selectNode(id)`, idempotente) — prova che la toolbar riceve ancora
+  // click reali dopo il cambio di larghezza, non solo che è visibile.
+  const modificaButton = heading.getByRole('button', { name: 'Modifica il blocco Titolo' });
+
+  // ─── Desktop (stato iniziale) ───────────────────────────────────────────
+  await expect(viewportContainer).toHaveAttribute('data-viewport', 'desktop');
+  const desktopBox = await viewportContainer.boundingBox();
+  expect(desktopBox?.width).toBeGreaterThan(768);
+  await expect(modificaButton).toBeVisible();
+  await modificaButton.click();
+
+  // ─── Tablet ──────────────────────────────────────────────────────────────
+  await page.getByRole('button', { name: VIEWPORT_BUTTON.tablet }).click();
+  await expect(viewportContainer).toHaveAttribute('data-viewport', 'tablet');
+  await expect(viewportContainer).toHaveCSS('width', '768px');
+  await expect(modificaButton).toBeVisible();
+  await modificaButton.click();
+
+  // ─── Mobile ──────────────────────────────────────────────────────────────
+  await page.getByRole('button', { name: VIEWPORT_BUTTON.mobile }).click();
+  await expect(viewportContainer).toHaveAttribute('data-viewport', 'mobile');
+  await expect(viewportContainer).toHaveCSS('width', '375px');
+  await expect(modificaButton).toBeVisible();
+  await modificaButton.click();
+
+  // ─── Torno a Desktop: lo switcher è bidirezionale, non solo "in giù" ──────
+  await page.getByRole('button', { name: VIEWPORT_BUTTON.desktop }).click();
+  await expect(viewportContainer).toHaveAttribute('data-viewport', 'desktop');
+  await expect(modificaButton).toBeVisible();
+
+  expect(jsErrors, `nessuna eccezione JS attesa in console: ${jsErrors.join('; ')}`).toEqual([]);
 });

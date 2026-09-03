@@ -19,6 +19,8 @@ interface PreviewDocumentProps {
    * produrrebbe, e header/footer ne fanno parte.
    */
   globalSections?: PublicActiveGlobalSectionsDto;
+  /** Vedi `PageView.tsx` — pass-through opzionale calcolato da `entry-server.tsx` (ADR-52). */
+  resolvePageUrl?: (pageGuid: string) => string | null | undefined;
 }
 
 /**
@@ -38,6 +40,7 @@ export default function PreviewDocument({
   cssHref,
   formScriptHref,
   globalSections,
+  resolvePageUrl,
 }: PreviewDocumentProps) {
   return (
     <html lang={page.locale}>
@@ -50,7 +53,12 @@ export default function PreviewDocument({
         <ThemeStyleTag themeConfig={themeConfig} />
       </head>
       <body>
-        <PageView content={page.content} globalSections={globalSections} formScriptHref={formScriptHref} />
+        <PageView
+          content={page.content}
+          globalSections={globalSections}
+          formScriptHref={formScriptHref}
+          resolvePageUrl={resolvePageUrl}
+        />
       </body>
     </html>
   );

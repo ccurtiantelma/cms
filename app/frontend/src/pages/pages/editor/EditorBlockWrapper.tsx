@@ -63,7 +63,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
-import { Text } from '@mantine/core';
+import { Button, Group, Modal, Stack, Text, TextInput } from '@mantine/core';
 import { useShallow } from 'zustand/react/shallow';
 import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core';
 import { notifications } from '@mantine/notifications';
@@ -93,11 +93,13 @@ import BlockErrorBoundary from '../../../components/blocks/BlockErrorBoundary';
 import Section from '../../../components/blocks/blocks/Section';
 import Container from '../../../components/blocks/blocks/Container';
 import FormBlock from '../../../components/blocks/blocks/FormBlock';
+import NavMenuBlock from '../../../components/blocks/blocks/NavMenuBlock';
 import tokenStyles from '../../../components/blocks/style-tokens.module.css';
 import { resolveHideClassName, resolveResponsiveClassNames } from '../../../components/blocks/style-tokens';
 import ConfirmModal from '../../../components/ConfirmModal';
 import BlockPalette, { blockIcon } from './BlockPalette';
 import BlockHoverOverlay from './components/BlockHoverOverlay';
+import { usePresetStore } from './usePresetStore';
 import InlineFloatingToolbar from './InlineFloatingToolbar';
 import InlineFormattingToolbar, {
   HEADING_LEVELS,
@@ -175,19 +177,31 @@ interface FormBlockContainerProps {
 }
 
 /**
+ * Props del blocco `navMenu` (ADR-52 § 1): nessuna prop propria dichiarata dal registro
+ * (`props: []`), solo `children` — i figli `navMenuItem` si montano come ogni altra foglia
+ * (vedi il ramo `isContainer` false più sotto), risolvendo il proprio `pageGuid` via
+ * `usePublicPageUrl` client-side, mai via `resolvePageUrl` (quello esiste solo lato SSR
+ * pubblico, `BlockRenderer.tsx`).
+ */
+interface NavMenuContainerProps {
+  children: ReactNode;
+}
+
+/**
  * Unione delle props ammesse da un componente montato in `CONTAINER_COMPONENTS`: ogni
  * tipo contenitore del registro dichiara il proprio schema — qui `section`, `container`
- * (ADR-39) e `form` (ADR-46). Tutte le interfacce dichiarano solo `children` come
- * obbligatoria e ogni altra prop opzionale (`unknown`): strutturalmente compatibili con
- * l'unione, senza bisogno di `any` per tipizzare il record qui sotto.
+ * (ADR-39), `form` (ADR-46) e `navMenu` (ADR-52). Tutte le interfacce dichiarano solo
+ * `children` come obbligatoria e ogni altra prop opzionale (`unknown`): strutturalmente
+ * compatibili con l'unione, senza bisogno di `any` per tipizzare il record qui sotto.
  */
 type ContainerComponentProps =
-  SectionContainerProps | ContainerBlockProps | FormBlockContainerProps;
+  SectionContainerProps | ContainerBlockProps | FormBlockContainerProps | NavMenuContainerProps;
 
 const CONTAINER_COMPONENTS: Record<string, (props: ContainerComponentProps) => JSX.Element> = {
   section: Section,
   container: Container,
   form: FormBlock,
+  navMenu: NavMenuBlock,
 };
 
 /**
@@ -201,7 +215,12 @@ function resolveContainerComponentProps(
 ):
   | Omit<SectionContainerProps, 'children'>
   | Omit<ContainerBlockProps, 'children'>
-  | Omit<FormBlockContainerProps, 'children'> {
+  | Omit<FormBlockContainerProps, 'children'>
+  | Omit<NavMenuContainerProps, 'children'> {
+  if (node.type === 'navMenu') {
+    // Nessuna prop propria (vedi {@link NavMenuContainerProps}).
+    return {};
+  }
   if (node.type === 'container') {
     return {
       display: node.props.display,
@@ -390,12 +409,17 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const commitContainerWidthAction = useBlockEditorStore(
     (state) => state.commitContainerWidthAction,
   );
+  /** "Salva come Preset Globale" (F14-01): stesso `usePresetStore` già usato da `AdvancedTab.tsx` per container/section — nessun secondo registro di preset. */
+  const savePreset = usePresetStore((state) => state.savePreset);
   /** "Occhio" del pannello Struttura/Navigator (`EditorStructureNavigator.tsx`): nascosto solo qui nel canvas, mai persistito. */
   const isHiddenInCanvas = useIsHiddenInCanvas(id);
   /** Riga corrispondente sotto il puntatore nel pannello Struttura/Navigator — stesso trattamento visivo dell'hover nel canvas. */
   const isHoveredFromNavigator = useIsHoveredFromNavigator(id);
 
   const [confirmOpened, setConfirmOpened] = useState(false);
+  /** Modal "Salva come Preset Globale" (F14-01), aperto dal sesto controllo di `BlockHoverOverlay.tsx` — solo su `section` (vedi `isSaveAsPresetOffered` più sotto). */
+  const [presetModalOpened, setPresetModalOpened] = useState(false);
+  const [presetName, setPresetName] = useState('');
   /** Solo il nodo direttamente sotto il puntatore (vedi commento di testa). */
   const [isHovered, setIsHovered] = useState(false);
 
@@ -748,6 +772,15 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
    * ha in più solo la linguetta d'azione sostitutiva più sotto.
    */
   const isSection = node.type === 'section';
+
+  /** Salva l'intero sottoalbero della Sezione corrente nel registro locale dei preset (F14-01). */
+  function handleSavePreset(): void {
+    const name = presetName.trim();
+    if (!name) return;
+    savePreset(name, currentNode);
+    setPresetName('');
+    setPresetModalOpened(false);
+  }
 
   /**
    * Resizer inter-colonna (punto 1 del task): solo su `section` con esattamente due figli
@@ -1217,6 +1250,11 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
             attributes={attributes}
             listeners={listeners}
             onDelete={() => setConfirmOpened(true)}
+            // Sesto controllo (F14-01), solo su `section`: nessun'altra categoria di
+            // blocco offre oggi "Salva come Preset Globale" dalla toolbar di selezione —
+            // `AdvancedTab.tsx` resta l'unico altro punto d'ingresso, lì esteso anche a
+            // `container`.
+            onSaveAsPreset={isSection ? () => setPresetModalOpened(true) : undefined}
           />
         )}
 
@@ -1449,6 +1487,43 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
               ? `Il blocco e i suoi ${childIds.length} blocchi figli vengono rimossi dalla bozza. L'eliminazione diventa definitiva al salvataggio.`
               : "Il blocco viene rimosso dalla bozza. L'eliminazione diventa definitiva al salvataggio."}
           </ConfirmModal>
+        )}
+
+        {/*
+          "Salva come Preset Globale" (F14-01): stesso pattern di nome-e-conferma già in
+          uso da `AdvancedTab.tsx` per container/section, stesso `usePresetStore` — un solo
+          registro di preset condiviso fra i due punti d'ingresso, mai due copie del
+          Modal/della logica di salvataggio.
+        */}
+        {presetModalOpened && (
+          <Modal
+            opened
+            onClose={() => setPresetModalOpened(false)}
+            title="Salva come Preset Globale"
+            centered
+            zIndex={1100}
+          >
+            <Stack>
+              <TextInput
+                label="Nome del preset"
+                placeholder="Es. Hero aziendale"
+                value={presetName}
+                onChange={(event) => setPresetName(event.currentTarget.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') handleSavePreset();
+                }}
+                data-autofocus
+              />
+              <Group justify="flex-end">
+                <Button variant="default" onClick={() => setPresetModalOpened(false)}>
+                  Annulla
+                </Button>
+                <Button onClick={handleSavePreset} disabled={!presetName.trim()}>
+                  Salva
+                </Button>
+              </Group>
+            </Stack>
+          </Modal>
         )}
 
         {/*

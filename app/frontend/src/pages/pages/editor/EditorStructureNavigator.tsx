@@ -120,6 +120,25 @@ function scrollBlockIntoView(id: string): void {
     ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
+/**
+ * Porta la riga `id` in vista **in questo pannello** (`[data-tree-node-id]`, sotto), non nel
+ * canvas — direzione opposta a `scrollBlockIntoView`. Serve quando la selezione arriva dal
+ * canvas (clic su un blocco fuori dallo scroll corrente del navigator): senza questo, la riga
+ * si evidenzia (`active`, via `selectedId`) ma può restare fuori vista, invisibile finché
+ * l'utente non scrolla a mano. `block: 'nearest'`, non `'center'` come per il canvas — qui la
+ * riga è quasi sempre già vicina al bordo visibile di un pannello stretto, e un ricentraggio
+ * ad ogni selezione produrrebbe uno scatto percepibile più che un aiuto.
+ */
+function scrollTreeRowIntoView(id: string): void {
+  const selector =
+    typeof window !== 'undefined' && typeof window.CSS?.escape === 'function'
+      ? `[data-tree-node-id="${window.CSS.escape(id)}"]`
+      : `[data-tree-node-id="${id}"]`;
+  document
+    .querySelector<HTMLElement>(selector)
+    ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 /** Appiattisce l'albero in ordine di visita in profondità — stesso ordine del rendering. */
 function flattenIds(nodes: readonly BlockNode[]): string[] {
   const ids: string[] = [];
@@ -193,7 +212,7 @@ function StructureNode({
   }, [isOver, active, roots, node.id]);
 
   return (
-    <div ref={setNodeRef} style={dragStyle}>
+    <div ref={setNodeRef} style={dragStyle} data-tree-node-id={node.id}>
       <Group
         gap={4}
         wrap="nowrap"
@@ -334,6 +353,14 @@ export default function EditorStructureNavigator(): JSX.Element {
   // questo cleanup l'ultimo `hoveredId` resterebbe scritto nello store e un blocco nel
   // canvas apparirebbe evidenziato "da solo", senza nessun puntatore sopra a spiegarlo.
   useEffect(() => () => setHoveredId(null), [setHoveredId]);
+
+  // Direzione canvas → navigator: `selectedId` cambia anche quando la selezione arriva da un
+  // clic nel canvas (`EditorBlockWrapper.tsx`, stessa `selectNode` dello store), non solo dal
+  // clic in questo pannello (che scrolla già da sé via `handleSelect`). Senza questo effetto,
+  // una riga fuori dallo scroll corrente si evidenzierebbe come attiva restando invisibile.
+  useEffect(() => {
+    if (selectedId) scrollTreeRowIntoView(selectedId);
+  }, [selectedId]);
 
   /** Seleziona il nodo e lo porta in vista nel canvas — mai l'uno senza l'altro da qui. */
   function handleSelect(id: string): void {

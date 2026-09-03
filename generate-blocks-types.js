@@ -63,6 +63,7 @@ export interface BlockPropDescriptor {
     | 'enum'
     | 'url'
     | 'mediaRef'
+    | 'pageRef'
     | 'color'
     | 'unitValue'
     | 'border'
