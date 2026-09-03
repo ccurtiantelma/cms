@@ -1,0 +1,65 @@
+info:
+  name: Change Status Authorized
+  type: http
+  seq: 19
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/pages/:guid/status"
+  params:
+    - name: guid
+      value: a1b2c3d4e5f6a7b8
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "status": "review"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Transizione `draft -> review` (ADR-18 § D3): l'unica ammessa a un `User` non
+  elevato, e solo sulla PROPRIA riga (`assertRowOwnership`, soglia di
+  elevazione Manager). `{{token}}` deve appartenere all'autore della pagina
+  (`createdBy`) o a un chiamante elevato (Manager/Admin/SuperAdmin) — un
+  `User` non proprietario riceve 403 (vedi "Change Status Forbidden.yml").
+  Il runner non garantisce lo stato pregresso della pagina referenziata dal
+  `guid`, quindi lo stile di assert resta difensivo sull'intera gamma
+  plausibile, come in "Change Status.yml".
+
+tests: |-
+  test("status is 200, 400, 403, 404 or 409", function() {
+    expect([200, 400, 403, 404, 409]).to.include(res.getStatus());
+  });
+
+  test("su successo la Pagina e' in review, con version presente", function() {
+    if (res.getStatus() === 200) {
+      const body = res.getBody();
+      expect(body.status).to.equal("review");
+      expect(body).to.have.property("version");
+    }
+  });
+
+  test("un 400 di transizione non ammessa porta il code dedicato", function() {
+    if (res.getStatus() === 400) {
+      const body = res.getBody();
+      expect(body.code).to.equal("PAGE_STATUS_TRANSITION_NOT_ALLOWED");
+      expect(body.details).to.have.property("transition");
+    }
+  });
+
+  test("un 409 e' un conflitto di version, non di slug", function() {
+    if (res.getStatus() === 409) {
+      const body = res.getBody();
+      expect(body.code).to.equal("PAGE_VERSION_CONFLICT");
+    }
+  });

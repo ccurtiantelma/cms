@@ -1,0 +1,60 @@
+info:
+  name: Change Status Forbidden
+  type: http
+  seq: 20
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/pages/:guid/status"
+  params:
+    - name: guid
+      value: a1b2c3d4e5f6a7b8
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "status": "published"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Transizione verso `published` (`statusTransitionRequiresElevation === true`
+  per qualunque `to` diverso da `review`, `pages.state-machine.ts`): richiede
+  soglia elevata (Manager+, ADR-18 § D3), qualunque sia la riga — anche la
+  propria. `{{token}}` in questa richiesta deve essere di un `User` (30) non
+  elevato, proprietario o no della pagina: il caso primario documentato è
+  **403**. La `ForbiddenException` lanciata da `PagesService.changeStatus`
+  (righe ~556-558) e' costruita col solo messaggio, senza un `code` di
+  dominio esplicito — verificato a codice, non assunto: `AllExceptionsFilter`
+  valorizza allora `code` col nome della classe dell'eccezione
+  (`exception.name`), quindi ci si aspetta `"ForbiddenException"`, MAI uno dei
+  `code` di dominio noti (`PAGE_STATUS_TRANSITION_NOT_ALLOWED`,
+  `PAGE_VERSION_CONFLICT`, `PAGE_SLUG_DUPLICATE`,
+  `PAGE_TRANSLATION_LOCALE_DUPLICATE`), che sono estranei a questo percorso.
+
+tests: |-
+  test("status is 403 or 404", function() {
+    expect([403, 404]).to.include(res.getStatus());
+  });
+
+  test("caso primario: 403 RBAC per soglia insufficiente, non un 403 di altra natura", function() {
+    if (res.getStatus() === 403) {
+      const body = res.getBody();
+      expect(body.message).to.be.a("string").and.not.empty;
+      // Nessun code di dominio: la ForbiddenException di RBAC non ne porta uno esplicito,
+      // AllExceptionsFilter ripiega sul nome della classe dell'eccezione.
+      expect(body.code).to.equal("ForbiddenException");
+      expect(body.code).to.not.equal("PAGE_STATUS_TRANSITION_NOT_ALLOWED");
+      expect(body.code).to.not.equal("PAGE_VERSION_CONFLICT");
+      expect(body.code).to.not.equal("PAGE_SLUG_DUPLICATE");
+    }
+  });

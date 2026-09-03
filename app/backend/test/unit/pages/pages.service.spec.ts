@@ -12,7 +12,7 @@ import type { ContentTree } from '../../../src/pages/content-tree';
 describe('PagesService — clonazione albero blocchi con id rigenerati (F05-02)', () => {
   function buildService(): PagesService {
     const noop = {} as never;
-    return new PagesService(noop, noop, noop, noop, noop, noop, noop, noop, noop, noop);
+    return new PagesService(noop, noop, noop, noop, noop, noop, noop, noop, noop, noop, noop);
   }
 
   function cloneContentTree(service: PagesService, content: ContentTree): ContentTree {

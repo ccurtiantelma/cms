@@ -46,6 +46,13 @@ export interface MediaFileRecord {
   entity: string | null;
   entityId: string | null;
   createdAt: string;
+  /**
+   * Punto focale editoriale, percentuale 0-100 (ADR-49 § M4). Sempre presente
+   * (colonna `NOT NULL DEFAULT 50` su `files`, mai `null`): un asset caricato
+   * prima di questa feature legge comunque 50/50, il centro dell'immagine.
+   */
+  focalX: number;
+  focalY: number;
 }
 
 /**
@@ -63,3 +70,28 @@ export type MediaListFilters = {
 
 /** Parametri completi di `GET api/v1/app/files`. */
 export type MediaListParams = PaginationParams & MediaListFilters;
+
+/**
+ * Insieme finito e nominato di preset (ADR-49 § M6/§ Decisione), ricalcato da
+ * `MediaTransformPreset` del backend (`files/dto/media-transform.dto.ts`): mai un crop
+ * continuo arbitrario da UI. Un sesto valore richiederebbe una nuova ADR — non si aggiunge
+ * qui senza che esista anche lì.
+ */
+export type MediaTransformPresetName = 'thumbnail' | 'card' | 'hero' | 'og';
+
+/**
+ * Corpo di `POST app/files/:guid/transform` (ADR-49), ricalcato da `MediaTransformDto` del
+ * backend. Il crop esplicito resta fuori scope di questa UI (solo preset + focal point,
+ * RFC-F09-media-transform-pipeline.md § M6): i quattro campi `cropX/Y/W/H` non sono
+ * costruibili da `MediaCropperModal`, che invia sempre `preset` + il focal point corrente.
+ */
+export interface MediaTransformRequest {
+  focalX: number;
+  focalY: number;
+  preset: MediaTransformPresetName;
+}
+
+/** Risposta di `POST app/files/:guid/transform`: id del job BullMQ accodato (ADR-49). */
+export interface MediaTransformResult {
+  jobId: string;
+}

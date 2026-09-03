@@ -154,6 +154,27 @@ export const fileEntity = pgTable(
     entity: varchar('entity', { length: 100 }),
     /** Id/guid dell'entità di dominio associata, facoltativo. */
     entityId: varchar('entity_id', { length: 100 }),
+    /**
+     * Focal point editoriale (percentuale 0-100, centro immagine di default) —
+     * usato da `MediaProcessor` per centrare il ritaglio quando genera una
+     * variante senza crop esplicito (ADR-49 § Decisione). `NOT NULL DEFAULT 50`
+     * anziché nullable con fallback applicativo: stesso comportamento, un
+     * `null`-check in meno a ogni lettura (ADR-49, scelta implementativa).
+     */
+    focalX: integer('focal_x').notNull().default(50),
+    focalY: integer('focal_y').notNull().default(50),
+    /**
+     * Riga sorgente da cui questa variante è stata derivata (ADR-49): valorizzato
+     * solo sui file generati da `MediaProcessor`, mai sull'originale caricato
+     * dall'utente. FK ricorsiva su `files.id` (`serial`, non `uuid` — ADR-49
+     * "Correzione tecnica"), `restrict`/`restrict` come da convenzione di
+     * default: mai un `onDelete: 'cascade'`, coerente con il `DELETE` fisico
+     * vietato in tutto il progetto.
+     */
+    parentFileId: integer('parent_file_id').references((): AnyPgColumn => fileEntity.id, {
+      onDelete: 'restrict',
+      onUpdate: 'restrict',
+    }),
     isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
@@ -170,6 +191,7 @@ export const fileEntity = pgTable(
     uniqueIndex('files_guid_idx').on(t.guid),
     uniqueIndex('files_storage_key_idx').on(t.storageKey),
     index('files_entity_idx').on(t.entity, t.entityId),
+    index('files_parent_file_idx').on(t.parentFileId),
   ],
 );
 
@@ -610,7 +632,7 @@ export const appSettingsRelations = relations(appSettingEntity, ({ one }) => ({
   }),
 }));
 
-export const filesRelations = relations(fileEntity, ({ one }) => ({
+export const filesRelations = relations(fileEntity, ({ one, many }) => ({
   createdByUser: one(userEntity, {
     fields: [fileEntity.createdBy],
     references: [userEntity.id],
@@ -619,6 +641,14 @@ export const filesRelations = relations(fileEntity, ({ one }) => ({
     fields: [fileEntity.updatedBy],
     references: [userEntity.id],
   }),
+  /** File sorgente da cui questa variante è stata derivata (ADR-49), se presente. */
+  parent: one(fileEntity, {
+    fields: [fileEntity.parentFileId],
+    references: [fileEntity.id],
+    relationName: 'fileVariants',
+  }),
+  /** Varianti generate da `MediaProcessor` a partire da questo file. */
+  variants: many(fileEntity, { relationName: 'fileVariants' }),
 }));
 
 export const pagesRelations = relations(pageEntity, ({ one, many }) => ({

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Inject,
@@ -20,6 +21,8 @@ import { findBlockDefinition } from '../blocks/block-registry';
 import { STORAGE_DRIVER, StorageDriver } from './storage/storage-driver.interface';
 import { FileMetadataDto } from './dto/file-metadata.dto';
 import { UploadFileDto } from './dto/upload-file.dto';
+import { MediaTransformDto } from './dto/media-transform.dto';
+import { MediaQueueService } from '../queues/media-queue/media-queue.service';
 
 /** Contenuto di un file pronto per lo streaming al client (vedi `FilesService.download`). */
 export interface FileDownload {
@@ -42,6 +45,7 @@ export class FilesService {
     private readonly db: DbService,
     @Inject(STORAGE_DRIVER) private readonly storageDriver: StorageDriver,
     private readonly auditLogService: AuditLogService,
+    private readonly mediaQueueService: MediaQueueService,
   ) {}
 
   /**
@@ -168,6 +172,59 @@ export class FilesService {
   async getMetadata(guid: string): Promise<FileMetadataDto> {
     const row = await this.findActiveByGuid(guid);
     return this.toMetadataDto(row);
+  }
+
+  /**
+   * Accoda la generazione di una variante trasformata dell'asset (ADR-49):
+   * verifica solo che il file sorgente esista e sia attivo, poi delega
+   * l'intero lavoro pixel-level a `MediaProcessor` via `MediaQueueService` —
+   * mai eseguito nel path di questa chiamata.
+   * @param fileGuid Identificatore pubblico del file sorgente.
+   * @param transformDto Crop esplicito e/o preset richiesto.
+   * @returns L'id del job BullMQ accodato, utile al chiamante per un eventuale tracking.
+   */
+  async requestImageTransform(
+    fileGuid: string,
+    transformDto: MediaTransformDto,
+  ): Promise<{ jobId: string }> {
+    await this.findActiveByGuid(fileGuid);
+    const jobId = await this.mediaQueueService.enqueueTransform(fileGuid, transformDto);
+    return { jobId };
+  }
+
+  /**
+   * Aggiorna il focal point persistito sull'asset (ADR-49 § M4): percentuale
+   * 0-100 del soggetto, usata da `MediaProcessor` come centro del ritaglio
+   * quando una trasformazione non fornisce un crop esplicito.
+   * @param fileGuid Identificatore pubblico del file.
+   * @param focalX Percentuale orizzontale (0-100).
+   * @param focalY Percentuale verticale (0-100).
+   * @returns I metadata aggiornati del file, con il nuovo focal point.
+   */
+  async updateFocalPoint(
+    fileGuid: string,
+    focalX: number,
+    focalY: number,
+  ): Promise<FileMetadataDto> {
+    if (focalX < 0 || focalX > 100 || focalY < 0 || focalY > 100) {
+      throw new BadRequestException(
+        'focalX/focalY devono essere percentuali comprese fra 0 e 100.',
+      );
+    }
+
+    const row = await this.findActiveByGuid(fileGuid);
+
+    const [updatedRow] = await this.db.db
+      .update(fileEntity)
+      .set({ focalX, focalY, updatedAt: new Date() })
+      .where(eq(fileEntity.id, row.id))
+      .returning();
+
+    this.logger.log(
+      `Focal point aggiornato (guid=${fileGuid}, focalX=${focalX}, focalY=${focalY}).`,
+    );
+
+    return this.toMetadataDto(updatedRow);
   }
 
   /**
@@ -312,6 +369,8 @@ export class FilesService {
       width: null,
       height: null,
       url: row.entity === 'page-media' ? `api/v1/public/media/${row.guid}` : null,
+      focalX: row.focalX,
+      focalY: row.focalY,
       createdAt: row.createdAt!,
     };
   }

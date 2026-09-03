@@ -1,11 +1,18 @@
 import { createHash } from 'crypto';
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { FilesService } from '../../../src/files/files.service';
 import { DbService } from '../../../src/db/db.service';
 import { AuditLogService } from '../../../src/common/audit-log.service';
 import { StorageDriver } from '../../../src/files/storage/storage-driver.interface';
 import { AppUserRoles } from '../../../src/common/enums';
 import { AuthInfo, FilesQueryParams } from '../../../src/common/types';
+import { MediaQueueService } from '../../../src/queues/media-queue/media-queue.service';
+import { MediaTransformPreset } from '../../../src/files/dto/media-transform.dto';
 
 /**
  * Albero minimale di contenuto pagina (`page_revisions.content`) usato per i
@@ -54,12 +61,14 @@ describe('FilesService (unit)', () => {
   let insertValuesMock: jest.Mock;
   let updateSetMock: jest.Mock;
   let updateWhereMock: jest.Mock;
+  let updateReturningMock: jest.Mock;
   let findFirstMock: jest.Mock;
   let findManyMock: jest.Mock;
   let selectWhereMock: jest.Mock;
   let innerJoinMock: jest.Mock;
   let auditLogMock: jest.Mock;
   let storageDriver: jest.Mocked<StorageDriver>;
+  let enqueueTransformMock: jest.Mock;
 
   const buildAuthInfo = (userId: number, role: AppUserRoles): AuthInfo => ({
     userId,
@@ -89,7 +98,11 @@ describe('FilesService (unit)', () => {
     insertValuesMock = jest
       .fn()
       .mockReturnValue({ returning: jest.fn().mockResolvedValue([insertedRow]) });
-    updateWhereMock = jest.fn().mockResolvedValue(undefined);
+    // `updateWhereMock` restituisce un oggetto con `.returning()` per coprire sia
+    // `updateFocalPoint` (che ora usa `.returning()`, vedi ADR-49) sia `softDelete`
+    // (che continua a fare solo `await ... .where(...)`, ignorando il valore).
+    updateReturningMock = jest.fn().mockResolvedValue([{ ...insertedRow, focalX: 50, focalY: 50 }]);
+    updateWhereMock = jest.fn().mockReturnValue({ returning: updateReturningMock });
     updateSetMock = jest.fn().mockReturnValue({ where: updateWhereMock });
     findFirstMock = jest.fn();
     findManyMock = jest.fn().mockResolvedValue([]);
@@ -120,7 +133,12 @@ describe('FilesService (unit)', () => {
 
     const auditLogService = { log: auditLogMock } as unknown as AuditLogService;
 
-    filesService = new FilesService(dbService, storageDriver, auditLogService);
+    enqueueTransformMock = jest.fn().mockResolvedValue('job-default');
+    const mediaQueueService = {
+      enqueueTransform: enqueueTransformMock,
+    } as unknown as MediaQueueService;
+
+    filesService = new FilesService(dbService, storageDriver, auditLogService, mediaQueueService);
   });
 
   describe('upload', () => {
@@ -455,6 +473,65 @@ describe('FilesService (unit)', () => {
       await filesService.softDelete(insertedRow.guid, authInfo);
 
       expect(updateSetMock).toHaveBeenCalledWith(expect.objectContaining({ isActive: false }));
+    });
+  });
+
+  describe('requestImageTransform', () => {
+    it('verifica che il file sorgente esista, accoda la trasformazione e ritorna il jobId', async () => {
+      findFirstMock.mockResolvedValue(insertedRow);
+      enqueueTransformMock.mockResolvedValue('job-123');
+      const transformDto = { preset: MediaTransformPreset.Card, focalX: 50, focalY: 50 };
+
+      const result = await filesService.requestImageTransform(insertedRow.guid, transformDto);
+
+      expect(enqueueTransformMock).toHaveBeenCalledWith(insertedRow.guid, transformDto);
+      expect(result).toEqual({ jobId: 'job-123' });
+    });
+
+    it('lancia NotFoundException e non accoda nulla se il file sorgente non esiste', async () => {
+      findFirstMock.mockResolvedValue(undefined);
+
+      await expect(
+        filesService.requestImageTransform('guid-inesistente', {
+          preset: MediaTransformPreset.Card,
+        }),
+      ).rejects.toThrow(NotFoundException);
+      expect(enqueueTransformMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateFocalPoint', () => {
+    it("aggiorna focalX/focalY sull'asset esistente e ritorna i metadata aggiornati", async () => {
+      findFirstMock.mockResolvedValue(insertedRow);
+      updateReturningMock.mockResolvedValueOnce([{ ...insertedRow, focalX: 30, focalY: 70 }]);
+
+      const result = await filesService.updateFocalPoint(insertedRow.guid, 30, 70);
+
+      expect(updateSetMock).toHaveBeenCalledWith(
+        expect.objectContaining({ focalX: 30, focalY: 70 }),
+      );
+      expect(updateWhereMock).toHaveBeenCalled();
+      expect(result).toEqual(
+        expect.objectContaining({ guid: insertedRow.guid, focalX: 30, focalY: 70 }),
+      );
+    });
+
+    it('lancia NotFoundException se il file non esiste o è stato eliminato', async () => {
+      findFirstMock.mockResolvedValue(undefined);
+
+      await expect(filesService.updateFocalPoint('guid-inesistente', 30, 70)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('rifiuta valori fuori dal range 0-100 senza toccare il DB', async () => {
+      await expect(filesService.updateFocalPoint(insertedRow.guid, -1, 50)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(filesService.updateFocalPoint(insertedRow.guid, 50, 101)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(updateSetMock).not.toHaveBeenCalled();
     });
   });
 });

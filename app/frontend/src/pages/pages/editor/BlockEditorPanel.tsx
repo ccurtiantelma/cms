@@ -23,7 +23,7 @@ import { notifications } from '@mantine/notifications';
 import type { AxiosError } from 'axios';
 import { getErrorMessage } from '../../../utils/api.utils';
 import { updatePage } from '../../../services/pages.service';
-import type { PageRecord, PagesErrorData } from '../../../types/pages.types';
+import type { PageRecord, PagesErrorData, PageStatus } from '../../../types/pages.types';
 import { ENVELOPE_VERSION } from '../../../types/blocks.types';
 import { useBlockEditorStore, useHasUnsavedChanges } from '../../../hooks/useBlockEditorStore';
 import { useUnsavedChangesGuard } from '../../../hooks/useUnsavedChangesGuard';
@@ -79,6 +79,19 @@ interface BlockEditorPanelProps {
    * inizia a coprire, misurata dal dettaglio sul bordo inferiore di `Tabs.List` — non
    * inoltrato oltre `FullScreenEditorLayout`.
    */
+  /**
+   * Stato corrente della Pagina e transizioni ammesse dal ruolo (`visibleTransitionsForRole`,
+   * `PagePageDetail.tsx`) — alimentano il badge di stato e il menu "Cambia Stato" della
+   * topbar full-screen (E01, `Toolbar.tsx`). `onRequestStatusChange` è la stessa funzione
+   * dietro la tendina di stato dell'intestazione (`requestStatusTransition`): nessuna
+   * seconda implementazione della macchina a stati qui, solo un secondo punto da cui
+   * invocarla — il `ConfirmModal`/il selettore di data restano montati nel dettaglio.
+   */
+  pageStatus: PageStatus;
+  visibleTransitions: readonly PageStatus[];
+  /** True durante una transizione di stato o un salvataggio dei metadati in corso nel dettaglio. */
+  statusSubmitting?: boolean;
+  onRequestStatusChange: (target: PageStatus) => void;
 }
 
 /** Superficie di editing dell'albero di blocchi della bozza corrente, in chrome full-screen. */
@@ -90,6 +103,10 @@ export default function BlockEditorPanel({
   previewLoading,
   onSaveDraftReady,
   active,
+  pageStatus,
+  visibleTransitions,
+  statusSubmitting,
+  onRequestStatusChange,
 }: BlockEditorPanelProps): JSX.Element {
   const [saving, setSaving] = useState(false);
   /** Nodo respinto dall'ultima validazione server-side, evidenziato nel canvas. */
@@ -235,6 +252,12 @@ export default function BlockEditorPanel({
         previewLoading={previewLoading}
         structurePanel={<EditorStructureNavigator />}
         active={active}
+        onPageUpdated={onPageUpdated}
+        onVersionConflict={onVersionConflict}
+        pageStatus={pageStatus}
+        visibleTransitions={visibleTransitions}
+        statusSubmitting={statusSubmitting}
+        onRequestStatusChange={onRequestStatusChange}
       >
         <InvalidBlockProvider invalidBlockId={invalidBlockId}>
           <EditorCanvas />

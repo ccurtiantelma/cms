@@ -1,0 +1,67 @@
+/*
+  Simulazione "fedele" dello snippet Google (SeoSerpPreview.tsx): colori/font letterali del
+  motore di ricerca reale, non del tema Mantine dell'admin — per questo CSS Module dedicato
+  invece delle prop native Mantine, coerente con la distinzione "chrome vs contenuto reso" già
+  in uso nell'editor (vedi RichTextFieldEditor.module.css). Questo box vive comunque nella
+  chrome admin (non è un blocco di contenuto pubblico), quindi il resto del pannello attorno
+  usa componenti Mantine normalmente.
+*/
+
+.serpCard {
+  max-width: 600px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #ffffff;
+  font-family: Arial, Roboto, sans-serif;
+}
+
+[data-mantine-color-scheme='dark'] .serpCard {
+  background: #202124;
+}
+
+.serpUrl {
+  font-size: 14px;
+  line-height: 1.3;
+  color: #202124;
+}
+
+[data-mantine-color-scheme='dark'] .serpUrl {
+  color: #bdc1c6;
+}
+
+.serpUrlSegment {
+  color: #4d5156;
+}
+
+[data-mantine-color-scheme='dark'] .serpUrlSegment {
+  color: #969ba1;
+}
+
+.serpTitle {
+  margin: 2px 0 3px;
+  font-size: 18px;
+  line-height: 1.3;
+  color: #1a0dab;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-mantine-color-scheme='dark'] .serpTitle {
+  color: #8ab4f8;
+}
+
+.serpDescription {
+  font-size: 14px;
+  line-height: 1.58;
+  color: #4d5156;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+[data-mantine-color-scheme='dark'] .serpDescription {
+  color: #bdc1c6;
+}

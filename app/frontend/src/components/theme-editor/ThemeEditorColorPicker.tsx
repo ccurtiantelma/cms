@@ -7,6 +7,7 @@
  * resta l'eyedropper nativo del browser (`useEyeDropper`), mostrato solo se
  * l'API è disponibile — stesso comportamento di `ColorInput`.
  */
+import { useEffect, useState } from 'react';
 import {
   ActionIcon,
   ColorPicker,
@@ -82,6 +83,17 @@ export function ThemeEditorColorPicker({
   const [gridOpened, { open: openGrid, close: closeGrid }] = useDisclosure(false);
   const [pickerOpened, { toggle: togglePicker, close: closePicker }] = useDisclosure(false);
   const eyeDropper = useEyeDropper();
+  // Anteprima locale durante il trascinamento hue/saturation: `onChange` del genitore è
+  // `onSetAndCommit`, che scrive nello store e apre un punto di undo/redo ad ogni chiamata
+  // (`updateBlockPropsAction`, `useBlockEditorStore.ts`). Committerlo su ogni pixel di
+  // trascinamento renderizzerebbe l'intero albero blocchi ad ogni frame, con lo scatto del
+  // pallino dietro il cursore — lo stesso motivo per cui il resize del container ha una sua
+  // preview dedicata. `draftValue` assorbe `onChange` durante il drag; solo `onChangeEnd`
+  // (rilascio o tastiera) inoltra il valore finale al genitore.
+  const [draftValue, setDraftValue] = useState(value);
+  useEffect(() => {
+    setDraftValue(value);
+  }, [value]);
 
   const diameter = CONTROL_DIAMETER[size];
   const iconSize = Math.round(diameter * 0.6);
@@ -125,7 +137,14 @@ export function ThemeEditorColorPicker({
           />
         </Tooltip>
 
-        <Popover opened={pickerOpened} onClose={closePicker} position="bottom-end" shadow="md">
+        <Popover
+          opened={pickerOpened}
+          onClose={closePicker}
+          position="bottom-end"
+          shadow="md"
+          withinPortal
+          zIndex={1100}
+        >
           <Popover.Target>
             <ActionIcon
               variant="default"
@@ -137,7 +156,12 @@ export function ThemeEditorColorPicker({
             </ActionIcon>
           </Popover.Target>
           <Popover.Dropdown>
-            <ColorPicker format="hex" value={value} onChange={onChange} />
+            <ColorPicker
+              format="hex"
+              value={draftValue}
+              onChange={setDraftValue}
+              onChangeEnd={onChange}
+            />
           </Popover.Dropdown>
         </Popover>
 

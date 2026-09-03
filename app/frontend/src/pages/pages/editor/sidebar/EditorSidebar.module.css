@@ -32,15 +32,22 @@
   background: rgba(26, 27, 30, 0.82);
 }
 
+/*
+ * Griglia a 2 colonne sostituita da flex a riga unica: con 3 schede
+ * (Widgets/Proprietà/Pagina) il `grid-template-columns: repeat(2, ...)`
+ * mandava sempre la terza scheda a capo su una riga propria.
+ */
 .tabs :global(.mantine-Tabs-list) {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: nowrap;
+  width: 100%;
   padding: 8px 8px 0;
   border: 0;
   background: transparent;
 }
 
 .tabs :global(.mantine-Tabs-tab) {
+  flex: 1;
   min-height: 38px;
   border-radius: 8px 8px 0 0;
   border: 0;
@@ -49,6 +56,9 @@
   letter-spacing: 0.01em;
   color: #4b5563;
   background: transparent;
+  text-align: center;
+  padding: 6px 8px;
+  white-space: nowrap;
 }
 
 .tabs :global(.mantine-Tabs-tab[data-active='true']) {

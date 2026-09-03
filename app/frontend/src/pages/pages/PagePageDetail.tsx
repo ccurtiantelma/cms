@@ -70,6 +70,7 @@ import {
   PAGE_STATUS_COLORS,
   PAGE_STATUS_LABELS,
   PAGE_STATUS_TRANSITIONS,
+  statusActionLabel,
   type ChangeStatusPayload,
   type PageFaqEntry,
   type PageRecord,
@@ -82,8 +83,13 @@ import {
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { PUBLIC_SITE_URL, usePublicPageUrl } from '../../hooks/usePublicPageUrl';
 import { usePublicSiteHealth } from '../../hooks/usePublicSiteHealth';
+import { useAuthStore } from '../../hooks/useAuth';
+import { AppUserRoles } from '../../types/common.types';
 import BlockEditorPanel from './editor/BlockEditorPanel';
 import RevisionDiffModal from './editor/RevisionDiffModal';
+import SeoSerpPreview from './editor/SeoSerpPreview';
+import SeoSocialPreview from './editor/SeoSocialPreview';
+import SeoJsonLdInspector from './editor/SeoJsonLdInspector';
 import PageHeader from '../../components/PageHeader';
 import PageNotFound from '../../components/PageNotFound';
 import ContentCard from '../../components/ContentCard';
@@ -98,24 +104,19 @@ import ConfirmModal from '../../components/ConfirmModal';
  */
 const PUBLISH_TIMESTAMP_TOLERANCE_MS = 2000;
 
-/** Etichetta azione per ogni stato di destinazione (macchina a stati). */
-const STATUS_ACTION_LABELS: Record<PageStatus, string> = {
-  draft: 'Riporta in bozza',
-  review: 'Invia in revisione',
-  scheduled: 'Programma pubblicazione',
-  published: 'Pubblica',
-  archived: 'Archivia',
-};
-
 /**
- * Etichetta dell'azione di transizione verso `target`, dato lo stato corrente. Caso
- * speciale: `published → published` non è una prima pubblicazione ma una
- * ripubblicazione (la Pagina è già online, si sostituisce con una nuova Revisione) —
- * riusare "Pubblica" lascerebbe intendere che non lo fosse ancora.
+ * Filtra le transizioni ammesse dallo stato corrente in base al ruolo (`docs/business-rules.md`
+ * § Permessi editoriali): un `User` può solo inviare in revisione (`review`) — mai pubblicare,
+ * programmare, archiviare o riportare in bozza. Gli altri ruoli (Manager/Admin/SuperAdmin) vedono
+ * tutte le transizioni ammesse. La barriera reale resta il backend (guard RBAC + ownership per
+ * riga, ADR-18): questo filtro evita solo di mostrare un'azione che il server rifiuterebbe.
  */
-function statusActionLabel(target: PageStatus, currentStatus: PageStatus): string {
-  if (target === 'published' && currentStatus === 'published') return 'Ripubblica';
-  return STATUS_ACTION_LABELS[target];
+function visibleTransitionsForRole(
+  transitions: readonly PageStatus[],
+  role: AppUserRoles | undefined,
+): readonly PageStatus[] {
+  if (role !== AppUserRoles.User) return transitions;
+  return transitions.filter((target) => target === 'review');
 }
 
 /** Valori del form Metadati + SEO/GEO (locale e contenuto non sono editabili qui). */
@@ -150,6 +151,27 @@ function linesToArray(text: string): string[] | undefined {
 /** Formatta una data ISO nel formato locale italiano (data + ora). */
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('it-IT');
+}
+
+/**
+ * URL da mostrare nell'anteprima SERP live: canonica se compilata, altrimenti dedotta dallo
+ * slug corrente del form. A differenza di `usePublicPageUrl` (che risale gli antenati con una
+ * richiesta di rete per il vero pulsante "Vedi pagina") questa è solo un'approssimazione per
+ * l'anteprima — nessuna richiesta, si aggiorna ad ogni tasto.
+ */
+function resolveSerpPreviewUrl(canonicalUrl: string, slug: string): string {
+  const trimmedCanonical = canonicalUrl.trim();
+  if (trimmedCanonical) return trimmedCanonical;
+  return `${PUBLIC_SITE_URL}/${slug.trim()}`;
+}
+
+/** Host di un URL assoluto, o l'URL grezzo se non ancora valido (es. slug vuoto durante la digitazione). */
+function extractHost(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
 }
 
 /** Legge un campo stringa da `draftSeo` (oggetto non tipizzato — contratto SEO libero). */
@@ -206,6 +228,7 @@ function pageToFormValues(page: PageRecord): MetadataFormValues {
 /** Pagina di dettaglio di una Pagina (chrome amministrativa, F01/T8 + editor F04). */
 export default function PagePageDetail(): JSX.Element {
   const { guid } = useParams<{ guid: string }>();
+  const authUser = useAuthStore((s) => s.user);
 
   const [page, setPage] = useState<PageRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -413,6 +436,19 @@ export default function PagePageDetail(): JSX.Element {
         notifyVersionConflict();
         setTransitionTarget(null);
         setScheduleOpened(false);
+      } else if (error.response?.status === 403) {
+        // Il ruolo/ownership non consente questa transizione: il filtro in UI (`visibleTransitionsForRole`)
+        // la esclude già dal menu in condizioni normali — questo resta il caso limite (ruolo
+        // cambiato o ownership persa a sessione già aperta). Si ricarica la Pagina per riallineare
+        // lo stato mostrato a quello reale sul server.
+        notifications.show({
+          color: 'red',
+          title: 'Operazione non consentita',
+          message: 'Non hai i permessi per eseguire questo cambio di stato su questa Pagina.',
+        });
+        setTransitionTarget(null);
+        setScheduleOpened(false);
+        void loadPage();
       } else if (error.response?.status === 400 && error.response.data?.details?.transition) {
         notifications.show({
           color: 'red',
@@ -426,6 +462,23 @@ export default function PagePageDetail(): JSX.Element {
       }
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  /**
+   * Avvia una transizione di stato: apre il selettore di data (`scheduled`) o il
+   * `ConfirmModal` di conferma (ogni altro target, `doChangeStatus` sopra) — la stessa
+   * funzione dietro la tendina di stato dell'intestazione E la voce "Cambia Stato" della
+   * topbar dell'editor full-screen (E01, `editor/Toolbar.tsx`, passata giù come
+   * `onRequestStatusChange` a `BlockEditorPanel`): un solo punto che decide come reagire a
+   * ciascun target, mai due copie della stessa diramazione `scheduled`/resto.
+   */
+  function requestStatusTransition(target: PageStatus): void {
+    if (target === 'scheduled') {
+      setScheduledAt(null);
+      setScheduleOpened(true);
+    } else {
+      setTransitionTarget(target);
     }
   }
 
@@ -517,6 +570,7 @@ export default function PagePageDetail(): JSX.Element {
 
   const status = page.status as PageStatus;
   const allowedTransitions = PAGE_STATUS_TRANSITIONS[status] ?? [];
+  const visibleTransitions = visibleTransitionsForRole(allowedTransitions, authUser?.role);
 
   /**
    * La bozza è stata toccata dopo l'ultima pubblicazione: online c'è ancora la Revisione
@@ -543,6 +597,20 @@ export default function PagePageDetail(): JSX.Element {
     { key: 'authorName', label: 'Autore' },
     { key: 'createdAt', label: 'Data', render: (row) => formatDate(row.createdAt) },
   ];
+
+  /*
+   * Valori live per i pannelli di anteprima SEO/OG/JSON-LD (`Tabs.Panel` "seo"/"geo" sotto):
+   * derivati da `form.values`, non da `page` salvato — l'obiettivo esplicito è aggiornarsi
+   * mentre l'utente digita, prima di premere "Salva". Stessi fallback già usati dal business
+   * rule (`docs/business-rules.md` § SEO): `ogTitle || metaTitle || title`,
+   * `ogDescription || metaDescription`.
+   */
+  const seoPreviewUrl = resolveSerpPreviewUrl(form.values.canonicalUrl, form.values.slug);
+  const seoPreviewDomain = extractHost(seoPreviewUrl);
+  const seoPreviewTitle = form.values.metaTitle || form.values.title;
+  const seoPreviewDescription = form.values.metaDescription;
+  const ogPreviewTitle = form.values.ogTitle || seoPreviewTitle;
+  const ogPreviewDescription = form.values.ogDescription || seoPreviewDescription;
 
   return (
     <div>
@@ -596,25 +664,18 @@ export default function PagePageDetail(): JSX.Element {
                   variant="light"
                   color={PAGE_STATUS_COLORS[status] ?? 'gray'}
                   rightSection={<IconChevronDown size={16} />}
-                  disabled={allowedTransitions.length === 0}
+                  disabled={visibleTransitions.length === 0}
                 >
                   {PAGE_STATUS_LABELS[status] ?? status}
                 </Button>
               </Menu.Target>
               <Menu.Dropdown>
                 <Menu.Label>Transizioni ammesse</Menu.Label>
-                {allowedTransitions.map((target) => (
+                {visibleTransitions.map((target) => (
                   <Menu.Item
                     key={target}
                     color={PAGE_STATUS_COLORS[target]}
-                    onClick={() => {
-                      if (target === 'scheduled') {
-                        setScheduledAt(null);
-                        setScheduleOpened(true);
-                      } else {
-                        setTransitionTarget(target);
-                      }
-                    }}
+                    onClick={() => requestStatusTransition(target)}
                   >
                     {statusActionLabel(target, status)}
                   </Menu.Item>
@@ -796,6 +857,10 @@ export default function PagePageDetail(): JSX.Element {
               onPreview={status === 'draft' ? () => void handlePreview() : undefined}
               previewLoading={previewLoading}
               active={activeTab === 'content'}
+              pageStatus={status}
+              visibleTransitions={visibleTransitions}
+              statusSubmitting={submitting}
+              onRequestStatusChange={requestStatusTransition}
             />
           </Tabs.Panel>
 
@@ -852,6 +917,27 @@ export default function PagePageDetail(): JSX.Element {
                 </Group>
               </Stack>
             </form>
+
+            {/*
+              Anteprime live (chrome dell'editor, puramente presentazionali — nessuna chiamata
+              API propria): alimentate da `form.values`, si aggiornano ad ogni tasto, prima
+              ancora di "Salva". Le checklist di lunghezza sono consultive (business rule 4),
+              mai un blocco alla pubblicazione.
+            */}
+            <Divider label="Anteprima" labelPosition="left" mt="lg" />
+            <Stack gap="lg" mt="sm">
+              <SeoSerpPreview
+                title={seoPreviewTitle}
+                description={seoPreviewDescription}
+                url={seoPreviewUrl}
+              />
+              <SeoSocialPreview
+                title={ogPreviewTitle}
+                description={ogPreviewDescription}
+                image={form.values.ogImage}
+                domain={seoPreviewDomain}
+              />
+            </Stack>
           </Tabs.Panel>
 
           {/* --- GEO (motori generativi): non è "SEO avanzato", è un altro consumatore --- */}
@@ -933,6 +1019,21 @@ export default function PagePageDetail(): JSX.Element {
                 </Group>
               </Stack>
             </form>
+
+            {/*
+              Anteprima JSON-LD (puramente presentazionale, calcolata in editor — vedi
+              `SeoJsonLdInspector.tsx`): `manualStructuredData` viene dal record salvato
+              (`page.draftSeo?.structuredData`), non dal form — quel campo non è editabile qui.
+            */}
+            <Divider label="Anteprima" labelPosition="left" mt="lg" />
+            <Stack mt="sm">
+              <SeoJsonLdInspector
+                pageTitle={seoPreviewTitle}
+                description={seoPreviewDescription}
+                faq={form.values.faq}
+                manualStructuredData={page.draftSeo?.structuredData as Record<string, unknown> | undefined}
+              />
+            </Stack>
           </Tabs.Panel>
 
           {/* --- Cronologia Revisioni + ripristino --- */}

@@ -1,12 +1,14 @@
-/* Overlay hover/selezione unico (BlockHoverOverlay.tsx). Stessa posizione/stile della
-   vecchia `.sectionHandle` di EditorBlockWrapper.module.css (riservata solo alle Sezioni
-   prima del reversal), qui montata per qualunque tipo di blocco: handle tab compatta,
-   centrata sul bordo superiore del blocco, quattro pulsanti. */
+/* Toolbar di selezione (BlockHoverOverlay.tsx): montata **solo** quando il blocco è
+   selezionato (mai sul solo hover, che mostra invece il badge nome in alto a sinistra,
+   vedi `.hoverBadge` in EditorBlockWrapper.module.css) — ancorata in alto a destra, non
+   più centrata sul bordo superiore, così non collide mai con quel badge sullo stesso
+   blocco. `position: absolute` dentro `.wrapper` (già `position: relative`): non sposta
+   mai il layout del contenuto, stesso principio di ogni altro overlay di chrome in questo
+   file. */
 .overlay {
   position: absolute;
   top: -12px;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 0;
   z-index: 20;
   display: inline-flex;
   align-items: center;

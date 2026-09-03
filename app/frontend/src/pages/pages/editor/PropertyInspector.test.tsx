@@ -114,6 +114,8 @@ const MEDIA_RECORD = {
   entity: 'page-media',
   entityId: null,
   createdAt: '2026-08-25T10:00:00.000Z',
+  focalX: 50,
+  focalY: 50,
 };
 
 beforeEach(() => {
@@ -1053,5 +1055,62 @@ describe('PropertyInspector — Media Library', () => {
     expect(
       screen.queryByRole('button', { name: /Scegli Immagine|Sostituisci Immagine/ }),
     ).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * ADR-50 — `styleBackgroundType` sceglie fra colore/immagine/gradiente: `StyleTab` nasconde i
+ * campi non pertinenti al tipo attivo (presentazione, non validazione — stesso principio di
+ * `maxWidth` sotto `contentWidth = full-width`, ADR-33 § 1). Le prop restano comunque
+ * dichiarate nel registro: qui si verifica solo la visibilità del controllo, non la scrittura
+ * (già coperta genericamente da "i sette kind del registro" per `enum`/`color`/`mediaRef`).
+ */
+describe('PropertyInspector — section.styleBackgroundType (ADR-50)', () => {
+  it('type "color" (default, nessun valore ancora scritto): niente campi di immagine o gradiente', () => {
+    renderInspectorWith(node('sec-bg', 'section', {}));
+
+    expect(screen.getByRole('textbox', { name: 'Tipo sfondo' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Scegli Immagine|Sostituisci Immagine/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Posizione sfondo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Dimensione sfondo' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Colore iniziale gradiente')).not.toBeInTheDocument();
+    expect(screen.queryByText('Colore finale gradiente')).not.toBeInTheDocument();
+  });
+
+  it('type "image": compaiono media picker, posizione e dimensione; il gradiente resta nascosto', () => {
+    renderInspectorWith(node('sec-bg', 'section', { styleBackgroundType: 'image' }));
+
+    expect(
+      screen.getByRole('button', { name: /Scegli Immagine|Sostituisci Immagine/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Posizione sfondo' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Dimensione sfondo' })).toBeInTheDocument();
+    expect(screen.queryByText('Colore iniziale gradiente')).not.toBeInTheDocument();
+    expect(screen.queryByText('Colore finale gradiente')).not.toBeInTheDocument();
+  });
+
+  it('type "gradient": compaiono i due color picker; immagine/posizione/dimensione restano nascosti', () => {
+    renderInspectorWith(node('sec-bg', 'section', { styleBackgroundType: 'gradient' }));
+
+    expect(screen.getByText('Colore iniziale gradiente')).toBeInTheDocument();
+    expect(screen.getByText('Colore finale gradiente')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Scegli Immagine|Sostituisci Immagine/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Posizione sfondo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Dimensione sfondo' })).not.toBeInTheDocument();
+  });
+
+  it('passare da "color" a "image" scrive il tipo in store e fa comparire i campi immagine', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('sec-bg', 'section', { styleBackgroundType: 'color' }));
+
+    expect(screen.queryByRole('textbox', { name: 'Posizione sfondo' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('textbox', { name: 'Tipo sfondo' }));
+    await user.click(screen.getByRole('option', { name: 'image' }));
+
+    expect(propsInStore('sec-bg').styleBackgroundType).toBe('image');
+    expect(screen.getByRole('textbox', { name: 'Posizione sfondo' })).toBeInTheDocument();
   });
 });

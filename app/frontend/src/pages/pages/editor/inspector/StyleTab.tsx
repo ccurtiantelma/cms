@@ -12,6 +12,12 @@
  * rendering individuale via `PropField`, mai un'assunzione che siano sempre tutte presenti.
  * Stessa logica di prima di questo restyle, solo spostata dentro la sezione invece che
  * sull'intera scheda.
+ *
+ * Seconda eccezione, solo per `section` (ADR-50): le prop di sfondo immagine
+ * (`styleBackgroundImageRef`/`styleBackgroundPosition`/`styleBackgroundSize`) e le due prop
+ * di gradiente (`styleGradientStart`/`styleGradientEnd`) sono filtrate da `visibleFields` in
+ * base al valore corrente di `styleBackgroundType` — logica di presentazione, mai di
+ * validazione (stesso principio di `maxWidth` sotto `contentWidth = full-width`, ADR-33 § 1).
  */
 import type { BlockPropDescriptor } from '../../../../types/blocks.types';
 import { Accordion } from '@mantine/core';
@@ -19,6 +25,7 @@ import VisualBoxModelInspector from '../VisualBoxModelInspector';
 import PropField from './PropField';
 import styles from './inspector.module.css';
 import {
+  asString,
   breakpointKey,
   groupPropsBySection,
   SPACING_SLIDER_PROPS,
@@ -30,6 +37,14 @@ import type { PropertyTabProps } from './ContentTab';
 /** Nome della sezione Accordion che riceve il trattamento speciale del box model. */
 const SPACING_SECTION_NAME = 'Spaziatura';
 
+/** ADR-50: prop di sfondo `section` visibili solo per un dato `styleBackgroundType`. */
+const IMAGE_ONLY_BACKGROUND_PROPS = new Set([
+  'styleBackgroundImageRef',
+  'styleBackgroundPosition',
+  'styleBackgroundSize',
+]);
+const GRADIENT_ONLY_BACKGROUND_PROPS = new Set(['styleGradientStart', 'styleGradientEnd']);
+
 export default function StyleTab({
   fields,
   draft,
@@ -39,8 +54,24 @@ export default function StyleTab({
   commit,
   setAndCommit,
   onOpenMediaPicker,
+  onOpenCropper,
+  nodeType,
 }: PropertyTabProps): JSX.Element {
   const activeBreakpoint = breakpointKey(activeViewport);
+
+  // ADR-50 — logica di presentazione, non di validazione (stesso principio di `maxWidth`
+  // sotto `contentWidth = full-width`, ADR-33 § 1): tutte le prop restano dichiarate e
+  // validate server-side, l'inspector nasconde solo i campi che non si applicano al tipo di
+  // sfondo attivo. `'color'` è il default del registro quando la prop è ancora assente.
+  const backgroundType = asString(draft.styleBackgroundType) || 'color';
+  const visibleFields =
+    nodeType === 'section'
+      ? fields.filter((field) => {
+          if (IMAGE_ONLY_BACKGROUND_PROPS.has(field.name)) return backgroundType === 'image';
+          if (GRADIENT_ONLY_BACKGROUND_PROPS.has(field.name)) return backgroundType === 'gradient';
+          return true;
+        })
+      : fields;
 
   function renderPropField(prop: BlockPropDescriptor): JSX.Element {
     return (
@@ -55,6 +86,7 @@ export default function StyleTab({
         onCommit={(next) => commit(prop.name, next)}
         onSetAndCommit={(next) => setAndCommit(prop.name, next)}
         onOpenMediaPicker={() => onOpenMediaPicker(prop.name)}
+        onOpenCropper={() => onOpenCropper(prop.name)}
       />
     );
   }
@@ -105,7 +137,7 @@ export default function StyleTab({
     return <div className={styles.fieldList}>{rendered}</div>;
   }
 
-  const sections = groupPropsBySection(fields, styleSectionFor, STYLE_SECTION_ORDER);
+  const sections = groupPropsBySection(visibleFields, styleSectionFor, STYLE_SECTION_ORDER);
 
   return (
     <Accordion

@@ -33,6 +33,7 @@ import {
   IconArrowLeft,
   IconArrowRight,
   IconArrowUp,
+  IconCrop,
   IconPhoto,
   IconTrash,
   IconWorld,
@@ -82,6 +83,17 @@ const FLEX_DIRECTION_ICON: Record<string, Icon> = {
 };
 
 /**
+ * Etichette leggibili per i valori `enum` di alcune prop, quando il token grezzo del
+ * registro (es. `'6'`/`'12'` di `colSpan`, ADR-51) non è già il testo da mostrare —
+ * riconosciute per nome, mai per `kind`, stesso principio di `CONTAINER_FLEX_SEGMENTED_PROPS`.
+ * Un token assente dalla mappa per la prop ricade sul token grezzo (nessuna voce
+ * obbligatoria).
+ */
+const ENUM_VALUE_LABELS: Record<string, Record<string, string>> = {
+  colSpan: { '6': '50%', '12': '100%' },
+};
+
+/**
  * Pallino d'override accanto all'etichetta di un campo `responsive` (ADR-29 § 2): visibile
  * solo quando il breakpoint attivo porta un valore esplicito nell'envelope, mai su
  * `default` (che non è mai un "override" — è la base della cascata). Il calcolo vive nel
@@ -113,6 +125,11 @@ export interface PropFieldProps {
   onSetAndCommit: (value: unknown) => void;
   /** Apre la Media Library per questa prop (solo `kind: 'mediaRef'`). */
   onOpenMediaPicker: () => void;
+  /**
+   * Apre `MediaCropperModal` sul `guid` corrente della prop (solo `kind: 'mediaRef'`, e solo
+   * quando un `guid` è già scritto — ADR-49: niente da ritagliare senza un asset scelto).
+   */
+  onOpenCropper: () => void;
 }
 
 /** Rende il controllo Mantine di una singola prop. Vedi il commento di testa del file. */
@@ -126,6 +143,7 @@ export default function PropField({
   onCommit,
   onSetAndCommit,
   onOpenMediaPicker,
+  onOpenCropper,
 }: PropFieldProps): JSX.Element {
   // Letto qui in cima (regola degli hook: mai dentro un ramo dello `switch` sotto), usato solo
   // da `case 'color'` — token picker sui colori del tema dell'installazione (Editor tema,
@@ -264,7 +282,10 @@ export default function PropField({
             withAsterisk={required}
             allowDeselect={false}
             comboboxProps={{ zIndex: 1100 }}
-            data={[...(prop.values ?? [])]}
+            data={(prop.values ?? []).map((token) => ({
+              value: token,
+              label: ENUM_VALUE_LABELS[prop.name]?.[token] ?? token,
+            }))}
             value={asString(displayValue) || null}
             error={error}
             onChange={(next) => onSetAndCommit({ ...envelope, [activeBreakpoint]: next ?? '' })}
@@ -343,6 +364,16 @@ export default function PropField({
               >
                 {guid ? 'Sostituisci Immagine' : 'Scegli Immagine'}
               </Button>
+              {guid && (
+                <Button
+                  variant="light"
+                  size="xs"
+                  leftSection={<IconCrop size={14} />}
+                  onClick={onOpenCropper}
+                >
+                  Gestisci Ritaglio & Punto Focale
+                </Button>
+              )}
               {guid && (
                 <Button
                   variant="subtle"

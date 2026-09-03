@@ -2,9 +2,14 @@ import { BlockDefinition } from '../block-definition.types';
 
 /**
  * `section` — l'unico contenitore del primo rilascio (ADR-21 § 5,
- * SPEC-F02-blocchi.md § 3.2). Nessuna prop dichiarata: qualunque prop
- * inviata produce `BLOCK_PROP_NOT_DECLARED`. Non contiene se stessa — la
+ * SPEC-F02-blocchi.md § 3.2). Nessuna prop non dichiarata è ammessa: qualunque prop
+ * non elencata qui produce `BLOCK_PROP_NOT_DECLARED`. Non contiene se stessa — la
  * profondità è 1 per costruzione nel primo rilascio.
+ * `styleBackgroundType`/`styleBackgroundPosition`/`styleBackgroundSize`/
+ * `styleGradientStart`/`styleGradientEnd` (ADR-50): tutte presentazione, non
+ * validazione — restano dichiarate indipendentemente da quale sorgente di sfondo il
+ * renderer sceglie di onorare, stesso principio di `maxWidth` sotto `contentWidth =
+ * full-width` (ADR-33 § 1). Nessun bump di `v`, tutte opzionali con default.
  */
 export const sectionBlock: BlockDefinition = {
   type: 'section',
@@ -191,6 +196,45 @@ export const sectionBlock: BlockDefinition = {
       min: 0,
       max: 1,
     },
+    // ADR-50: presentazione, non validazione — resta dichiarata e validata anche quando
+    // `styleBackgroundType` seleziona un'altra sorgente di sfondo (stesso principio di
+    // `maxWidth` sotto `contentWidth = full-width`, ADR-33 § 1).
+    styleBackgroundType: {
+      kind: 'enum',
+      required: false,
+      values: ['color', 'image', 'gradient'],
+      default: 'color',
+    },
+    styleBackgroundPosition: {
+      kind: 'enum',
+      required: false,
+      values: [
+        'top left',
+        'top center',
+        'top right',
+        'center left',
+        'center center',
+        'center right',
+        'bottom left',
+        'bottom center',
+        'bottom right',
+      ],
+      default: 'center center',
+    },
+    styleBackgroundSize: {
+      kind: 'enum',
+      required: false,
+      values: ['cover', 'contain', 'auto'],
+      default: 'cover',
+    },
+    styleGradientStart: {
+      kind: 'color',
+      required: false,
+    },
+    styleGradientEnd: {
+      kind: 'color',
+      required: false,
+    },
   },
   children: { allow: ['heading', 'richText', 'image', 'button', 'container', 'form'] },
   migrations: [],
@@ -267,6 +311,36 @@ export const sectionBlock: BlockDefinition = {
         tab: 'style',
         order: 30,
         help: 'Valore da 0 (trasparente) a 1 (opaco).',
+      },
+      styleBackgroundType: {
+        label: 'Tipo sfondo',
+        tab: 'style',
+        order: 31,
+        help: 'Colore, immagine o gradiente.',
+      },
+      styleBackgroundPosition: {
+        label: 'Posizione sfondo',
+        tab: 'style',
+        order: 32,
+        help: 'Applicata solo quando il tipo sfondo è Immagine.',
+      },
+      styleBackgroundSize: {
+        label: 'Dimensione sfondo',
+        tab: 'style',
+        order: 33,
+        help: 'Applicata solo quando il tipo sfondo è Immagine.',
+      },
+      styleGradientStart: {
+        label: 'Colore iniziale gradiente',
+        tab: 'style',
+        order: 34,
+        help: 'Applicato solo quando il tipo sfondo è Gradiente.',
+      },
+      styleGradientEnd: {
+        label: 'Colore finale gradiente',
+        tab: 'style',
+        order: 35,
+        help: 'Applicato solo quando il tipo sfondo è Gradiente.',
       },
     },
   },

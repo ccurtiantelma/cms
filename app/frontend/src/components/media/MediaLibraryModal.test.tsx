@@ -47,6 +47,8 @@ function record(overrides: Partial<MediaFileRecord> = {}): MediaFileRecord {
     entity: 'page-media',
     entityId: null,
     createdAt: '2026-08-25T10:00:00.000Z',
+    focalX: 50,
+    focalY: 50,
     ...overrides,
   };
 }

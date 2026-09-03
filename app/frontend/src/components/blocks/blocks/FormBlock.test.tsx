@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import FormBlock from './FormBlock';
+import FormFieldBlock from './FormFieldBlock';
 
 describe('FormBlock', () => {
   it('renderizza un elemento <form> con i figli e il formKey in data-attribute', () => {
@@ -58,5 +59,17 @@ describe('FormBlock', () => {
     // Mai `type="hidden"` sul campo honeypot: deve restare un input reale, solo nascosto via CSS.
     const honeypotTag = html.match(/<input[^>]*data-honeypot="true"[^>]*>/)?.[0] ?? '';
     expect(honeypotTag).not.toContain('type="hidden"');
+  });
+
+  it('due `form-field` con colSpan a 6 si affiancano nella stessa riga della griglia (ADR-51)', () => {
+    const html = renderToStaticMarkup(
+      <FormBlock formKey="contatti">
+        <FormFieldBlock fieldType="text" name="cognome" label="Cognome" colSpan={{ default: '6' }} />
+        <FormFieldBlock fieldType="email" name="email" label="Email" colSpan={{ default: '6' }} />
+      </FormBlock>,
+    );
+
+    expect(html).toContain('data-form-fields');
+    expect(html.match(/colSpan_default_6/g) ?? []).toHaveLength(2);
   });
 });

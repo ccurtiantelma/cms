@@ -61,6 +61,23 @@ export class FileMetadataDto {
   })
   url!: string | null;
 
+  @ApiProperty({
+    description:
+      'Percentuale orizzontale (0-100) del soggetto, usata come centro del ritaglio quando una trasformazione non fornisce un crop esplicito. Default: centro immagine.',
+    example: 50,
+    minimum: 0,
+    maximum: 100,
+  })
+  focalX!: number;
+
+  @ApiProperty({
+    description: 'Percentuale verticale (0-100) del soggetto, stessa semantica di focalX.',
+    example: 50,
+    minimum: 0,
+    maximum: 100,
+  })
+  focalY!: number;
+
   @ApiProperty({ description: 'Data di caricamento', example: '2026-07-23T10:00:00.000Z' })
   createdAt!: Date;
 }

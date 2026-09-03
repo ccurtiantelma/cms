@@ -1,6 +1,9 @@
+import { createHash } from 'crypto';
+import { readFile } from 'fs/promises';
+import * as path from 'path';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { DbService } from '../../db/db.service';
-import { pageEntity, pageRevisionEntity, userEntity } from '../../db/schema';
+import { fileEntity, pageEntity, pageRevisionEntity, userEntity } from '../../db/schema';
 import { AppConstants } from '../../common/app-constants';
 import { AppUserRoles } from '../../common/enums';
 import { Utils } from '../../common/utils';
@@ -18,10 +21,28 @@ import { BlockTreeValidatorService } from '../../blocks/validator/block-tree-val
 import { ValidatableBlockNode } from '../../blocks/validator/validatable-node.types';
 import { BlockPropSanitizerService } from '../../common/sanitizer/block-prop-sanitizer.service';
 import { TreeSanitizerService } from '../../common/sanitizer/tree-sanitizer.service';
+import { detectRasterMimeType } from '../../files/public-media/raster-mime-sniffer';
+import { LocalDiskDriver } from '../../files/storage/local-disk.driver';
+import { S3CompatibleDriver } from '../../files/storage/s3-compatible.driver';
+import { StorageDriver } from '../../files/storage/storage-driver.interface';
 
 /** Slug pubblico della pagina, unico per `locale` fra le pagine root attive. */
 const PAGE_SLUG = 'contatti-antelma';
 const PAGE_TITLE = 'Antelma - Richiedi un Contatto';
+
+/**
+ * `guid` fisso della riga `files` che referenzia lo sfondo dell'Hero
+ * (`styleBackgroundImageRef`, `kind: 'mediaRef'` — un percorso statico non
+ * supera `GUID_PATTERN` in `block-tree-validator.service.ts`, quindi l'unico
+ * modo per collegare `/Antelma-pit.png` è registrarlo come file editoriale
+ * vero, vedi {@link ensureAntelmaHeroImageFile}).
+ */
+const HERO_IMAGE_FILE_GUID = 'a1b2c3d4e5f60001';
+/** Asset statico del frontend da registrare come file editoriale (mai servito da `app/frontend/public` in produzione). */
+const HERO_IMAGE_ASSET_PATH = path.resolve(
+  __dirname,
+  '../../../../frontend/public/Antelma-pit.png',
+);
 
 /**
  * Serializzazione canonica (chiavi di ogni oggetto in ordine alfabetico,
@@ -53,60 +74,66 @@ function sortKeysDeep(value: unknown): unknown {
 
 /**
  * Blueprint statico "Antelma - Richiedi un Contatto" (ADR-21 § schema blocchi,
- * ADR-31 § layout a colonne di `section`, ADR-39 § `container` flex a nesting
- * ricorsivo, ADR-46 § form dinamici). Solo prop realmente dichiarate dal
- * registro di produzione (`blocks/block-registry.ts`): niente `style` libero,
- * niente `h1` (riservato al template del consumer HTML), niente prop inventate
- * — ADR-21 § 4 tratta un `kind` aggiuntivo come nuovo schema di blocco, non
- * qualcosa che si introduce in un seed.
+ * ADR-50 § `styleBackgroundType`/overlay su `section`, ADR-51 § `colSpan` su
+ * `form-field`, ADR-39 § `container` flex a nesting ricorsivo, ADR-46 § form
+ * dinamici). Stessa forma — stessi `id`, `type`, `props`, `children`, stesso
+ * ordine — della fixture di riferimento del contenuto pubblicato
+ * (`app/frontend/src/test/fixtures/antelma-contatti.seed.ts`, sorgente di
+ * verità del brief per questa pagina), tradotta da `RenderableBlockNode` a
+ * {@link BlockNode} aggiungendo `v: 1` a ogni nodo (ADR-21 § 1: assente sul
+ * tipo frontend, obbligatorio in scrittura lato backend). Solo prop
+ * realmente dichiarate dal registro di produzione (`blocks/block-registry.ts`):
+ * niente `style` libero, niente prop inventate — ADR-21 § 4 tratta un `kind`
+ * aggiuntivo come nuovo schema di blocco, non qualcosa che si introduce in un
+ * seed.
  *
- * Adattamenti dichiarati rispetto al brief grafico originale (nessun
- * equivalente nel registro attuale, quindi omessi anziché inventati):
- * - `Heading.level` è `h2`, mai `h1` (registro `heading.block.ts`).
- * - Nessun `background-image` sull'Hero: `styleOverlayColor`/`styleOverlayOpacity`
- *   (ADR-47) sono dichiarate per un layer sopra `styleBackgroundImageRef`, ma qui
- *   restano impostate senza immagine di sfondo — l'overlay si applica comunque
- *   sopra `styleBackgroundColor` per coerenza col tono scuro richiesto dal brief.
- * - Spaziature in pixel del brief proiettate sul token più vicino fra
- *   `stylePaddingTop/Right/Bottom/Left` (`'0'..'96'`), non un valore libero.
- * - `container` non ha `columns`/`maxWidth`: il vincolo di larghezza del form
- *   (760px, centrato) è espresso da `section.maxWidth`/`contentWidth`, non dal
- *   `container` che lo racchiude (che resta comunque presente, come da brief).
- * - `form` ha solo `formKey` (niente `formTitle`).
+ * Due scostamenti dal brief letterale, entrambi ereditati dalla fixture ed
+ * entrambi per rispettare lo schema del registro già approvato (mai una
+ * prop/valore inventati fuori ADR):
+ * - Titolo Hero e Sub-Footer a `level: 'h2'`/`'h3'`, mai `h1` — l'enum di
+ *   `heading` lo esclude, riservato al template del consumer HTML
+ *   (`heading.block.ts`, SPEC-F02-blocchi.md § 3.3).
+ * - Pulsante telefono con `href` root-relative (`/contatti`), non `tel:` —
+ *   `kind: 'url'` ammette solo `http`/`https`/`mailto`/root-relative
+ *   (`isAllowedUrl`, `block-tree-validator.service.ts`); il rilievo "danger"
+ *   è reso con `styleBackgroundColor`/`styleTextColor` (`kind: 'color'`),
+ *   perché `button` non dichiara una prop `variant` (`button.block.ts`).
  *
- * Nessun header/footer qui: sono cromatura di layout, non contenuto di
- * Pagina (ADR-40) — vive nelle Sezioni Globali `header`/`footer`
- * (`antelma-global-sections.seed.ts`), renderizzate da `PageView` attorno a
- * questo albero. Un footer duplicato dentro la Pagina è stato rimosso da qui
- * per questo motivo (era il doppio footer visibile sulla pagina pubblicata).
+ * Il quarto `section` di primo livello ("Footer istituzionale a 4 colonne")
+ * **non** è cromatura di layout: è contenuto della Pagina stessa (blocchi
+ * `container`/`heading`/`richText` dentro l'albero di `contatti-antelma`),
+ * non l'header/footer di sito gestito dalle Sezioni Globali
+ * (`antelma-global-sections.seed.ts`, ADR-40) — le due cose coesistono senza
+ * conflitto: questo è un blocco di chiusura specifico della pagina Contatti,
+ * non il chrome renderizzato da `PageView` attorno a ogni Pagina.
  */
 function buildAntelmaContactBlocks(): BlockNode[] {
   const heroSection: BlockNode = {
-    id: 'antelma-contatti-hero-section',
+    id: 'hero-section',
     type: 'section',
     v: 1,
     props: {
-      styleBackgroundColor: '#0f172a',
-      styleOverlayColor: '#0f172a',
-      styleOverlayOpacity: 0.65,
+      contentWidth: 'full-width',
+      styleBackgroundType: 'image',
+      styleBackgroundImageRef: HERO_IMAGE_FILE_GUID,
+      styleBackgroundPosition: 'center center',
+      styleBackgroundSize: 'cover',
+      styleOverlayColor: '#0c2340',
+      styleOverlayOpacity: 0.6,
       stylePaddingTop: { default: '96' },
       stylePaddingBottom: { default: '96' },
-      stylePaddingLeft: { default: '24' },
-      stylePaddingRight: { default: '24' },
-      contentWidth: 'boxed',
-      columns: { default: '1' },
     },
     children: [
       {
-        id: 'antelma-contatti-hero-heading',
+        id: 'hero-heading',
         type: 'heading',
         v: 1,
         props: {
           level: 'h2',
           text: 'RICHIEDI UN CONTATTO ANTELMA',
-          styleTextColorCustom: '#ffffff',
+          styleTextColor: { default: 'inverse' },
           styleTextAlign: 'center',
-          styleFontSizeCustom: { value: 36, unit: 'px' },
+          styleFontSize: { default: 'xl' },
           styleFontWeight: { default: 'bold' },
         },
         children: [],
@@ -115,89 +142,148 @@ function buildAntelmaContactBlocks(): BlockNode[] {
   };
 
   const formSection: BlockNode = {
-    id: 'antelma-contatti-form-section',
+    id: 'form-section',
     type: 'section',
     v: 1,
     props: {
-      styleBackgroundColor: '#ffffff',
+      // "large" (brief) mappato al token dichiarato più vicino: la scala di
+      // `stylePaddingTop`/`stylePaddingBottom` è numerica (0-96px), nessun valore 'large'.
       stylePaddingTop: { default: '64' },
       stylePaddingBottom: { default: '64' },
-      stylePaddingLeft: { default: '24' },
-      stylePaddingRight: { default: '24' },
-      contentWidth: 'boxed',
-      maxWidth: 'md',
-      columns: { default: '1' },
     },
     children: [
       {
-        id: 'antelma-contatti-form-container',
+        id: 'form-heading',
+        type: 'heading',
+        v: 1,
+        props: {
+          level: 'h2',
+          text: 'Hai necessità di ricevere un nostro contatto?',
+          styleTextAlign: 'center',
+        },
+        children: [],
+      },
+      {
+        id: 'form-phone-cta-wrapper',
         type: 'container',
         v: 1,
         props: {
-          flexDirection: { default: 'column' },
-          gap: { default: 'md' },
+          justifyContent: { default: 'center' },
         },
         children: [
           {
-            id: 'antelma-contatti-form',
-            type: 'form',
-            v: 1,
-            props: { formKey: 'antelma-contact' },
-            children: [
-              {
-                id: 'antelma-contatti-form-field-cognome',
-                type: 'form-field',
-                v: 1,
-                props: {
-                  fieldType: 'text',
-                  name: 'cognome',
-                  label: 'COGNOME',
-                  placeholder: 'Cognome',
-                  required: true,
-                },
-                children: [],
-              },
-              {
-                id: 'antelma-contatti-form-field-email',
-                type: 'form-field',
-                v: 1,
-                props: {
-                  fieldType: 'email',
-                  name: 'email',
-                  label: 'EMAIL',
-                  placeholder: 'Email',
-                  required: true,
-                },
-                children: [],
-              },
-              {
-                id: 'antelma-contatti-form-submit',
-                type: 'form-submit',
-                v: 1,
-                props: {
-                  label: 'INVIA RICHIESTA',
-                  styleBackgroundColor: '#d90000',
-                  styleTextColor: '#ffffff',
-                },
-                children: [],
-              },
-            ],
-          },
-          // `form.children.allow` è chiuso a `form-field`/`form-submit` (form.block.ts):
-          // il testo di consenso non può vivere dentro il nodo `form`, quindi è un
-          // fratello del `form` dentro il `container`, subito dopo (stesso ordine
-          // visivo del brief: campi → invio → nota di consenso).
-          {
-            id: 'antelma-contatti-form-consent',
-            type: 'richText',
+            id: 'form-phone-cta',
+            type: 'button',
             v: 1,
             props: {
-              html:
-                '<p>Prestazione del consenso ai sensi del Regolamento UE per ricevere ' +
-                'assistenza e informazioni sui servizi offerti dal titolare.</p>',
-              styleFontSize: { default: 'sm' },
-              styleTextColorCustom: '#6b7280',
+              label: '+39 0331 651 811',
+              href: '/contatti',
+              styleBackgroundColor: '#c0392b',
+              styleTextColor: { default: 'inverse' },
             },
+            children: [],
+          },
+        ],
+      },
+      {
+        id: 'contact-form',
+        type: 'form',
+        v: 1,
+        props: { formKey: 'antelma-contatti' },
+        children: [
+          {
+            id: 'field-nome',
+            type: 'form-field',
+            v: 1,
+            props: {
+              fieldType: 'text',
+              name: 'nome',
+              label: 'Nome',
+              required: true,
+              colSpan: { default: '6' },
+            },
+            children: [],
+          },
+          {
+            id: 'field-cognome',
+            type: 'form-field',
+            v: 1,
+            props: {
+              fieldType: 'text',
+              name: 'cognome',
+              label: 'Cognome',
+              required: true,
+              colSpan: { default: '6' },
+            },
+            children: [],
+          },
+          {
+            id: 'field-azienda',
+            type: 'form-field',
+            v: 1,
+            props: {
+              fieldType: 'text',
+              name: 'azienda',
+              label: 'Azienda',
+              colSpan: { default: '6' },
+            },
+            children: [],
+          },
+          {
+            id: 'field-telefono',
+            type: 'form-field',
+            v: 1,
+            props: {
+              fieldType: 'text',
+              name: 'telefono',
+              label: 'Telefono',
+              colSpan: { default: '6' },
+            },
+            children: [],
+          },
+          {
+            id: 'field-email',
+            type: 'form-field',
+            v: 1,
+            props: {
+              fieldType: 'email',
+              name: 'email',
+              label: 'Email',
+              required: true,
+              colSpan: { default: '6' },
+            },
+            children: [],
+          },
+          {
+            id: 'field-note',
+            type: 'form-field',
+            v: 1,
+            props: {
+              fieldType: 'textarea',
+              name: 'note',
+              label: 'Note / Messaggio',
+              colSpan: { default: '12' },
+            },
+            children: [],
+          },
+          {
+            id: 'field-privacy',
+            type: 'form-field',
+            v: 1,
+            props: {
+              fieldType: 'checkbox',
+              name: 'privacy',
+              label: 'Ho letto e accetto la Privacy Policy',
+              required: true,
+              colSpan: { default: '12' },
+            },
+            children: [],
+          },
+          {
+            id: 'field-submit',
+            type: 'form-submit',
+            v: 1,
+            props: { label: 'Invia richiesta' },
             children: [],
           },
         ],
@@ -205,7 +291,212 @@ function buildAntelmaContactBlocks(): BlockNode[] {
     ],
   };
 
-  return [heroSection, formSection];
+  const subfooterCtaSection: BlockNode = {
+    id: 'subfooter-cta-section',
+    type: 'section',
+    v: 1,
+    props: {
+      contentWidth: 'full-width',
+      styleBackgroundType: 'image',
+      styleBackgroundImageRef: 'a1b2c3d4e5f60002',
+      styleOverlayColor: '#051329',
+      styleOverlayOpacity: 0.8,
+    },
+    children: [
+      {
+        id: 'subfooter-heading',
+        type: 'heading',
+        v: 1,
+        props: {
+          level: 'h3',
+          text: "RIMANI IN CONNESSIONE CON L'INNOVAZIONE",
+          styleTextColor: { default: 'inverse' },
+          styleTextAlign: 'center',
+        },
+        children: [],
+      },
+      {
+        id: 'subfooter-cta-button',
+        type: 'button',
+        v: 1,
+        props: {
+          label: 'ISCRIZIONE NEWSLETTER',
+          href: '/newsletter',
+          styleTextColor: { default: 'inverse' },
+        },
+        children: [],
+      },
+    ],
+  };
+
+  const footerSection: BlockNode = {
+    id: 'footer-section',
+    type: 'section',
+    v: 1,
+    props: {
+      columns: { default: '4' },
+      gap: { default: 'lg' },
+      styleBackground: { default: 'inverse' },
+    },
+    children: [
+      {
+        id: 'footer-col-info',
+        type: 'container',
+        v: 1,
+        props: { flexDirection: { default: 'column' } },
+        children: [
+          {
+            id: 'footer-info-heading',
+            type: 'heading',
+            v: 1,
+            props: { level: 'h4', text: 'Antelma Group', styleTextColor: { default: 'inverse' } },
+            children: [],
+          },
+          {
+            id: 'footer-info-text',
+            type: 'richText',
+            v: 1,
+            props: { html: '<p>Informazioni societarie Antelma</p>' },
+            children: [],
+          },
+        ],
+      },
+      {
+        id: 'footer-col-group',
+        type: 'container',
+        v: 1,
+        props: { flexDirection: { default: 'column' } },
+        children: [
+          {
+            id: 'footer-group-heading',
+            type: 'heading',
+            v: 1,
+            props: { level: 'h4', text: 'Gruppo Antelma', styleTextColor: { default: 'inverse' } },
+            children: [],
+          },
+          {
+            id: 'footer-group-text',
+            type: 'richText',
+            v: 1,
+            props: { html: '<p>Le aziende del Gruppo Antelma</p>' },
+            children: [],
+          },
+        ],
+      },
+      {
+        id: 'footer-col-solutions',
+        type: 'container',
+        v: 1,
+        props: { flexDirection: { default: 'column' } },
+        children: [
+          {
+            id: 'footer-solutions-heading',
+            type: 'heading',
+            v: 1,
+            props: { level: 'h4', text: 'Soluzioni', styleTextColor: { default: 'inverse' } },
+            children: [],
+          },
+          {
+            id: 'footer-solutions-text',
+            type: 'richText',
+            v: 1,
+            props: { html: '<p>Le nostre soluzioni</p>' },
+            children: [],
+          },
+        ],
+      },
+      {
+        id: 'footer-col-resources',
+        type: 'container',
+        v: 1,
+        props: { flexDirection: { default: 'column' } },
+        children: [
+          {
+            id: 'footer-resources-heading',
+            type: 'heading',
+            v: 1,
+            props: { level: 'h4', text: 'Altre risorse', styleTextColor: { default: 'inverse' } },
+            children: [],
+          },
+          {
+            id: 'footer-resources-text',
+            type: 'richText',
+            v: 1,
+            props: { html: '<p>Link utili</p>' },
+            children: [],
+          },
+        ],
+      },
+      {
+        id: 'footer-copyright-bar',
+        type: 'container',
+        v: 1,
+        props: { justifyContent: { default: 'center' } },
+        children: [
+          {
+            id: 'footer-copyright-text',
+            type: 'richText',
+            v: 1,
+            props: { html: '<p>© 2026 Antelma Group. Tutti i diritti riservati.</p>' },
+            children: [],
+          },
+        ],
+      },
+    ],
+  };
+
+  return [heroSection, formSection, subfooterCtaSection, footerSection];
+}
+
+/** Sceglie l'implementazione di `StorageDriver` coerente con `AppConstants.storageDriver` — stesso criterio di `files.module.ts`, qui istanziata direttamente (nessuna delle due classi ha dipendenze iniettate). */
+function resolveStorageDriver(): StorageDriver {
+  return AppConstants.storageDriver === 's3' ? new S3CompatibleDriver() : new LocalDiskDriver();
+}
+
+/**
+ * Registra, in modo idempotente per `guid` fisso, l'asset statico
+ * `Antelma-pit.png` come file editoriale (`entity: 'page-media'`, opt-in
+ * richiesto da ADR-27 § 2 perché `PublicMediaController` lo serva su
+ * `public/media/:guid`) — senza questa riga il `guid` referenziato
+ * dall'Hero non risolve a nessun blob. MIME dai byte reali via
+ * `detectRasterMimeType` (`business-rules.md` § Security "MIME da
+ * contenuto reale, non estensione"), mai dall'estensione del file letto.
+ * Se la riga esiste già (riesecuzioni successive del seed) non ricarica
+ * il blob: stesso principio "nessuna scrittura spuria" di `canonicalJson`
+ * sopra.
+ */
+async function ensureAntelmaHeroImageFile(dbService: DbService, authorId: number): Promise<void> {
+  const db = dbService.db;
+  const existing = await db.query.fileEntity.findFirst({
+    where: eq(fileEntity.guid, HERO_IMAGE_FILE_GUID),
+  });
+  if (existing) {
+    return;
+  }
+
+  const buffer = await readFile(HERO_IMAGE_ASSET_PATH);
+  const mimeType = detectRasterMimeType(buffer);
+  if (!mimeType) {
+    throw new Error(
+      `Seed "${PAGE_SLUG}": "${HERO_IMAGE_ASSET_PATH}" non riconosciuto come immagine raster.`,
+    );
+  }
+
+  const storageKey = `seed-${HERO_IMAGE_FILE_GUID}`;
+  await resolveStorageDriver().upload(storageKey, buffer, mimeType);
+
+  await db.insert(fileEntity).values({
+    guid: HERO_IMAGE_FILE_GUID,
+    originalName: 'Antelma-pit.png',
+    mimeType,
+    sizeBytes: buffer.length,
+    storageDriver: AppConstants.storageDriver,
+    storageKey,
+    checksumSha256: createHash('sha256').update(buffer).digest('hex'),
+    entity: 'page-media',
+    createdBy: authorId,
+    updatedBy: authorId,
+  });
 }
 
 /**
@@ -299,6 +590,8 @@ export async function antelmaContactSeed(dbService: DbService): Promise<AntelmaC
       `Seed "${PAGE_SLUG}": nessun utente SuperAdmin trovato — eseguire prima il seed utenti.`,
     );
   }
+
+  await ensureAntelmaHeroImageFile(dbService, author.id);
 
   const content = buildPersistableContentTree();
   const seoSanitizer = new TreeSanitizerService();

@@ -773,6 +773,66 @@ paths:
       summary: Metadati di un file, senza scaricarne il contenuto
       tags:
         - Files
+  /api/v1/app/files/{guid}/focal-point:
+    patch:
+      operationId: FilesController_updateFocalPoint
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFocalPointDto'
+      responses:
+        '200':
+          description: Metadati aggiornati del file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileMetadataDto'
+        '400':
+          description: focalX/focalY fuori dal range 0-100
+        '404':
+          description: File non trovato o eliminato
+      security:
+        - access-token: []
+      summary: Aggiorna il focal point editoriale (percentuale 0-100) di un asset
+      tags:
+        - Files
+  /api/v1/app/files/{guid}/transform:
+    post:
+      operationId: FilesController_requestImageTransform
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MediaTransformDto'
+      responses:
+        '201':
+          description: Trasformazione accodata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaTransformResultDto'
+        '404':
+          description: File sorgente non trovato o eliminato
+      security:
+        - access-token: []
+      summary: Accoda la generazione asincrona di una variante trasformata (ADR-49)
+      tags:
+        - Files
   /api/v1/public/media/{guid}:
     get:
       operationId: PublicMediaController_getMedia
@@ -3531,6 +3591,23 @@ components:
             rotta (ADR-27 § 3, § 4).
           example: api/v1/public/media/a1b2c3d4e5f6a7b8
           nullable: true
+        focalX:
+          type: number
+          description: >-
+            Percentuale orizzontale (0-100) del soggetto, usata come centro del
+            ritaglio quando una trasformazione non fornisce un crop esplicito.
+            Default: centro immagine.
+          example: 50
+          minimum: 0
+          maximum: 100
+        focalY:
+          type: number
+          description: >-
+            Percentuale verticale (0-100) del soggetto, stessa semantica di
+            focalX.
+          example: 50
+          minimum: 0
+          maximum: 100
         createdAt:
           format: date-time
           type: string
@@ -3541,7 +3618,87 @@ components:
         - originalName
         - mimeType
         - sizeBytes
+        - focalX
+        - focalY
         - createdAt
+    UpdateFocalPointDto:
+      type: object
+      properties:
+        focalX:
+          type: number
+          description: >-
+            Percentuale orizzontale (0-100) del soggetto, usata come centro del
+            ritaglio quando non è fornito un crop esplicito. Default: centro
+            immagine.
+          minimum: 0
+          maximum: 100
+          example: 50
+        focalY:
+          type: number
+          description: >-
+            Percentuale verticale (0-100) del soggetto, stessa semantica di
+            focalX.
+          minimum: 0
+          maximum: 100
+          example: 50
+      required:
+        - focalX
+        - focalY
+    MediaTransformDto:
+      type: object
+      properties:
+        cropX:
+          type: number
+          description: Coordinata X (px) dell'angolo del ritaglio
+          minimum: 0
+        cropY:
+          type: number
+          description: Coordinata Y (px) dell'angolo del ritaglio
+          minimum: 0
+        cropW:
+          type: number
+          description: Larghezza (px) del ritaglio
+          minimum: 1
+        cropH:
+          type: number
+          description: Altezza (px) del ritaglio
+          minimum: 1
+        focalX:
+          type: number
+          description: >-
+            Percentuale orizzontale (0-100) del soggetto, usata come centro del
+            ritaglio quando non è fornito un crop esplicito. Default: centro
+            immagine.
+          minimum: 0
+          maximum: 100
+          default: 50
+        focalY:
+          type: number
+          description: >-
+            Percentuale verticale (0-100) del soggetto, stessa semantica di
+            focalX.
+          minimum: 0
+          maximum: 100
+          default: 50
+        preset:
+          type: string
+          description: >-
+            Preset nominato di destinazione (ADR-49 § M6). Ignorato se è fornito
+            un crop esplicito.
+          enum:
+            - thumbnail
+            - card
+            - hero
+            - og
+    MediaTransformResultDto:
+      type: object
+      properties:
+        jobId:
+          type: string
+          description: Id del job BullMQ accodato per la generazione della variante
+          example: '42'
+      required:
+        - jobId
     UnreadCountDto:
       type: object
       properties:

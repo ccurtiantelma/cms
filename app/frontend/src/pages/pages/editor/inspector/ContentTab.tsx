@@ -31,6 +31,8 @@ export interface PropertyTabProps {
   commit: (name: string, value: unknown) => void;
   setAndCommit: (name: string, value: unknown) => void;
   onOpenMediaPicker: (propName: string) => void;
+  /** Apre `MediaCropperModal` sul `guid` corrente della prop (solo `kind: 'mediaRef'`). */
+  onOpenCropper: (propName: string) => void;
   nodeType?: string;
   onSavePreset?: (name: string) => void;
 }
@@ -44,6 +46,7 @@ export default function ContentTab({
   commit,
   setAndCommit,
   onOpenMediaPicker,
+  onOpenCropper,
 }: PropertyTabProps): JSX.Element {
   const activeBreakpoint = breakpointKey(activeViewport);
 
@@ -60,6 +63,7 @@ export default function ContentTab({
         onCommit={(next) => commit(prop.name, next)}
         onSetAndCommit={(next) => setAndCommit(prop.name, next)}
         onOpenMediaPicker={() => onOpenMediaPicker(prop.name)}
+        onOpenCropper={() => onOpenCropper(prop.name)}
       />
     );
   }

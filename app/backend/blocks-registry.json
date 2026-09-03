@@ -423,6 +423,55 @@
           "required": false,
           "min": 0,
           "max": 1
+        },
+        {
+          "name": "styleBackgroundType",
+          "kind": "enum",
+          "required": false,
+          "default": "color",
+          "values": [
+            "color",
+            "image",
+            "gradient"
+          ]
+        },
+        {
+          "name": "styleBackgroundPosition",
+          "kind": "enum",
+          "required": false,
+          "default": "center center",
+          "values": [
+            "top left",
+            "top center",
+            "top right",
+            "center left",
+            "center center",
+            "center right",
+            "bottom left",
+            "bottom center",
+            "bottom right"
+          ]
+        },
+        {
+          "name": "styleBackgroundSize",
+          "kind": "enum",
+          "required": false,
+          "default": "cover",
+          "values": [
+            "cover",
+            "contain",
+            "auto"
+          ]
+        },
+        {
+          "name": "styleGradientStart",
+          "kind": "color",
+          "required": false
+        },
+        {
+          "name": "styleGradientEnd",
+          "kind": "color",
+          "required": false
         }
       ],
       "meta": {
@@ -601,6 +650,36 @@
             "tab": "style",
             "order": 30,
             "help": "Valore da 0 (trasparente) a 1 (opaco)."
+          },
+          "styleBackgroundType": {
+            "label": "Tipo sfondo",
+            "tab": "style",
+            "order": 31,
+            "help": "Colore, immagine o gradiente."
+          },
+          "styleBackgroundPosition": {
+            "label": "Posizione sfondo",
+            "tab": "style",
+            "order": 32,
+            "help": "Applicata solo quando il tipo sfondo è Immagine."
+          },
+          "styleBackgroundSize": {
+            "label": "Dimensione sfondo",
+            "tab": "style",
+            "order": 33,
+            "help": "Applicata solo quando il tipo sfondo è Immagine."
+          },
+          "styleGradientStart": {
+            "label": "Colore iniziale gradiente",
+            "tab": "style",
+            "order": 34,
+            "help": "Applicato solo quando il tipo sfondo è Gradiente."
+          },
+          "styleGradientEnd": {
+            "label": "Colore finale gradiente",
+            "tab": "style",
+            "order": 35,
+            "help": "Applicato solo quando il tipo sfondo è Gradiente."
           }
         }
       }
@@ -2157,6 +2236,19 @@
           "kind": "plainText",
           "required": false,
           "maxLength": 1000
+        },
+        {
+          "name": "colSpan",
+          "kind": "enum",
+          "required": false,
+          "default": {
+            "default": "12"
+          },
+          "values": [
+            "6",
+            "12"
+          ],
+          "responsive": true
         }
       ],
       "meta": {
@@ -2189,6 +2281,11 @@
             "label": "Opzioni (solo per \"Select\")",
             "order": 6,
             "help": "Elenco separato da virgola, es. \"Nord,Centro,Sud\"."
+          },
+          "colSpan": {
+            "label": "Larghezza campo",
+            "order": 7,
+            "help": "50% per affiancare due campi sulla stessa riga, 100% per occupare l'intera larghezza."
           }
         }
       }

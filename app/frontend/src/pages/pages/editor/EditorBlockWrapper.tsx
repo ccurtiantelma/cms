@@ -4,7 +4,7 @@
  * (dnd-kit), eliminazione ed inserimento posizionale.
  *
  * **Overlay hover/selezione unico (reversal esplicito e autorizzato, vedi il commento di
- * testa del blocco di render "Chrome hover/selezione" più sotto).** Fra questo task e uno
+ * testa del blocco di render "Toolbar di selezione" più sotto).** Fra questo task e uno
  * precedente era esistita — poi deliberatamente rimossa — una barra di icone fissa per
  * ogni blocco (drag/duplica/elimina/modifica), sostituita da tre varianti di chrome
  * mutuamente esclusive per categoria (handle tab compatta delle Sezioni, badge informativo
@@ -16,6 +16,14 @@
  * su/giù", "Sposta dentro/fuori dal contenitore" e il menu "Cambia livello del titolo"
  * restano comunque raggiungibili solo dal menu contestuale (`CanvasContextMenu.tsx`, tasto
  * destro) — mai una seconda copia della stessa azione nell'overlay.
+ *
+ * **Split hover/selezione (round successivo, F04d-02).** I due stati ora portano segnali
+ * distinti, mai sovrapposti sullo stesso blocco: hover senza selezione mostra solo il
+ * bordo di categoria (v. `overlayBorderClassName` sotto) più un badge nome in alto a
+ * sinistra (`.hoverBadge`); la toolbar di cinque controlli sopra è montata **solo** su
+ * `isSelected`, ancorata in alto a destra (`BlockHoverOverlay.module.css`), non più al
+ * centro del bordo superiore. Nessun controllo si è spostato: stessa toolbar, stesse
+ * cinque azioni, solo la condizione di montaggio e la posizione sono cambiate.
  *
  * Ogni azione che cambia la struttura passa dallo store, che la verifica contro il
  * registro dei blocchi prima di applicarla: qui si decide solo se *offrirla* (es.
@@ -86,7 +94,7 @@ import Section from '../../../components/blocks/blocks/Section';
 import Container from '../../../components/blocks/blocks/Container';
 import FormBlock from '../../../components/blocks/blocks/FormBlock';
 import tokenStyles from '../../../components/blocks/style-tokens.module.css';
-import { resolveHideClassName } from '../../../components/blocks/style-tokens';
+import { resolveHideClassName, resolveResponsiveClassNames } from '../../../components/blocks/style-tokens';
 import ConfirmModal from '../../../components/ConfirmModal';
 import BlockPalette, { blockIcon } from './BlockPalette';
 import BlockHoverOverlay from './components/BlockHoverOverlay';
@@ -720,7 +728,7 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const isContainer =
     descriptor?.childrenAllow === '*' || (descriptor?.childrenAllow.length ?? 0) > 0;
   /**
-   * Icona del tipo di blocco per il badge delle colonne (`.columnBadge`, restyle
+   * Icona del tipo di blocco per il badge nome mostrato su hover (`.hoverBadge`, restyle
    * Elementor Pro, punto 4 del task). `createElement`, non un tag JSX `<Icon />`
    * assegnato a una variabile locale: `blockIcon` restituisce sempre lo stesso
    * riferimento stabile di `ICON_MAP` (mai una funzione creata a questo render), ma per
@@ -838,6 +846,28 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
    * ereditato dal componente di contenuto con la sola attenuazione visiva.
    */
   const isHiddenForActiveViewport = currentNode.props[VIEWPORT_HIDE_PROP[activeViewport]] === true;
+
+  /**
+   * `colSpan` (ADR-51, `form-field`/`form-submit`): dentro `.fields` di
+   * `FormBlock.module.css` (griglia a 12 colonne) il grid item reale nel Canvas è
+   * **questo** `.wrapper`, non la radice di `FormFieldBlock.tsx` (`grid-column` da
+   * `colSpan`) né quella di `FormSubmitBlock.tsx` (`grid-column: 1 / -1` fisso) — un
+   * livello più a fondo per via della chrome dell'editor, quindi il `grid-column` che quei
+   * componenti calcolano sulla propria radice non ha alcun effetto sul posizionamento nella
+   * griglia del genitore, e il nodo resta relegato a un'unica traccia stretta invece di
+   * estendersi alla larghezza prevista. Sul sito pubblico (`BlockRenderer.tsx`, nessun
+   * wrapper interposto) quel div è già il grid item diretto, dove la classe fa già effetto:
+   * stessa risoluzione (stesso fallback a `span 12` per `form-field`, `span 12` — equivalente
+   * a `1 / -1` su una griglia di 12 colonne — per `form-submit`, che non dichiara `colSpan`),
+   * applicata qui in più perché qui serve a un elemento diverso, non in sostituzione.
+   */
+  const formFieldColSpanClassName =
+    currentNode.type === 'form-field'
+      ? resolveResponsiveClassNames(tokenStyles, 'colSpan', currentNode.props.colSpan) ||
+        tokenStyles.colSpan_default_12
+      : currentNode.type === 'form-submit'
+        ? tokenStyles.colSpan_default_12
+        : '';
 
   /**
    * Solo `container` (ADR-39) ha una prop di larghezza dichiarata dal registro
@@ -989,6 +1019,7 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const className = [
     styles.wrapper,
     overlayBorderClassName,
+    formFieldColSpanClassName,
     isInvalid ? styles.invalid : '',
     isDragging ? styles.dragging : '',
     resolveHideClassName(tokenStyles, 'hideDesktop', currentNode.props.styleHideDesktop),
@@ -1158,15 +1189,17 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
         )}
 
         {/*
-          Chrome hover/selezione: overlay **unico** montato per qualunque tipo di blocco
-          (Sezioni, Colonne, widget foglia) quando `isHovered || isSelected` — reversal
-          esplicito e autorizzato dal proprietario del progetto delle tre varianti mutuamente
-          esclusive per categoria che vivevano qui prima (Handle Tab di Sezione, badge
-          informativo di Colonna, linguetta "Modifica" di foglia): cinque controlli sempre
-          nello stesso posto (`BlockHoverOverlay.tsx`) — trascina (`attributes`/`listeners`
-          dnd-kit di sempre), seleziona genitore (`selectNode(location.parentId)`,
-          disabilitato su un nodo di radice), duplica (`duplicateNodeAction`), elimina (apre
-          lo stesso `ConfirmModal` già montato più sotto, mai un secondo modal), modifica
+          Toolbar di selezione: montata per qualunque tipo di blocco (Sezioni, Colonne,
+          widget foglia) solo quando `isSelected` (mai sul solo hover — quello mostra
+          invece il badge nome subito sotto, mai i due insieme sullo stesso blocco,
+          richiesta esplicita di un round successivo del task) — reversal esplicito e
+          autorizzato dal proprietario del progetto delle tre varianti mutuamente esclusive
+          per categoria che vivevano qui prima (Handle Tab di Sezione, badge informativo di
+          Colonna, linguetta "Modifica" di foglia): cinque controlli sempre nello stesso
+          posto (`BlockHoverOverlay.tsx`) — trascina (`attributes`/`listeners` dnd-kit di
+          sempre), seleziona genitore (`selectNode(location.parentId)`, disabilitato su un
+          nodo di radice), duplica (`duplicateNodeAction`), elimina (apre lo stesso
+          `ConfirmModal` già montato più sotto, mai un secondo modal), modifica
           (`selectNode`, già imposta `activeSidebarTab: 'properties'`). "Sposta su/giù",
           "Sposta dentro/fuori dal contenitore" e il menu "Cambia livello del titolo" restano
           raggiungibili solo dal menu contestuale (tasto destro, `CanvasContextMenu.tsx`) —
@@ -1176,7 +1209,7 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           `e2e/tests/helpers/page-editor.ts` prima della rimozione della vecchia toolbar
           unica.
         */}
-        {(isHovered || isSelected) && (
+        {isSelected && (
           <BlockHoverOverlay
             id={id}
             label={label}
@@ -1188,20 +1221,17 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
         )}
 
         {/*
-          Colonne (il `container` del registro, ADR-39 — il solo tipo contenitore diverso
-          da `section` oggi disponibile, mappatura dichiarata in consegna): badge compatto
-          d'identificazione nell'angolo superiore sinistro interno, icona + nome del tipo,
-          nessun pulsante — mantenuto accanto al nuovo overlay unico sopra (che non porta
-          alcuna etichetta testuale del tipo di blocco): senza questo badge un `container`
-          in hover/selezione perderebbe l'unica affordance visiva che lo distingue da una
-          `section` o da un widget foglia. `pointer-events: none`: puramente informativo, il
-          click-to-select del wrapper (`onClick` sul `div` principale) resta l'unico modo di
-          selezionare questo nodo, invariato.
+          Badge nome del blocco (qualunque tipo, non più solo Colonne): icona + nome del
+          tipo nell'angolo superiore sinistro interno, nessun pulsante — mostrato solo su
+          hover **senza** selezione (`isHovered && !isSelected`), lasciando il posto alla
+          toolbar di selezione sopra appena il nodo viene selezionato. `pointer-events:
+          none`: puramente informativo, il click-to-select del wrapper (`onClick` sul `div`
+          principale) resta l'unico modo di selezionare questo nodo, invariato.
         */}
-        {isContainerBlockType && (isHovered || isSelected) && (
-          <span className={styles.columnBadge} aria-hidden="true">
+        {isHovered && !isSelected && (
+          <span className={styles.hoverBadge} aria-hidden="true">
             {badgeIconElement}
-            <Text size="xs" fw={500} className={styles.columnBadgeLabel}>
+            <Text size="xs" fw={500} className={styles.hoverBadgeLabel}>
               {label}
             </Text>
           </span>

@@ -3,12 +3,22 @@
   flex-direction: column;
   gap: 12px;
   position: relative;
+  width: 100%;
 }
 
+/*
+ * Griglia a 12 colonne (ADR-51): ogni `form-field` porta la propria classe
+ * `colSpan_<breakpoint>_<6|12>` (style-tokens.module.css) che ne fissa il
+ * `grid-column`. Nessun campo esistente senza `colSpan` cambia aspetto: il
+ * fallback a `span 12` di `FormFieldBlock.tsx` riproduce lo stesso "un campo
+ * per riga" di quando `.fields` era `flex-direction: column`.
+ */
 .fields {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+  width: 100%;
+  align-items: start;
 }
 
 /*

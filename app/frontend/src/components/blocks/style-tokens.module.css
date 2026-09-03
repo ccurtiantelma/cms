@@ -156,6 +156,11 @@
 .columns_default_3 { grid-template-columns: repeat(3, 1fr); }
 .columns_default_4 { grid-template-columns: repeat(4, 1fr); }
 
+/* ─── colSpan (ADR-51) — solo form-field, responsive, griglia 12 colonne del form ── */
+
+.colSpan_default_6 { grid-column: span 6; }
+.colSpan_default_12 { grid-column: span 12; }
+
 .gap_default_none { gap: 0; }
 .gap_default_sm { gap: var(--cms-space-xs); }
 .gap_default_md { gap: var(--cms-space-sm); }
@@ -349,6 +354,9 @@
   .columns_tablet_3 { grid-template-columns: repeat(3, 1fr); }
   .columns_tablet_4 { grid-template-columns: repeat(4, 1fr); }
 
+  .colSpan_tablet_6 { grid-column: span 6; }
+  .colSpan_tablet_12 { grid-column: span 12; }
+
   .gap_tablet_none { gap: 0; }
   .gap_tablet_sm { gap: var(--cms-space-xs); }
   .gap_tablet_md { gap: var(--cms-space-sm); }
@@ -515,6 +523,9 @@
   .columns_mobile_2 { grid-template-columns: repeat(2, 1fr); }
   .columns_mobile_3 { grid-template-columns: repeat(3, 1fr); }
   .columns_mobile_4 { grid-template-columns: repeat(4, 1fr); }
+
+  .colSpan_mobile_6 { grid-column: span 6; }
+  .colSpan_mobile_12 { grid-column: span 12; }
 
   .gap_mobile_none { gap: 0; }
   .gap_mobile_sm { gap: var(--cms-space-xs); }
@@ -742,6 +753,9 @@
   .columns_tablet_3 { grid-template-columns: repeat(3, 1fr); }
   .columns_tablet_4 { grid-template-columns: repeat(4, 1fr); }
 
+  .colSpan_tablet_6 { grid-column: span 6; }
+  .colSpan_tablet_12 { grid-column: span 12; }
+
   .gap_tablet_none { gap: 0; }
   .gap_tablet_sm { gap: var(--cms-space-xs); }
   .gap_tablet_md { gap: var(--cms-space-sm); }
@@ -906,6 +920,9 @@
   .columns_mobile_2 { grid-template-columns: repeat(2, 1fr); }
   .columns_mobile_3 { grid-template-columns: repeat(3, 1fr); }
   .columns_mobile_4 { grid-template-columns: repeat(4, 1fr); }
+
+  .colSpan_mobile_6 { grid-column: span 6; }
+  .colSpan_mobile_12 { grid-column: span 12; }
 
   .gap_mobile_none { gap: 0; }
   .gap_mobile_sm { gap: var(--cms-space-xs); }

@@ -56,6 +56,8 @@ import { PageRevisionDiffResponseDto } from './dto/page-revision-diff.dto';
 import { PageTranslationDto } from './dto/page-translation.dto';
 import { PagePreviewTokenDto } from './dto/page-preview-token.dto';
 import { BlockDiffEngineService } from './diff/block-diff-engine.service';
+import { SeoGraphService } from './seo-graph.service';
+import { PageSeoDto } from './dto/page-seo.dto';
 
 type PageRow = typeof pageEntity.$inferSelect;
 type PageRowWithParent = PageRow & { parent: { guid: string } | null };
@@ -146,6 +148,7 @@ export class PagesService {
     private readonly settingsService: SettingsService,
     private readonly exportService: ExportService,
     private readonly blockDiffEngine: BlockDiffEngineService,
+    private readonly seoGraphService: SeoGraphService,
   ) {}
 
   /** Lista paginata delle Pagine attive. Un `User` vede solo le proprie (ADR-18 § D6). */
@@ -645,7 +648,15 @@ export class PagesService {
     // deprecated/enabled:false nel frattempo) blocca la pubblicazione con lo
     // stesso 400 di una scrittura: non si pubblica un albero non valido.
     const sanitizedContent = this.runPersistedContentPipeline(row.draftContent, authInfo);
-    const sanitizedSeo = this.treeSanitizer.sanitizeTree(row.draftSeo);
+    const sanitizedSeo = this.treeSanitizer.sanitizeTree(row.draftSeo) as PageSeoDto;
+    // ADR-48: JSON-LD/OpenGraph generati a publish-time, prima dell'INSERT
+    // della Revisione — il risultato entra nello snapshot immutabile, mai in
+    // `pages.draftSeo` (bozza e pubblicato restano indipendenti).
+    const enrichedSeo = this.seoGraphService.generateSeoMetadata(
+      row.title,
+      sanitizedContent.blocks,
+      sanitizedSeo,
+    );
 
     const finalRow = await this.db.db.transaction(async (tx) => {
       const [lockedPage] = await tx
@@ -692,7 +703,7 @@ export class PagesService {
             title: lockedPage.title,
             slug: lockedPage.slug,
             content: sanitizedContent,
-            seo: sanitizedSeo,
+            seo: enrichedSeo,
             createdBy: authInfo.userId,
           })
           .returning();

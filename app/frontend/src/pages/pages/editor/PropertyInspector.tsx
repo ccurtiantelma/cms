@@ -42,6 +42,7 @@ import {
 } from '../../../hooks/useBlockEditorStore';
 import type { BlockNode } from './block-tree.utils';
 import MediaLibraryModal from '../../../components/media/MediaLibraryModal';
+import MediaCropperModal from '../../../components/media/MediaCropperModal';
 import type { MediaFileRecord } from '../../../types/media.types';
 import ContentTab from './inspector/ContentTab';
 import StyleTab from './inspector/StyleTab';
@@ -98,6 +99,12 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
    * sbagliata. La modal è montata una volta sola in fondo al form, mai dentro `renderField`.
    */
   const [mediaPickerProp, setMediaPickerProp] = useState<string | null>(null);
+  /**
+   * Nome della prop `mediaRef` per cui è aperto `MediaCropperModal`, o `null` — stesso
+   * principio di `mediaPickerProp`: si tiene il nome della prop, non un booleano, per
+   * restare corretti se in futuro un tipo dichiarasse più prop `mediaRef`.
+   */
+  const [cropperPickerProp, setCropperPickerProp] = useState<string | null>(null);
 
   /** Aggiorna la sola bozza locale (nessun dispatch): usato mentre si digita. */
   function setLocal(name: string, value: unknown): void {
@@ -149,6 +156,7 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
     commit,
     setAndCommit,
     onOpenMediaPicker: setMediaPickerProp,
+    onOpenCropper: setCropperPickerProp,
     nodeType: node.type,
     onSavePreset: (name: string) => savePreset(name, node),
   };
@@ -168,6 +176,22 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
     />
   ) : null;
 
+  /**
+   * Montata solo con un `guid` non vuoto: il pulsante che apre questa modal (`PropField`,
+   * ramo `mediaRef`) compare solo quando `guid` è già scritto, ma la bozza potrebbe cambiare
+   * fra l'apertura e il render — niente da ritagliare senza un asset scelto (ADR-49).
+   */
+  const cropperGuid = cropperPickerProp ? asString(draft[cropperPickerProp]) : '';
+  const mediaCropper =
+    cropperPickerProp && cropperGuid ? (
+      <MediaCropperModal
+        opened
+        guid={cropperGuid}
+        onClose={() => setCropperPickerProp(null)}
+        zIndex={MEDIA_MODAL_Z_INDEX}
+      />
+    ) : null;
+
   // Una scheda senza props non compare — mai una scheda vuota (ADR-30 § 1, ADR-37 § 5):
   // si passa `undefined` a `InspectorTabs`, mai un nodo per una sezione priva di campi.
   // Con una sola scheda popolata `InspectorTabs` monta direttamente il contenuto, senza
@@ -180,6 +204,7 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
         advanced={advanced.length > 0 ? <AdvancedTab fields={advanced} {...tabProps} /> : undefined}
       />
       {mediaPicker}
+      {mediaCropper}
     </>
   );
 }

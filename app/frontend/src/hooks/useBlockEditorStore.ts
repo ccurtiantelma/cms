@@ -120,7 +120,7 @@ function isDirty(state: BlockEditorState): boolean {
 export type EditorViewport = 'desktop' | 'tablet' | 'mobile';
 
 /** Scheda attiva della sidebar sinistra dell'editor full-screen (`EditorSidebar`). */
-export type EditorSidebarTab = 'widgets' | 'properties';
+export type EditorSidebarTab = 'widgets' | 'properties' | 'page';
 
 /**
  * Ampiezza che un nodo `container` sta assumendo **mentre** il puntatore trascina la sua
@@ -207,6 +207,17 @@ interface BlockEditorState {
    */
   hoveredId: string | null;
   /**
+   * Id del blocco sotto il puntatore nel **canvas** dell'editor full-screen, `null`
+   * altrimenti — stato UI puramente effimero, mai persistito. Distinto da {@link
+   * hoveredId} (hover del pannello Struttura/Navigator): quello nasce fuori dal canvas e
+   * deve raggiungere il wrapper del blocco per evidenziarne la riga nel navigator; questo
+   * nasce nel canvas stesso (`EditorBlockWrapper.tsx`) ed è promosso qui perché un
+   * consumer diverso dal wrapper che lo produce — ad es. un badge nella topbar o
+   * un'evidenziazione nel navigator nella direzione opposta — deve poterlo leggere senza
+   * che il wrapper lo tenga in uno `useState` locale irraggiungibile dall'esterno.
+   */
+  hoveredBlockId: string | null;
+  /**
    * Global Design Tokens correnti (F04 step 1, `libs/globalTokensCompiler.ts`) — palette
    * di brand, font di base, unità di spaziatura, esposti come variabili CSS al canvas.
    * `null` finché nessuno li ha impostati in questa sessione: né persistenza né UI di
@@ -226,6 +237,13 @@ interface BlockEditorState {
    */
   containerResize: ContainerResizeState | null;
   styleClipboard: StyleClipboard | null;
+  /**
+   * "Anteprima Pura" della topbar full-screen (E01): nasconde la sidebar sinistra e
+   * disattiva i contorni hover/selezione del canvas, per giudicare il risultato senza la
+   * chrome dell'editor attorno. Stato di chrome puramente effimero, mai persistito e mai
+   * sulla history undo/redo — stesso principio di `isSidebarOpen`/`isStructurePanelOpen`.
+   */
+  isPreviewMode: boolean;
 
   /** Inizializza l'albero da `draftContent.blocks` esistente (nessun riordino spurio: ordine e struttura conservati com'è). Azzera history e selezione. */
   initTree: (blocks: BlockNode[]) => void;
@@ -241,6 +259,8 @@ interface BlockEditorState {
   setSidebarOpen: (opened: boolean) => void;
   /** Alterna l'apertura della sidebar sinistra "Widgets"/"Proprietà". */
   toggleSidebar: () => void;
+  /** Alterna la modalità "Anteprima Pura" (sidebar nascosta, contorni del canvas disattivati). */
+  togglePreviewMode: () => void;
   /** Cambia la scheda attiva della sidebar sinistra ("Widgets"/"Proprietà"). */
   setActiveSidebarTab: (tab: EditorSidebarTab) => void;
   /** Aggiunge un blocco `type` a `index` fra i figli di `parentId` (radice se `null`). */
@@ -291,6 +311,8 @@ interface BlockEditorState {
   toggleHiddenInCanvas: (id: string) => void;
   /** Imposta il nodo sotto il puntatore nel pannello Struttura/Navigator, o `null` per sgombrare l'hover. */
   setHoveredId: (id: string | null) => void;
+  /** Imposta il nodo sotto il puntatore nel canvas, o `null` per sgombrare l'hover (vedi {@link hoveredBlockId}). */
+  setHoveredBlock: (id: string | null) => void;
   /** Disfa l'ultimo comando applicato, se presente. */
   undo: () => void;
   /** Rifà l'ultimo comando disfatto, se presente. */
@@ -423,9 +445,11 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   savePoint: CLEAN_SAVE_POINT,
   hiddenInCanvasIds: new Set(),
   hoveredId: null,
+  hoveredBlockId: null,
   globalTokens: null,
   containerResize: null,
   styleClipboard: null,
+  isPreviewMode: false,
 
   initTree: (blocks) => {
     set((state) => ({
@@ -443,6 +467,8 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       // Stesso principio: un hover del navigator legato alla sessione precedente non ha
       // più un nodo a cui riferirsi.
       hoveredId: null,
+      // Stesso principio per l'hover del canvas: l'albero sotto di lui non esiste più.
+      hoveredBlockId: null,
       // Stesso principio per un ridimensionamento eventualmente rimasto aperto: l'albero
       // sotto di lui non esiste più.
       containerResize: null,
@@ -463,6 +489,8 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   setSidebarOpen: (opened) => set({ isSidebarOpen: opened }),
 
   toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+
+  togglePreviewMode: () => set((state) => ({ isPreviewMode: !state.isPreviewMode })),
 
   setActiveSidebarTab: (tab) => set({ activeSidebarTab: tab }),
 
@@ -705,6 +733,9 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   setHoveredId: (id) =>
     set((state) => (state.hoveredId === id ? {} : { hoveredId: id })),
 
+  setHoveredBlock: (id) =>
+    set((state) => (state.hoveredBlockId === id ? {} : { hoveredBlockId: id })),
+
   undo: () => {
     set((state) => {
       if (state.undoStack.length === 0) return {};
@@ -914,6 +945,11 @@ export function useIsSidebarOpen(): boolean {
   return useBlockEditorStore((state) => state.isSidebarOpen);
 }
 
+/** Selettore granulare: solo lo stato di "Anteprima Pura" della topbar full-screen. */
+export function useIsPreviewMode(): boolean {
+  return useBlockEditorStore((state) => state.isPreviewMode);
+}
+
 /** Selettore granulare: solo la scheda attiva della sidebar sinistra ("Widgets"/"Proprietà"). */
 export function useActiveSidebarTab(): EditorSidebarTab {
   return useBlockEditorStore((state) => state.activeSidebarTab);
@@ -948,6 +984,17 @@ export function useIsHiddenInCanvas(id: string): boolean {
  */
 export function useIsHoveredFromNavigator(id: string): boolean {
   return useBlockEditorStore((state) => state.hoveredId === id);
+}
+
+/**
+ * Selettore granulare: il nodo `id` è sotto il puntatore nel **canvas** (vedi {@link
+ * BlockEditorState.hoveredBlockId}), non nel pannello Struttura/Navigator (per quello
+ * vedi {@link useIsHoveredFromNavigator}). Sottoscrive solo l'uguaglianza con questo id,
+ * non `hoveredBlockId` intero: l'hover che si sposta da un blocco all'altro del canvas
+ * ri-renderizza solo i due wrapper coinvolti.
+ */
+export function useIsHoveredBlock(id: string): boolean {
+  return useBlockEditorStore((state) => state.hoveredBlockId === id);
 }
 
 /** Selettore granulare: c'è almeno un comando da annullare. */

@@ -47,4 +47,21 @@ describe('FormFieldBlock', () => {
     expect(html).toContain('type="checkbox"');
     expect(html).toContain('Accetto la privacy');
   });
+
+  it('applica grid-column a 6 colonne quando colSpan.default è "6" (ADR-51)', () => {
+    const html = renderToStaticMarkup(
+      <FormFieldBlock fieldType="text" name="cognome" label="Cognome" colSpan={{ default: '6' }} />,
+    );
+
+    expect(html).toContain('colSpan_default_6');
+    expect(html).not.toContain('colSpan_default_12');
+  });
+
+  it('ricade su 12 colonne (piena larghezza) quando colSpan è assente, comportamento identico al form pre-ADR-51', () => {
+    const html = renderToStaticMarkup(
+      <FormFieldBlock fieldType="text" name="cognome" label="Cognome" />,
+    );
+
+    expect(html).toContain('colSpan_default_12');
+  });
 });

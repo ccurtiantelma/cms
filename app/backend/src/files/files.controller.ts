@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -29,6 +30,9 @@ import { Pagination } from '../common/pagination';
 import { FilesService } from './files.service';
 import { FileMetadataDto } from './dto/file-metadata.dto';
 import { UploadFileDto } from './dto/upload-file.dto';
+import { UpdateFocalPointDto } from './dto/update-focal-point.dto';
+import { MediaTransformDto } from './dto/media-transform.dto';
+import { MediaTransformResultDto } from './dto/media-transform-result.dto';
 
 /**
  * Endpoint dell'astrazione di storage documenti (ADR-8). Upload/download/
@@ -130,6 +134,45 @@ export class FilesController {
   @ApiResponse({ status: 404, description: 'File non trovato o eliminato' })
   async getMetadata(@Param('guid') guid: string): Promise<FileMetadataDto> {
     return this.filesService.getMetadata(guid);
+  }
+
+  /**
+   * Aggiorna il focal point editoriale dell'asset (ADR-49 § M4). Nessun
+   * `GuardManager`: accessibile a ogni ruolo autenticato (solo JWT globale),
+   * come `getMetadata()`/`list()` — nessuna regola di ownership è definita
+   * per questa risorsa in ADR-49/ADR-35.
+   */
+  @Patch(':guid/focal-point')
+  @ApiOperation({ summary: "Aggiorna il focal point editoriale (percentuale 0-100) di un asset" })
+  @ApiResponse({ status: 200, description: 'Metadati aggiornati del file', type: FileMetadataDto })
+  @ApiResponse({ status: 400, description: 'focalX/focalY fuori dal range 0-100' })
+  @ApiResponse({ status: 404, description: 'File non trovato o eliminato' })
+  async updateFocalPoint(
+    @Param('guid') guid: string,
+    @Body() dto: UpdateFocalPointDto,
+  ): Promise<FileMetadataDto> {
+    return this.filesService.updateFocalPoint(guid, dto.focalX, dto.focalY);
+  }
+
+  /**
+   * Accoda la generazione asincrona di una variante trasformata dell'asset
+   * (ADR-49): crop esplicito e/o preset nominato. Il lavoro pixel-level vive
+   * interamente nel worker BullMQ (`MediaProcessor`), mai in questa richiesta
+   * HTTP. Nessun `GuardManager`: stessa soglia di `getMetadata()`/`list()`.
+   */
+  @Post(':guid/transform')
+  @ApiOperation({ summary: 'Accoda la generazione asincrona di una variante trasformata (ADR-49)' })
+  @ApiResponse({
+    status: 201,
+    description: 'Trasformazione accodata',
+    type: MediaTransformResultDto,
+  })
+  @ApiResponse({ status: 404, description: 'File sorgente non trovato o eliminato' })
+  async requestImageTransform(
+    @Param('guid') guid: string,
+    @Body() dto: MediaTransformDto,
+  ): Promise<MediaTransformResultDto> {
+    return this.filesService.requestImageTransform(guid, dto);
   }
 
   /** Elimina (soft-delete) il file — solo l'autore o un ruolo Admin/superiore. */

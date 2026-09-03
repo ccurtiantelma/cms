@@ -8,6 +8,7 @@ import { PublicMediaService } from './public-media/public-media.service';
 import { STORAGE_DRIVER } from './storage/storage-driver.interface';
 import { LocalDiskDriver } from './storage/local-disk.driver';
 import { S3CompatibleDriver } from './storage/s3-compatible.driver';
+import { MediaQueueModule } from '../queues/media-queue/media-queue.module';
 
 /**
  * Modulo core di storage documenti (ADR-8). Sceglie il driver concreto
@@ -15,10 +16,13 @@ import { S3CompatibleDriver } from './storage/s3-compatible.driver';
  * `AppConstants.storageDriver`, iniettato dietro il token `STORAGE_DRIVER` —
  * `FilesService` non conosce mai quale dei due è attivo. Ospita anche la
  * superficie pubblica dei media (`PublicMediaController`/`Service`, ADR-27):
- * stesso driver, nessun secondo meccanismo di lettura.
+ * stesso driver, nessun secondo meccanismo di lettura. Importa
+ * `MediaQueueModule` (ADR-49) per accodare le richieste di trasformazione
+ * immagine da `FilesService` — vedi `media-queue.module.ts` sul perché quel
+ * modulo non importa `FilesModule` a sua volta.
  */
 @Module({
-  imports: [DbModule],
+  imports: [DbModule, MediaQueueModule],
   controllers: [FilesController, PublicMediaController],
   providers: [
     FilesService,

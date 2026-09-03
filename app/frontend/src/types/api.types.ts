@@ -522,6 +522,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/app/files/{guid}/focal-point": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Aggiorna il focal point editoriale (percentuale 0-100) di un asset */
+        patch: operations["FilesController_updateFocalPoint"];
+        trace?: never;
+    };
+    "/api/v1/app/files/{guid}/transform": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accoda la generazione asincrona di una variante trasformata (ADR-49) */
+        post: operations["FilesController_requestImageTransform"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/media/{guid}": {
         parameters: {
             query?: never;
@@ -2038,11 +2072,65 @@ export interface components {
              */
             url?: Record<string, never> | null;
             /**
+             * @description Percentuale orizzontale (0-100) del soggetto, usata come centro del ritaglio quando una trasformazione non fornisce un crop esplicito. Default: centro immagine.
+             * @example 50
+             */
+            focalX: number;
+            /**
+             * @description Percentuale verticale (0-100) del soggetto, stessa semantica di focalX.
+             * @example 50
+             */
+            focalY: number;
+            /**
              * Format: date-time
              * @description Data di caricamento
              * @example 2026-07-23T10:00:00.000Z
              */
             createdAt: string;
+        };
+        UpdateFocalPointDto: {
+            /**
+             * @description Percentuale orizzontale (0-100) del soggetto, usata come centro del ritaglio quando non è fornito un crop esplicito. Default: centro immagine.
+             * @example 50
+             */
+            focalX: number;
+            /**
+             * @description Percentuale verticale (0-100) del soggetto, stessa semantica di focalX.
+             * @example 50
+             */
+            focalY: number;
+        };
+        MediaTransformDto: {
+            /** @description Coordinata X (px) dell'angolo del ritaglio */
+            cropX?: number;
+            /** @description Coordinata Y (px) dell'angolo del ritaglio */
+            cropY?: number;
+            /** @description Larghezza (px) del ritaglio */
+            cropW?: number;
+            /** @description Altezza (px) del ritaglio */
+            cropH?: number;
+            /**
+             * @description Percentuale orizzontale (0-100) del soggetto, usata come centro del ritaglio quando non è fornito un crop esplicito. Default: centro immagine.
+             * @default 50
+             */
+            focalX: number;
+            /**
+             * @description Percentuale verticale (0-100) del soggetto, stessa semantica di focalX.
+             * @default 50
+             */
+            focalY: number;
+            /**
+             * @description Preset nominato di destinazione (ADR-49 § M6). Ignorato se è fornito un crop esplicito.
+             * @enum {string}
+             */
+            preset?: "thumbnail" | "card" | "hero" | "og";
+        };
+        MediaTransformResultDto: {
+            /**
+             * @description Id del job BullMQ accodato per la generazione della variante
+             * @example 42
+             */
+            jobId: string;
         };
         UnreadCountDto: {
             /**
@@ -3943,6 +4031,79 @@ export interface operations {
                 };
             };
             /** @description File non trovato o eliminato */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FilesController_updateFocalPoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateFocalPointDto"];
+            };
+        };
+        responses: {
+            /** @description Metadati aggiornati del file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FileMetadataDto"];
+                };
+            };
+            /** @description focalX/focalY fuori dal range 0-100 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description File non trovato o eliminato */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FilesController_requestImageTransform: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaTransformDto"];
+            };
+        };
+        responses: {
+            /** @description Trasformazione accodata */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaTransformResultDto"];
+                };
+            };
+            /** @description File sorgente non trovato o eliminato */
             404: {
                 headers: {
                     [name: string]: unknown;

@@ -42,7 +42,14 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { IconEye, IconEyeOff, IconGripVertical, IconTrash } from '@tabler/icons-react';
+import {
+  IconChevronDown,
+  IconChevronUp,
+  IconEye,
+  IconEyeOff,
+  IconGripVertical,
+  IconTrash,
+} from '@tabler/icons-react';
 import {
   useBlockEditorStore,
   useIsHiddenInCanvas,
@@ -131,6 +138,7 @@ interface StructureNodeProps {
   onSelect: (id: string) => void;
   onRequestDelete: (id: string) => void;
   onHoverChange: (id: string | null) => void;
+  onMove: (id: string, direction: 'up' | 'down') => void;
 }
 
 /**
@@ -149,11 +157,21 @@ function StructureNode({
   onSelect,
   onRequestDelete,
   onHoverChange,
+  onMove,
 }: StructureNodeProps): JSX.Element {
   const label = nodeLabel(node);
   const Icon = blockIcon(blockIconName(node.type));
   const isHiddenInCanvas = useIsHiddenInCanvas(node.id);
   const toggleHiddenInCanvas = useBlockEditorStore((state) => state.toggleHiddenInCanvas);
+
+  // Bordi del riordino "su/giù": stessa `findLocation` che alimenta già `handleDragEnd`,
+  // qui solo per sapere se il nodo è il primo/ultimo fra i suoi fratelli diretti — i
+  // pulsanti si disabilitano al bordo invece di affidarsi al no-op silenzioso di
+  // `moveBlockAction` (`pushCommand` ritorna `{}` ai bordi, `EditorBlockWrapper.tsx` segue
+  // lo stesso schema per la sua toolbar).
+  const location = findLocation(roots, node.id);
+  const isFirst = !location || location.index === 0;
+  const isLast = !location || location.index === location.siblingsCount - 1;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver, active } =
     useSortable({ id: node.id });
@@ -207,6 +225,38 @@ function StructureNode({
           onClick={() => onSelect(node.id)}
         />
 
+        <Tooltip label="Sposta su" withArrow>
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            size="sm"
+            disabled={isFirst}
+            aria-label={`Sposta su il blocco "${label}"`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onMove(node.id, 'up');
+            }}
+          >
+            <IconChevronUp size={14} />
+          </ActionIcon>
+        </Tooltip>
+
+        <Tooltip label="Sposta giù" withArrow>
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            size="sm"
+            disabled={isLast}
+            aria-label={`Sposta giù il blocco "${label}"`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onMove(node.id, 'down');
+            }}
+          >
+            <IconChevronDown size={14} />
+          </ActionIcon>
+        </Tooltip>
+
         <Tooltip label={isHiddenInCanvas ? 'Mostra nel canvas' : 'Nascondi nel canvas'} withArrow>
           <ActionIcon
             variant="subtle"
@@ -252,6 +302,7 @@ function StructureNode({
           onSelect={onSelect}
           onRequestDelete={onRequestDelete}
           onHoverChange={onHoverChange}
+          onMove={onMove}
         />
       ))}
     </div>
@@ -265,6 +316,7 @@ export default function EditorStructureNavigator(): JSX.Element {
   const selectNode = useBlockEditorStore((state) => state.selectNode);
   const removeBlockAction = useBlockEditorStore((state) => state.removeBlockAction);
   const moveNodeToAction = useBlockEditorStore((state) => state.moveNodeToAction);
+  const moveBlockAction = useBlockEditorStore((state) => state.moveBlockAction);
   const setHoveredId = useBlockEditorStore((state) => state.setHoveredId);
 
   /** Id del nodo per cui è aperta la conferma di eliminazione, `null` se nessuna è aperta. */
@@ -324,6 +376,7 @@ export default function EditorStructureNavigator(): JSX.Element {
                   onSelect={handleSelect}
                   onRequestDelete={setPendingDeleteId}
                   onHoverChange={setHoveredId}
+                  onMove={moveBlockAction}
                 />
               ))}
             </SortableContext>

@@ -13,19 +13,38 @@
  * contenitore scrollabile indipendente dall'header, che `Tabs.Panel` non offre da solo.
  */
 import { Tabs, Text } from '@mantine/core';
-import { IconAdjustments, IconStack2 } from '@tabler/icons-react';
+import { IconAdjustments, IconSettings, IconStack2 } from '@tabler/icons-react';
 import {
   useActiveSidebarTab,
   useBlockEditorStore,
   useSelectedId,
   type EditorSidebarTab,
 } from '../../../../hooks/useBlockEditorStore';
+import type { PageRecord } from '../../../../types/pages.types';
 import PropertyInspector from '../PropertyInspector';
 import WidgetSidebar from './WidgetSidebar';
+import PageSettingsTab from './PageSettingsTab';
 import styles from './EditorSidebar.module.css';
 
-/** Sidebar a schede Widgets/Proprietà dell'editor full-screen. */
-export default function EditorSidebar(): JSX.Element {
+export interface EditorSidebarProps {
+  /**
+   * La Pagina in editing, per la scheda "Pagina" (E01, Titolo/Slug/SEO essenziale) —
+   * opzionale come in `FullScreenEditorLayout` (assente nel Builder delle Sezioni Globali,
+   * ADR-40): la scheda resta nella lista ma senza form da compilare in quel contesto.
+   */
+  page?: PageRecord;
+  /** Propaga un salvataggio riuscito dal form compatto della scheda "Pagina". */
+  onPageUpdated?: (page: PageRecord) => void;
+  /** Notifica di conflitto di editing (`409`) dello stesso form — mai overwrite silenzioso. */
+  onVersionConflict?: () => void;
+}
+
+/** Sidebar a schede Widgets/Proprietà/Pagina dell'editor full-screen. */
+export default function EditorSidebar({
+  page,
+  onPageUpdated,
+  onVersionConflict,
+}: EditorSidebarProps): JSX.Element {
   const activeTab = useActiveSidebarTab();
   const setActiveSidebarTab = useBlockEditorStore((state) => state.setActiveSidebarTab);
   const selectedId = useSelectedId();
@@ -44,6 +63,9 @@ export default function EditorSidebar(): JSX.Element {
           <Tabs.Tab value="properties" leftSection={<IconAdjustments size={16} />}>
             Proprietà
           </Tabs.Tab>
+          <Tabs.Tab value="page" leftSection={<IconSettings size={16} />}>
+            Pagina
+          </Tabs.Tab>
         </Tabs.List>
       </Tabs>
 
@@ -51,6 +73,14 @@ export default function EditorSidebar(): JSX.Element {
         {activeTab === 'widgets' ? (
           <div className={styles.panel}>
             <WidgetSidebar />
+          </div>
+        ) : activeTab === 'page' ? (
+          <div className={styles.panel}>
+            <PageSettingsTab
+              page={page}
+              onPageUpdated={onPageUpdated}
+              onVersionConflict={onVersionConflict}
+            />
           </div>
         ) : selectedId === null ? (
           <div className={styles.panel}>

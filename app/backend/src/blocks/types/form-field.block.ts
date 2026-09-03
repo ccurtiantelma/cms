@@ -15,6 +15,10 @@ import { BlockDefinition } from '../block-definition.types';
  * consumer (renderer di F04/F10 e `FormsService` lato validazione
  * dell'Invio), non del registro. Foglia (`children.allow: []`): un
  * `form-field` non contiene altri blocchi.
+ *
+ * `colSpan` (ADR-51): larghezza del campo nella griglia a 12 colonne del `form`
+ * che lo contiene, riuso di `enum`+`responsive` (ADR-29 §2/§3) — nessun nuovo
+ * `kind`. Additiva con `default` dichiarato, `v` resta 1.
  */
 export const formFieldBlock: BlockDefinition = {
   type: 'form-field',
@@ -55,6 +59,13 @@ export const formFieldBlock: BlockDefinition = {
       required: false,
       maxLength: 1000,
     },
+    colSpan: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['6', '12'],
+      default: { default: '12' },
+    },
   },
   children: { allow: [] },
   migrations: [],
@@ -77,6 +88,11 @@ export const formFieldBlock: BlockDefinition = {
         label: 'Opzioni (solo per "Select")',
         order: 6,
         help: 'Elenco separato da virgola, es. "Nord,Centro,Sud".',
+      },
+      colSpan: {
+        label: 'Larghezza campo',
+        order: 7,
+        help: '50% per affiancare due campi sulla stessa riga, 100% per occupare l\'intera larghezza.',
       },
     },
   },

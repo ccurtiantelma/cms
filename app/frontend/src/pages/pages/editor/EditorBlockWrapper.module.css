@@ -63,6 +63,23 @@
 }
 
 /*
+  "Anteprima Pura" (E01, `FullScreenEditorLayout.tsx`): `[data-preview-mode='true']` è
+  l'attributo che quel componente porta su `.canvasArea`, ancestor di ogni wrapper — un
+  selettore d'attributo attraversa i confini dei CSS Module senza problemi (non è una
+  classe locale), quindi non serve alcuna prop nuova su `EditorBlockWrapper.tsx` per
+  reagire alla modalità. Disattiva solo il segnale visivo del bordo, mai la selezione o
+  l'hover come stato (`isHovered`/`selectedId` restano invariati) — così uscire
+  dall'anteprima ritrova esattamente la stessa selezione di prima.
+*/
+[data-preview-mode='true'] .wrapper:focus-visible,
+[data-preview-mode='true'] .hovered,
+[data-preview-mode='true'] .selected,
+[data-preview-mode='true'] .columnHovered {
+  border-color: transparent;
+  outline: none;
+}
+
+/*
   Un figlio sotto il cursore ha precedenza anche se il contenitore resta selezionato: la
   chrome del genitore (overlay unico di `BlockHoverOverlay.tsx`, badge di Colonna) si
   nasconde finché dura, così le due non si sovrappongono mai sullo stesso angolo del
@@ -78,9 +95,9 @@
 .selected:has(.hovered) > [data-block-overlay='true'],
 .selected:has(.selected) > [data-block-overlay='true'],
 .selected:has(.columnHovered) > [data-block-overlay='true'],
-.selected:has(.hovered) > .columnBadge,
-.selected:has(.selected) > .columnBadge,
-.selected:has(.columnHovered) > .columnBadge {
+.selected:has(.hovered) > .hoverBadge,
+.selected:has(.selected) > .hoverBadge,
+.selected:has(.columnHovered) > .hoverBadge {
   opacity: 0;
   visibility: hidden;
 }
@@ -240,17 +257,21 @@
 }
 
 /*
-  Badge delle Colonne (`container`, ADR-39 — mappatura dichiarata in consegna): solo
-  identificazione (icona + nome del tipo), nessun pulsante — le quattro azioni (drag/
-  duplica/elimina/modifica) vivono tutte nell'overlay unico (`BlockHoverOverlay.tsx`),
-  mai duplicate qui. Mantenuto accanto all'overlay unico (reversal esplicito, vedi il
-  commento di `EditorBlockWrapper.tsx`): senza questa etichetta un `container` in
-  hover/selezione perderebbe l'unica affordance visiva che lo distingue da una `section`
-  o da un widget foglia, dato che l'overlay unico non porta alcun nome di tipo. Angolo
+  Badge nome del blocco (qualunque tipo — Sezioni, Colonne, widget foglia): icona + nome
+  del tipo, nessun pulsante — le cinque azioni (drag/genitore/duplica/modifica/elimina)
+  vivono tutte nella toolbar di selezione (`BlockHoverOverlay.tsx`, ancorata in alto a
+  destra), mai duplicate qui. Montato **solo** su hover senza selezione
+  (`isHovered && !isSelected`, `EditorBlockWrapper.tsx`) — sulla selezione il posto è
+  preso dalla toolbar, mai i due insieme sullo stesso blocco. Generalizzato da un badge
+  riservato alle sole Colonne (`container`, ADR-39) a ogni tipo di blocco: la spec del
+  round successivo del task lo chiede esplicito ("nome visuale del blocco"), e l'icona è
+  già risolta genericamente da `descriptor?.meta?.icon` per qualunque tipo. Angolo
   superiore sinistro *interno* al wrapper (non fuori, a differenza di `.hiddenBadge`):
-  valori letterali della spec del task originario.
+  `position: absolute` dentro `.wrapper` (già `position: relative`) non sposta mai il
+  layout del contenuto — nessuna compensazione di `padding` necessaria (Zero Layout Shift
+  Guard).
 */
-.columnBadge {
+.hoverBadge {
   position: absolute;
   top: 0;
   left: 0;
@@ -265,7 +286,7 @@
   pointer-events: none;
 }
 
-.columnBadgeLabel {
+.hoverBadgeLabel {
   color: var(--mantine-color-white);
   font-size: 11px;
   white-space: nowrap;
@@ -274,14 +295,14 @@
 
 /*
   Badge "Nascosto su [Device]" (ADR-37 § 3): sempre visibile (non solo su hover/selezione,
-  a differenza dell'overlay unico di `BlockHoverOverlay.tsx` sopra) quando il nodo è
-  nascosto sul dispositivo attivo del Device Switcher — l'attenuazione del contenuto
+  a differenza della toolbar di selezione di `BlockHoverOverlay.tsx` sopra) quando il nodo
+  è nascosto sul dispositivo attivo del Device Switcher — l'attenuazione del contenuto
   (`previewHidden`, `style-tokens.module.css`) da sola non spiegherebbe perché il blocco
-  appare sbiadito. In alto a destra (`top: -32px`): l'overlay unico è centrato
-  (`left: 50%`, `BlockHoverOverlay.module.css`), quindi le due non si toccano mai anche
-  quando entrambe sono visibili insieme (blocco selezionato e nascosto sul viewport
-  attivo). Colore d'allerta (arancione), distinto dal blu di hover/selezione/modifica e
-  dal rosso di `.invalid` — segnali visivi diversi per stati diversi.
+  appare sbiadito. In alto a destra (`top: -32px`), stesso lato ma una riga sopra la
+  toolbar di selezione (`top: -12px`, `BlockHoverOverlay.module.css`): le due non si
+  toccano mai anche quando entrambe sono visibili insieme (blocco selezionato e nascosto
+  sul viewport attivo). Colore d'allerta (arancione), distinto dal blu di hover/selezione/
+  modifica e dal rosso di `.invalid` — segnali visivi diversi per stati diversi.
 */
 .hiddenBadge {
   position: absolute;

@@ -282,6 +282,62 @@ describe('useBlockEditorStore — azioni senza effetto e selezione', () => {
   });
 });
 
+describe('useBlockEditorStore — hover del canvas, selezione e viewport', () => {
+  beforeEach(() => {
+    useBlockEditorStore.getState().initTree(initialTree());
+  });
+
+  it('setHoveredBlock aggiorna hoveredBlockId, distinto da hoveredId del navigator', () => {
+    expect(state().hoveredBlockId).toBeNull();
+
+    state().setHoveredBlock('head-1');
+    expect(state().hoveredBlockId).toBe('head-1');
+    // Il navigator ha il proprio hover: settarne uno non tocca l'altro.
+    expect(state().hoveredId).toBeNull();
+
+    state().setHoveredId('rich-1');
+    expect(state().hoveredId).toBe('rich-1');
+    expect(state().hoveredBlockId).toBe('head-1');
+
+    state().setHoveredBlock(null);
+    expect(state().hoveredBlockId).toBeNull();
+  });
+
+  it('selectNode aggiorna selectedId e sposta la sidebar su "properties"; null la lascia invariata', () => {
+    expect(state().selectedId).toBeNull();
+
+    state().selectNode('head-1');
+    expect(state().selectedId).toBe('head-1');
+    expect(state().activeSidebarTab).toBe('properties');
+
+    state().setActiveSidebarTab('widgets');
+    state().selectNode(null);
+    expect(state().selectedId).toBeNull();
+    expect(state().activeSidebarTab).toBe('widgets');
+  });
+
+  it('setActiveViewport commuta fra desktop/tablet/mobile', () => {
+    expect(state().activeViewport).toBe('desktop');
+
+    state().setActiveViewport('tablet');
+    expect(state().activeViewport).toBe('tablet');
+
+    state().setActiveViewport('mobile');
+    expect(state().activeViewport).toBe('mobile');
+
+    state().setActiveViewport('desktop');
+    expect(state().activeViewport).toBe('desktop');
+  });
+
+  it('initTree azzera anche hoveredBlockId', () => {
+    state().setHoveredBlock('head-1');
+
+    state().initTree(initialTree());
+
+    expect(state().hoveredBlockId).toBeNull();
+  });
+});
+
 describe('useBlockEditorStore — savePoint e isDirty (useHasUnsavedChanges)', () => {
   beforeEach(() => {
     useBlockEditorStore.getState().initTree(initialTree());

@@ -134,6 +134,31 @@ export const PAGE_STATUS_COLORS: Record<PageStatus, string> = {
   archived: 'dark',
 };
 
+/**
+ * Etichetta azione per ogni stato di destinazione (macchina a stati) — condivisa fra la
+ * tendina di stato dell'intestazione (`PagePageDetail.tsx`) e il menu "Cambia Stato" della
+ * topbar dell'editor full-screen (`editor/Toolbar.tsx`, E01): un solo posto per il testo dei
+ * pulsanti di transizione, mai due copie che possono divergere.
+ */
+export const STATUS_ACTION_LABELS: Record<PageStatus, string> = {
+  draft: 'Riporta in bozza',
+  review: 'Invia in revisione',
+  scheduled: 'Programma pubblicazione',
+  published: 'Pubblica',
+  archived: 'Archivia',
+};
+
+/**
+ * Etichetta dell'azione di transizione verso `target`, dato lo stato corrente. Caso
+ * speciale: `published → published` non è una prima pubblicazione ma una
+ * ripubblicazione (la Pagina è già online, si sostituisce con una nuova Revisione) —
+ * riusare "Pubblica" lascerebbe intendere che non lo fosse ancora.
+ */
+export function statusActionLabel(target: PageStatus, currentStatus: PageStatus): string {
+  if (target === 'published' && currentStatus === 'published') return 'Ripubblica';
+  return STATUS_ACTION_LABELS[target];
+}
+
 /** Filtri/parametri di query di `GET /app/pages`. */
 export interface PagesQueryParams extends PaginationParams {
   status?: PageStatus;

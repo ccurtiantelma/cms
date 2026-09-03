@@ -1,11 +1,17 @@
 /**
- * Overlay hover/selezione **unico** per qualunque tipo di blocco (Sezioni, Colonne,
- * widget foglia): quattro controlli sempre nello stesso punto — trascina, duplica,
- * elimina, modifica — al posto delle tre varianti di chrome mutuamente esclusive per
- * categoria che questo file sostituisce in `EditorBlockWrapper.tsx`. Reversal
+ * Toolbar di selezione **unica** per qualunque tipo di blocco (Sezioni, Colonne, widget
+ * foglia): cinque controlli sempre nello stesso punto — trascina, seleziona genitore,
+ * duplica, modifica, elimina — al posto delle tre varianti di chrome mutuamente esclusive
+ * per categoria che questo file sostituisce in `EditorBlockWrapper.tsx`. Reversal
  * architetturale esplicito, richiesto e autorizzato dal proprietario del progetto (vedi
  * il task che introduce questo componente): supera la decisione precedente, non la
  * ignora — quella decisione resta leggibile nella history di `EditorBlockWrapper.tsx`.
+ *
+ * Montata solo quando il blocco è **selezionato** (`isSelected`, mai sul solo hover): il
+ * solo hover mostra invece un badge nome in alto a sinistra (`.hoverBadge`,
+ * `EditorBlockWrapper.tsx`) — due segnali distinti per due stati distinti, richiesta
+ * esplicita di un round successivo del task, mai sovrapposti sullo stesso angolo del
+ * blocco.
  */
 import { ActionIcon, Group, Tooltip } from '@mantine/core';
 import type { DraggableAttributes } from '@dnd-kit/core';

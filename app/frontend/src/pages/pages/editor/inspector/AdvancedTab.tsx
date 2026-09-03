@@ -33,6 +33,7 @@ export default function AdvancedTab({
   commit,
   setAndCommit,
   onOpenMediaPicker,
+  onOpenCropper,
   nodeType,
   onSavePreset,
 }: PropertyTabProps): JSX.Element {
@@ -98,6 +99,7 @@ export default function AdvancedTab({
                     onCommit={(next) => commit(prop.name, next)}
                     onSetAndCommit={(next) => setAndCommit(prop.name, next)}
                     onOpenMediaPicker={() => onOpenMediaPicker(prop.name)}
+                    onOpenCropper={() => onOpenCropper(prop.name)}
                   />
                 ))}
             </div>

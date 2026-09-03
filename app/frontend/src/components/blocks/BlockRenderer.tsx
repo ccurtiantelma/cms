@@ -270,6 +270,7 @@ function renderNode(
           required={node.props.required}
           placeholder={node.props.placeholder}
           options={node.props.options}
+          colSpan={node.props.colSpan}
         />
       );
     case 'form-submit':

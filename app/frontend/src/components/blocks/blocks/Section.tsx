@@ -11,6 +11,10 @@
  * delegato al chiamante (`BlockRenderer`), che ricorre e applica il proprio Error
  * Boundary a ciascuno; nessun figlio riceve un indice di colonna, l'ordine nella griglia
  * segue l'ordine dei figli nell'albero (ADR-31 § 7).
+ * ADR-50: `styleBackgroundType` (`color|image|gradient`) sceglie quale sorgente di sfondo
+ * onorare; `styleBackgroundPosition`/`styleBackgroundSize` rendono configurabili posizione e
+ * dimensione dell'immagine (prima fisse a `center`/`cover`); `styleGradientStart`/
+ * `styleGradientEnd` (`kind: 'color'`, riuso ADR-33/38/47) alimentano un gradiente lineare.
  */
 import type { CSSProperties, ReactNode } from 'react';
 import styles from './Section.module.css';
@@ -55,6 +59,16 @@ interface SectionProps {
   styleOverlayColor?: unknown;
   /** ADR-47 § 1: opacità dell'overlay, `0 ≤ x ≤ 1`. */
   styleOverlayOpacity?: unknown;
+  /** ADR-50: `color | image | gradient`, sceglie la sorgente di sfondo attiva. */
+  styleBackgroundType?: unknown;
+  /** ADR-50: preset di posizione (griglia 3×3), applicato solo quando il tipo è `image`. */
+  styleBackgroundPosition?: unknown;
+  /** ADR-50: `cover | contain | auto`, applicato solo quando il tipo è `image`. */
+  styleBackgroundSize?: unknown;
+  /** ADR-50: colore iniziale del gradiente, applicato solo quando il tipo è `gradient`. */
+  styleGradientStart?: unknown;
+  /** ADR-50: colore finale del gradiente, applicato solo quando il tipo è `gradient`. */
+  styleGradientEnd?: unknown;
 }
 
 export default function Section({
@@ -86,6 +100,11 @@ export default function Section({
   styleBackgroundImageRef,
   styleOverlayColor,
   styleOverlayOpacity,
+  styleBackgroundType,
+  styleBackgroundPosition,
+  styleBackgroundSize,
+  styleGradientStart,
+  styleGradientEnd,
 }: SectionProps) {
   // ADR-33 § 1 — logica di rendering, non di validazione: `maxWidth` resta dichiarato e
   // validato server-side anche quando `contentWidth === 'full-width'`, ma il renderer lo
@@ -93,11 +112,42 @@ export default function Section({
   // tetto di larghezza contenuto).
   const isFullWidth = contentWidth === 'full-width';
 
+  const hasBackgroundImageRef =
+    typeof styleBackgroundImageRef === 'string' && styleBackgroundImageRef.length > 0;
+  const hasGradientStart = typeof styleGradientStart === 'string' && styleGradientStart.length > 0;
+  const hasGradientEnd = typeof styleGradientEnd === 'string' && styleGradientEnd.length > 0;
+
+  // ADR-50 — un nodo salvato prima di questa ADR non ha `styleBackgroundType` ma può già
+  // avere `styleBackgroundImageRef` (ADR-47): l'assenza del tipo non deve nascondere
+  // un'immagine di sfondo già configurata, "comportamento invariato per ogni nodo
+  // pre-esistente" (ADR-50, Conseguenza). Un tipo esplicito resta l'unica scelta per il
+  // contenuto nuovo.
+  const backgroundType =
+    typeof styleBackgroundType === 'string'
+      ? styleBackgroundType
+      : hasBackgroundImageRef
+        ? 'image'
+        : 'color';
+
   // ADR-47 § 1 — risoluzione dell'URL pubblico via lo stesso modulo condiviso già usato da
   // `Image.tsx` (`resolveMediaSrc`, ADR-27 § 6): nessuna seconda implementazione.
   const backgroundImageSrc =
-    typeof styleBackgroundImageRef === 'string' && styleBackgroundImageRef
-      ? resolveMediaSrc(styleBackgroundImageRef)
+    backgroundType === 'image' && hasBackgroundImageRef
+      ? resolveMediaSrc(styleBackgroundImageRef as string)
+      : undefined;
+
+  const backgroundPosition =
+    typeof styleBackgroundPosition === 'string' ? styleBackgroundPosition : 'center center';
+  const backgroundSize = typeof styleBackgroundSize === 'string' ? styleBackgroundSize : 'cover';
+
+  // Gradiente lineare a due tinte (ADR-50): renderizzato solo quando entrambi gli stop sono
+  // presenti, stesso principio "nessun elemento senza dati sufficienti" già in uso per
+  // l'overlay sotto. Valori assegnati per proprietà `style`, mai concatenati in HTML — solo
+  // interpolati in un valore CSS `linear-gradient()`, entrambi gli stop già vincolati dal
+  // pattern esadecimale del `kind: 'color'` server-side.
+  const gradientValue =
+    backgroundType === 'gradient' && hasGradientStart && hasGradientEnd
+      ? `linear-gradient(135deg, ${styleGradientStart}, ${styleGradientEnd})`
       : undefined;
 
   // Overlay renderizzato solo se almeno una delle due prop è presente — assenza di
@@ -152,11 +202,12 @@ export default function Section({
     ...(backgroundImageSrc
       ? {
           backgroundImage: `url(${backgroundImageSrc})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          backgroundSize,
+          backgroundPosition,
           backgroundRepeat: 'no-repeat',
         }
       : {}),
+    ...(gradientValue ? { backgroundImage: gradientValue } : {}),
   };
   const hasInlineStyle = Object.keys(inlineStyle).length > 0;
 

@@ -10,7 +10,12 @@
  */
 import api from './api';
 import type { Pagination } from '../types/common.types';
-import type { MediaFileRecord, MediaListParams } from '../types/media.types';
+import type {
+  MediaFileRecord,
+  MediaListParams,
+  MediaTransformRequest,
+  MediaTransformResult,
+} from '../types/media.types';
 import { PAGE_MEDIA_ENTITY } from '../types/media.types';
 
 const FILES_PREFIX = 'app/files';
@@ -55,4 +60,37 @@ export async function fetchMediaMetadata(guid: string): Promise<MediaFileRecord>
 /** `DELETE /app/files/:guid` — soft-delete (autore o Admin+, `files.service.ts`). */
 export async function deleteMediaFile(guid: string): Promise<void> {
   await api.delete(`${FILES_PREFIX}/${guid}`);
+}
+
+/**
+ * `PATCH /app/files/:guid/focal-point` — aggiorna il punto focale editoriale (ADR-49 § M4),
+ * percentuale 0-100. Ritorna i metadati aggiornati (`focalX`/`focalY` inclusi): `MediaCropperModal`
+ * li usa per riflettere subito il valore persistito, senza un secondo giro di `fetchMediaMetadata`.
+ */
+export async function updateFocalPoint(
+  guid: string,
+  focalX: number,
+  focalY: number,
+): Promise<MediaFileRecord> {
+  const { data } = await api.patch<MediaFileRecord>(`${FILES_PREFIX}/${guid}/focal-point`, {
+    focalX,
+    focalY,
+  });
+  return data;
+}
+
+/**
+ * `POST /app/files/:guid/transform` — accoda la generazione asincrona di una variante (ADR-49):
+ * mai eseguita nel path di questa chiamata, il lavoro pixel-level vive nel worker BullMQ
+ * (`MediaProcessor`). Ritorna l'id del job accodato, solo a scopo di riscontro in UI.
+ */
+export async function requestImageTransform(
+  guid: string,
+  transform: MediaTransformRequest,
+): Promise<MediaTransformResult> {
+  const { data } = await api.post<MediaTransformResult>(
+    `${FILES_PREFIX}/${guid}/transform`,
+    transform,
+  );
+  return data;
 }

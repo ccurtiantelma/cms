@@ -10,6 +10,7 @@ import { PublicPagesController } from './public-pages.controller';
 import { PublicPagesService } from './public-pages.service';
 import { PublicPageCacheService } from './public-page-cache.service';
 import { BlockDiffEngineService } from './diff/block-diff-engine.service';
+import { SeoGraphService } from './seo-graph.service';
 
 /**
  * Modulo Pagine (F01/F02/F03): CRUD amministrativo, slug, gerarchia, lock
@@ -40,7 +41,13 @@ import { BlockDiffEngineService } from './diff/block-diff-engine.service';
 @Module({
   imports: [DbModule, BlocksModule, CacheInvalidationQueueModule, ExportModule, SettingsModule],
   controllers: [PagesController, PublicPagesController],
-  providers: [PagesService, PublicPagesService, PublicPageCacheService, BlockDiffEngineService],
+  providers: [
+    PagesService,
+    PublicPagesService,
+    PublicPageCacheService,
+    BlockDiffEngineService,
+    SeoGraphService,
+  ],
   exports: [PagesService, PublicPagesService],
 })
 export class PagesModule {}

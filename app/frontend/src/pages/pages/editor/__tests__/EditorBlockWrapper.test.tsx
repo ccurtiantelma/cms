@@ -321,3 +321,143 @@ describe('EditorBlockWrapper — controllo rapido livello titolo H2-H6 (gap #4)'
     expect(screen.queryByRole('toolbar', { name: 'Livello del titolo' })).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Hover overlay e toolbar di selezione (F04d-02). I due stati portano segnali distinti,
+ * mai sovrapposti sullo stesso blocco: hover **senza** selezione mostra solo il badge
+ * nome (`.hoverBadge`, icona + `meta.label`); la toolbar di cinque controlli
+ * (`BlockHoverOverlay.tsx` — trascina/seleziona genitore/duplica/modifica/elimina) è
+ * montata **solo** su `isSelected`. Gli handler del wrapper usano `onMouseOver`/
+ * `onMouseOut` (non `onMouseEnter`/`onMouseLeave`, che in React non attraversano mai il
+ * bubbling — `stopPropagation()` lì sarebbe un no-op, vedi il commento di testa di
+ * `EditorBlockWrapper.tsx`): `fireEvent.mouseOver`/`mouseOut` sono quindi gli eventi
+ * corretti da simulare qui, non `mouseEnter`/`mouseLeave`.
+ */
+describe('EditorBlockWrapper — hover overlay e toolbar di selezione (F04d-02)', () => {
+  beforeEach(() => {
+    useBlockEditorStore.getState().initTree([]);
+    useBlockEditorStore.getState().setActiveViewport('desktop');
+    useBlockEditorStore.getState().selectNode(null);
+  });
+
+  it('hover senza selezione: il badge nome compare (icona + label del tipo)', () => {
+    const heading = node('h-1', 'heading', { level: 'h2', text: 'Testo' });
+    useBlockEditorStore.getState().initTree([heading]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="h-1" />);
+    const wrapperEl = container.querySelector('[data-block-id="h-1"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
+
+    expect(container.querySelector(`.${styles.hoverBadge}`)).not.toBeInTheDocument();
+
+    fireEvent.mouseOver(wrapperEl);
+
+    const badge = container.querySelector(`.${styles.hoverBadge}`);
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveTextContent('Titolo');
+  });
+
+  it('mouseOut nasconde di nuovo il badge nome', () => {
+    const heading = node('h-1', 'heading', { level: 'h2', text: 'Testo' });
+    useBlockEditorStore.getState().initTree([heading]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="h-1" />);
+    const wrapperEl = container.querySelector('[data-block-id="h-1"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
+
+    fireEvent.mouseOver(wrapperEl);
+    expect(container.querySelector(`.${styles.hoverBadge}`)).toBeInTheDocument();
+
+    fireEvent.mouseOut(wrapperEl);
+    expect(container.querySelector(`.${styles.hoverBadge}`)).not.toBeInTheDocument();
+  });
+
+  it('hover su un figlio annidato non marca "hovered" anche il genitore (stopPropagation)', () => {
+    const child = node('h-child', 'heading', { level: 'h2', text: 'Testo' });
+    const section = node('sec-1', 'section', { columns: { default: '1' } }, [child]);
+    useBlockEditorStore.getState().initTree([section]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="sec-1" />);
+    const childEl = container.querySelector('[data-block-id="h-child"]');
+    if (!childEl) throw new Error('figlio non trovato');
+
+    fireEvent.mouseOver(childEl);
+
+    // Un solo badge nell'albero: quello del figlio (heading, "Titolo"), mai anche quello
+    // del genitore (section, "Sezione") — il bubbling nativo fermato da `stopPropagation`
+    // sul nodo più interno garantisce che solo il nodo sotto il puntatore sia "hovered".
+    const badges = container.querySelectorAll(`.${styles.hoverBadge}`);
+    expect(badges).toHaveLength(1);
+    expect(badges[0]).toHaveTextContent('Titolo');
+  });
+
+  it('blocco selezionato: la toolbar con i cinque controlli compare, il badge nome resta assente', () => {
+    const heading = node('h-1', 'heading', { level: 'h2', text: 'Testo' });
+    useBlockEditorStore.getState().initTree([heading]);
+    useBlockEditorStore.getState().selectNode('h-1');
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="h-1" />);
+
+    expect(container.querySelector('[data-block-overlay="true"]')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Trascina per spostare il blocco Titolo' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Seleziona il blocco genitore di Titolo' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Duplica il blocco Titolo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Modifica il blocco Titolo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Elimina il blocco Titolo' })).toBeInTheDocument();
+    expect(container.querySelector(`.${styles.hoverBadge}`)).not.toBeInTheDocument();
+  });
+
+  it('"Seleziona blocco genitore" è disabilitato su un nodo di radice (nessun genitore)', () => {
+    const heading = node('h-1', 'heading', { level: 'h2', text: 'Testo' });
+    useBlockEditorStore.getState().initTree([heading]);
+    useBlockEditorStore.getState().selectNode('h-1');
+
+    renderWithProviders(<EditorBlockWrapper id="h-1" />);
+
+    expect(
+      screen.getByRole('button', { name: 'Seleziona il blocco genitore di Titolo' }),
+    ).toBeDisabled();
+  });
+
+  it('"Seleziona blocco genitore" seleziona il genitore quando esiste', () => {
+    const child = node('h-child', 'heading', { level: 'h2', text: 'Testo' });
+    const section = node('sec-1', 'section', { columns: { default: '1' } }, [child]);
+    useBlockEditorStore.getState().initTree([section]);
+    useBlockEditorStore.getState().selectNode('h-child');
+
+    renderWithProviders(<EditorBlockWrapper id="sec-1" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seleziona il blocco genitore di Titolo' }));
+
+    expect(useBlockEditorStore.getState().selectedId).toBe('sec-1');
+  });
+
+  it('"Duplica" clona il blocco nell\'albero (duplicateNodeAction)', () => {
+    const heading = node('h-1', 'heading', { level: 'h2', text: 'Testo' });
+    useBlockEditorStore.getState().initTree([heading]);
+    useBlockEditorStore.getState().selectNode('h-1');
+
+    renderWithProviders(<EditorBlockWrapper id="h-1" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Duplica il blocco Titolo' }));
+
+    expect(useBlockEditorStore.getState().tree).toHaveLength(2);
+  });
+
+  it('"Elimina" apre una conferma; confermando rimuove il blocco dall\'albero (removeBlockAction)', () => {
+    const heading = node('h-1', 'heading', { level: 'h2', text: 'Testo' });
+    useBlockEditorStore.getState().initTree([heading]);
+    useBlockEditorStore.getState().selectNode('h-1');
+
+    renderWithProviders(<EditorBlockWrapper id="h-1" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Elimina il blocco Titolo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Elimina' }));
+
+    expect(useBlockEditorStore.getState().tree).toHaveLength(0);
+  });
+});

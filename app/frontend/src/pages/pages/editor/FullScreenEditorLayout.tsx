@@ -66,12 +66,13 @@ import {
   useBlockEditorStore,
   useCanRedo,
   useCanUndo,
+  useIsPreviewMode,
   useIsSidebarOpen,
   useIsStructurePanelOpen,
   type EditorViewport,
 } from '../../../hooks/useBlockEditorStore';
 import { BLOCK_TYPES } from '../../../types/blocks.types';
-import type { PageRecord } from '../../../types/pages.types';
+import type { PageRecord, PageStatus } from '../../../types/pages.types';
 import { blockIcon, defaultPropsFor } from './BlockPalette';
 import EditorSidebar from './sidebar/EditorSidebar';
 import Toolbar from './Toolbar';
@@ -177,6 +178,26 @@ export interface FullScreenEditorLayoutProps {
    * il bordo inferiore di `Tabs.List`, misurato da `PagePageDetail.tsx`. Ignorato quando
    * `active` è `false` (il nodo è `display:none`, la posizione non conta).
    */
+  /**
+   * Propaga a `EditorSidebar` (scheda "Pagina", E01) il salvataggio riuscito/il conflitto di
+   * versione del form compatto Titolo/Slug/SEO essenziale — stessi callback già passati a
+   * `BlockEditorPanel` dal dettaglio, non una seconda coppia. Assenti quando `page` non è
+   * fornita (Builder delle Sezioni Globali, ADR-40): la scheda "Pagina" resta senza contenuto
+   * editabile in quel contesto.
+   */
+  onPageUpdated?: (page: PageRecord) => void;
+  onVersionConflict?: () => void;
+  /**
+   * Stato/transizioni ammesse e handler di cambio stato per il menu "Cambia Stato" della
+   * topbar (E01) — vedi lo stesso commento su `BlockEditorPanelProps` in
+   * `BlockEditorPanel.tsx`. Opzionali per lo stesso motivo di `onPageUpdated` sopra (Builder
+   * Sezioni Globali, che non ha una macchina a stati Pagina): il menu resta vuoto/nascosto in
+   * quel contesto invece di ricevere transizioni inventate.
+   */
+  pageStatus?: PageStatus;
+  visibleTransitions?: readonly PageStatus[];
+  statusSubmitting?: boolean;
+  onRequestStatusChange?: (target: PageStatus) => void;
 }
 
 /**
@@ -195,6 +216,12 @@ export default function FullScreenEditorLayout({
   structurePanel,
   children,
   active,
+  onPageUpdated,
+  onVersionConflict,
+  pageStatus,
+  visibleTransitions,
+  statusSubmitting,
+  onRequestStatusChange,
 }: FullScreenEditorLayoutProps): JSX.Element {
   const activeViewport = useActiveViewport();
   const setActiveViewport = useBlockEditorStore((state) => state.setActiveViewport);
@@ -202,6 +229,14 @@ export default function FullScreenEditorLayout({
   const toggleStructurePanel = useBlockEditorStore((state) => state.toggleStructurePanel);
   const isSidebarOpen = useIsSidebarOpen();
   const toggleSidebar = useBlockEditorStore((state) => state.toggleSidebar);
+  const isPreviewMode = useIsPreviewMode();
+  const togglePreviewMode = useBlockEditorStore((state) => state.togglePreviewMode);
+  // "Anteprima Pura" nasconde la sidebar sinistra (E01): stesso meccanismo di
+  // `isSidebarOpen` (`.sidebarCollapsed`, transizione di `flex-basis` invece di
+  // montare/smontare l'elemento), solo con una seconda condizione che lo forza chiuso.
+  // Il pulsante "+" della topbar resta comunque governato dal solo `isSidebarOpen` sotto:
+  // uscendo dall'anteprima la sidebar riappare nello stato in cui l'utente l'aveva lasciata.
+  const isSidebarVisible = isSidebarOpen && !isPreviewMode;
   const undo = useBlockEditorStore((state) => state.undo);
   const redo = useBlockEditorStore((state) => state.redo);
   const canUndo = useCanUndo();
@@ -347,7 +382,13 @@ export default function FullScreenEditorLayout({
         onRedo={redo}
         hasUnsavedChanges={hasUnsavedChanges}
         saving={saving}
-        onPublish={onSaveDraft}
+        onSaveDraft={onSaveDraft}
+        pageStatus={pageStatus}
+        visibleTransitions={visibleTransitions}
+        statusSubmitting={statusSubmitting}
+        onRequestStatusChange={onRequestStatusChange}
+        isPreviewMode={isPreviewMode}
+        onTogglePreviewMode={togglePreviewMode}
         leadingActions={
           <>
             {/* "+" Widget (restyle Elementor Pro, richiesta esplicita del task): stessa
@@ -359,6 +400,7 @@ export default function FullScreenEditorLayout({
               size="lg"
               aria-label="Mostra/Nascondi pannello widget"
               aria-pressed={isSidebarOpen}
+              disabled={isPreviewMode}
               onClick={toggleSidebar}
             >
               <IconPlus size={18} />
@@ -448,11 +490,25 @@ export default function FullScreenEditorLayout({
             colpo. `styles.sidebarCollapsed` porta la larghezza a 0 mantenendo il nodo nel
             DOM.
           */}
-            <aside className={`${styles.sidebar} ${isSidebarOpen ? '' : styles.sidebarCollapsed}`}>
-              <EditorSidebar />
+            <aside
+              className={`${styles.sidebar} ${isSidebarVisible ? '' : styles.sidebarCollapsed}`}
+            >
+              <EditorSidebar
+                page={page}
+                onPageUpdated={onPageUpdated}
+                onVersionConflict={onVersionConflict}
+              />
             </aside>
 
-            <div className={styles.canvasArea} ref={canvasAreaRef}>
+            <div
+              className={styles.canvasArea}
+              ref={canvasAreaRef}
+              // "Anteprima Pura" (E01): disattiva i contorni hover/selezione del canvas —
+              // vedi la regola `[data-preview-mode='true']` in
+              // `EditorBlockWrapper.module.css`, gate CSS puro, nessuna prop nuova sul
+              // wrapper di ogni blocco.
+              data-preview-mode={isPreviewMode || undefined}
+            >
               {/*
               `data-viewport` non pilota nessuna media query nuova (il sync col rendering
               responsive dei blocchi passa già da `container-type: inline-size` qui sotto,

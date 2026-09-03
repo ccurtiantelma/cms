@@ -5,8 +5,16 @@
  * un componente per `fieldType`. `options` è una singola stringa CSV (`kind: 'plainText'`,
  * nessun `kind` array nel registro, vedi il JSDoc di `form-field.block.ts`): il parsing è
  * responsabilità del consumer, qui e non altrove. Foglia: nessun figlio.
+ *
+ * `colSpan` (ADR-51): risolto con lo stesso `resolveResponsiveClassNames` di
+ * `Container.tsx`/`Section.tsx` (vocabolario `colSpan_*` di `style-tokens.module.css`). Un
+ * valore assente (contenuto pre-esistente, prop opzionale senza default persistito) ricade
+ * su `span 12` — lo stesso "un campo per riga" di quando `.fields` era `flex-direction:
+ * column`, mai un campo che collassa a un solo track di griglia per mancanza di classe.
  */
 import styles from './FormFieldBlock.module.css';
+import tokenStyles from '../style-tokens.module.css';
+import { resolveResponsiveClassNames } from '../style-tokens';
 
 interface FormFieldBlockProps {
   fieldType?: unknown;
@@ -15,6 +23,7 @@ interface FormFieldBlockProps {
   required?: unknown;
   placeholder?: unknown;
   options?: unknown;
+  colSpan?: unknown;
 }
 
 /** Divide la stringa CSV di `options` in valori puliti, scartando le voci vuote. */
@@ -33,12 +42,16 @@ export default function FormFieldBlock({
   required,
   placeholder,
   options,
+  colSpan,
 }: FormFieldBlockProps) {
   const fieldName = typeof name === 'string' ? name : '';
   const fieldLabel = typeof label === 'string' ? label : '';
   const isRequired = required === true;
   const fieldPlaceholder = typeof placeholder === 'string' && placeholder ? placeholder : undefined;
   const inputId = `form-field-${fieldName || 'campo'}`;
+  const colSpanClassName =
+    resolveResponsiveClassNames(tokenStyles, 'colSpan', colSpan) || tokenStyles.colSpan_default_12;
+  const fieldClassName = [styles.field, colSpanClassName].filter(Boolean).join(' ');
 
   const requiredMark = isRequired ? (
     <span className={styles.required} aria-hidden="true">
@@ -49,7 +62,7 @@ export default function FormFieldBlock({
 
   if (fieldType === 'checkbox') {
     return (
-      <div className={styles.field}>
+      <div className={fieldClassName}>
         <label className={styles.checkboxRow} htmlFor={inputId}>
           <input type="checkbox" id={inputId} name={fieldName} required={isRequired} />
           <span>
@@ -125,7 +138,7 @@ export default function FormFieldBlock({
   }
 
   return (
-    <div className={styles.field}>
+    <div className={fieldClassName}>
       <label className={styles.label} htmlFor={inputId}>
         {fieldLabel || 'Campo'}
         {requiredMark}
