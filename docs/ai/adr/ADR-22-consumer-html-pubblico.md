@@ -1,10 +1,24 @@
 # ADR-22 — Consumer HTML pubblico
 
 ## Status
-[ ] In discussione · [x] **Approvata** · [ ] Rifiutata · [ ] Superseded da ADR-XXX
+[ ] In discussione · [ ] Approvata · [ ] Rifiutata · [x] **SUPERSEDED da ADR-53**
 
 ## Data approvazione
 2026-08-17 — approvata da: ccurti
+
+> ### ⚠️ SUPERSEDED da ADR-53 — 2026-09-04
+>
+> **L'erogazione pubblica dinamica SSR via Express/`node:http` sulla porta 55000 è declassata
+> a solo uso Preview Mode (bozza/editor), protetta dal token di ADR-25.** L'erogazione di
+> produzione è trasferita alla pipeline SSG air-gapped di ADR-53: HTML compilato a
+> publish-time e sincronizzato sull'edge, nessuna connessione di rete fra superficie pubblica,
+> API NestJS e database.
+>
+> Restano in vigore, trasferiti ad ADR-53: l'invariante di escaping di `plainText` (§ 7, ora
+> verificata sull'HTML prodotto dal job di export), l'unicità dei componenti dei blocchi via
+> alias di build (§ 3) e la proprietà di `app/public-site` in capo al frontend-developer (§ 5).
+> Il superamento era già stato anticipato in forma di reinterpretazione da ADR-45 (2026-09-01);
+> ADR-53 lo formalizza.
 
 ---
 

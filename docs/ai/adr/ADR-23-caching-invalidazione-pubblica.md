@@ -1,10 +1,24 @@
 # ADR-23 — Caching e invalidazione del contenuto pubblico
 
 ## Status
-[ ] In discussione · [x] **Approvata** · [ ] Rifiutata · [ ] Superseded da ADR-XXX
+[ ] In discussione · [ ] Approvata · [ ] Rifiutata · [x] **SUPERSEDED da ADR-53**
 
 ## Data approvazione
 2026-08-17 — approvata da: ccurti
+
+> ### ⚠️ SUPERSEDED da ADR-53 — 2026-09-04
+>
+> **La cache in-memory o Redis a runtime per le rotte pubbliche è sostituita
+> dall'invalidazione/sincronizzazione statica su CDN edge al momento della pubblicazione.**
+> Nessuna chiave `public:*` viene più scritta o letta; il token di registro nella chiave, il
+> `DEL` post-commit e il job BullMQ di ricorso decadono con essa. Redis resta esclusivamente
+> backend della coda BullMQ.
+>
+> Resta in vigore, trasferito ad ADR-53, il principio della regola 8 del modello di contenuto:
+> l'aggiornamento del contenuto pubblico è guidato dall'evento di pubblicazione, mai da una
+> TTL. L'NFR di invalidazione entro 5 secondi si rilegge come "build + sync entro 5 secondi".
+> Il superamento era già stato anticipato in forma di reinterpretazione da ADR-45 (2026-09-01);
+> ADR-53 lo formalizza.
 
 ---
 

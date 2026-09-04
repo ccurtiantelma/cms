@@ -1,10 +1,22 @@
 # ADR-24 — Routing e risoluzione degli slug
 
 ## Status
-[ ] In discussione · [x] **Approvata** · [ ] Rifiutata · [ ] Superseded da ADR-XXX
+[ ] In discussione · [ ] Approvata · [ ] Rifiutata · [x] **SUPERSEDED da ADR-53**
 
 ## Data approvazione
 2026-08-17 — approvata da: ccurti
+
+> ### ⚠️ SUPERSEDED da ADR-53 — 2026-09-04
+>
+> **La risoluzione dinamica degli slug via API NestJS è sostituita dalla mappa delle rotte
+> pre-compilata a publish-time e gestita direttamente dall'infrastruttura Edge/Nginx.** La
+> discesa iterativa per segmenti (§ 1) non avviene più a ogni richiesta: diventa un calcolo del
+> job di build che emette il percorso definitivo di ciascun file statico.
+>
+> Restano in vigore, trasferite ad ADR-53 come vincoli sulla forma dell'output: la forma
+> canonica del percorso e il `308` (§ 4), la lingua di default senza prefisso (§ 5), il `404`
+> uniforme per tutto ciò che non è servibile (§ 3, ora semplicemente l'assenza del file),
+> i nomi riservati (§ 8) e il debito sui redirect (§ 6), non sanato da ADR-53.
 
 ---
 
