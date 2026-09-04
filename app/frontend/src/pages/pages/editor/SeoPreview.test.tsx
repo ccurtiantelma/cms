@@ -16,30 +16,42 @@ describe('SeoSerpPreview', () => {
     );
 
     expect(screen.getByText('Titolo breve')).toBeInTheDocument();
-    expect(
-      screen.getByText('Descrizione breve entro la soglia consigliata.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Descrizione breve entro la soglia consigliata.')).toBeInTheDocument();
     expect(screen.queryByText(/verrà troncato/)).not.toBeInTheDocument();
   });
 
-  it('mostra l’avviso di superamento soglia per titolo e description troppo lunghi', () => {
+  it('mostra titolo e description lunghi senza spostare i contatori nell’anteprima', () => {
     const longTitle = 'T'.repeat(61);
     const longDescription = 'D'.repeat(161);
     renderWithProviders(
-      <SeoSerpPreview title={longTitle} description={longDescription} url="https://example.com/pagina" />,
+      <SeoSerpPreview
+        title={longTitle}
+        description={longDescription}
+        url="https://example.com/pagina"
+      />,
     );
 
-    expect(screen.getAllByText(/verrà troncato/)).toHaveLength(2);
+    expect(screen.getByText(longTitle)).toBeInTheDocument();
+    expect(screen.getByText(longDescription)).toBeInTheDocument();
+    expect(screen.queryByText(/verrà troncato/)).not.toBeInTheDocument();
   });
 
   it('si aggiorna quando le prop cambiano (componente controllato)', () => {
     const { rerender } = renderWithProviders(
-      <SeoSerpPreview title="Primo titolo" description="Prima descrizione" url="https://example.com/a" />,
+      <SeoSerpPreview
+        title="Primo titolo"
+        description="Prima descrizione"
+        url="https://example.com/a"
+      />,
     );
     expect(screen.getByText('Primo titolo')).toBeInTheDocument();
 
     rerender(
-      <SeoSerpPreview title="Secondo titolo" description="Seconda descrizione" url="https://example.com/b" />,
+      <SeoSerpPreview
+        title="Secondo titolo"
+        description="Seconda descrizione"
+        url="https://example.com/b"
+      />,
     );
     expect(screen.getByText('Secondo titolo')).toBeInTheDocument();
     expect(screen.queryByText('Primo titolo')).not.toBeInTheDocument();
@@ -108,9 +120,7 @@ describe('SeoJsonLdInspector', () => {
     );
 
     expect(screen.getByText(/"@context": "https:\/\/manual\.example\.com"/)).toBeInTheDocument();
-    expect(
-      screen.queryByText(/"@context": "https:\/\/schema\.org"/),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/"@context": "https:\/\/schema\.org"/)).not.toBeInTheDocument();
   });
 
   it('mostra il badge "Valid Schema.org" quando la struttura minima è presente', () => {

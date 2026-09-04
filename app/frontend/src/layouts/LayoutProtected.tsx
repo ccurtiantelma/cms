@@ -157,10 +157,7 @@ export default function LayoutProtected(): JSX.Element {
           padding="md"
           classNames={{ navbar: classes.navbar, main: classes.main }}
         >
-          <AppShell.Navbar
-            data-tour="sidebar-nav"
-            className={classes.navbarSurface}
-          >
+          <AppShell.Navbar data-tour="sidebar-nav" className={classes.navbarSurface}>
             {/* Branding della sidebar. */}
             <div className={`${classes.brand} ${isCollapsed ? classes.brandCollapsed : ''}`}>
               <img className={classes.logoImage} src="/logo.png" alt="CMS" />
@@ -169,7 +166,9 @@ export default function LayoutProtected(): JSX.Element {
                   <span className={classes.brandName}>CMS</span>
                 </div>
               )}
-              <NotificationBell />
+              <div className={classes.brandNotifications}>
+                <NotificationBell />
+              </div>
             </div>
 
             {/* Voci di navigazione — sull'Editor tema diventano ancore alle sezioni
@@ -281,15 +280,9 @@ export default function LayoutProtected(): JSX.Element {
                     visibleFrom="sm"
                   >
                     {collapsed ? (
-                      <IconLayoutSidebarLeftExpand
-                        size={18}
-                        color="#242424"
-                      />
+                      <IconLayoutSidebarLeftExpand size={18} color="#242424" />
                     ) : (
-                      <IconLayoutSidebarLeftCollapse
-                        size={18}
-                        color="#242424"
-                      />
+                      <IconLayoutSidebarLeftCollapse size={18} color="#242424" />
                     )}
                   </ActionIcon>
                 </Tooltip>
@@ -300,10 +293,7 @@ export default function LayoutProtected(): JSX.Element {
                     onClick={() => logout()}
                     aria-label="Logout"
                   >
-                    <IconLogout
-                      size={18}
-                      color="#242424"
-                    />
+                    <IconLogout size={18} color="#242424" />
                   </ActionIcon>
                 </Tooltip>
               </div>

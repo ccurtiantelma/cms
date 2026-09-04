@@ -33,6 +33,7 @@ import {
 import { useAuthStore } from '../../hooks/useAuth';
 import { useColorScheme, type ColorScheme } from '../../hooks/useColorScheme';
 import { getErrorMessage } from '../../utils/api.utils';
+import { formatDate } from '../../utils/date.utils';
 import { parseDeviceLabel } from '../../utils/device.utils';
 import PasswordStrengthInput, {
   validatePasswordStrength,
@@ -547,12 +548,12 @@ export default function PageProfile(): JSX.Element {
                               </Table.Td>
                               <Table.Td>
                                 <Text size="sm">
-                                  {new Date(session.lastUsedAt).toLocaleString('it-IT')}
+                                  {formatDate(session.lastUsedAt)}
                                 </Text>
                               </Table.Td>
                               <Table.Td>
                                 <Text size="sm">
-                                  {new Date(session.createdAt).toLocaleString('it-IT')}
+                                  {formatDate(session.createdAt)}
                                 </Text>
                               </Table.Td>
                               <Table.Td>

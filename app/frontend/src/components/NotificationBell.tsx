@@ -16,12 +16,8 @@ import {
 import { useDisclosure } from '@mantine/hooks';
 import { IconBell } from '@tabler/icons-react';
 import { useNotificationsStore } from '../hooks/useNotifications';
+import { formatDate } from '../utils/date.utils';
 import classes from './NotificationBell.module.css';
-
-/** Formatta una data ISO nel formato locale italiano (data + ora). */
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('it-IT');
-}
 
 export default function NotificationBell(): JSX.Element {
   const [opened, { toggle }] = useDisclosure(false);

@@ -48,7 +48,7 @@ import {
   IconHistory,
   IconLayoutGrid,
   IconLayoutSidebarRight,
-  IconPlus,
+  IconEyeOff,
 } from '@tabler/icons-react';
 import {
   DndContext,
@@ -391,10 +391,8 @@ export default function FullScreenEditorLayout({
         onTogglePreviewMode={togglePreviewMode}
         leadingActions={
           <>
-            {/* "+" Widget (restyle Elementor Pro, richiesta esplicita del task): stessa
-                azione di sempre (mostra/nascondi il pannello Widgets), solo il glifo
-                cambia da un'icona di layout generica al "+" letterale del task — nessuna
-                modifica di comportamento. */}
+            {/* Visibilita della sidebar sinistra: l'occhio rende esplicita l'azione di mostrare
+              o nascondere il pannello, senza duplicare un controllo di aggiunta. */}
             <ActionIcon
               variant={isSidebarOpen ? 'filled' : 'subtle'}
               size="lg"
@@ -403,7 +401,7 @@ export default function FullScreenEditorLayout({
               disabled={isPreviewMode}
               onClick={toggleSidebar}
             >
-              <IconPlus size={18} />
+              {isSidebarOpen ? <IconEye size={18} /> : <IconEyeOff size={18} />}
             </ActionIcon>
             {/* Storia/Navigatore (restyle Elementor Pro): spostate qui dal gruppo di destra
                 — stessi due `ActionIcon`, stessi handler, solo la posizione nella topbar
@@ -417,15 +415,6 @@ export default function FullScreenEditorLayout({
               onClick={toggleHistory}
             >
               <IconHistory size={18} />
-            </ActionIcon>
-            <ActionIcon
-              variant={isStructurePanelOpen ? 'filled' : 'subtle'}
-              size="lg"
-              aria-label="Pannello struttura"
-              aria-pressed={isStructurePanelOpen}
-              onClick={toggleStructurePanel}
-            >
-              <IconLayoutSidebarRight size={18} />
             </ActionIcon>
           </>
         }
@@ -449,6 +438,15 @@ export default function FullScreenEditorLayout({
               onClick={() => setTemplateLibraryOpened(true)}
             >
               <IconLayoutGrid size={18} />
+            </ActionIcon>
+            <ActionIcon
+              variant={isStructurePanelOpen ? 'filled' : 'subtle'}
+              size="lg"
+              aria-label="Pannello struttura"
+              aria-pressed={isStructurePanelOpen}
+              onClick={toggleStructurePanel}
+            >
+              <IconLayoutSidebarRight size={18} />
             </ActionIcon>
           </>
         }

@@ -11,6 +11,8 @@ interface PreviewDocumentProps {
   /** Tema dell'installazione, `null` se il backend non ha risposto (vedi `ThemeStyleTag`). */
   themeConfig: ThemeConfigDto | null;
   cssHref: string;
+  /** Vedi `App.tsx` — stesso contratto di CSS critico inline (SPEC-F03 § 3.2). */
+  criticalCss: string;
   /** Isola JS di submit dei Form (F10-04) — iniettata da `PageView` solo se la Pagina ne ha bisogno. */
   formScriptHref?: string;
   /**
@@ -38,6 +40,7 @@ export default function PreviewDocument({
   page,
   themeConfig,
   cssHref,
+  criticalCss,
   formScriptHref,
   globalSections,
   resolvePageUrl,
@@ -49,6 +52,9 @@ export default function PreviewDocument({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="noindex,nofollow" />
         <title>{page.title}</title>
+        {criticalCss ? (
+          <style data-critical-css dangerouslySetInnerHTML={{ __html: criticalCss }} />
+        ) : null}
         <link rel="stylesheet" href={cssHref} />
         <ThemeStyleTag themeConfig={themeConfig} />
       </head>

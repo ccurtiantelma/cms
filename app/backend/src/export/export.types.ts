@@ -9,6 +9,16 @@ export interface PageExportJobData {
   pageId: string;
   locale: string;
   path: string;
+  /**
+   * `true` solo quando il job nasce dal fan-out di un full-site rebuild
+   * (`ExportProcessor::exportFullSite`): il chiamante rigenera già
+   * `sitemap.xml`/`robots.txt` una sola volta a fine fan-out, riusando
+   * l'enumerazione già risolta — ogni job individuale del batch salta la
+   * propria rigenerazione per non trasformare l'O(catalogo) del rebuild in
+   * O(catalogo²). Assente/`false` per ogni pubblicazione/spostamento di
+   * singola pagina, dove la rigenerazione per-pagina è invece voluta.
+   */
+  skipSitemapRegeneration?: boolean;
 }
 
 /** Rimozione del file statico su transizione fuori da `published` (RFC-44, Decisione 5). */

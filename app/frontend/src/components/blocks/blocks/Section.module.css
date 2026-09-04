@@ -38,3 +38,38 @@
   position: relative;
   z-index: 1;
 }
+
+/*
+ * Riga a piena larghezza dentro una griglia del footer pubblico (`<footer>`, Global
+ * Section slot "footer" — ADR-40, reso da `GlobalSectionSlot` in
+ * `app/public-site/src/PageView.tsx`). Ciò che il brief chiama "blocco Columns" non
+ * esiste come tipo a sé: è questa stessa `section` con `columns`/`gap` (ADR-31) — il
+ * registro non ha un sesto tipo "colonne". Un `container` figlio diretto di una `section`
+ * a griglia occupa per costruzione una singola cella (una "colonna": nel contenuto reale,
+ * `antelma-global-sections.seed.ts`, ogni colonna del footer è sempre incapsulata in un
+ * `container` proprio); la riga dei dati legali e quella dei link Privacy/Cookie sono gli
+ * ultimi due figli di quella stessa griglia e restano invece incapsulate in una sola
+ * cella quando la griglia va a capo, invece di estendersi su tutte le colonne come una
+ * vera riga a sé.
+ *
+ * Il registro blocchi non ha, su `container`, una prop che marchi esplicitamente "estendi
+ * su tutta la riga della griglia" (la sola prop di stile propria del tipo è
+ * `styleFlexBasis`, ADR-39 § 2, pensata per una percentuale fissa di riga — non per uno
+ * span di griglia): introdurne una richiederebbe una nuova ADR sul registro blocchi,
+ * fuori scope di una correzione CSS. In sua assenza l'aggancio qui è strutturale
+ * (`:nth-last-child`) e scoped al solo `<footer>` pubblico — non tocca il comportamento
+ * generico della griglia (`.columns_default_*`/`.gap_default_*` in
+ * `style-tokens.module.css`, condivisa da ogni uso di `section`, incluso l'Header) né
+ * quello di `container` altrove nella pagina.
+ *
+ * Limite noto (da riportare, non silenziare): l'aggancio presuppone che le ultime due
+ * righe di una griglia dentro `<footer>` siano sempre bande a piena larghezza — vero per
+ * il contenuto oggi seedato, ma non verificabile in puro CSS per un footer editoriale
+ * futuro dalla forma diversa (es. quattro colonne "vere" senza righe finali). La
+ * correzione definitiva è una prop dedicata sul registro `container` (fuori scope qui).
+ */
+:global(footer) .section > :global(div):nth-last-child(-n + 2) {
+  grid-column: 1 / -1;
+  width: 100%;
+  text-align: center;
+}

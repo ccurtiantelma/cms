@@ -43,11 +43,23 @@ export class ExportService {
     private readonly queue: Queue<StaticExportJobData>,
   ) {}
 
-  /** Accoda la (ri)generazione del file statico di una Pagina pubblicata. */
-  async enqueuePageExport(pageId: string, locale: string, path: string): Promise<void> {
+  /**
+   * Accoda la (ri)generazione del file statico di una Pagina pubblicata.
+   * `skipSitemapRegeneration` è `true` solo per il fan-out interno di un
+   * full-site rebuild (`ExportProcessor::exportFullSite`), che rigenera
+   * `sitemap.xml`/`robots.txt` una volta sola a fine batch — ogni altro
+   * chiamante (pubblicazione, cambio slug/genitore) lo lascia `false` per
+   * ottenere la rigenerazione immediata per-pagina.
+   */
+  async enqueuePageExport(
+    pageId: string,
+    locale: string,
+    path: string,
+    skipSitemapRegeneration = false,
+  ): Promise<void> {
     await this.queue.add(
       'export-page',
-      { kind: 'page', pageId, locale, path },
+      { kind: 'page', pageId, locale, path, skipSitemapRegeneration },
       SINGLE_PAGE_JOB_OPTS,
     );
     this.logger.log(`Export statico accodato (pageId=${pageId}, locale=${locale}, path=${path}).`);

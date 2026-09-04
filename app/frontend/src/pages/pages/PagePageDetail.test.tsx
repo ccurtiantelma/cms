@@ -199,3 +199,46 @@ describe('PagePageDetail — invocazione del cambio di stato', () => {
     await waitFor(() => expect(fetchPage).toHaveBeenCalledTimes(2));
   });
 });
+
+describe('PagePageDetail — scheda Metadati, slug "home" (ADR-24 § 7)', () => {
+  it('su una Pagina con slug diverso da "home" mostra il pulsante "Imposta come Home Page", che al click imposta lo slug e disabilita l\'input', async () => {
+    mockAuthUser = authUser(AppUserRoles.Manager);
+    fetchPage.mockResolvedValue(page({ slug: 'chi-siamo', parentGuid: 'p1b2c3d4e5f6a7b8' }));
+    renderDetail();
+
+    await screen.findByRole('button', { name: 'Bozza' });
+
+    const slugInput = await screen.findByLabelText('Slug', { exact: false });
+    expect(slugInput).toHaveValue('chi-siamo');
+    expect(slugInput).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Imposta come Home Page' })).toBeInTheDocument();
+    expect(screen.queryByText('Home Page (Radice)')).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Imposta come Home Page' }));
+
+    const updatedSlugInput = await screen.findByLabelText('Slug', { exact: false });
+    expect(updatedSlugInput).toHaveValue('/');
+    expect(updatedSlugInput).toBeDisabled();
+    expect(screen.getByText('Home Page (Radice)')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Imposta come Home Page' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('su una Pagina con slug "home" mostra l\'input disabilitato con "/" e il badge, senza il pulsante', async () => {
+    mockAuthUser = authUser(AppUserRoles.Manager);
+    fetchPage.mockResolvedValue(page({ slug: 'home', parentGuid: null }));
+    renderDetail();
+
+    await screen.findByRole('button', { name: 'Bozza' });
+
+    const slugInput = await screen.findByLabelText('Slug', { exact: false });
+    expect(slugInput).toHaveValue('/');
+    expect(slugInput).toBeDisabled();
+    expect(screen.getByText('Home Page (Radice)')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Imposta come Home Page' }),
+    ).not.toBeInTheDocument();
+  });
+});

@@ -108,7 +108,12 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
 
   switch (resolution.kind) {
     case 'ok': {
-      const html = isHead ? undefined : await renderPageDocument(resolution.page, css.href, formSubmitScript.href);
+      // `url.pathname` è già il percorso canonico: `resolvePublicPage` avrebbe
+      // risposto `redirect` (case sotto) se non lo fosse (ADR-24 § 4) — nessun
+      // ricalcolo qui, si passa lo stesso percorso già usato per la richiesta.
+      const html = isHead
+        ? undefined
+        : await renderPageDocument(resolution.page, css.href, formSubmitScript.href, url.pathname);
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(html);
       if (!isHead) ingestPageview(url.pathname);

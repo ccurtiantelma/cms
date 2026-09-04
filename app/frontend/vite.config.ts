@@ -4,10 +4,12 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: '0.0.0.0',
-    // Porta host non standard di proposito: il progetto gira sempre in
-    // parallelo con altri stack sulla stessa macchina, vedi il commento di
-    // testa di docker-compose.yml (root).
+    // Non specificare 'host' (come fanno backend e public-site, che infatti
+    // vengono agganciati dal relay localhost di WSL2/Windows): '0.0.0.0'
+    // forzava il bind al solo IPv4 e wslrelay.exe su Windows non creava il
+    // listener per questa porta — verificato con `netstat` lato Windows,
+    // le altre due porte comparivano, questa no.
+    host: true,
     port: 55173,
     proxy: {
       '/api': {

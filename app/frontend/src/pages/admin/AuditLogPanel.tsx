@@ -10,10 +10,7 @@ import { usePaginatedList } from '../../hooks/usePaginatedList';
 import ListToolbar from '../../components/ListToolbar';
 import ContentCard from '../../components/ContentCard';
 import ResponsiveTable, { type ResponsiveTableColumn } from '../../components/ResponsiveTable';
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('it-IT');
-}
+import { formatDate } from '../../utils/date.utils';
 
 /** Elenco in sola lettura delle azioni sensibili registrate. */
 export default function AuditLogPanel(): JSX.Element {

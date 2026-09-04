@@ -220,4 +220,14 @@ export class AppConstants {
   static readonly staticExportPath = str('STATIC_EXPORT_PATH', 'dist/static-site');
   /** Dimensione dei batch di fan-out del full-site rebuild (RFC-44 § Decisione 4): backpressure, mai tutto in un solo giro. */
   static readonly staticExportFullSiteBatchSize = num('STATIC_EXPORT_FULL_SITE_BATCH_SIZE', 50);
+
+  /**
+   * Origine assoluta (schema+host) del sito pubblico servito dall'edge
+   * air-gapped (ADR-53 § 4) — distinta da `publicSiteUrl`, che è l'origine
+   * *interna* del motore di rendering/anteprima (loopback, mai esposta).
+   * Serve solo a comporre URL assolute in `sitemap.xml`/`robots.txt`
+   * (SPEC-F03 § 4.2): nessun'altra parte del sistema ne ha bisogno, perché
+   * l'HTML esportato usa sempre percorsi relativi (ADR-24 § 4).
+   */
+  static readonly staticSiteBaseUrl = str('STATIC_SITE_BASE_URL', 'http://localhost');
 }

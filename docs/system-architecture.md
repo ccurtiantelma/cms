@@ -3,8 +3,11 @@
 > Descrizione di come il sistema è fatto **oggi**, più i punti di aggancio previsti per
 > il dominio CMS. Priorità: dopo Glossary.
 >
-> Ultima revisione: 2026-08-13 — allineata alla nuova identità (CMS headless a pagine) e
-> corretta la tabella delle porte, che divergeva dalla configurazione reale.
+> Ultima revisione: 2026-09-04 — aggiunta la topologia di rete Air-Gapped SSG (ADR-53):
+> separazione fra Piano di Gestione e Piano di Erogazione Pubblica, regola di air-gap,
+> porta `app/public-site` (55000). Aggiornamento su richiesta umana esplicita, task di
+> allineamento documentale ad ADR-53; non tocca le sezioni non relative alla topologia
+> pubblica (restano riferite alla revisione del 2026-08-13).
 
 ---
 
@@ -13,8 +16,9 @@
 ```
 cms/
 ├── app/
-│   ├── backend/    ← NestJS 11, porta 3000
-│   └── frontend/   ← React 19 + Vite, porta 5173
+│   ├── backend/       ← NestJS 11, porta 3000
+│   ├── frontend/      ← React 19 + Vite, porta 5173
+│   └── public-site/   ← Motore di rendering/anteprima, porta 55000 (ADR-53, § Topologia)
 ├── bruno/          ← Collezioni API testing (OpenCollection YAML)
 ├── e2e/            ← Test browser Playwright
 └── docs/
@@ -36,12 +40,99 @@ mai servite dallo stesso controller.
 | Autorizzazione | RBAC a soglie di ruolo | Nessuna |
 | Operazioni | Lettura e scrittura | **Sola lettura** |
 | Contenuto visibile | Tutti gli stati | Solo `published` |
-| Cache | Mai | Redis, invalidazione per evento |
+| Cache | Mai | — (vedi nota) |
 | Rate limiting | Standard | Proprio, più stringente |
-| Stato | ✅ Attiva | 🔜 Prevista con F03 |
+| Stato | ✅ Attiva | ✅ Attiva (F03), architettura Air-Gapped SSG — vedi § Topologia sotto |
+
+> **Nota post-ADR-53**: `api/v1/public/*` resta il contratto di lettura usato **solo**
+> internamente, dal job di export statico e dalla rotta di anteprima (ADR-25) — non è più
+> il percorso del traffico anonimo di produzione, che è servito da file HTML pre-compilati
+> su storage edge (§ Topologia). La riga "Cache: Redis, invalidazione per evento" di ADR-23
+> descriveva quel traffico anonimo: con ADR-53 quel traffico non passa più da qui, e Redis
+> non ha più chiavi `public:*` (resta solo backend BullMQ).
 
 Gli endpoint di autenticazione restano sotto `api/v1/auth/`.
 Swagger UI (solo fuori produzione): `api/v1/docs`.
+
+---
+
+## Topologia di rete — Piano di Gestione vs Piano di Erogazione Pubblica (ADR-53)
+
+Con **ADR-53** (supera ADR-22/ADR-23/ADR-24, completa ADR-45) il sistema è composto da due
+piani infrastrutturali distinti, con un solo canale ammesso fra loro: **push**, mai **pull**.
+
+- **Piano di Gestione** — Backend NestJS (porta 3000), PostgreSQL, Redis (solo backend
+  BullMQ da F03 in poi), il motore di rendering `app/public-site` (porta 55000, uso interno +
+  anteprima autenticata). Qui vive ogni scrittura, ogni stato, ogni segreto.
+- **Piano di Erogazione Pubblica** — storage edge (CDN, bucket S3-compatibile o volume Nginx
+  isolato) che serve file `.html`/asset statici al traffico anonimo. Nessun processo
+  applicativo, nessun database, nessuna sessione.
+
+L'unico punto di attraversamento fra i due piani è il **worker della coda `static-export`**
+(`app/backend/src/export/`, ADR-45): legge dal Piano di Gestione, scrive/spinge verso il
+Piano di Erogazione Pubblica. Nessun altro componente attraversa il confine.
+
+```mermaid
+flowchart LR
+    subgraph mgmt["Piano di Gestione (rete privata)"]
+        direction TB
+        admin["Admin SPA\n(React 19 + Mantine)"] -->|"JWT + RBAC\napi/v1/app/*"| backend["Backend NestJS\n:3000"]
+        backend --> pg[("PostgreSQL")]
+        backend --> redis[("Redis\n(solo BullMQ)")]
+        backend -->|"coda static-export"| worker["Export Worker\n(BullMQ processor)"]
+        worker -->|"HTTP interno\nGET /&lt;path&gt;"| preview["app/public-site\n:55000 (renderer)"]
+        admin -->|"JWT purpose:\npage-preview (ADR-25)"| preview
+    end
+
+    subgraph edge["Piano di Erogazione Pubblica (rete pubblica)"]
+        direction TB
+        storage[("Storage edge\nCDN / S3 / volume Nginx isolato")]
+        nginx["Nginx / CDN edge"]
+        storage --> nginx
+    end
+
+    worker -->|"PUSH — write(path, bytes)\nmai pull"| storage
+
+    visitor(["Visitatore anonimo"]) -->|"GET https://sito/..."| nginx
+
+    classDef airgap stroke-dasharray: 5 5,stroke:#c0392b,stroke-width:2px;
+    class visitor,nginx airgap
+```
+
+**Regola Air-Gap (vincolante, ADR-53 § 4/Conformità)**: nessun canale di rete in ingresso
+(PULL) è consentito dalla superficie pubblica (visitatore, Nginx/CDN edge) verso il Piano di
+Gestione (PostgreSQL, Redis, backend NestJS). Il visitatore anonimo non raggiunge mai
+`api/v1/*`; l'unico traffico che attraversa il confine è quello generato **dal Piano di
+Gestione verso lo storage edge** (push del worker di export). La regola è **di
+infrastruttura/rete** (firewall, security group, assenza di rotta), verificabile a livello di
+configurazione di deploy — non una convenzione applicativa che un controller potrebbe violare
+domani.
+
+```mermaid
+sequenceDiagram
+    participant Editor as Redattore (Admin SPA)
+    participant Backend as Backend NestJS
+    participant Queue as Coda static-export (BullMQ)
+    participant Renderer as app/public-site (:55000)
+    participant Edge as Storage edge / CDN
+    participant Visitor as Visitatore anonimo
+
+    Editor->>Backend: POST app/pages/:guid/status (publish)
+    Backend->>Backend: publishTransactionally() — Revisione + SeoGraphService
+    Backend->>Queue: enqueuePageExport(pageId, locale, path)
+    Queue->>Renderer: GET /<path> (HTTP interno, rete privata)
+    Renderer-->>Queue: HTML5 statico (renderToStaticMarkup)
+    Queue->>Edge: PUSH write(path, html) — mai pull
+    Note over Edge,Visitor: Air-gap: nessuna rotta da qui verso Backend/PostgreSQL/Redis
+    Visitor->>Edge: GET https://sito/<path>
+    Edge-->>Visitor: HTML già compilato (nessuna query, nessun rendering a runtime)
+```
+
+**Conseguenze dirette sulla tabella delle superfici API** sopra: la superficie pubblica
+storica (`api/v1/public/*`) non sparisce — resta il contratto che il worker di export e la
+rotta di anteprima usano internamente — ma cessa di essere ciò che il traffico anonimo
+raggiunge. Il vero "endpoint pubblico" in produzione, dal punto di vista del visitatore, è
+oggi lo storage edge, fuori dal perimetro `api/v1`.
 
 ---
 
@@ -437,6 +528,7 @@ Decisione e alternative valutate: `docs/ai/adr/ADR-15-observability-sentry-prome
 |---|---|---|---|
 | NestJS backend | 3000 | — | `PORT` in `.env` |
 | Vite frontend | 5173 | — | `vite.config.ts` |
+| `app/public-site` (renderer/anteprima) | 55000 | — | Solo rete interna + anteprima admin (ADR-25/ADR-53 § 5), **non** il traffico pubblico di produzione |
 | PostgreSQL | 5432 | 5432 | `docker-compose.yml` |
 | Redis | 6379 | 6379 | `docker-compose.yml` |
 | Mailhog SMTP | 1025 | 1025 | `SMTP_PORT` |
@@ -490,7 +582,10 @@ macchina è garantito dal nome del progetto Compose (`name: cms`), non da porte 
   aggiunti dall'ambiente di hosting davanti a `frontend`/`backend`
 - Decisione e alternative valutate: `docs/ai/adr/ADR-6-containerizzazione-produzione.md`
 
-> **Nota per il dominio CMS**: quando esisterà la superficie pubblica di lettura (F03), il
-> reverse proxy davanti al backend diventa il punto naturale per la cache HTTP e per il
-> rate limiting degli endpoint anonimi. Va deciso con ADR insieme alla strategia di
-> invalidazione, non improvvisato in fase di deploy.
+> **Nota per il dominio CMS — superata da ADR-53**: l'ipotesi originaria (reverse proxy
+> davanti al backend come punto di cache/rate-limiting del traffico pubblico) presupponeva un
+> traffico anonimo che raggiunge ancora NestJS. Con l'architettura Air-Gapped SSG (ADR-53,
+> § Topologia sopra) quel traffico non arriva più al backend: il reverse proxy/CDN edge serve
+> file statici pre-compilati dal worker `static-export`, e il rate limiting del solo
+> `api/v1/public/*` resta rilevante per il traffico interno (export + anteprima), non per il
+> visitatore anonimo.

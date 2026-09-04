@@ -17,6 +17,7 @@ import {
   type PageStatus,
 } from '../../../types/pages.types';
 import ViewportSelector from './ViewportSelector';
+import NotificationBell from '../../../components/NotificationBell';
 import styles from './Toolbar.module.css';
 
 /**
@@ -109,6 +110,10 @@ export default function Toolbar({
         <span className={styles.logo} aria-hidden="true">
           {BRAND_INITIAL}
         </span>
+        <Text size="sm" fw={600} className={styles.pageTitle} title={pageTitle}>
+          {pageTitle}
+        </Text>
+        <NotificationBell />
         <Tooltip label="Torna alla Dashboard" withArrow>
           <ActionIcon
             component="a"
@@ -120,9 +125,6 @@ export default function Toolbar({
             <IconArrowLeft size={18} />
           </ActionIcon>
         </Tooltip>
-        <Text size="sm" fw={600} className={styles.pageTitle} title={pageTitle}>
-          {pageTitle}
-        </Text>
         {pageStatus && (
           <Badge color={PAGE_STATUS_COLORS[pageStatus]} variant="light" size="sm">
             {PAGE_STATUS_LABELS[pageStatus]}
@@ -204,6 +206,7 @@ export default function Toolbar({
           shadow="md"
           position="bottom-end"
           withinPortal
+          zIndex={1100}
           disabled={!canChangeStatus || statusSubmitting}
         >
           <Menu.Target>

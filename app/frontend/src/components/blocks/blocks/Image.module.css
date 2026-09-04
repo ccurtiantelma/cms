@@ -2,3 +2,23 @@
   max-width: 100%;
   display: block;
 }
+
+/*
+ * Vincolo dimensionale contestuale per un blocco `image` annidato dentro l'header
+ * pubblico (`<header>`, Global Section slot "header" — ADR-40, reso da
+ * `GlobalSectionSlot` in `app/public-site/src/PageView.tsx`). Il registro blocchi non ha
+ * un sesto tipo "logo" né una prop che marchi un'istanza di `image` come tale (ADR-21: un
+ * sesto tipo richiederebbe una nuova firma, fuori scope di una correzione CSS) — nel
+ * contenuto reale (`antelma-global-sections.seed.ts`, header) l'unico `image` presente
+ * nell'Header è proprio il logo del brand, quindi l'ancestor semantico `<header>` è
+ * l'aggancio corretto: contestuale, non un vincolo globale su `.image` (che altrove nella
+ * pagina — Hero, corpo, footer — resta senza limiti di altezza).
+ * `object-fit: contain` + `width: auto` mantengono le proporzioni originali del file
+ * (mai uno stretch): l'altezza massima segue la fascia richiesta per un logo in barra di
+ * navigazione (48–60px), qui a metà scala.
+ */
+:global(header) .image {
+  max-height: 56px;
+  width: auto;
+  object-fit: contain;
+}

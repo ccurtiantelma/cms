@@ -24,6 +24,7 @@ function buildChain(dimensions: { width?: number; height?: number }) {
   chain.extract = jest.fn().mockReturnValue(chain);
   chain.resize = jest.fn().mockReturnValue(chain);
   chain.webp = jest.fn().mockReturnValue(chain);
+  chain.avif = jest.fn().mockReturnValue(chain);
   chain.toBuffer = jest.fn().mockResolvedValue(outputBuffer);
   return chain;
 }
@@ -90,11 +91,18 @@ describe('MediaProcessor (unit)', () => {
     });
     expect(sourceChain.resize).not.toHaveBeenCalled();
     expect(sourceChain.webp).toHaveBeenCalledWith({ quality: 80 });
+    expect(sourceChain.avif).toHaveBeenCalledWith({ quality: 60 });
     expect(storageDriver.upload).toHaveBeenCalledWith(
       expect.any(String),
       outputBuffer,
       'image/webp',
     );
+    expect(storageDriver.upload).toHaveBeenCalledWith(
+      expect.any(String),
+      outputBuffer,
+      'image/avif',
+    );
+    expect(insertValuesMock).toHaveBeenCalledTimes(2);
     expect(insertValuesMock).toHaveBeenCalledWith(
       expect.objectContaining({
         mimeType: 'image/webp',
@@ -102,6 +110,12 @@ describe('MediaProcessor (unit)', () => {
         entity: sourceRow.entity,
         entityId: sourceRow.entityId,
         sizeBytes: outputBuffer.length,
+      }),
+    );
+    expect(insertValuesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mimeType: 'image/avif',
+        parentFileId: sourceRow.id,
       }),
     );
   });

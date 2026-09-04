@@ -1,0 +1,14 @@
+.seoImageField {
+  flex: 1;
+}
+
+.seoPreviewColumn {
+  position: sticky;
+  top: 16px;
+}
+
+@media (max-width: 62em) {
+  .seoPreviewColumn {
+    position: static;
+  }
+}

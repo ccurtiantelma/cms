@@ -19,11 +19,13 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActionIcon,
   Badge,
   Button,
   Center,
   Code,
   Divider,
+  Grid,
   Group,
   Loader,
   Menu,
@@ -56,6 +58,7 @@ import {
 import { useParams } from 'react-router-dom';
 import type { AxiosError } from 'axios';
 import { getErrorMessage } from '../../utils/api.utils';
+import { formatDate } from '../../utils/date.utils';
 import type { PaginationParams } from '../../types/common.types';
 import {
   changePageStatus,
@@ -96,6 +99,10 @@ import ContentCard from '../../components/ContentCard';
 import ListToolbar from '../../components/ListToolbar';
 import ResponsiveTable, { type ResponsiveTableColumn } from '../../components/ResponsiveTable';
 import ConfirmModal from '../../components/ConfirmModal';
+import ParentPageSelectorDrawer from './components/ParentPageSelectorDrawer';
+import MediaLibraryModal from '../../components/media/MediaLibraryModal';
+import { resolveMediaSrc } from '../../components/blocks/media-url';
+import styles from './PagePageDetail.module.css';
 
 /**
  * Scarto entro cui `updatedAt` e `publishedAt` si considerano lo stesso istante. Copre le
@@ -148,11 +155,6 @@ function linesToArray(text: string): string[] | undefined {
   return lines.length > 0 ? lines : undefined;
 }
 
-/** Formatta una data ISO nel formato locale italiano (data + ora). */
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('it-IT');
-}
-
 /**
  * URL da mostrare nell'anteprima SERP live: canonica se compilata, altrimenti dedotta dallo
  * slug corrente del form. A differenza di `usePublicPageUrl` (che risale gli antenati con una
@@ -202,6 +204,14 @@ function seoFaq(seo: Record<string, unknown>): PageFaqEntry[] {
     }));
 }
 
+/**
+ * Slug riservato alla home page (ADR-24 § 7, `HOME_SLUG` in
+ * `app/backend/src/pages/public-path.util.ts`): una Pagina senza genitore con questo slug
+ * è servita su `/`. Nessun flag DB dedicato — è pura convenzione sullo slug, già applicata
+ * dal backend; qui serve solo a pilotare l'interfaccia (input disabilitato + badge).
+ */
+const HOME_SLUG = 'home';
+
 /** Ricostruisce i valori del form Metadati + SEO a partire da una `PageRecord`. */
 function pageToFormValues(page: PageRecord): MetadataFormValues {
   const seo = page.draftSeo ?? {};
@@ -234,6 +244,7 @@ export default function PagePageDetail(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [mediaLibraryOpened, setMediaLibraryOpened] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
 
   const [transitionTarget, setTransitionTarget] = useState<PageStatus | null>(null);
@@ -605,6 +616,13 @@ export default function PagePageDetail(): JSX.Element {
    * rule (`docs/business-rules.md` § SEO): `ogTitle || metaTitle || title`,
    * `ogDescription || metaDescription`.
    */
+  /**
+   * Vero quando lo slug corrente del form coincide con `HOME_SLUG`: pilota solo l'interfaccia
+   * (input disabilitato "/" + badge invece del pulsante "Imposta come Home Page") — la
+   * convenzione che rende la Pagina effettivamente la home è tutta lato backend (ADR-24 § 7).
+   */
+  const isHome = form.values.slug.trim() === HOME_SLUG;
+
   const seoPreviewUrl = resolveSerpPreviewUrl(form.values.canonicalUrl, form.values.slug);
   const seoPreviewDomain = extractHost(seoPreviewUrl);
   const seoPreviewTitle = form.values.metaTitle || form.values.title;
@@ -720,7 +738,7 @@ export default function PagePageDetail(): JSX.Element {
                   variant="default"
                   leftSection={<IconExternalLink size={16} />}
                 >
-                  Vedi pagina
+                  Anteprima
                 </Button>
                 {/*
                   Avviso non bloccante, non un'interdizione: il link resta un vero `href`
@@ -764,13 +782,15 @@ export default function PagePageDetail(): JSX.Element {
                 Anteprima
               </Button>
             )}
-            <Button
-              variant="default"
-              leftSection={<IconRefresh size={16} />}
-              onClick={() => void loadPage()}
-            >
-              Ricarica
-            </Button>
+            <Tooltip label="Ricarica" withArrow>
+              <ActionIcon
+                variant="default"
+                aria-label="Ricarica"
+                onClick={() => void loadPage()}
+              >
+                <IconRefresh size={16} />
+              </ActionIcon>
+            </Tooltip>
           </Group>
         </Group>
 
@@ -822,17 +842,44 @@ export default function PagePageDetail(): JSX.Element {
               <Stack gap="lg">
                 <Stack gap="sm">
                   <TextInput label="Titolo" withAsterisk {...form.getInputProps('title')} />
-                  <TextInput label="Slug" withAsterisk {...form.getInputProps('slug')} />
-                  <TextInput
-                    label="Lingua"
-                    value={page.locale}
-                    disabled
-                    description="Non modificabile dopo la creazione (F05)"
-                  />
-                  <TextInput
-                    label="Pagina genitore (guid)"
-                    placeholder="lascia vuoto per spostare in radice"
-                    {...form.getInputProps('parentGuid')}
+                  {/*
+                    Slug + azione Home Page: `isHome` (derivato da `form.values.slug`, sopra)
+                    pilota entrambe le colonne. Quando è la home, l'input mostra `/` senza
+                    essere collegato a `form.getInputProps('slug')` — altrimenti mostrerebbe il
+                    valore reale `home` invece della radice pubblica che rappresenta.
+                  */}
+                  <Grid gutter="sm" align="flex-end">
+                    <Grid.Col span={8}>
+                      {isHome ? (
+                        <TextInput label="Slug" value="/" disabled />
+                      ) : (
+                        <TextInput label="Slug" withAsterisk {...form.getInputProps('slug')} />
+                      )}
+                    </Grid.Col>
+                    <Grid.Col span={4}>
+                      <Stack justify="flex-end" h="100%">
+                        {isHome ? (
+                          <Badge color="green" variant="light">
+                            Home Page (Radice)
+                          </Badge>
+                        ) : (
+                          <Button
+                            variant="light"
+                            onClick={() => {
+                              form.setFieldValue('slug', HOME_SLUG);
+                              form.setFieldValue('parentGuid', '');
+                            }}
+                          >
+                            Imposta come Home Page
+                          </Button>
+                        )}
+                      </Stack>
+                    </Grid.Col>
+                  </Grid>
+                  <ParentPageSelectorDrawer
+                    currentPageGuid={page.guid}
+                    value={form.values.parentGuid}
+                    onChange={(parentGuid) => form.setFieldValue('parentGuid', parentGuid)}
                   />
                 </Stack>
 
@@ -866,57 +913,135 @@ export default function PagePageDetail(): JSX.Element {
 
           {/* --- SEO (motori di ricerca classici) --- */}
           <Tabs.Panel value="seo" pt="md">
-            <form onSubmit={form.onSubmit((values) => void handleMetadataSubmit(values))}>
-              <Stack gap="lg">
-                <Stack gap="sm">
-                  <TextInput label="Meta title" {...form.getInputProps('metaTitle')} />
-                  <Textarea
-                    label="Meta description"
-                    autosize
-                    minRows={2}
-                    {...form.getInputProps('metaDescription')}
+            <Grid gutter="xl" align="start">
+              <Grid.Col span={{ base: 12, md: 7 }}>
+                <form onSubmit={form.onSubmit((values) => void handleMetadataSubmit(values))}>
+                  <Stack gap="lg">
+                    <Stack gap="sm">
+                      <TextInput
+                        label={
+                          <Group gap={6}>
+                            <span>Meta title</span>
+                            <Badge
+                              size="xs"
+                              variant="light"
+                              color={form.values.metaTitle.length > 60 ? 'orange' : 'gray'}
+                            >
+                              {form.values.metaTitle.length}/60
+                            </Badge>
+                          </Group>
+                        }
+                        {...form.getInputProps('metaTitle')}
+                      />
+                      <Textarea
+                        label={
+                          <Group gap={6}>
+                            <span>Meta description</span>
+                            <Badge
+                              size="xs"
+                              variant="light"
+                              color={form.values.metaDescription.length > 160 ? 'orange' : 'gray'}
+                            >
+                              {form.values.metaDescription.length}/160
+                            </Badge>
+                          </Group>
+                        }
+                        autosize
+                        minRows={2}
+                        {...form.getInputProps('metaDescription')}
+                      />
+                      <TextInput label="URL canonica" {...form.getInputProps('canonicalUrl')} />
+                      <Group grow>
+                        <Select
+                          label="Indicizzazione"
+                          data={[
+                            { value: 'index', label: 'index' },
+                            { value: 'noindex', label: 'noindex' },
+                          ]}
+                          allowDeselect={false}
+                          {...form.getInputProps('robotsIndex')}
+                        />
+                        <Select
+                          label="Crawling link"
+                          data={[
+                            { value: 'follow', label: 'follow' },
+                            { value: 'nofollow', label: 'nofollow' },
+                          ]}
+                          allowDeselect={false}
+                          {...form.getInputProps('robotsFollow')}
+                        />
+                      </Group>
+                      <TextInput label="Open Graph — titolo" {...form.getInputProps('ogTitle')} />
+                      <Textarea
+                        label="Open Graph — descrizione"
+                        autosize
+                        minRows={2}
+                        {...form.getInputProps('ogDescription')}
+                      />
+                      <Group align="flex-end" wrap="nowrap">
+                        <TextInput
+                          label="Open Graph (immagine)"
+                          value={form.values.ogImage ? 'Immagine selezionata' : 'Nessuna immagine'}
+                          readOnly
+                          className={styles.seoImageField}
+                        />
+                        <Button
+                          type="button"
+                          variant="light"
+                          leftSection={<IconCirclePlus size={16} />}
+                          onClick={() => setMediaLibraryOpened(true)}
+                        >
+                          Scegli immagine
+                        </Button>
+                      </Group>
+                      {form.values.ogImage && (
+                        <Button
+                          type="button"
+                          variant="subtle"
+                          color="red"
+                          size="xs"
+                          onClick={() => form.setFieldValue('ogImage', '')}
+                        >
+                          Rimuovi immagine
+                        </Button>
+                      )}
+                    </Stack>
+
+                    <Group justify="flex-end">
+                      <Button type="submit" loading={submitting} disabled={!form.isValid()}>
+                        Salva
+                      </Button>
+                    </Group>
+                  </Stack>
+                </form>
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, md: 5 }} className={styles.seoPreviewColumn}>
+                <Stack gap="lg">
+                  <Divider label="Anteprima" labelPosition="left" />
+                  <SeoSerpPreview
+                    title={seoPreviewTitle}
+                    description={seoPreviewDescription}
+                    url={seoPreviewUrl}
                   />
-                  <TextInput label="URL canonica" {...form.getInputProps('canonicalUrl')} />
-                  <Group grow>
-                    <Select
-                      label="Indicizzazione"
-                      data={[
-                        { value: 'index', label: 'index' },
-                        { value: 'noindex', label: 'noindex' },
-                      ]}
-                      allowDeselect={false}
-                      {...form.getInputProps('robotsIndex')}
-                    />
-                    <Select
-                      label="Crawling link"
-                      data={[
-                        { value: 'follow', label: 'follow' },
-                        { value: 'nofollow', label: 'nofollow' },
-                      ]}
-                      allowDeselect={false}
-                      {...form.getInputProps('robotsFollow')}
-                    />
-                  </Group>
-                  <TextInput label="Open Graph — titolo" {...form.getInputProps('ogTitle')} />
-                  <Textarea
-                    label="Open Graph — descrizione"
-                    autosize
-                    minRows={2}
-                    {...form.getInputProps('ogDescription')}
-                  />
-                  <TextInput
-                    label="Open Graph — immagine (URL)"
-                    {...form.getInputProps('ogImage')}
+                  <SeoSocialPreview
+                    title={ogPreviewTitle}
+                    description={ogPreviewDescription}
+                    image={form.values.ogImage}
+                    domain={seoPreviewDomain}
                   />
                 </Stack>
-
-                <Group justify="flex-end">
-                  <Button type="submit" loading={submitting} disabled={!form.isValid()}>
-                    Salva
-                  </Button>
-                </Group>
-              </Stack>
-            </form>
+              </Grid.Col>
+            </Grid>
+            <MediaLibraryModal
+              opened={mediaLibraryOpened}
+              onClose={() => setMediaLibraryOpened(false)}
+              currentGuid={undefined}
+              onSelect={(file) => {
+                form.setFieldValue('ogImage', resolveMediaSrc(file.guid));
+                setMediaLibraryOpened(false);
+              }}
+              zIndex={1200}
+            />
 
             {/*
               Anteprime live (chrome dell'editor, puramente presentazionali — nessuna chiamata
@@ -924,20 +1049,6 @@ export default function PagePageDetail(): JSX.Element {
               ancora di "Salva". Le checklist di lunghezza sono consultive (business rule 4),
               mai un blocco alla pubblicazione.
             */}
-            <Divider label="Anteprima" labelPosition="left" mt="lg" />
-            <Stack gap="lg" mt="sm">
-              <SeoSerpPreview
-                title={seoPreviewTitle}
-                description={seoPreviewDescription}
-                url={seoPreviewUrl}
-              />
-              <SeoSocialPreview
-                title={ogPreviewTitle}
-                description={ogPreviewDescription}
-                image={form.values.ogImage}
-                domain={seoPreviewDomain}
-              />
-            </Stack>
           </Tabs.Panel>
 
           {/* --- GEO (motori generativi): non è "SEO avanzato", è un altro consumatore --- */}
@@ -1031,7 +1142,9 @@ export default function PagePageDetail(): JSX.Element {
                 pageTitle={seoPreviewTitle}
                 description={seoPreviewDescription}
                 faq={form.values.faq}
-                manualStructuredData={page.draftSeo?.structuredData as Record<string, unknown> | undefined}
+                manualStructuredData={
+                  page.draftSeo?.structuredData as Record<string, unknown> | undefined
+                }
               />
             </Stack>
           </Tabs.Panel>

@@ -8,6 +8,7 @@ import {
   resolvePageGuidsToPaths,
 } from './public-api-client';
 import { blocksOf } from './PageView';
+import { buildCriticalCss } from './critical-css';
 import App from './App';
 import ErrorDocument from './ErrorDocument';
 import PreviewDocument from './PreviewDocument';
@@ -88,16 +89,26 @@ export async function renderPageDocument(
   page: PublicPageDto,
   cssHref: string,
   formScriptHref = '',
+  /**
+   * Percorso pubblico canonico della Pagina (ADR-24 § 4), passato in coda con
+   * default `''` (⇒ nessun `<link rel="canonical">`, `App.tsx`) invece che
+   * inserito fra `cssHref`/`formScriptHref` per non rompere i chiamanti già
+   * esistenti nei test — non è un contratto nuovo, solo l'ultimo argomento di
+   * uno già in uso.
+   */
+  canonicalPath = '',
 ): Promise<string> {
-  const { themeConfig, globalSections, resolvePageUrl } = await buildLayoutContext(
-    blocksOf(page.content),
-  );
+  const pageBlocks = blocksOf(page.content);
+  const { themeConfig, globalSections, resolvePageUrl } = await buildLayoutContext(pageBlocks);
+  const criticalCss = buildCriticalCss(pageBlocks, blocksOf(globalSections.header?.content));
   return (
     DOCTYPE +
     renderToStaticMarkup(
       <App
         page={page}
         cssHref={cssHref}
+        canonicalPath={canonicalPath}
+        criticalCss={criticalCss}
         formScriptHref={formScriptHref}
         themeConfig={themeConfig}
         globalSections={globalSections}
@@ -129,15 +140,16 @@ export async function renderPreviewDocument(
   cssHref: string,
   formScriptHref = '',
 ): Promise<string> {
-  const { themeConfig, globalSections, resolvePageUrl } = await buildLayoutContext(
-    blocksOf(page.content),
-  );
+  const pageBlocks = blocksOf(page.content);
+  const { themeConfig, globalSections, resolvePageUrl } = await buildLayoutContext(pageBlocks);
+  const criticalCss = buildCriticalCss(pageBlocks, blocksOf(globalSections.header?.content));
   return (
     DOCTYPE +
     renderToStaticMarkup(
       <PreviewDocument
         page={page}
         cssHref={cssHref}
+        criticalCss={criticalCss}
         formScriptHref={formScriptHref}
         themeConfig={themeConfig}
         globalSections={globalSections}

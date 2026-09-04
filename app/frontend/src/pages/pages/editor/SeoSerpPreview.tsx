@@ -8,15 +8,8 @@
  * `docs/business-rules.md` § SEO — un avviso, mai un blocco (business rule 4): il componente
  * non impedisce nulla, segnala solo.
  */
-import { Group, Stack, Text } from '@mantine/core';
-import { IconAlertTriangle } from '@tabler/icons-react';
+import { Stack, Text } from '@mantine/core';
 import styles from './SeoSerpPreview.module.css';
-
-/** Lunghezza oltre la quale Google tronca visivamente il titolo nello snippet reale. */
-const TITLE_WARNING_THRESHOLD = 60;
-
-/** Lunghezza oltre la quale Google tronca visivamente la description nello snippet reale. */
-const DESCRIPTION_WARNING_THRESHOLD = 160;
 
 interface SeoSerpPreviewProps {
   /** Titolo già risolto dal chiamante (fallback `metaTitle || titolo Pagina` già applicato). */
@@ -40,22 +33,12 @@ function urlToBreadcrumbSegments(url: string): string[] {
   }
 }
 
-/** Indicatore "N/soglia caratteri", in rosso solo oltre soglia — mai bloccante. */
-function LengthIndicator({ length, threshold }: { length: number; threshold: number }): JSX.Element {
-  const overThreshold = length > threshold;
-  return (
-    <Group gap={4} wrap="nowrap">
-      {overThreshold && <IconAlertTriangle size={14} color="var(--mantine-color-orange-6)" />}
-      <Text size="xs" c={overThreshold ? 'orange' : 'dimmed'}>
-        {length}/{threshold} caratteri
-        {overThreshold ? ' — verrà troncato nello snippet reale' : ''}
-      </Text>
-    </Group>
-  );
-}
-
 /** Anteprima dello snippet di ricerca Google per la Pagina in editing. */
-export default function SeoSerpPreview({ title, description, url }: SeoSerpPreviewProps): JSX.Element {
+export default function SeoSerpPreview({
+  title,
+  description,
+  url,
+}: SeoSerpPreviewProps): JSX.Element {
   const segments = urlToBreadcrumbSegments(url);
 
   return (
@@ -75,10 +58,6 @@ export default function SeoSerpPreview({ title, description, url }: SeoSerpPrevi
         <div className={styles.serpTitle}>{title}</div>
         <div className={styles.serpDescription}>{description}</div>
       </div>
-      <Group gap="lg">
-        <LengthIndicator length={title.length} threshold={TITLE_WARNING_THRESHOLD} />
-        <LengthIndicator length={description.length} threshold={DESCRIPTION_WARNING_THRESHOLD} />
-      </Group>
     </Stack>
   );
 }

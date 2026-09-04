@@ -8,22 +8,24 @@ import { fileEntity } from '../../db/schema';
 import { AppConstants } from '../../common/app-constants';
 import { Utils } from '../../common/utils';
 import { STORAGE_DRIVER, StorageDriver } from '../../files/storage/storage-driver.interface';
-import { MediaTransformPreset } from '../../files/dto/media-transform.dto';
+import {
+  buildDerivedFileName,
+  CROP_VARIANT_LABEL,
+  PRESET_DIMENSIONS,
+} from '../../files/media-variant-naming';
 import type { MediaTransformJobData } from './media-queue.service';
 
-/**
- * Dimensioni assolute (px) per ciascun preset nominato (ADR-49 § M6). I
- * rapporti sono la decisione approvata (thumbnail 1:1, card 16:9, hero
- * ~21:9, og 1.91:1); i valori pixel concreti sono una scelta implementativa
- * di questo worker, rivedibile senza nuova ADR finché resta all'interno
- * dell'insieme di preset già nominato (ADR-49 § Conseguenze).
- */
-const PRESET_DIMENSIONS: Record<MediaTransformPreset, { width: number; height: number }> = {
-  [MediaTransformPreset.Thumbnail]: { width: 400, height: 400 },
-  [MediaTransformPreset.Card]: { width: 800, height: 450 },
-  [MediaTransformPreset.Hero]: { width: 1600, height: 762 },
-  [MediaTransformPreset.Og]: { width: 1200, height: 628 },
-};
+/** Formato di output generato per ogni variante (SPEC-F03 § 3.3: AVIF oltre a WebP, stesso preset). */
+interface OutputFormat {
+  mimeType: 'image/webp' | 'image/avif';
+  extension: 'webp' | 'avif';
+  encode(pipeline: SharpPipeline): SharpPipeline;
+}
+
+const OUTPUT_FORMATS: OutputFormat[] = [
+  { mimeType: 'image/webp', extension: 'webp', encode: (p) => p.webp({ quality: 80 }) },
+  { mimeType: 'image/avif', extension: 'avif', encode: (p) => p.avif({ quality: 60 }) },
+];
 
 interface SharpMetadata {
   width?: number;
@@ -35,6 +37,7 @@ interface SharpPipeline {
   extract(region: { left: number; top: number; width: number; height: number }): SharpPipeline;
   resize(width: number, height: number): SharpPipeline;
   webp(options: { quality: number }): SharpPipeline;
+  avif(options: { quality: number }): SharpPipeline;
   toBuffer(): Promise<Buffer>;
 }
 
@@ -57,9 +60,14 @@ const sharp: (input: Buffer) => SharpPipeline = require('sharp');
  * eseguito nel path di una richiesta HTTP pubblica. Ispeziona il sorgente
  * con `sharp`, applica `.extract()` su un crop esplicito oppure un
  * ricampionamento centrato sul focal point per un preset nominato, riconverte
- * sempre in `webp` (quality 80) e persiste il risultato come **riga nuova**
- * in `files` (`parentFileId` verso l'originale) — l'originale non viene mai
- * riscritto (non distruttività, ADR-49 § M8).
+ * sia in `webp` (quality 80) sia in `avif` (quality 60, SPEC-F03 § 3.3) e
+ * persiste ciascun formato come **riga nuova** distinta in `files` (stesso
+ * `parentFileId` verso l'originale, righe sorelle differenziate da
+ * `mimeType`) — l'originale non viene mai riscritto (non distruttività,
+ * ADR-49 § M8). Le dimensioni di output sono note prima ancora di invocare
+ * `sharp` (il target del preset o il box di crop esplicito): non serve
+ * rileggerle da `outputMetadata`, così `ExportProcessor` può riusare lo
+ * stesso valore deterministico senza ricalcolo (SPEC-F03 § 3.3).
  */
 @Injectable()
 @Processor('media-queue')
@@ -101,11 +109,11 @@ export class MediaProcessor extends WorkerHost {
       transform.cropW !== undefined ||
       transform.cropH !== undefined;
 
-    let pipeline: SharpPipeline;
+    let positionedRegion: { left: number; top: number; width: number; height: number };
+    let outputDimensions: { width: number; height: number };
     if (hasCrop) {
-      pipeline = sharp(sourceBuffer).extract(
-        this.resolveExplicitCropBox(transform, sourceWidth, sourceHeight),
-      );
+      positionedRegion = this.resolveExplicitCropBox(transform, sourceWidth, sourceHeight);
+      outputDimensions = { width: positionedRegion.width, height: positionedRegion.height };
     } else {
       if (!transform.preset) {
         throw new BadRequestException(
@@ -115,44 +123,59 @@ export class MediaProcessor extends WorkerHost {
       const target = PRESET_DIMENSIONS[transform.preset];
       const focalX = transform.focalX ?? sourceRow.focalX;
       const focalY = transform.focalY ?? sourceRow.focalY;
-      const box = this.computeFocalCropBox(
+      positionedRegion = this.computeFocalCropBox(
         sourceWidth,
         sourceHeight,
         target.width / target.height,
         focalX,
         focalY,
       );
-      pipeline = sharp(sourceBuffer).extract(box).resize(target.width, target.height);
+      outputDimensions = target;
     }
 
-    const outputBuffer = await pipeline.webp({ quality: 80 }).toBuffer();
-    const outputMetadata = await sharp(outputBuffer).metadata();
+    const variantLabel = transform.preset ?? CROP_VARIANT_LABEL;
+    const buildPositionedPipeline = (): SharpPipeline => {
+      const extracted = sharp(sourceBuffer).extract(positionedRegion);
+      return hasCrop
+        ? extracted
+        : extracted.resize(outputDimensions.width, outputDimensions.height);
+    };
 
-    const storageKey = Utils.randomString(40);
-    await this.storageDriver.upload(storageKey, outputBuffer, 'image/webp');
+    const derivedGuids: string[] = [];
+    for (const format of OUTPUT_FORMATS) {
+      const outputBuffer = await format.encode(buildPositionedPipeline()).toBuffer();
+      const storageKey = Utils.randomString(40);
+      await this.storageDriver.upload(storageKey, outputBuffer, format.mimeType);
 
-    const variantLabel = transform.preset ?? 'crop';
-    const derivedName = `${variantLabel}-${sourceRow.originalName.replace(/\.[^./]+$/, '')}.webp`;
+      const derivedName = buildDerivedFileName(
+        variantLabel,
+        sourceRow.originalName,
+        format.extension,
+      );
 
-    const [derivedRow] = await this.db.db
-      .insert(fileEntity)
-      .values({
-        guid: Utils.randomString(16),
-        originalName: derivedName,
-        mimeType: 'image/webp',
-        sizeBytes: outputBuffer.length,
-        storageDriver: AppConstants.storageDriver,
-        storageKey,
-        checksumSha256: createHash('sha256').update(outputBuffer).digest('hex'),
-        entity: sourceRow.entity,
-        entityId: sourceRow.entityId,
-        parentFileId: sourceRow.id,
-      })
-      .returning();
+      const [derivedRow] = await this.db.db
+        .insert(fileEntity)
+        .values({
+          guid: Utils.randomString(16),
+          originalName: derivedName,
+          mimeType: format.mimeType,
+          sizeBytes: outputBuffer.length,
+          storageDriver: AppConstants.storageDriver,
+          storageKey,
+          checksumSha256: createHash('sha256').update(outputBuffer).digest('hex'),
+          entity: sourceRow.entity,
+          entityId: sourceRow.entityId,
+          parentFileId: sourceRow.id,
+        })
+        .returning();
+
+      derivedGuids.push(derivedRow.guid);
+    }
 
     this.logger.log(
-      `Variante media generata (parentGuid=${fileGuid}, guid=${derivedRow.guid}, ` +
-        `${outputMetadata.width}x${outputMetadata.height}, preset=${transform.preset ?? 'n/d'}).`,
+      `Variante media generata (parentGuid=${fileGuid}, guid/e=${derivedGuids.join(',')}, ` +
+        `${outputDimensions.width}x${outputDimensions.height}, preset=${transform.preset ?? 'n/d'}, ` +
+        `formati=${OUTPUT_FORMATS.map((f) => f.extension).join('+')}).`,
     );
   }
 

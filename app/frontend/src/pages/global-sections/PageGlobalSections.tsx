@@ -28,6 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { useColumnVisibility } from '../../hooks/useColumnVisibility';
 import { getErrorMessage } from '../../utils/api.utils';
+import { formatDate } from '../../utils/date.utils';
 import {
   createGlobalSection,
   deleteGlobalSection,
@@ -84,11 +85,6 @@ const EMPTY_FORM: GlobalSectionFormValues = {
   layoutSlot: 'none',
   isSticky: false,
 };
-
-/** Formatta una data ISO nel formato locale italiano (data + ora). */
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('it-IT');
-}
 
 /** Pagina elenco Sezioni Globali (chrome amministrativa, F06). */
 export default function PageGlobalSections(): JSX.Element {

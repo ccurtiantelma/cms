@@ -13,13 +13,13 @@
  * `400`).
  */
 (function () {
-  'use strict';
+  "use strict";
 
   /** Costruisce il payload separando honeypot/firma (top-level) dai valori reali dei campi. */
   function collectPayload(form) {
     var honeypotName = null;
-    var honeypotValue = '';
-    var signature = '';
+    var honeypotValue = "";
+    var signature = "";
     var values = {};
 
     var elements = form.elements;
@@ -28,17 +28,17 @@
       var name = el.name;
       if (!name) continue;
 
-      if (el.getAttribute('data-honeypot') === 'true') {
+      if (el.getAttribute("data-honeypot") === "true") {
         honeypotName = name;
         honeypotValue = el.value;
         continue;
       }
-      if (name === 'signature') {
+      if (name === "signature") {
         signature = el.value;
         continue;
       }
 
-      values[name] = el.type === 'checkbox' ? el.checked : el.value;
+      values[name] = el.type === "checkbox" ? el.checked : el.value;
     }
 
     var payload = { signature: signature, values: values };
@@ -54,22 +54,22 @@
     if (!button) return;
     button.disabled = submitting;
     if (submitting) {
-      if (button.getAttribute('data-original-label') === null) {
-        button.setAttribute('data-original-label', button.textContent || '');
+      if (button.getAttribute("data-original-label") === null) {
+        button.setAttribute("data-original-label", button.textContent || "");
       }
-      button.textContent = 'Invio in corso…';
+      button.textContent = "Invio in corso…";
     } else {
-      var original = button.getAttribute('data-original-label');
+      var original = button.getAttribute("data-original-label");
       if (original !== null) button.textContent = original;
     }
   }
 
   /** Mostra un messaggio (successo/errore) nello slot dedicato del form. */
   function showMessage(form, variant, text) {
-    var slot = form.querySelector('[data-form-message]');
+    var slot = form.querySelector("[data-form-message]");
     if (!slot) return;
     slot.textContent = text;
-    slot.setAttribute('data-variant', variant);
+    slot.setAttribute("data-variant", variant);
     slot.hidden = false;
   }
 
@@ -78,31 +78,40 @@
    * è dentro lo stesso contenitore) e mostra solo il messaggio di conferma.
    */
   function showSuccess(form) {
-    var fields = form.querySelector('[data-form-fields]');
+    var fields = form.querySelector("[data-form-fields]");
     if (fields) fields.hidden = true;
-    showMessage(form, 'success', 'Grazie, il messaggio è stato inviato con successo.');
+    showMessage(
+      form,
+      "success",
+      "Grazie, il messaggio è stato inviato con successo.",
+    );
   }
 
   /** Esito negativo (istruzione "Error"): messaggio sopra i campi, valori utente intatti. */
   function showError(form, text) {
-    showMessage(form, 'error', text);
+    showMessage(form, "error", text);
   }
 
   function handleSubmit(event) {
     var form = event.currentTarget;
-    var submitUrl = form.getAttribute('data-submit-url');
+    var submitUrl = form.getAttribute("data-submit-url");
     if (!submitUrl) return; // Nessun URL calcolato lato server: submit nativo disabilitato a monte, non qui.
+
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
 
     event.preventDefault();
 
-    var messageSlot = form.querySelector('[data-form-message]');
+    var messageSlot = form.querySelector("[data-form-message]");
     if (messageSlot) messageSlot.hidden = true;
 
     setSubmitting(form, true);
 
     fetch(submitUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(collectPayload(form)),
     })
       .then(function (response) {
@@ -110,24 +119,30 @@
         if (response.ok) {
           showSuccess(form);
         } else {
-          showError(form, 'Non è stato possibile inviare il modulo. Controlla i campi compilati e riprova.');
+          showError(
+            form,
+            "Non è stato possibile inviare il modulo. Controlla i campi compilati e riprova.",
+          );
         }
       })
       .catch(function () {
         setSubmitting(form, false);
-        showError(form, 'Errore di rete: non è stato possibile inviare il modulo. Riprova.');
+        showError(
+          form,
+          "Errore di rete: non è stato possibile inviare il modulo. Riprova.",
+        );
       });
   }
 
   function init() {
-    var forms = document.querySelectorAll('form[data-form-id]');
+    var forms = document.querySelectorAll("form[data-form-id]");
     for (var i = 0; i < forms.length; i += 1) {
-      forms[i].addEventListener('submit', handleSubmit);
+      forms[i].addEventListener("submit", handleSubmit);
     }
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
   } else {
     init();
   }

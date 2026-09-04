@@ -19,7 +19,9 @@
 /* Transizione fluida su collasso/espansione della sidebar. */
 .navbar,
 .main {
-  transition: width 200ms ease, padding-inline-start 200ms ease;
+  transition:
+    width 200ms ease,
+    padding-inline-start 200ms ease;
 }
 
 /* --- Navbar --- */
@@ -56,7 +58,7 @@ nav.navbarSurface {
   flex-shrink: 0;
 }
 
-.brand :global(.mantine-Popover-root) {
+.brandNotifications {
   margin-left: auto;
 }
 
@@ -64,6 +66,10 @@ nav.navbarSurface {
   justify-content: center;
   gap: 4px;
   padding: 0;
+}
+
+.brandCollapsed .brandNotifications {
+  margin-left: 0;
 }
 
 /* Logo dell'installazione, mantenuto in una dimensione stabile nella sidebar. */
@@ -126,7 +132,9 @@ nav.navbarSurface {
   color: var(--mantine-color-text);
   font-size: 14px;
   font-weight: 500;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
 }
 
 .navItem:hover {

@@ -58,21 +58,37 @@ schemi e migrazione dei contenuti esistenti.
 
 ### F03 — Superficie pubblica di lettura
 
-**Pilastro**: prerequisito di 2 e 7 · **Stato**: ⏳ Da avviare · **Dipende da**: F01, F02
+**Pilastro**: prerequisito di 2 e 7 · **Stato**: 🚀 **Ready for Implementation (Air-Gapped
+SSG)** · **Dipende da**: F01, F02
 
-Endpoint `api/v1/public/*`: risoluzione di una Pagina per `(locale, percorso)`, sola
-lettura, solo `published`, rate limiting proprio, cache Redis con invalidazione per evento.
+Il contenuto pubblicato è compilato asincronamente in HTML5 statico (worker BullMQ
+`static-export`) e consegnato in push a uno storage edge isolato (CDN/S3/volume Nginx),
+senza alcun canale di rete PULL dalla superficie pubblica verso PostgreSQL, Redis o il
+backend NestJS. `api/v1/public/*` resta il contratto di lettura usato internamente dal
+worker di export e dalla rotta di anteprima (ADR-25), non più il percorso del traffico
+anonimo di produzione.
 
-**Richiede ADR**: strategia di caching e invalidazione del contenuto pubblico.
+**Decisione corrente**: `docs/ai/adr/ADR-53-air-gapped-ssg-zero-db.md` — **Approvata**
+(2026-09-04). Supera ADR-22/ADR-23/ADR-24; completa (non supera) ADR-45. Fissa Build-on-
+Publish, zero-JS/CSS critico inline, media CLS = 0 (AVIF/WebP + `srcset`/dimensioni
+intrinseche), consegna edge air-gapped, SEO/JSON-LD/OpenGraph pre-compilati nel file
+statico. Spec e piano operativo riscritti in `docs/ai/specs/SPEC-F03-superficie-pubblica.md`
+e `docs/ai/plans/PLAN-F03-superficie-pubblica.md` (2026-09-04).
 
-**Decisione ratificata (2026-09-01)**: `docs/ai/rfc/RFC-44-static-site-export-engine.md` —
-**Approvato** dal Project Owner (N1–N7 firmati). Il servizio pubblico si disaccoppia da
-Node/Database con un motore di export statico (SSG) sopra la SSR a richiesta già costruita
-(ADR-22/23/24), con `app/public-site` ridotto a server di sola anteprima per i redattori.
-Decisione conseguente registrata in `docs/ai/adr/ADR-45-ssg-export-architecture.md`
-(Approvata, riconcilia ADR-22 e ADR-23 in un'unica ADR, ADR-24 resta valida a tempo di
-build). Implementazione (`StaticExportModule`, adapter locale, tombstone, media) da
-pianificare.
+**Baseline già implementata** (non da ricostruire): coda `static-export` e worker di
+compilazione/tombstone (ADR-45), generazione dati SEO (`SeoGraphService`, ADR-48), pipeline
+media `sharp` con preset/focal point (ADR-49), token di anteprima dedicato (ADR-25).
+
+**Delta da costruire per la piena conformità ad ADR-53** (piano § Task): CSS critico
+inline nel documento esportato, output AVIF oltre a WebP con dimensioni intrinseche/
+`srcset` per CLS = 0, assemblaggio di JSON-LD/OpenGraph nel file statico + rigenerazione
+`sitemap.xml`/`robots.txt`, adapter di consegna edge dietro un'interfaccia esplicita
+(`LocalFolderDeployer` unica implementazione attiva).
+
+**Storico**: decisione originaria ratificata il 2026-09-01 in
+`docs/ai/rfc/RFC-44-static-site-export-engine.md` (Approvato, N1–N7 firmati), che ha
+prodotto `ADR-45-ssg-export-architecture.md` — resta valida e non riscritta; ADR-53 ne è
+il completamento sull'air-gap di consegna, non una sua sostituzione.
 
 ---
 

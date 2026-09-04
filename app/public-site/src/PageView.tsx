@@ -1,8 +1,11 @@
 import BlockRenderer from '@blocks/BlockRenderer';
 import type { RenderableBlockNode } from '@blocks/types';
 import type { components } from '@api-types';
+import type { CSSProperties } from 'react';
 import { computeFormHoneypotFieldName, computeFormSignature } from './form-antispam';
 import { PublicSiteConfig } from './config';
+// Reset `html`/`body` (full-bleed) — vedi il commento di testa di `PageView.css` per il perché.
+import './PageView.css';
 
 type PublicPageContent = components['schemas']['PublicPageDto']['content'];
 type PublicActiveGlobalSectionsDto = components['schemas']['PublicActiveGlobalSectionsDto'];
@@ -80,7 +83,8 @@ function GlobalSectionSlot({
 }) {
   const blocks = blocksOf(section?.content);
   if (blocks.length === 0) return null;
-  const stickyStyle = Tag === 'header' && section?.isSticky ? { position: 'sticky', top: 0, zIndex: 20 } : undefined;
+  const stickyStyle: CSSProperties | undefined =
+    Tag === 'header' && section?.isSticky ? { position: 'sticky', top: 0, zIndex: 20 } : undefined;
   return (
     <Tag style={stickyStyle}>
       {blocks.map((block) => (

@@ -25,13 +25,9 @@ import {
 import { IconRestore } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { getErrorMessage } from '../../../utils/api.utils';
+import { formatDate } from '../../../utils/date.utils';
 import { fetchPageRevisionDiff } from '../../../services/pages.service';
 import type { PageRevisionDiff, PageRevisionSummary } from '../../../types/pages.types';
-
-/** Formatta una data ISO nel formato locale italiano (data + ora). */
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('it-IT');
-}
 
 /**
  * Serializza un valore `unknown` di `PropertyDiff.before`/`after` per la cella della

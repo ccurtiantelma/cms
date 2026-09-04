@@ -123,20 +123,32 @@ describe('unicità di dangerouslySetInnerHTML (ADR-22 § 7)', () => {
     expect(hits.map((file) => relative(blocksDir, file))).toEqual([join('blocks', 'RichText.tsx')]);
   });
 
-  // Eccezione nota e **unica**: l'iniezione del blocco `:root { ... }` del tema
-  // dell'installazione (`<style id="eaidos-theme-vars">`) in `ThemeStyleTag.tsx`.
-  // Non è input utente non fidato: il CSS è compilato da `generateThemeCss`, che
-  // ricontrolla ogni valore prima di emetterlo (colori sulla regex `#rrggbb`,
-  // unità e pesi su whitelist, numeri su `Number.isFinite`) — stesso principio
-  // del richText già sanitizzato server-side.
+  // Eccezioni note e **uniche**, entrambe CSS mai derivato da input utente non
+  // fidato:
+  // - il blocco `:root { ... }` del tema dell'installazione
+  //   (`<style id="eaidos-theme-vars">`) in `ThemeStyleTag.tsx`: compilato da
+  //   `generateThemeCss`, che ricontrolla ogni valore prima di emetterlo
+  //   (colori sulla regex `#rrggbb`, unità e pesi su whitelist, numeri su
+  //   `Number.isFinite`) — stesso principio del richText già sanitizzato
+  //   server-side.
+  // - il CSS critico above-the-fold (`<style data-critical-css>`, ADR-53 § 2,
+  //   SPEC-F03 § 3.2) in `App.tsx`/`PreviewDocument.tsx`: testo di build,
+  //   letto da `critical-css.ts` via import `?inline` degli stessi CSS Modules
+  //   già compilati nel bundle esterno — nessuna interpolazione di valore
+  //   proveniente da `page`/`node.props` a runtime.
   //
-  // Un solo file, non tre: il tag è un componente condiviso da Pagina, anteprima
-  // e pagine di errore, quindi questa asserzione fallisce anche se un quarto
-  // documento tornasse a iniettare CSS per conto proprio.
-  it("non compare in app/public-site salvo l'iniezione nota del tema", () => {
+  // Tre file, non uno: qualunque quarto file che tornasse a iniettare CSS per
+  // conto proprio (o che riducesse questo elenco) fa fallire l'asserzione.
+  it("non compare in app/public-site salvo le iniezioni note di tema e CSS critico", () => {
     const files = listSourceFiles(publicSiteSrcDir);
     const hits = files.filter((file) => USAGE_PATTERN.test(readFileSync(file, 'utf-8')));
 
-    expect(hits.sort()).toEqual([join(publicSiteSrcDir, 'ThemeStyleTag.tsx')]);
+    expect(hits.sort()).toEqual(
+      [
+        join(publicSiteSrcDir, 'App.tsx'),
+        join(publicSiteSrcDir, 'PreviewDocument.tsx'),
+        join(publicSiteSrcDir, 'ThemeStyleTag.tsx'),
+      ].sort(),
+    );
   });
 });

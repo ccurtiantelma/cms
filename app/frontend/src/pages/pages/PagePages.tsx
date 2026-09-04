@@ -17,6 +17,7 @@ import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { useColumnVisibility } from '../../hooks/useColumnVisibility';
 import { PUBLIC_SITE_URL } from '../../hooks/usePublicPageUrl';
 import { getErrorMessage } from '../../utils/api.utils';
+import { formatDate } from '../../utils/date.utils';
 import {
   createPage,
   deletePage,
@@ -87,11 +88,6 @@ function localeFlag(locale: string): string {
   if (!region || region.length !== 2) return '🌐';
   const codePoints = [...region.toUpperCase()].map((char) => 127397 + char.charCodeAt(0));
   return String.fromCodePoint(...codePoints);
-}
-
-/** Formatta una data ISO nel formato locale italiano (data + ora). */
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('it-IT');
 }
 
 /**
@@ -332,7 +328,20 @@ export default function PagePages(): JSX.Element {
   }
 
   const columns: ResponsiveTableColumn<PageRecord>[] = [
-    { key: 'title', label: 'Titolo' },
+    {
+      key: 'title',
+      label: 'Titolo',
+      render: (row) => (
+        <Group gap={6} wrap="nowrap">
+          <Text fw={600}>{row.title}</Text>
+          {row.slug === 'home' && (
+            <Badge color="green" size="sm" variant="light">
+              HOME
+            </Badge>
+          )}
+        </Group>
+      ),
+    },
     { key: 'slug', label: 'Slug', hideInCard: true },
     {
       key: 'locale',

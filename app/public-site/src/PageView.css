@@ -1,0 +1,37 @@
+/*
+ * Reset minimo del documento pubblico (`<html>`/`<body>`), non del contenuto: senza,
+ * il margin di user-agent di `<body>` (~8px per lato secondo il browser, mai dichiarato
+ * in nessun foglio di questo repository — verificato, nessun `html,body{...}` esiste
+ * altrove in `app/public-site`/`app/frontend`) impedisce a una Section marcata
+ * `contentWidth: 'full-width'` di toccare davvero il bordo della viewport, anche se la
+ * sua stessa classe (`contentWidth_full-width`, `style-tokens.module.css`, ADR-33 § 1)
+ * applica già `width: 100%; max-width: none` — quel 100% resta comunque contenuto dentro
+ * il padding implicito del `<body>`.
+ *
+ * File CSS **non** a modulo (`.css`, non `.module.css`) di proposito: un `import` di sola
+ * side-effect da un `*.module.css` privo di ogni classe locale davvero consumata dal
+ * chiamante viene scartato per intero dal tree-shaking di Vite/Rollup insieme al CSS
+ * associato (verificato sulla build SSR — `vite build --ssr src/server.ts`, il reset
+ * spariva dal bundle finché il file era un CSS Module). Un `.css` semplice resta invece
+ * sempre un side-effect per il bundler, incluso senza condizioni.
+ *
+ * Importato da `PageView.tsx`, il solo punto in comune fra il documento pubblicato
+ * (`App.tsx`) e quello di anteprima (`PreviewDocument.tsx`): un reset, non duplicato fra
+ * i due. Scope volutamente limitato a `html`/`body` — nessun padding/margine è imposto
+ * qui ai blocchi figli, che restano liberi di dichiarare i propri
+ * (`stylePadding*`/`styleMargin*` di `Section`, ADR-33 § 4): l'incapsulamento "boxed"
+ * resta una scelta esplicita del singolo blocco (`contentWidth: 'boxed'` + `maxWidth`),
+ * mai un default di layout imposto qui.
+ */
+html {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}

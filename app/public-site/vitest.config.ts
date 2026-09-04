@@ -21,5 +21,15 @@ export default defineConfig({
     environment: 'node',
     globals: false,
     include: ['test/**/*.{test,spec}.{ts,tsx}'],
+    /**
+     * Il default di Vitest (`false`) sostituisce ogni import CSS con una
+     * stringa vuota, `critical-css.ts` incluso: il CSS critico iniettato
+     * nell'HTML dipende dal testo *reale* già processato dai CSS Modules
+     * (`?inline`, stesse classi hashate del bundle esterno). `true` fa
+     * girare la stessa pipeline CSS della build di produzione anche in
+     * test, coerente con l'ambiente `node` di questa config, che già
+     * asserisce sulla stringa HTML prodotta e non su un DOM montato.
+     */
+    css: true,
   },
 });

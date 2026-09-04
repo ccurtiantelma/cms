@@ -14,7 +14,14 @@ export default function HistoryDrawer({ opened, onClose }: HistoryDrawerProps): 
   const restoreHistory = useBlockEditorStore((state) => state.restoreHistory);
 
   return (
-    <Drawer opened={opened} onClose={onClose} position="right" title="Cronologia Azioni" size="md">
+    <Drawer
+      opened={opened}
+      onClose={onClose}
+      position="right"
+      title="Cronologia Azioni"
+      size="md"
+      zIndex={1100}
+    >
       {history.length === 0 ? (
         <Text size="sm" c="dimmed">
           Nessuna azione nella cronologia.

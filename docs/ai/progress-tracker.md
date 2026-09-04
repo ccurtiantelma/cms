@@ -70,7 +70,7 @@
 |---|---|---|---|---|
 | F01 | Gestione Pagine (modello, stati, slug, revisioni) | fondativa | features/F01-gestione-pagine.md · specs/SPEC-F01-gestione-pagine.md · plans/PLAN-F01-innesto.md | ✅ Done (2026-08-17) |
 | F02 | Registro e validazione dei Blocchi | 1 | plans/PLAN-F02-blocchi.md | ✅ Done (2026-08-19, riconciliata) |
-| F03 | Superficie pubblica di lettura + cache | 2, 7 | specs/SPEC-F03-superficie-pubblica.md · plans/PLAN-F03-superficie-pubblica.md | ✅ Done (2026-08-19) |
+| F03 | Superficie pubblica di lettura (Air-Gapped SSG) | 2, 7 | specs/SPEC-F03-superficie-pubblica.md · plans/PLAN-F03-superficie-pubblica.md · ADR-53-air-gapped-ssg-zero-db.md | 🚀 Ready for Implementation (Air-Gapped SSG) — baseline SSR/cache del 2026-08-19 superata da ADR-45/ADR-53, delta di consegna edge/CLS/SEO in `PLAN-F03` § Task |
 | F04 | Editor visivo (page builder) | 1 | plans/PLAN-F04-editor-visivo.md · plans/PLAN-F04c-editor-maturo.md | ✅ Done (2026-08-19). Anteprima bozza (voce 1.10 di `docs/TODO.md`) chiusa lo stesso giorno — `plans/PLAN-anteprima-bozza.md`, ADR-25. Round **F04b (upgrade editor)** ✅ Done (2026-08-20): undo/redo + guardia + inserimento posizionale + `moveNodeTo` coperti da test (voce 3.11). Round **F04c (editor maturo)** ✅ Done (2026-08-20), T1–T8 di `plans/PLAN-F04c-editor-maturo.md`: props di stile responsive (ADR-29), metadati d'editor nel registro + ispettore a schede/etichette (ADR-30, chiude la voce 3.10), lettura pubblica dei media (ADR-27, chiude la voce 1.12), duplicazione blocco + drag & drop via `dnd-kit` (ADR-28). Quattro ADR di questo round tutte firmate. Copertura di test chiusa da `test-engineer` (voce 3.12). WYSIWYG (ADR-26) resta l'unica decisione ancora in attesa di firma, confermata fuori scope, rinviata a **F04d** |
 | F05 | Multilingua | 4 | — | ⏳ Pending |
 | F06 | Template e Sezioni globali | 1 | `GlobalSectionsModule` (`app/backend/src/global-sections/`) · ADR-40-sezioni-globali-e-layout.md | ✅ Done |
@@ -694,3 +694,58 @@ zero errori (restano 7 warning `no-explicit-any` preesistenti, fuori scope).
 
 `docs/business-rules.md` § "Menu di navigazione" marcata deprecata a favore dell'approccio
 AST a blocchi di ADR-52 (vedi nota nel documento stesso).
+
+---
+
+## ADR-53 — Architettura Air-Gapped SSG Zero-DB, allineamento documentale (2026-09-04)
+
+Approvata `docs/ai/adr/ADR-53-air-gapped-ssg-zero-db.md` (firma umana in sede di task, stesso
+pattern di ADR-38/47/50/51/52). Supera formalmente ADR-22 (consumer HTML pubblico), ADR-23
+(caching/invalidazione pubblica) e ADR-24 (routing/risoluzione slug) — tutte già annotate
+"SUPERSEDED da ADR-53" nel proprio file. **Non supera ADR-45**: ne è il completamento
+sull'air-gap di consegna (storage edge via push, mai pull) e sulla riduzione di
+`app/public-site` a solo motore di anteprima/rendering interno, cosa che ADR-45 aveva già
+anticipato ma non chiuso a livello di regola di rete.
+
+Il controllo documentale preliminare (grep mirato su `app/backend/src/export/`,
+`seo-graph.service.ts`, `queues/media-queue/`, `app/public-site/src/App.tsx` e `server.ts`)
+ha verificato che **buona parte della baseline esiste già**, per non trattare F03 come
+territorio vergine una seconda volta dopo RFC-44/ADR-45:
+
+- ✅ Coda BullMQ `static-export` con job `page`/`tombstone`/`full-site`, manifest su
+  filesystem, scrittura atomica (`ExportModule`, confermato Done il 2026-09-03).
+- ✅ `SeoGraphService` scrive già JSON-LD/OpenGraph come dati in `revision.seo` (ADR-48).
+- ✅ Worker `sharp` con preset nominati e focal point (ADR-49).
+- ✅ Token di anteprima dedicato e rotta `/__preview/:token` (ADR-25).
+- ❌ Nessun assemblaggio dei dati SEO in markup (`App.tsx` non legge mai `page.seo`, commento
+  esplicito nel file lo dichiara fuori dal perimetro F03 originario).
+- ❌ Output media limitato a `webp` fisso, nessun `avif`, nessuna dimensione persistita per
+  `srcset`/CLS.
+- ❌ CSS dei blocchi sempre esterno (`<link>`), nessun critical CSS inline oltre le variabili
+  di tema (`ThemeStyleTag`).
+- ❌ Nessun `sitemap.xml`/`robots.txt`.
+- ❌ Nessuna interfaccia `StaticSiteDeployer`: la scrittura su filesystem è inline nel
+  processor, nessun adapter edge/CDN.
+
+`docs/ai/specs/SPEC-F03-superficie-pubblica.md` e `docs/ai/plans/PLAN-F03-superficie-pubblica.md`
+riscritti su questa base: la spec porta una tabella "Stato reale" che distingue baseline da
+delta, il piano ha sei task (tetto otto) ciascuno ancorato a una riga ❌ specifica, con T1
+dedicato a verificare che il delta non regredisca la baseline. `docs/system-architecture.md`
+aggiornato con una sezione dedicata (diagrammi Mermaid flowchart + sequence) che separa Piano
+di Gestione e Piano di Erogazione Pubblica e dichiara la regola di air-gap come proprietà di
+rete, non applicativa; tabella delle porte con `app/public-site` (55000); nota obsoleta sul
+reverse-proxy-cache-davanti-al-backend corretta. `docs/roadmap.md` § F03 aggiornato: stato
+**Ready for Implementation (Air-Gapped SSG)**, baseline/delta elencati, storico RFC-44/ADR-45
+preservato senza riscriverlo.
+
+**Incongruenza segnalata, non risolta in questo task**: `docs/non-functional-requirements.md`
+§ Performance pubblica descrive ancora un profilo "cache calda/cache fredda" per il traffico
+pubblico anonimo, che con ADR-53 non esiste più (quel traffico serve file statici, non
+attraversa più Redis/PostgreSQL). La correzione richiede autorizzazione umana esplicita per
+quel file — non inclusa nella richiesta che ha originato questo allineamento — ed è annotata
+in `PLAN-F03` § Definition of Done come voce aperta.
+
+**Prossimo passo**: implementazione dei sei task di `PLAN-F03-superficie-pubblica.md`
+(T1 verifica baseline, T2 CSS critico, T3 media AVIF/CLS, T4 SEO/sitemap, T5 adapter edge,
+T6 test), di competenza backend-developer/frontend-developer/test-engineer per task —
+non coperta da questo task documentale.

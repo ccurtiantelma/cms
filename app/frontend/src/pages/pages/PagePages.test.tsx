@@ -110,6 +110,40 @@ describe('PagePages — filtro lingua', () => {
   });
 });
 
+describe('PagePages — badge HOME sulla colonna Titolo', () => {
+  it('una riga con slug "home" mostra il badge HOME accanto al titolo', async () => {
+    fetchPages.mockResolvedValue({
+      items: [page({ title: 'Home', slug: 'home' })],
+      totalItems: 1,
+      totalPages: 1,
+      currentPage: 1,
+      itemsPerPage: 20,
+    });
+    renderPagePages();
+
+    const titleCell = await screen.findByText('Home');
+    const row = titleCell.closest('tr');
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getByText('HOME')).toBeInTheDocument();
+  });
+
+  it('una riga con slug diverso da "home" non mostra il badge HOME', async () => {
+    fetchPages.mockResolvedValue({
+      items: [page()],
+      totalItems: 1,
+      totalPages: 1,
+      currentPage: 1,
+      itemsPerPage: 20,
+    });
+    renderPagePages();
+
+    const titleCell = await screen.findByText('Chi siamo');
+    const row = titleCell.closest('tr');
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).queryByText('HOME')).not.toBeInTheDocument();
+  });
+});
+
 describe('PagePages — badge lingua per translationGroupId', () => {
   it('una Pagina senza traduzioni sorelle mostra solo il proprio locale', async () => {
     fetchPages.mockResolvedValue({
