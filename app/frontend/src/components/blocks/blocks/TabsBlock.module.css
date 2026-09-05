@@ -1,0 +1,13 @@
+/*
+ * `display:flex; flex-wrap:wrap`: contesto di riordino visivo per i figli `.tabItem`
+ * (`TabPanelBlock.module.css`, `display:contents`) — le loro etichette (`order:0`) e i loro
+ * pannelli (`order:1`, `flex-basis:100%`) diventano item flex diretti di questo contenitore,
+ * pur restando ciascuno annidato nel proprio `.tabItem` nel DOM (necessario perché il
+ * selettore CSS `input:checked + label + .panel` di `TabPanelBlock.module.css` richiede che
+ * radio/etichetta/pannello restino fratelli DOM diretti l'uno dell'altro).
+ */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+}

@@ -22,6 +22,16 @@ import {
 export interface BlockTreeValidationContext {
   /** Livello di ruolo RBAC dell'autore (valore più basso = più privilegi). Assente = nessun filtro `minRole` applicato. */
   roleLevel?: number;
+  /**
+   * `true` quando l'albero in validazione è il `content` di una Sezione
+   * Globale (ADR-55, "Cicli chiusi per contratto"): impostato solo da
+   * `GlobalSectionsService.runWriteContentPipeline`, mai da `PagesService` o
+   * da qualunque altro consumer del contenuto di una Pagina. Un nodo
+   * `globalRef` incontrato con questo flag attivo è respinto
+   * (`BLOCK_TYPE_NOT_ALLOWED_IN_GLOBAL_SECTION`): elimina il ciclo per
+   * costruzione, senza risolvere il riferimento né attraversare un grafo.
+   */
+  insideGlobalSection?: boolean;
 }
 
 /** Schemi ammessi per `kind: 'url'` (SPEC-F02-blocchi.md § 3.6): assoluta http/https, `mailto:`, root-relative con una sola barra iniziale. */
@@ -126,6 +136,20 @@ export class BlockTreeValidatorService {
       });
       // Tipo sconosciuto: `children.allow` di questo nodo è indeterminabile,
       // non si scende oltre su questo ramo.
+      return;
+    }
+
+    if (node.type === 'globalRef' && context.insideGlobalSection === true) {
+      // Divieto di ciclo per contratto, non per rilevamento a grafo (ADR-55):
+      // un `globalRef` non può mai comparire dentro l'albero di una Sezione
+      // Globale, né verso se stessa né verso un'altra. Il tipo è noto e
+      // valido altrove (in una Pagina) — qui si respinge il nodo invece di
+      // validarlo normalmente; è comunque una foglia (`children.allow: []`),
+      // nessun figlio da scendere.
+      errors.push({
+        code: 'BLOCK_TYPE_NOT_ALLOWED_IN_GLOBAL_SECTION',
+        details: { path, type: node.type },
+      });
       return;
     }
 
@@ -305,6 +329,15 @@ export class BlockTreeValidatorService {
         // Stessa validazione di forma di `mediaRef` (16 hex): nessuna
         // verifica di esistenza/pubblicazione della Pagina a scrittura, la
         // risoluzione è a valle nella pipeline SSR (ADR-52 § 3/§ 4).
+        if (typeof value !== 'string') return invalid('type');
+        if (!GUID_PATTERN.test(value)) return invalid('guidFormat');
+        return;
+      }
+      case 'globalSectionRef': {
+        // Stessa validazione di forma di `pageRef`/`mediaRef` (16 hex):
+        // nessuna verifica di esistenza della Sezione Globale a scrittura, la
+        // risoluzione è a valle nel job di export (ADR-55 § 1, stesso
+        // principio di `pageRef`, ADR-52 § 4).
         if (typeof value !== 'string') return invalid('type');
         if (!GUID_PATTERN.test(value)) return invalid('guidFormat');
         return;

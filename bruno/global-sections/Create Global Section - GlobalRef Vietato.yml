@@ -1,0 +1,55 @@
+info:
+  name: Create Global Section - GlobalRef Vietato
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/global-sections"
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Sezione con ciclo vietato",
+        "content": {
+          "version": 1,
+          "blocks": [
+            {
+              "id": "gr1",
+              "type": "globalRef",
+              "v": 1,
+              "props": { "globalSectionGuid": "0123456789abcdef" },
+              "children": []
+            }
+          ]
+        }
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  ADR-55, "Cicli chiusi per contratto": `GlobalSectionsService.runWriteContentPipeline`
+  valida sempre con `insideGlobalSection: true`, incondizionatamente — un nodo
+  `globalRef` non è MAI un content ammesso per una Sezione Globale (a
+  differenza del content di una Pagina, dove lo stesso nodo è valido). Questo
+  vale anche con un `globalSectionGuid` di forma corretta: il rifiuto non
+  dipende dalla validità del guid referenziato.
+
+tests: |-
+  test("status is 400", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+
+  test("code è BLOCK_TYPE_NOT_ALLOWED_IN_GLOBAL_SECTION, con il path del nodo colpevole in details", function() {
+    const body = res.getBody();
+    expect(body.code).to.equal("BLOCK_TYPE_NOT_ALLOWED_IN_GLOBAL_SECTION");
+    expect(body.details).to.have.property("path", "blocks[0]");
+    expect(body.details).to.have.property("type", "globalRef");
+  });

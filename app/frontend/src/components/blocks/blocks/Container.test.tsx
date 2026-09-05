@@ -18,6 +18,28 @@ describe('Container', () => {
   });
 
   /**
+   * Test di regressione RFC-58 T6 (Punto 3, seconda metà): un `container` figlio senza
+   * `children` non deve ricevere alcun vincolo di altezza minima — comportamento CSS
+   * Flexbox standard (nessun `min-height` in `Container.module.css`), deliberatamente
+   * diverso dall'affordance di editing `.emptyContainer` (`min-height: 120px`) che vive
+   * solo in `EditorBlockWrapper.module.css`, mai in questo componente. Questo componente è
+   * lo stesso montato dal consumer SSR pubblico (`app/public-site`, alias `@blocks`): vedi
+   * `app/public-site/test/section-container-layout-regression.spec.tsx` per l'asserzione
+   * equivalente sull'HTML SSR reale.
+   */
+  it('senza children (container vuoto): nessun attributo style, nessun min-height, nessuna classe emptyContainer', () => {
+    const html = renderToStaticMarkup(<Container>{null}</Container>);
+
+    expect(html).not.toContain('style=');
+    expect(html).not.toMatch(/min-height/i);
+    expect(html).not.toMatch(/emptyContainer/);
+    // Solo la classe di base `container` (nessuna prop di layout passata): stesso pattern
+    // di corrispondenza sostringa già in uso nel resto della suite (le classi CSS Modules
+    // sono hashate anche in questa pipeline di test, es. `_container_bb9328`).
+    expect(html).toMatch(/^<div class="[^"]*container[^"]*"><\/div>$/);
+  });
+
+  /**
    * `display` non produce mai una classe dedicata (ADR-39 § 2 punto 1, commento di testa di
    * `Container.tsx`): un solo valore possibile in questo round, già cablato in
    * `Container.module.css` senza bisogno di un token — qualunque cosa arrivi in questa prop

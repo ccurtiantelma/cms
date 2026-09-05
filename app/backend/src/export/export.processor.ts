@@ -47,6 +47,15 @@ const MEDIA_EXTENSION_BY_MIME_TYPE: Record<string, string> = {
 const IMG_TAG_PATTERN = /<img\b[^>]*>/g;
 /** `guid` a 16 esadecimali (CLAUDE.md: mai `id` numerico in URL), stesso formato validato da `Utils.randomString(16)`. */
 const MEDIA_REF_PATTERN = /data-media-ref="([0-9a-f]{16})"/;
+/**
+ * Preset di dimensionamento (ADR-58, `image.styleSizePreset`) emesso dal
+ * componente `Image` condiviso accanto a `data-media-ref` quando
+ * `styleSizePreset !== 'full'`: uno dei sei token dichiarati dal registro
+ * blocchi (`thumbnail|card|hero|og|full|custom`), stesso approccio a due fasi
+ * di `MEDIA_REF_PATTERN`. Assente sul tag → comportamento invariato
+ * (aggregazione di tutte le varianti, come prima di ADR-58).
+ */
+const MEDIA_PRESET_PATTERN = /data-media-preset="([a-z]+)"/;
 
 /** Cattura l'intero tag `<link rel="stylesheet">` del foglio CSS esterno dei blocchi (`App.tsx`, servito da `server.ts::loadCss`), stesso approccio a due fasi già usato per `IMG_TAG_PATTERN`/`MEDIA_REF_PATTERN`. */
 const STYLESHEET_LINK_TAG_PATTERN = /<link\b[^>]*\brel="stylesheet"[^>]*>/;
@@ -225,7 +234,12 @@ export class ExportProcessor extends WorkerHost {
       return html;
     }
 
-    const resourcesByGuid = new Map<string, ResolvedMediaResources | null>();
+    // Chiave composta `guid:preset` (ADR-58): lo stesso `guid` risolve a
+    // famiglie di varianti diverse a seconda del preset richiesto dal
+    // singolo blocco — una cache indicizzata solo per `guid` mescolerebbe
+    // varianti a rapporto d'aspetto incompatibile fra due occorrenze dello
+    // stesso originale trasformato per preset diversi.
+    const resourcesByGuidAndPreset = new Map<string, ResolvedMediaResources | null>();
     let result = html;
 
     for (const tag of tags) {
@@ -234,11 +248,13 @@ export class ExportProcessor extends WorkerHost {
         continue;
       }
       const guid = guidMatch[1];
+      const preset = tag.match(MEDIA_PRESET_PATTERN)?.[1];
+      const cacheKey = `${guid}:${preset ?? 'full'}`;
 
-      if (!resourcesByGuid.has(guid)) {
-        resourcesByGuid.set(guid, await this.resolveMediaResources(guid));
+      if (!resourcesByGuidAndPreset.has(cacheKey)) {
+        resourcesByGuidAndPreset.set(cacheKey, await this.resolveMediaResources(guid, preset));
       }
-      const resources = resourcesByGuid.get(guid);
+      const resources = resourcesByGuidAndPreset.get(cacheKey);
       if (resources) {
         result = result.replace(tag, this.renderMediaMarkup(tag, resources));
       }
@@ -250,13 +266,27 @@ export class ExportProcessor extends WorkerHost {
   /**
    * Risolve le risorse copiate sull'export per un `guid` referenziato
    * (asset di base + eventuali varianti a preset nominato in AVIF/WebP,
-   * famiglia legata da `parentFileId`, ADR-49): cacheabile per `guid`, a
-   * differenza del markup finale che dipende anche dagli attributi del
-   * singolo tag `<img>` (`alt` in primis) e va quindi ricomposto per ogni
-   * occorrenza (`renderMediaMarkup`). Restituisce `null` se il `guid` non è
-   * servibile — il chiamante lascia il tag originale invariato.
+   * famiglia legata da `parentFileId`, ADR-49): cacheabile per `guid`+`preset`
+   * (ADR-58), a differenza del markup finale che dipende anche dagli
+   * attributi del singolo tag `<img>` (`alt` in primis) e va quindi
+   * ricomposto per ogni occorrenza (`renderMediaMarkup`). Restituisce `null`
+   * se il `guid` non è servibile — il chiamante lascia il tag originale
+   * invariato.
+   *
+   * @param guid Identificativo del file referenziato dal blocco `image`.
+   * @param preset Valore di `data-media-preset` emesso dal renderer quando
+   *   `image.styleSizePreset !== 'full'` (ADR-58). Quando presente ed è uno
+   *   dei quattro preset nominati (`thumbnail|card|hero|og`), la famiglia di
+   *   varianti viene filtrata a **solo** quel preset — corregge il
+   *   mescolamento di rapporti d'aspetto incompatibili fra preset diversi
+   *   generati per lo stesso originale. Assente, `'full'` o `'custom'`:
+   *   comportamento invariato, tutte le varianti nominate della famiglia
+   *   confluiscono nello stesso `srcset` (comportamento pre-ADR-58).
    */
-  private async resolveMediaResources(guid: string): Promise<ResolvedMediaResources | null> {
+  private async resolveMediaResources(
+    guid: string,
+    preset?: string,
+  ): Promise<ResolvedMediaResources | null> {
     const referenceRow = await this.db.db.query.fileEntity.findFirst({
       where: and(
         eq(fileEntity.guid, guid),
@@ -291,10 +321,20 @@ export class ExportProcessor extends WorkerHost {
       ),
     });
 
+    // Filtro preset-aware (ADR-58): attivo solo quando il tag dichiara uno
+    // dei quattro preset nominati. Assente, `'full'` o `'custom'`: nessun
+    // filtro, comportamento invariato (tutte le varianti nominate della
+    // famiglia confluiscono nello stesso `srcset`, come prima di ADR-58).
+    const isNamedPresetFilterActive =
+      preset !== undefined && preset !== 'full' && preset !== 'custom';
+
     const entriesByExtension = new Map<'avif' | 'webp', { width: number; url: string }[]>();
     for (const row of familyRows) {
       const label = parseVariantLabel(row.originalName);
       if (!label || label === CROP_VARIANT_LABEL) {
+        continue;
+      }
+      if (isNamedPresetFilterActive && label !== preset) {
         continue;
       }
       if (row.mimeType !== 'image/avif' && row.mimeType !== 'image/webp') {

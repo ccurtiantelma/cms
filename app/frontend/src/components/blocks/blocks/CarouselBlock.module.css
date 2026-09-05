@@ -1,0 +1,22 @@
+/* `manual-scroll` (default): riga scorrevole nativa con "aggancio" per slide. */
+.carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  gap: var(--cms-space-sm, 1rem);
+}
+
+/* `fade-loop`/`slide-loop`: le slide (CarouselSlideBlock.module.css) si impilano in
+ * `position: absolute`, quindi questo contenitore deve fornire loro un riferimento di
+ * posizionamento (`position: relative`) e un'altezza propria — le slide assolute non
+ * contribuiscono al flusso, senza un minimo esplicito il contenitore collasserebbe a
+ * altezza zero. Valore di default sensato, sovrascrivibile da una futura prop di stile
+ * (fuori scope di ADR-57, che non ne dichiara una). */
+.carousel.fadeLoop,
+.carousel.slideLoop {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  min-height: var(--cms-carousel-min-height, 20rem);
+}

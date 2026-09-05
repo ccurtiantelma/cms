@@ -29,7 +29,7 @@ import {
   ContentTree,
 } from '../pages/content-tree';
 import { normalizeSlug, isReservedSlug } from '../pages/slug.util';
-import { PublicGlobalSectionsCacheService } from './public-global-sections-cache.service';
+import { ExportService } from '../export/export.service';
 import { CreateGlobalSectionDto } from './dto/create-global-section.dto';
 import { UpdateGlobalSectionDto } from './dto/update-global-section.dto';
 import { GlobalSectionDto } from './dto/global-section.dto';
@@ -54,20 +54,26 @@ const ORDERABLE_COLUMNS: Record<string, PgColumn> = {
  * "proprie" Sezioni Globali. Il contenuto riusa integralmente la pipeline
  * di ADR-21 (migrazione → validazione di registro → sanitizzazione per
  * `kind`): nessuna logica di dominio sui blocchi duplicata qui.
+ *
+ * Nessuna cache Redis pubblica (fix ADR-55, debito ereditato da ADR-53):
+ * ogni scrittura che tocca `content`/`layoutSlot`/`isActive` accoda un
+ * full-site export (`ExportService.enqueueFullSiteExport`), indipendente dal
+ * `layoutSlot`, perché una Sezione Globale è ora referenziabile ovunque via
+ * `globalRef`, non solo negli slot `header`/`footer`.
  */
 @Injectable()
 export class GlobalSectionsService {
   private readonly logger = new Logger(GlobalSectionsService.name);
 
   /**
-   * Inietta le dipendenze di persistenza e invalidazione cache del modulo.
+   * Inietta le dipendenze di persistenza e propagazione dell'export statico.
    */
   constructor(
     private readonly db: DbService,
     private readonly auditLogService: AuditLogService,
     private readonly blockTreeValidator: BlockTreeValidatorService,
     private readonly blockPropSanitizer: BlockPropSanitizerService,
-    private readonly publicCache: PublicGlobalSectionsCacheService,
+    private readonly exportService: ExportService,
     @Inject(BLOCK_REGISTRY_TOKEN) private readonly blockRegistry: BlockRegistry,
   ) {}
 
@@ -134,9 +140,7 @@ export class GlobalSectionsService {
       updatedBy: authInfo.userId,
     });
 
-    if (row.layoutSlot !== GlobalSectionLayoutSlot.None) {
-      await this.publicCache.invalidate(authInfo.userId);
-    }
+    await this.exportService.enqueueFullSiteExport();
 
     this.logger.log(`Sezione Globale creata (guid=${row.guid}).`);
     return this.toDto(row);
@@ -171,8 +175,11 @@ export class GlobalSectionsService {
     }
     if (dto.content !== undefined) values.content = this.runWriteContentPipeline(dto.content);
 
+    // Slot/content sono gli unici campi che condizionano l'export (ADR-55):
+    // nessuna restrizione allo slot assegnato — una Sezione anche in stato
+    // `none` è referenziabile via `globalRef` ovunque nell'albero di una
+    // Pagina, quindi ogni scrittura sul suo contenuto conta.
     const slotOrContentChanged = values.layoutSlot !== undefined || values.content !== undefined;
-    const wasAssigned = row.layoutSlot !== GlobalSectionLayoutSlot.None;
 
     const updatedRow = await this.updateOrMapConflict(row.id, dto.version, values);
     if (!updatedRow) {
@@ -182,16 +189,15 @@ export class GlobalSectionsService {
       });
     }
 
-    const isAssignedNow = updatedRow.layoutSlot !== GlobalSectionLayoutSlot.None;
-    if (slotOrContentChanged && (wasAssigned || isAssignedNow)) {
-      await this.publicCache.invalidate(authInfo.userId);
+    if (slotOrContentChanged) {
+      await this.exportService.enqueueFullSiteExport();
     }
 
     this.logger.log(`Sezione Globale aggiornata (guid=${guid}).`);
     return this.toDto(updatedRow);
   }
 
-  /** Soft delete. Invalida la cache pubblica se la riga era assegnata a uno slot. */
+  /** Soft delete. Accoda sempre un full-site export (ADR-55): la riga può essere referenziata via `globalRef` a prescindere dal `layoutSlot`. */
   async remove(guid: string, authInfo: AuthInfo, ip?: string): Promise<void> {
     const row = await this.loadActiveByGuid(guid);
 
@@ -200,9 +206,7 @@ export class GlobalSectionsService {
       .set({ isActive: false, updatedAt: new Date(), updatedBy: authInfo.userId })
       .where(eq(globalSectionEntity.id, row.id));
 
-    if (row.layoutSlot !== GlobalSectionLayoutSlot.None) {
-      await this.publicCache.invalidate(authInfo.userId);
-    }
+    await this.exportService.enqueueFullSiteExport();
 
     this.logger.log(`Sezione Globale eliminata (guid=${guid}).`);
     await this.auditLogService.log(
@@ -217,14 +221,13 @@ export class GlobalSectionsService {
   }
 
   /**
-   * Sezioni pubbliche attive per `header`/`footer` (ADR-40). Cache-first: un
-   * `miss` legge dal database e ripopola la cache; sempre `200`, slot senza
-   * Sezione assegnata → `null`.
+   * Sezioni pubbliche attive per `header`/`footer` (ADR-40). Legge sempre dal
+   * database, nessun cache-first: conforme ad ADR-53 § Conformità ("nessuna
+   * chiave Redis con prefisso `public:` letta o scritta"), volume di lettura
+   * trascurabile (due righe, ADR-55). Sempre `200`, slot senza Sezione
+   * assegnata → `null`.
    */
   async getActivePublic(): Promise<PublicActiveGlobalSectionsDto> {
-    const cached = await this.publicCache.getCached();
-    if (cached) return cached;
-
     const rows = await this.db.db.query.globalSectionEntity.findMany({
       where: and(
         eq(globalSectionEntity.isActive, true),
@@ -255,7 +258,6 @@ export class GlobalSectionsService {
         : null,
     };
 
-    await this.publicCache.setCached(dto);
     return dto;
   }
 
@@ -337,7 +339,9 @@ export class GlobalSectionsService {
    * forma envelope (`v` obbligatorio per nodo) → migrazione → validazione
    * contro il registro → sanitizzazione per `kind` → controllo payload
    * "persist". Un albero non conforme è respinto per intero al primo
-   * errore incontrato.
+   * errore incontrato. `insideGlobalSection: true` (ADR-55): il contenuto di
+   * una Sezione Globale non può mai contenere un nodo `globalRef` — divieto
+   * di ciclo per contratto, mai impostato dal contenuto di una Pagina.
    */
   private runWriteContentPipeline(input: unknown): PersistableContent {
     assertValidContentTreeShape(input);
@@ -366,6 +370,7 @@ export class GlobalSectionsService {
     const validation = this.blockTreeValidator.validateTree(
       migration.blocks as ValidatableBlockNode[],
       this.blockRegistry,
+      { insideGlobalSection: true },
     );
     if (!validation.valid) {
       throw this.blockErrorToBadRequest(validation.errors[0]);

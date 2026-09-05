@@ -29,3 +29,14 @@
 [data-mantine-color-scheme='dark'] .presetButton {
   border-color: var(--mantine-color-dark-4);
 }
+
+/*
+ * Thumbnail decorativo (ADR-56 § 4): asset SVG statico bundlato, mai un upload. Dimensione
+ * fissa e `object-fit: contain` cosi tessere di preset diverse restano allineate anche se
+ * l'SVG originale ha proporzioni diverse.
+ */
+.presetThumbnail {
+  width: 100%;
+  height: 64px;
+  object-fit: contain;
+}

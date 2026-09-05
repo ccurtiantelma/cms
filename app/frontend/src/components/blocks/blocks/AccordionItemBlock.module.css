@@ -1,0 +1,46 @@
+.item {
+  border: 1px solid var(--cms-bg-subtle, #f4f4f5);
+  border-radius: var(--cms-radius-sm, 4px);
+  background-color: var(--cms-bg-none, transparent);
+}
+
+.summary {
+  cursor: pointer;
+  padding: var(--cms-padding-sm, 0.5rem) var(--cms-padding-md, 1rem);
+  font-size: var(--cms-font-size-md, 1rem);
+  font-weight: 600;
+  color: var(--cms-text-color-default, #1a1a1a);
+  list-style: none;
+}
+
+/* Rimuove il marcatore di default del browser (triangolo/freccia nativa): un chevron
+ * disegnato via `::after`, ruotato allo stato `[open]`, sostituisce il marcatore nativo su
+ * ogni motore di rendering — nessuna icona `@tabler/icons-react` (i blocchi non importano
+ * dipendenze applicative, solo markup semantico + CSS). */
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.summary::marker {
+  content: '';
+}
+
+.summary::after {
+  content: '';
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-left: 0.5rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+.item[open] > .summary::after {
+  transform: rotate(-135deg);
+}
+
+.panel {
+  padding: 0 var(--cms-padding-md, 1rem) var(--cms-padding-sm, 0.5rem);
+}

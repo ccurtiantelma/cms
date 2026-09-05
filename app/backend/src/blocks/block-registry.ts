@@ -11,6 +11,14 @@ import { formFieldBlock } from './types/form-field.block';
 import { formSubmitBlock } from './types/form-submit.block';
 import { navMenuBlock } from './types/nav-menu.block';
 import { navMenuItemBlock } from './types/nav-menu-item.block';
+import { globalRefBlock } from './types/global-ref.block';
+import { accordionBlock } from './types/accordion.block';
+import { accordionItemBlock } from './types/accordion-item.block';
+import { tabsBlock } from './types/tabs.block';
+import { tabPanelBlock } from './types/tab-panel.block';
+import { carouselBlock } from './types/carousel.block';
+import { carouselSlideBlock } from './types/carousel-slide.block';
+import { modalTriggerBlock } from './types/modal-trigger.block';
 
 /**
  * Tipi ammessi come nodo di **radice** dell'albero. Dichiarato qui e mai
@@ -18,7 +26,13 @@ import { navMenuItemBlock } from './types/nav-menu-item.block';
  * sei i tipi — non solo `section` — perché F01 ha già persistito alberi
  * con una foglia in `blocks[0]` e nessuna migrazione può inventare un nodo
  * `section` sintetico senza creare struttura che l'autore non ha scritto.
- * `container` (ADR-39 § 4) segue lo stesso principio.
+ * `container` (ADR-39 § 4) segue lo stesso principio. `globalRef` (ADR-55
+ * § 1) vi è ammesso perché deve essere referenziabile ovunque nell'albero
+ * `content` di una Pagina, non solo dentro un `section`/`container`.
+ * `accordion`/`tabs`/`carousel`/`modalTrigger` (ADR-57 § Decisione punto 1):
+ * i quattro contenitori dei widget interattivi CSS-only, stesso trattamento
+ * di `navMenu` — le tre voci (`accordionItem`/`tabPanel`/`carouselSlide`)
+ * non vi compaiono mai, stesso trattamento di `navMenuItem`.
  */
 export const ROOT_ALLOWED: readonly string[] = [
   'section',
@@ -28,14 +42,23 @@ export const ROOT_ALLOWED: readonly string[] = [
   'button',
   'container',
   'navMenu',
+  'globalRef',
+  'accordion',
+  'tabs',
+  'carousel',
+  'modalTrigger',
 ];
 
 /**
  * I cinque tipi approvati uno per uno da ADR-21 § 5, più `container`
  * (sesto tipo, ADR-39), `form`/`form-field`/`form-submit` (settimo/ottavo/
- * nono tipo, ADR-46 § 1) e `navMenu`/`navMenuItem` (decimo/undicesimo tipo,
- * ADR-52 § 1) — undici tipi in tutto. Tutti a `v: 1`, `enabled: true`,
- * nessun `minRole`, nessun `deprecated` (PLAN-F02 T2).
+ * nono tipo, ADR-46 § 1), `navMenu`/`navMenuItem` (decimo/undicesimo tipo,
+ * ADR-52 § 1), `globalRef` (dodicesimo tipo, ADR-55 § 1) e i sette widget
+ * interattivi CSS-only `accordion`/`accordionItem`/`tabs`/`tabPanel`/
+ * `carousel`/`carouselSlide`/`modalTrigger` (tredicesimo–diciannovesimo
+ * tipo, ADR-57 § Decisione punto 1) — diciannove tipi in tutto. Tutti a
+ * `v: 1`, `enabled: true`, nessun `minRole`, nessun `deprecated`
+ * (PLAN-F02 T2).
  */
 const BLOCK_DEFINITIONS: readonly BlockDefinition[] = [
   sectionBlock,
@@ -49,6 +72,14 @@ const BLOCK_DEFINITIONS: readonly BlockDefinition[] = [
   formSubmitBlock,
   navMenuBlock,
   navMenuItemBlock,
+  globalRefBlock,
+  accordionBlock,
+  accordionItemBlock,
+  tabsBlock,
+  tabPanelBlock,
+  carouselBlock,
+  carouselSlideBlock,
+  modalTriggerBlock,
 ];
 
 /** Registro dei tipi, indicizzato per `type`. Fonte di verità del backend (ADR-21 § 2). */
@@ -68,7 +99,7 @@ export interface BlockRegistry {
   rootAllowed: readonly string[];
 }
 
-/** Registro di produzione: gli undici tipi approvati (ADR-21 § 5, ADR-39, ADR-46 § 1, ADR-52 § 1). */
+/** Registro di produzione: i diciannove tipi approvati (ADR-21 § 5, ADR-39, ADR-46 § 1, ADR-52 § 1, ADR-55 § 1, ADR-57 § Decisione punto 1). */
 export const DEFAULT_BLOCK_REGISTRY: BlockRegistry = {
   definitions: BLOCK_REGISTRY,
   rootAllowed: ROOT_ALLOWED,

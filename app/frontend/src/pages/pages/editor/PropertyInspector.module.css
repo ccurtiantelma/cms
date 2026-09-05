@@ -10,7 +10,21 @@
  * quindi `height: 100%` qui sotto risolve correttamente senza un valore hardcoded da
  * tenere sincronizzato a mano con la topbar.
  */
+/*
+ * `position: relative` + `z-index: 10` (RE-2, requisito esplicito del task — "sidebar
+ * proprietà con problemi di z-index/sovrapposizione sul canvas"): stabilisce un proprio
+ * contesto di stacking per la scheda "Proprietà", così i `Popover`/`Select` Mantine
+ * montati **dentro** questo pannello (color picker, dropdown responsive) restano sopra il
+ * canvas dell'editor, mai sotto — senza dover alzare lo z-index dei singoli controlli, che
+ * Mantine già monta `withinPortal` di default (il portale eredita comunque lo z-index del
+ * proprio `Popover`, non quello di questo contenitore: qui si isola l'intera colonna della
+ * sidebar dal resto della chrome per evitare che un antenato con `z-index`/stacking
+ * inaspettato la scavalchi). `overflow-y: auto` era già presente (scroll indipendente dal
+ * resto della chrome, vedi sotto) — non un requisito nuovo, solo confermato qui.
+ */
 .root {
+  position: relative;
+  z-index: 10;
   height: 100%;
   min-height: 0;
   overflow-y: auto;

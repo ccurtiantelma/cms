@@ -91,6 +91,226 @@ describe('invariante di escaping plainText (ADR-21 § 4, ADR-22 § 7)', () => {
 });
 
 /**
+ * Pagina di fixture con i sette tipi di ADR-57 (`accordion`/`accordionItem`,
+ * `tabs`/`tabPanel`, `carousel`/`carouselSlide` — sia `transition:'manual-scroll'` sia
+ * `'fade-loop'`, `modalTrigger`) tutti annidati correttamente (stessa forma dell'albero
+ * "happy path" di `pages-blocks-widgets-interattivi.e2e-spec.ts` T7, qui riusata come
+ * fixture SSR invece che come payload di validazione backend).
+ */
+function pageWithInteractiveWidgets(): PublicPageDto {
+  return {
+    title: 'Pagina widget interattivi',
+    slug: 'pagina-widget-interattivi',
+    locale: 'it-IT',
+    content: {
+      version: 1,
+      blocks: [
+        {
+          id: 'section-1',
+          type: 'section',
+          v: 1,
+          props: {},
+          children: [
+            {
+              id: 'accordion-1',
+              type: 'accordion',
+              v: 1,
+              props: { exclusive: true },
+              children: [
+                {
+                  id: 'acc-item-1',
+                  type: 'accordionItem',
+                  v: 1,
+                  props: { title: 'Domanda 1' },
+                  children: [
+                    { id: 'acc-h1', type: 'heading', v: 1, props: { level: 'h3', text: 'Risposta 1' }, children: [] },
+                  ],
+                },
+                {
+                  id: 'acc-item-2',
+                  type: 'accordionItem',
+                  v: 1,
+                  props: { title: 'Domanda 2' },
+                  children: [
+                    { id: 'acc-h2', type: 'heading', v: 1, props: { level: 'h3', text: 'Risposta 2' }, children: [] },
+                  ],
+                },
+              ],
+            },
+            {
+              id: 'tabs-1',
+              type: 'tabs',
+              v: 1,
+              props: {},
+              children: [
+                {
+                  id: 'tab-panel-1',
+                  type: 'tabPanel',
+                  v: 1,
+                  props: { label: 'Scheda 1' },
+                  children: [
+                    { id: 'tab-h1', type: 'heading', v: 1, props: { level: 'h3', text: 'Contenuto scheda 1' }, children: [] },
+                  ],
+                },
+                {
+                  id: 'tab-panel-2',
+                  type: 'tabPanel',
+                  v: 1,
+                  props: { label: 'Scheda 2' },
+                  children: [
+                    { id: 'tab-h2', type: 'heading', v: 1, props: { level: 'h3', text: 'Contenuto scheda 2' }, children: [] },
+                  ],
+                },
+              ],
+            },
+            {
+              id: 'carousel-manual',
+              type: 'carousel',
+              v: 1,
+              props: { autoplay: false, transition: 'manual-scroll' },
+              children: [
+                {
+                  id: 'car-slide-1',
+                  type: 'carouselSlide',
+                  v: 1,
+                  props: {},
+                  children: [
+                    { id: 'car-img-1', type: 'image', v: 1, props: { mediaRef: 'abc', alt: 'Slide 1' }, children: [] },
+                  ],
+                },
+                {
+                  id: 'car-slide-2',
+                  type: 'carouselSlide',
+                  v: 1,
+                  props: {},
+                  children: [
+                    { id: 'car-img-2', type: 'image', v: 1, props: { mediaRef: 'def', alt: 'Slide 2' }, children: [] },
+                  ],
+                },
+              ],
+            },
+            {
+              id: 'carousel-fade',
+              type: 'carousel',
+              v: 1,
+              props: { autoplay: true, transition: 'fade-loop' },
+              children: [
+                {
+                  id: 'car-fade-slide-1',
+                  type: 'carouselSlide',
+                  v: 1,
+                  props: {},
+                  children: [
+                    { id: 'car-fade-h1', type: 'heading', v: 1, props: { level: 'h3', text: 'Slide loop 1' }, children: [] },
+                  ],
+                },
+                {
+                  id: 'car-fade-slide-2',
+                  type: 'carouselSlide',
+                  v: 1,
+                  props: {},
+                  children: [
+                    { id: 'car-fade-h2', type: 'heading', v: 1, props: { level: 'h3', text: 'Slide loop 2' }, children: [] },
+                  ],
+                },
+              ],
+            },
+            {
+              id: 'modal-trigger-1',
+              type: 'modalTrigger',
+              v: 1,
+              props: { triggerLabel: 'Apri modale', animation: 'fade' },
+              children: [
+                {
+                  id: 'modal-btn',
+                  type: 'button',
+                  v: 1,
+                  props: { label: 'Contenuto modale', href: 'https://example.com' },
+                  children: [],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
+const FORBIDDEN_SCRIPT_TAG = /<script[\s>]/i;
+/** Un attributo `on*` di handler inline, es. ` onclick="..."` — richiede uno spazio prima di
+ * `on` (attributo, non testo) per non generare falsi positivi su parole comuni italiane. */
+const FORBIDDEN_EVENT_HANDLER_ATTR = /\son[a-z]+\s*=/i;
+const FORBIDDEN_HYDRATION_ATTR = /data-reactroot|data-hydrate/i;
+
+/**
+ * Gate CI zero-JS/zero-hydration (ADR-57 § Conformità, PLAN-widget-interattivi-enterprise.md
+ * T8) — stesso principio del gate di escaping `plainText` sopra: un'unica funzione di
+ * asserzione riusata sia dal test positivo sull'HTML reale sia dai test di "sabotaggio" sotto,
+ * che dimostrano che l'asserzione intercetta davvero i pattern vietati (script, handler `on*`,
+ * attributo di hydration) e non è un placeholder che passa sempre.
+ */
+function assertZeroJsZeroHydration(htmlToCheck: string): void {
+  expect(htmlToCheck).not.toMatch(FORBIDDEN_SCRIPT_TAG);
+  expect(htmlToCheck).not.toMatch(FORBIDDEN_EVENT_HANDLER_ATTR);
+  expect(htmlToCheck).not.toMatch(FORBIDDEN_HYDRATION_ATTR);
+}
+
+describe('gate CI zero-JS/zero-hydration sui sette widget interattivi (ADR-57 § Conformità, PLAN-widget-interattivi-enterprise.md T8)', () => {
+  it(
+    "l'HTML reale prodotto da renderToStaticMarkup per una pagina con tutti e sette i tipi " +
+      'annidati correttamente non contiene <script>, handler on* o attributi di hydration, e ' +
+      'contiene il markup CSS-only atteso per ciascun widget',
+    async () => {
+      const html = await renderPageDocument(pageWithInteractiveWidgets(), '/assets/style.css');
+
+      // Verifica negativa (ADR-57 § Conformità): nessuno dei sette tipi carica un runtime, uno
+      // script di hydration o un event listener.
+      assertZeroJsZeroHydration(html);
+
+      // Verifica positiva: markup CSS-only atteso per ciascun widget contenitore.
+      // accordion/accordionItem -> <details>/<summary> nativi.
+      expect(html).toContain('<details');
+      expect(html).toContain('<summary');
+      // tabs/tabPanel -> radio-hack CSS-only.
+      expect(html).toMatch(/<input[^>]*type="radio"/);
+      // carousel/carouselSlide (manual-scroll) -> ancora nativa #slide-{id}.
+      expect(html).toContain('id="slide-car-slide-1"');
+      expect(html).toContain('id="slide-car-slide-2"');
+      // modalTrigger -> ancora #modal-{nodeId}.
+      expect(html).toMatch(/href="#modal-modal-trigger-1"/);
+      expect(html).toContain('id="modal-modal-trigger-1"');
+    },
+  );
+
+  it(
+    'il gate rileva deliberatamente uno <script> iniettato — dimostra che non è un placeholder ' +
+      'che passa sempre',
+    () => {
+      const sabotagedHtml =
+        '<div class="accordion"><details><summary>Domanda</summary></details></div>' +
+        '<script>alert(1)</script>';
+
+      expect(() => assertZeroJsZeroHydration(sabotagedHtml)).toThrow();
+    },
+  );
+
+  it('il gate rileva deliberatamente un handler inline on* iniettato', () => {
+    const sabotagedHtml = '<a href="#modal-trigger-1" onclick="doSomething()">Apri modale</a>';
+
+    expect(() => assertZeroJsZeroHydration(sabotagedHtml)).toThrow();
+  });
+
+  it('il gate rileva deliberatamente un attributo di hydration iniettato (data-reactroot/data-hydrate)', () => {
+    const sabotagedWithReactroot = '<div data-reactroot="">contenuto</div>';
+    const sabotagedWithHydrate = '<div data-hydrate="widget-1">contenuto</div>';
+
+    expect(() => assertZeroJsZeroHydration(sabotagedWithReactroot)).toThrow();
+    expect(() => assertZeroJsZeroHydration(sabotagedWithHydrate)).toThrow();
+  });
+});
+
+/**
  * `dangerouslySetInnerHTML` è ammesso in un solo punto (RichText.tsx, su HTML
  * già sanitizzato server-side). Qualunque altra occorrenza — in un altro
  * blocco o in app/public-site — è per costruzione uno XSS stored, perché

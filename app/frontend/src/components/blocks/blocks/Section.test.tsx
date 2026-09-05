@@ -150,4 +150,45 @@ describe('Section', () => {
       expect(html).toContain('contentWidth_boxed');
     });
   });
+
+  /**
+   * Test di regressione RFC-58 T6 (Punto 3, prima metà): `ADR-33 § 1` dichiara
+   * "`maxWidth` è ignorato dal renderer quando `contentWidth = full-width`" — comportamento
+   * verificato corretto in `Section.tsx` riga 176 (`isFullWidth ? '' :
+   * resolveScalarClassName(...)`), finora privo di un'asserzione esplicita. Questo componente
+   * è l'unico file sorgente sia per l'editor (`EditorBlockWrapper.tsx` lo importa direttamente,
+   * `CONTAINER_COMPONENTS`) sia per il consumer SSR pubblico (`app/public-site`, alias `@blocks`
+   * su `entry-server.tsx` → `App.tsx` → `PageView.tsx` → `BlockRenderer.tsx`): un test qui
+   * copre entrambe le superfici. Vedi anche
+   * `app/public-site/test/section-container-layout-regression.spec.tsx` per l'asserzione
+   * equivalente sull'HTML SSR reale (classi hashate dai CSS Modules, pipeline diversa da questa).
+   */
+  describe('ADR-33 § 1 — maxWidth ignorato quando contentWidth è full-width (RFC-58 T6)', () => {
+    it('contentWidth "full-width" con maxWidth valorizzato: nessuna classe maxWidth_* emessa', () => {
+      const html = renderToStaticMarkup(
+        <Section contentWidth="full-width" maxWidth="lg">
+          Contenuto
+        </Section>,
+      );
+
+      expect(html).toContain('contentWidth_full-width');
+      expect(html).not.toContain('maxWidth_lg');
+      expect(html).not.toMatch(/maxWidth_/);
+    });
+
+    /**
+     * Controllo di sensibilità: senza questo secondo caso, il test sopra passerebbe anche se
+     * `resolveScalarClassName` per `maxWidth` fosse rotto in generale (es. mai emesso, in
+     * qualunque combinazione) — non solo nel caso `full-width` che ADR-33 § 1 prescrive.
+     */
+    it('la stessa maxWidth "lg" produce la classe corrispondente quando contentWidth è "boxed"', () => {
+      const html = renderToStaticMarkup(
+        <Section contentWidth="boxed" maxWidth="lg">
+          Contenuto
+        </Section>,
+      );
+
+      expect(html).toContain('maxWidth_lg');
+    });
+  });
 });

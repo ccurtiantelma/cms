@@ -209,6 +209,8 @@
 .columnRatio_equal { grid-template-columns: repeat(2, 1fr); }
 .columnRatio_33-66 { grid-template-columns: 1fr 2fr; }
 .columnRatio_66-33 { grid-template-columns: 2fr 1fr; }
+.columnRatio_30-70 { grid-template-columns: 3fr 7fr; }
+.columnRatio_70-30 { grid-template-columns: 7fr 3fr; }
 
 /* ─── stylePaddingTop/Right/Bottom/Left, styleMarginTop/Right/Bottom/Left
    (ADR-33 § 4) — solo section, responsive, scala chiusa 0-96px ─────────── */

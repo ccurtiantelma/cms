@@ -883,7 +883,9 @@ describe('PropertyInspector — copertura del registro reale', () => {
     // (`styleBorder`/`styleShadow`/`customCssClass`/`customElementId`/`styleFontSizeCustom`).
     // `number` è in uso reale da ADR-47 (`section.styleOverlayOpacity`): non è più l'unico
     // kind assente dai tipi approvati, non c'è più bisogno del tipo sintetico per coprirlo.
-    // `pageRef` è in uso reale da ADR-52 (`navMenuItem.pageGuid`).
+    // `pageRef` è in uso reale da ADR-52 (`navMenuItem.pageGuid`). `globalSectionRef` è in
+    // uso reale da ADR-55 (`globalRef.globalSectionGuid`, dodicesimo tipo, stessa forma di
+    // `pageRef` — `PropField.tsx` case `'globalSectionRef'`, nessun Picker dedicato).
     expect([...kindsNelRegistro].sort()).toEqual(
       [
         'border',
@@ -891,6 +893,7 @@ describe('PropertyInspector — copertura del registro reale', () => {
         'color',
         'cssClassName',
         'enum',
+        'globalSectionRef',
         'htmlId',
         'mediaRef',
         'number',
@@ -904,7 +907,7 @@ describe('PropertyInspector — copertura del registro reale', () => {
     );
   });
 
-  it('i tredici kind del contratto sono tutti rappresentati fra tipi reali e sonda sintetica', () => {
+  it('i quattordici kind del contratto sono tutti rappresentati fra tipi reali e sonda sintetica', () => {
     const coperti = new Set(
       BLOCK_TYPES.flatMap((descriptor) => descriptor.props).map((prop) => prop.kind),
     );
@@ -916,6 +919,7 @@ describe('PropertyInspector — copertura del registro reale', () => {
         'color',
         'cssClassName',
         'enum',
+        'globalSectionRef',
         'htmlId',
         'mediaRef',
         'number',
@@ -927,6 +931,102 @@ describe('PropertyInspector — copertura del registro reale', () => {
         'url',
       ].sort(),
     );
+  });
+});
+
+/**
+ * I sette tipi widget interattivi (ADR-57, PLAN-widget-interattivi-enterprise.md T5): nessuna
+ * modifica a `ContentTab.tsx`/`AdvancedTab.tsx`/`PropField.tsx` è stata necessaria — le prop
+ * dei sette tipi (`exclusive`/`title`/`label`/`autoplay`/`transition`/`triggerLabel`/
+ * `animation`) riusano interamente i controlli già esistenti per `boolean`/`plainText`/`enum`,
+ * con etichette/help già dichiarati dal registro (`meta.props`). Questa suite verifica che
+ * l'infrastruttura generica dell'ispettore copra i sette tipi senza codice dedicato, esattamente
+ * come dichiara il commento di testa di `PropertyInspector.tsx` ("aggiungere un tipo di blocco
+ * non richiede alcun file nuovo").
+ */
+describe('PropertyInspector — i sette tipi widget interattivi (ADR-57)', () => {
+  it('accordion: Switch "Apertura esclusiva", scrittura immediata in store', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('acc-1', 'accordion', { exclusive: false }));
+
+    const toggle = screen.getByLabelText('Apertura esclusiva');
+    expect(toggle).toHaveAttribute('type', 'checkbox');
+    expect(toggle).not.toBeChecked();
+
+    await user.click(toggle);
+
+    expect(propsInStore('acc-1').exclusive).toBe(true);
+  });
+
+  it('accordionItem: TextInput "Titolo" obbligatorio, scritto onBlur', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('item-1', 'accordionItem', { title: '' }));
+
+    const input = screen.getByRole('textbox', { name: 'Titolo' });
+    expect(input).toHaveAttribute('maxlength', '120');
+
+    await user.type(input, 'Domanda frequente');
+    await user.tab();
+
+    expect(propsInStore('item-1').title).toBe('Domanda frequente');
+  });
+
+  it('tabs: nessuna prop propria, dichiara che si configura con i figli', () => {
+    renderInspectorWith(node('tabs-1', 'tabs'));
+
+    expect(screen.getByText(/non ha proprietà modificabili/i)).toBeInTheDocument();
+  });
+
+  it('tabPanel: TextInput "Etichetta" obbligatorio', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('panel-1', 'tabPanel', { label: '' }));
+
+    const input = screen.getByRole('textbox', { name: 'Etichetta' });
+    expect(input).toHaveAttribute('maxlength', '60');
+
+    await user.type(input, 'Panoramica');
+    await user.tab();
+
+    expect(propsInStore('panel-1').label).toBe('Panoramica');
+  });
+
+  it('carousel: Switch "Avvio automatico" e Select "Transizione" con i soli valori del registro', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('car-1', 'carousel', { autoplay: false, transition: 'manual-scroll' }));
+
+    const autoplayToggle = screen.getByLabelText('Avvio automatico');
+    await user.click(autoplayToggle);
+    expect(propsInStore('car-1').autoplay).toBe(true);
+
+    const transitionSelect = screen.getByRole('textbox', { name: 'Transizione' });
+    await user.click(transitionSelect);
+    await user.click(screen.getByRole('option', { name: 'fade-loop' }));
+
+    expect(propsInStore('car-1').transition).toBe('fade-loop');
+  });
+
+  it('carouselSlide: nessuna prop propria, dichiara che si configura con i figli', () => {
+    renderInspectorWith(node('slide-1', 'carouselSlide'));
+
+    expect(screen.getByText(/non ha proprietà modificabili/i)).toBeInTheDocument();
+  });
+
+  it('modalTrigger: TextInput "Etichetta del link" e Select "Animazione"', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(
+      node('modal-1', 'modalTrigger', { triggerLabel: '', animation: 'fade' }),
+    );
+
+    const labelInput = screen.getByRole('textbox', { name: 'Etichetta del link' });
+    expect(labelInput).toHaveAttribute('maxlength', '80');
+    await user.type(labelInput, 'Scopri di più');
+    await user.tab();
+    expect(propsInStore('modal-1').triggerLabel).toBe('Scopri di più');
+
+    const animationSelect = screen.getByRole('textbox', { name: 'Animazione' });
+    await user.click(animationSelect);
+    await user.click(screen.getByRole('option', { name: 'slide-down' }));
+    expect(propsInStore('modal-1').animation).toBe('slide-down');
   });
 });
 

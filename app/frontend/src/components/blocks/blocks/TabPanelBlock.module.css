@@ -1,0 +1,56 @@
+/*
+ * `display: contents`: questo wrapper sparisce dall'albero di rendering — i suoi tre figli
+ * DOM diretti (radio, label, pannello) diventano item flex diretti di `.tabs`
+ * (TabsBlock.module.css), che li riordina visivamente (`order`) senza intaccarne la
+ * fratellanza DOM, di cui il selettore `input:checked + label + .panel` sotto ha bisogno.
+ */
+.tabItem {
+  display: contents;
+}
+
+/* Radio nascosto ma presente nel flusso: stessa tecnica di `.toggleInput` in
+ * `NavMenuBlock.module.css` — nascosto alla vista, non a `:checked`/al focus da tastiera. */
+.tabInput {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.tabLabel {
+  order: 0;
+  cursor: pointer;
+  padding: var(--cms-padding-sm, 0.5rem) var(--cms-padding-md, 1rem);
+  font-size: var(--cms-font-size-md, 1rem);
+  font-weight: 500;
+  color: var(--cms-text-color-muted, #6b7280);
+  border-bottom: 3px solid transparent;
+}
+
+.tabInput:checked + .tabLabel {
+  color: var(--cms-text-color-accent, #4338ca);
+  border-bottom-color: var(--cms-text-color-accent, #4338ca);
+  font-weight: 600;
+}
+
+.tabInput:focus-visible + .tabLabel {
+  outline: 2px solid var(--cms-text-color-accent, #4338ca);
+  outline-offset: 2px;
+}
+
+/* Pannello nascosto per default: `order:1`/`flex-basis:100%` lo forzano su una riga propria
+ * sotto le etichette (tutte `order:0`) quando è mostrato. Selettore adiacente `+` in
+ * cascata: valido solo perché radio/label/pannello sono fratelli DOM diretti dentro lo
+ * stesso `.tabItem` (`display:contents` sopra) — nessuna dipendenza dagli altri `.tabItem`
+ * fratelli, ciascuno gestisce la propria visibilità in modo indipendente. */
+.panel {
+  order: 1;
+  flex-basis: 100%;
+  display: none;
+  padding: var(--cms-padding-md, 1rem) 0;
+}
+
+.tabInput:checked + .tabLabel + .panel {
+  display: block;
+}

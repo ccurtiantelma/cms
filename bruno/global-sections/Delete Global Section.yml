@@ -1,0 +1,31 @@
+info:
+  name: Delete Global Section
+  type: http
+  seq: 7
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/app/global-sections/:guid"
+  params:
+    - name: guid
+      value: "0000000000000000"
+      type: path
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Soft-delete: accoda sempre un full-site export (ADR-55), anche per una
+  Sezione con `layoutSlot: "none"` — a differenza del comportamento
+  pre-ADR-55, ristretto a header/footer.
+
+tests: |-
+  test("status is 204 (eliminata) o 404 (già inesistente/eliminata)", function() {
+    expect([204, 404]).to.include(res.getStatus());
+  });

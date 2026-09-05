@@ -28,7 +28,15 @@ import FormFieldBlock from './blocks/FormFieldBlock';
 import FormSubmitBlock from './blocks/FormSubmitBlock';
 import NavMenuBlock from './blocks/NavMenuBlock';
 import NavMenuItemBlock from './blocks/NavMenuItemBlock';
+import GlobalRefBlock from './blocks/GlobalRefBlock';
 import ContentPlaceholderBlock, { CONTENT_AREA_BLOCK_ID } from './blocks/ContentPlaceholderBlock';
+import AccordionBlock from './blocks/AccordionBlock';
+import AccordionItemBlock from './blocks/AccordionItemBlock';
+import TabsBlock from './blocks/TabsBlock';
+import TabPanelBlock from './blocks/TabPanelBlock';
+import CarouselBlock, { resolveCarouselTransition } from './blocks/CarouselBlock';
+import CarouselSlideBlock from './blocks/CarouselSlideBlock';
+import ModalTriggerBlock from './blocks/ModalTriggerBlock';
 
 const KNOWN_TYPES = new Map(BLOCK_TYPES.map((descriptor) => [descriptor.type, descriptor]));
 
@@ -252,6 +260,11 @@ function renderNode(
           styleHideDesktop={node.props.styleHideDesktop}
           styleHideTablet={node.props.styleHideTablet}
           styleHideMobile={node.props.styleHideMobile}
+          styleSizePreset={node.props.styleSizePreset}
+          styleWidth={node.props.styleWidth}
+          styleHeight={node.props.styleHeight}
+          styleObjectFit={node.props.styleObjectFit}
+          styleAlign={node.props.styleAlign}
         />
       );
     }
@@ -336,6 +349,148 @@ function renderNode(
           target={target === '_blank' ? '_blank' : '_self'}
           resolvedUrl={hasPageGuid ? resolvePageUrl?.(pageGuid) : undefined}
         />
+      );
+    }
+    case 'globalRef': {
+      // Foglia (ADR-55, `children.allow: []`): nessuna ricorsione sui figli, a differenza
+      // di ogni altro `case` sopra che ne ha. La risoluzione nel contenuto vero della riga
+      // `global_sections` referenziata è del job di export lato server — mai qui.
+      const globalSectionGuid = node.props.globalSectionGuid;
+      return (
+        <GlobalRefBlock
+          globalSectionGuid={typeof globalSectionGuid === 'string' ? globalSectionGuid : ''}
+        />
+      );
+    }
+    case 'accordion': {
+      // Composizione a `children` (ADR-57 § 2): a differenza di ogni altro contenitore sopra,
+      // i figli `accordionItem` non sono ricorsi genericamente via `<BlockRenderer>` — devono
+      // ricevere `groupName` (l'attributo HTML `name` condiviso, presente solo quando
+      // `exclusive:true`), che solo questo case, proprietario dell'intero gruppo di fratelli,
+      // può calcolare. Ogni voce riceve comunque il proprio `BlockErrorBoundary` dedicato
+      // (mai un unico boundary per l'intero accordion), stesso principio di ogni altro nodo
+      // dell'albero.
+      const exclusive = node.props.exclusive === true;
+      const groupName = exclusive ? `accordion-${node.id}` : undefined;
+      return (
+        <AccordionBlock>
+          {node.children.map((child) => (
+            <BlockErrorBoundary key={child.id}>
+              <AccordionItemBlock
+                title={typeof child.props.title === 'string' ? child.props.title : ''}
+                groupName={groupName}
+              >
+                {child.children.map((grandChild) => (
+                  <BlockRenderer key={grandChild.id} node={grandChild} />
+                ))}
+              </AccordionItemBlock>
+            </BlockErrorBoundary>
+          ))}
+        </AccordionBlock>
+      );
+    }
+    case 'accordionItem':
+      // Difensivo: un `accordionItem` valido nell'albero è sempre figlio di un `accordion`,
+      // già gestito interamente dal case sopra — questo ramo copre solo un contenuto
+      // malformato/legacy che lo porti fuori da quel contesto (mai un errore che abbatte la
+      // pagina). Nessun genitore noto qui: nessun `groupName`, mai un'esclusività inventata.
+      return (
+        <AccordionItemBlock title={typeof node.props.title === 'string' ? node.props.title : ''}>
+          {node.children.map((child) => (
+            <BlockRenderer key={child.id} node={child} />
+          ))}
+        </AccordionItemBlock>
+      );
+    case 'tabs': {
+      // Stesso principio di `case 'accordion'`: i figli `tabPanel` condividono un unico
+      // `groupName` (l'attributo `name` dei radio del hack CSS) e solo il primo riceve
+      // `defaultChecked` — entrambe informazioni note solo a chi possiede l'intero gruppo di
+      // fratelli, mai al singolo figlio.
+      const groupName = `tabs-${node.id}`;
+      return (
+        <TabsBlock>
+          {node.children.map((child, index) => (
+            <BlockErrorBoundary key={child.id}>
+              <TabPanelBlock
+                label={typeof child.props.label === 'string' ? child.props.label : ''}
+                groupName={groupName}
+                defaultChecked={index === 0}
+              >
+                {child.children.map((grandChild) => (
+                  <BlockRenderer key={grandChild.id} node={grandChild} />
+                ))}
+              </TabPanelBlock>
+            </BlockErrorBoundary>
+          ))}
+        </TabsBlock>
+      );
+    }
+    case 'tabPanel':
+      // Difensivo, stesso principio di `case 'accordionItem'`: un `tabPanel` fuori da un
+      // `tabs` padre riceve un `groupName` tutto suo (nessun fratello con cui condividerlo)
+      // e resta sempre aperto (`defaultChecked`), il comportamento meno sorprendente per un
+      // pannello isolato.
+      return (
+        <TabPanelBlock
+          label={typeof node.props.label === 'string' ? node.props.label : ''}
+          groupName={`tabpanel-${node.id}`}
+          defaultChecked
+        >
+          {node.children.map((child) => (
+            <BlockRenderer key={child.id} node={child} />
+          ))}
+        </TabPanelBlock>
+      );
+    case 'carousel': {
+      // `resolveCarouselTransition` (CarouselBlock.tsx): unico punto di calcolo della
+      // transizione effettiva, riusata identica sia dal contenitore sia da ogni slide (mai
+      // ricalcolata due volte, mai una divergenza fra le due).
+      const transition = resolveCarouselTransition(node.props.autoplay, node.props.transition);
+      const slideCount = node.children.length;
+      return (
+        <CarouselBlock transition={transition}>
+          {node.children.map((child, index) => (
+            <BlockErrorBoundary key={child.id}>
+              <CarouselSlideBlock
+                slideId={child.id}
+                transition={transition}
+                index={index}
+                count={slideCount}
+              >
+                {child.children.map((grandChild) => (
+                  <BlockRenderer key={grandChild.id} node={grandChild} />
+                ))}
+              </CarouselSlideBlock>
+            </BlockErrorBoundary>
+          ))}
+        </CarouselBlock>
+      );
+    }
+    case 'carouselSlide':
+      // Difensivo, stesso principio di `case 'accordionItem'`/`case 'tabPanel'`: una slide
+      // isolata non ha fratelli di cui conoscere il conteggio, quindi mai un'animazione di
+      // loop (serve `index`/`count` del gruppo, noti solo al genitore) — resa come singola
+      // slide statica.
+      return (
+        <CarouselSlideBlock slideId={node.id} transition="manual-scroll" index={0} count={1}>
+          {node.children.map((child) => (
+            <BlockRenderer key={child.id} node={child} />
+          ))}
+        </CarouselSlideBlock>
+      );
+    case 'modalTrigger': {
+      const triggerLabel = node.props.triggerLabel;
+      const animation = node.props.animation;
+      return (
+        <ModalTriggerBlock
+          nodeId={node.id}
+          triggerLabel={typeof triggerLabel === 'string' ? triggerLabel : ''}
+          animation={animation === 'none' || animation === 'slide-down' ? animation : 'fade'}
+        >
+          {node.children.map((child) => (
+            <BlockRenderer key={child.id} node={child} />
+          ))}
+        </ModalTriggerBlock>
       );
     }
     default:

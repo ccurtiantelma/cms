@@ -1,0 +1,48 @@
+info:
+  name: Update Global Section - Version Conflict
+  type: http
+  seq: 6
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/app/global-sections/:guid"
+  params:
+    - name: guid
+      value: "0000000000000000"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "version": 1,
+        "content": { "version": 1, "blocks": [] }
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Valorizza `guid` con una Sezione Globale reale già esistente e già
+  aggiornata almeno una volta (così `version: 1` è certamente obsoleta):
+  lock ottimistico `WHERE version = :version`, zero righe aggiornate ⇒ 409,
+  distinto dal 409 di slug/layoutSlot duplicato mappato da `mapPgError`
+  (business-rules.md, concorrenza — "il secondo riceve 409, nessuna
+  modifica del primo va persa").
+
+tests: |-
+  test("status is 404 (guid non valorizzato) o 409 (version obsoleta)", function() {
+    expect([404, 409]).to.include(res.getStatus());
+  });
+
+  test("su 409 il code è GLOBAL_SECTION_VERSION_CONFLICT, distinto dal 409 di slug/layoutSlot duplicato", function() {
+    if (res.getStatus() === 409) {
+      const body = res.getBody();
+      expect(body.code).to.equal("GLOBAL_SECTION_VERSION_CONFLICT");
+    }
+  });

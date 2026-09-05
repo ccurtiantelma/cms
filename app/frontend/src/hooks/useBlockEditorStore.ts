@@ -25,6 +25,7 @@ import {
   duplicateSubtree,
   findLocation,
   findNode,
+  generateBlockId,
   moveBlock,
   moveNodeTo,
   removeBlock,
@@ -32,6 +33,7 @@ import {
   type BlockNode,
 } from '../pages/pages/editor/block-tree.utils';
 import { canContainType, nestingRejectionMessage } from '../pages/pages/editor/block-registry.utils';
+import { toPersistableBlocks } from '../pages/pages/editor/block-content.serialization';
 import {
   CONTAINER_WIDTH_PROP,
   toContainerWidthValue,
@@ -40,13 +42,18 @@ import {
   resolveColumnRatio,
   type ColumnRatioValue,
 } from '../pages/pages/editor/column-resize.utils';
-import { BLOCK_TYPES, CONTENT_TREE_LIMITS } from '../types/blocks.types';
+import { BLOCK_TYPES, CONTENT_TREE_LIMITS, ENVELOPE_VERSION } from '../types/blocks.types';
 import {
   compileTokensToCss,
   GLOBAL_TOKENS_CANVAS_SCOPE_CLASS,
   GLOBAL_TOKENS_STYLE_TAG_ID,
   type GlobalTokens,
 } from '../libs/globalTokensCompiler';
+import { createGlobalSection } from '../services/global-sections.service';
+import type { GlobalSectionRecord } from '../types/global-sections.types';
+import { fetchMediaMetadata, requestImageTransform } from '../services/media.service';
+import type { MediaTransformPresetName } from '../types/media.types';
+import { getErrorMessage } from '../utils/api.utils';
 
 /** Selettore CSS su cui i Global Design Tokens vengono scopati — mai `:root` (vedi {@link GLOBAL_TOKENS_CANVAS_SCOPE_CLASS}). */
 const GLOBAL_TOKENS_SCOPE_SELECTOR = `.${GLOBAL_TOKENS_CANVAS_SCOPE_CLASS}`;
@@ -54,6 +61,56 @@ const GLOBAL_TOKENS_SCOPE_SELECTOR = `.${GLOBAL_TOKENS_CANVAS_SCOPE_CLASS}`;
 /** Direzione opposta, usata per costruire l'inverso di un comando `move`. */
 function oppositeDirection(direction: 'up' | 'down'): 'up' | 'down' {
   return direction === 'up' ? 'down' : 'up';
+}
+
+/** I quattro preset nominati della pipeline di ADR-49/ADR-58 (`full`/`custom` non ne fanno parte). */
+const NAMED_IMAGE_PRESETS = new Set<MediaTransformPresetName>(['thumbnail', 'card', 'hero', 'og']);
+
+/**
+ * ADR-58: quando l'editor imposta `styleSizePreset` di un blocco `image` su un preset
+ * nominato, accoda la generazione della variante — **al cambio della prop, non a ogni
+ * render** (chiamata solo da qui, mai da `Image.tsx`, che resta un componente puro: vedi il
+ * suo commento di testa). Fire-and-forget: nessun polling del job, "nel frattempo il blocco
+ * mostra l'originale" (ADR-58 § Decisione) — l'unico riscontro di un fallimento è la
+ * notification, mai un retry automatico oltre a quanto la coda già fa.
+ *
+ * Legge il punto focale corrente da `fetchMediaMetadata` (mai un default center "a occhio"):
+ * lo stesso valore che `MediaCropperModal` avrebbe usato se l'utente avesse generato la
+ * variante da lì. Chiamata dopo il commit dello stato (tree già aggiornato): non dipende dal
+ * risultato per decidere se procedere, quindi l'ordine non è osservabile dall'utente.
+ */
+function requestImagePresetVariantIfNeeded(
+  tree: readonly BlockNode[],
+  id: string,
+  props: Record<string, unknown>,
+): void {
+  if (!('styleSizePreset' in props)) return;
+  const preset = props.styleSizePreset;
+  if (typeof preset !== 'string' || !NAMED_IMAGE_PRESETS.has(preset as MediaTransformPresetName)) {
+    return;
+  }
+  const node = findNode(tree, id);
+  const mediaRef = node && typeof node.props.mediaRef === 'string' ? node.props.mediaRef : '';
+  if (!node || node.type !== 'image' || !mediaRef) return;
+
+  void (async () => {
+    try {
+      const metadata = await fetchMediaMetadata(mediaRef);
+      await requestImageTransform(mediaRef, {
+        focalX: metadata.focalX,
+        focalY: metadata.focalY,
+        preset: preset as MediaTransformPresetName,
+      });
+    } catch {
+      // L'interceptor Axios ha già notificato 401/403/404/5xx/rete assente (CLAUDE.md §
+      // Error handling): qui resta solo il caso 400 (mediaRef non più esistente/soft-deleted
+      // fra la scelta del preset e questa chiamata), non altrimenti segnalato.
+      notifications.show({
+        color: 'red',
+        message: 'Impossibile accodare la variante immagine per il formato scelto.',
+      });
+    }
+  })();
 }
 
 /**
@@ -324,6 +381,34 @@ interface BlockEditorState {
    * selezionato.
    */
   duplicateNodeAction: (id: string) => void;
+  /**
+   * "Converti in Sezione Globale" (ADR-55, estende ADR-40): estrae il sottoalbero del nodo
+   * `id` — un contenitore o una `section` di primo livello, l'unico caso offerto dalla chrome
+   * (Floating Toolbar `BlockHoverOverlay.tsx`/Property Inspector `AdvancedTab.tsx`, che
+   * decidono solo *se* offrire l'azione, mai una seconda verifica qui) — e lo sostituisce,
+   * nella stessa posizione dell'albero della Pagina corrente, con un nodo puntatore
+   * `globalRef` (`{ globalSectionGuid }`, foglia, `children: []`).
+   *
+   * Crea prima una riga `global_sections` col sottoalbero estratto come contenuto iniziale
+   * (`global-sections.service.ts`, stesso envelope `{ version, blocks }` di
+   * `PageGlobalSectionBuilder.tsx`/`toPersistableBlocks`): **solo** se quella chiamata riesce
+   * il nodo locale viene sostituito — un fallimento non tocca l'albero
+   * (`notifications.show` di errore, mai un overwrite silenzioso, stesso principio del 409 di
+   * conflitto di CLAUDE.md § dominio CMS). Ritorna `true` se la Sezione Globale è stata creata
+   * (nel raro caso in cui il nodo sia sparito/si sia spostato durante l'attesa, la creazione
+   * resta comunque un successo e il puntatore non viene inserito — un avviso lo segnala, ma
+   * riprovare creerebbe solo un doppione), `false` se la creazione è fallita (l'errore è già
+   * stato notificato): il chiamante (`ConvertToGlobalSectionModal.tsx`) usa il valore solo per
+   * decidere se chiudersi o restare aperto per un nuovo tentativo, mai come seconda fonte di
+   * verità sull'esito.
+   *
+   * Comando invertibile sulla stessa history undo/redo di ogni altra mutazione strutturale:
+   * l'inverso reinserisce il sottoalbero estratto al posto del puntatore. La riga
+   * `global_sections` creata nel frattempo non viene eliminata da un annullamento locale —
+   * resta disponibile (stesso principio di "Elimina", un soft-delete a sé che Ctrl+Z non
+   * annulla mai).
+   */
+  convertToGlobalSectionAction: (id: string, title: string) => Promise<boolean>;
   copyStyleAction: (id: string) => void;
   pasteStyleAction: (id: string) => void;
   /** Merge delle `props` fornite sul nodo `id`. */
@@ -674,6 +759,79 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
     });
   },
 
+  convertToGlobalSectionAction: async (id, title) => {
+    const node = findNode(get().tree, id);
+    const location = findLocation(get().tree, id);
+    // Non un errore da segnalare: il nodo può essere sparito prima ancora che l'azione
+    // partisse (stesso principio difensivo di `duplicateNodeAction`/`removeBlockAction`).
+    if (!node || !location) return false;
+
+    let created: GlobalSectionRecord;
+    try {
+      created = await createGlobalSection({
+        title,
+        // Stesso envelope `{ version, blocks }` di `PageGlobalSectionBuilder.tsx`: il
+        // sottoalbero estratto diventa il contenuto iniziale della nuova riga
+        // `global_sections`, `v` ristampato dal registro corrente per ogni nodo (mai
+        // inventato lato client — vedi il commento di testa di `toPersistableBlocks`).
+        content: { version: ENVELOPE_VERSION, blocks: toPersistableBlocks([node]) },
+      });
+    } catch (err) {
+      notifications.show({
+        color: 'red',
+        message: getErrorMessage(err, 'Errore nella creazione della Sezione Globale'),
+      });
+      return false;
+    }
+
+    const pointerNode: BlockNode = {
+      id: generateBlockId(),
+      type: 'globalRef',
+      props: { globalSectionGuid: created.guid },
+      children: [],
+    };
+
+    set((state) => {
+      // Il nodo può essersi spostato o essere stato rimosso mentre la richiesta era in
+      // volo: si rilegge la posizione attuale invece di fidarsi ciecamente di quella
+      // catturata prima dell'`await` (stessa cautela di `commitContainerWidthAction`).
+      const currentNode = findNode(state.tree, id);
+      const currentLocation = findLocation(state.tree, id);
+      if (!currentNode || !currentLocation) {
+        notifications.show({
+          color: 'orange',
+          title: 'Sezione Globale creata, blocco non sostituito',
+          message: `"${title}" è stata creata, ma il blocco originale non è più nella posizione attesa: nessuna sostituzione automatica per non rischiare un albero incoerente.`,
+        });
+        return {};
+      }
+
+      const command: TreeCommand = {
+        kind: 'tree',
+        apply: (tree) =>
+          addBlockAtExact(
+            removeBlock(tree, id),
+            currentLocation.parentId,
+            currentLocation.index,
+            pointerNode,
+          ),
+        invert: (tree) =>
+          addBlockAtExact(
+            removeBlock(tree, pointerNode.id),
+            currentLocation.parentId,
+            currentLocation.index,
+            currentNode,
+          ),
+      };
+      const patch = pushCommand(state, command, `Convertito in Sezione Globale: ${title}`);
+      if (!patch.tree) return patch;
+      return { ...patch, selectedId: pointerNode.id };
+    });
+
+    notifications.show({ color: 'green', message: `Sezione Globale "${title}" creata e collegata` });
+    return true;
+  },
+
   copyStyleAction: (id) => {
     set((state) => {
       const node = findNode(state.tree, id);
@@ -762,6 +920,11 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       };
       return pushCommand(state, command, `Modificate proprietà ${id}`);
     });
+    // Effetto collaterale fuori da `set` (ADR-58): non altera lo stato Zustand, quindi non
+    // appartiene al reducer sopra — vedi il commento di testa di
+    // {@link requestImagePresetVariantIfNeeded}. Un `undo`/`redo` successivo non passa da
+    // qui (agiscono sul `TreeCommand` direttamente), quindi non ri-accoda mai la richiesta.
+    requestImagePresetVariantIfNeeded(get().tree, id, props);
   },
 
   toggleHiddenInCanvas: (id) =>

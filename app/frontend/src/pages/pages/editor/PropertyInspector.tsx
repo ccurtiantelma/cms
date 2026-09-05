@@ -32,6 +32,7 @@
 import { useState } from 'react';
 import { ActionIcon, Alert, Badge, Group, Paper, Stack, Text, Tooltip } from '@mantine/core';
 import { IconArrowLeft, IconInfoCircle } from '@tabler/icons-react';
+import { useShallow } from 'zustand/react/shallow';
 import { BLOCK_TYPES, type BlockTypeDescriptor } from '../../../types/blocks.types';
 import styles from './PropertyInspector.module.css';
 import {
@@ -40,7 +41,7 @@ import {
   useSelectedNode,
   useTreeGeneration,
 } from '../../../hooks/useBlockEditorStore';
-import type { BlockNode } from './block-tree.utils';
+import { findLocation, type BlockNode } from './block-tree.utils';
 import MediaLibraryModal from '../../../components/media/MediaLibraryModal';
 import MediaCropperModal from '../../../components/media/MediaCropperModal';
 import type { MediaFileRecord } from '../../../types/media.types';
@@ -90,6 +91,17 @@ interface PropertyFormProps {
 function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
   const updateBlockPropsAction = useBlockEditorStore((state) => state.updateBlockPropsAction);
   const savePreset = usePresetStore((state) => state.savePreset);
+  const convertToGlobalSectionAction = useBlockEditorStore(
+    (state) => state.convertToGlobalSectionAction,
+  );
+  /**
+   * Solo per decidere se "Converti in Sezione Globale" (ADR-55) va offerta — un
+   * contenitore/`section` di **primo livello**, la sola informazione che questo file
+   * possiede e `AdvancedTab.tsx` no (vedi il commento di `onConvertToGlobalSection` in
+   * `ContentTab.tsx`). Selettore mirato per id: un cambio altrove nell'albero non
+   * ri-renderizza questo form.
+   */
+  const location = useBlockEditorStore(useShallow((state) => findLocation(state.tree, node.id)));
   const activeViewport = useActiveViewport();
   const [draft, setDraft] = useState<Record<string, unknown>>(() => ({ ...node.props }));
   /**
@@ -148,6 +160,16 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
 
   const { content, style, advanced } = groupPropsByTab(descriptor.props, propsMeta);
 
+  /**
+   * "Converti in Sezione Globale" (ADR-55, estende ADR-40): offerta solo su un
+   * contenitore/`section` di primo livello, stessa restrizione di
+   * `EditorBlockWrapper.tsx` (`isTopLevelContainerOrSection`) — un `globalRef` non può
+   * contenere altri blocchi da estrarre, e un nodo annidato più in profondità resta fuori
+   * scope di questo round (stessa deviazione dichiarata).
+   */
+  const isTopLevelContainerOrSection =
+    location?.parentId === null && (node.type === 'section' || node.type === 'container');
+
   const tabProps = {
     draft,
     propsMeta,
@@ -159,6 +181,9 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
     onOpenCropper: setCropperPickerProp,
     nodeType: node.type,
     onSavePreset: (name: string) => savePreset(name, node),
+    onConvertToGlobalSection: isTopLevelContainerOrSection
+      ? (title: string) => convertToGlobalSectionAction(node.id, title)
+      : undefined,
   };
 
   /**

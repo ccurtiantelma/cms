@@ -1,19 +1,29 @@
-/* Toolbar di selezione (BlockHoverOverlay.tsx): montata **solo** quando il blocco è
-   selezionato (mai sul solo hover, che mostra invece il badge nome in alto a sinistra,
-   vedi `.hoverBadge` in EditorBlockWrapper.module.css) — ancorata in alto a destra, non
-   più centrata sul bordo superiore, così non collide mai con quel badge sullo stesso
-   blocco. `position: absolute` dentro `.wrapper` (già `position: relative`): non sposta
-   mai il layout del contenuto, stesso principio di ogni altro overlay di chrome in questo
-   file. */
+/*
+  Toolbar di selezione (BlockHoverOverlay.tsx): montata **solo** quando il blocco è
+  selezionato (mai sul solo hover, che mostra invece il badge nome in alto a sinistra,
+  vedi `.hoverBadge` in EditorBlockWrapper.module.css) — ancorata in alto **al centro**
+  del blocco (RE-2, restyle Elementor Pro, richiesta esplicita del task: "maniglie
+  contestuali posizionate in angolo" era il deficit da correggere), non più in un angolo.
+  `left: 50%; transform: translateX(-50%)` centra la Group indipendentemente dalla sua
+  larghezza reale (variabile: cresce con i controlli opzionali `onSaveAsPreset`/
+  `onConvertToGlobalSection`/`onExportJson`), senza bisogno di conoscerla in anticipo.
+  `position: absolute` dentro `.wrapper` (già `position: relative`): non sposta mai il
+  layout del contenuto, stesso principio di ogni altro overlay di chrome in questo file.
+  Il colore di sfondo legge `var(--block-level-color)`, la custom property impostata da
+  `EditorBlockWrapper.tsx` sul wrapper del nodo selezionato (viola/azzurro/blu per livello
+  di annidamento) — un solo calcolo del colore, mai un secondo valore fisso qui.
+*/
 .overlay {
   position: absolute;
-  top: -12px;
-  right: 0;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 20;
   display: inline-flex;
   align-items: center;
-  border-radius: 4px;
-  background: #2271b1;
+  border-radius: 6px;
+  background: var(--block-level-color, #2271b1);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
   pointer-events: auto;
 }
 
@@ -21,16 +31,25 @@
   Anti-clipping (EditorBlockWrapper.tsx, `overlayAnchoredInside`): quando il bordo
   superiore del blocco è troppo vicino al confine scrollabile reale del canvas
   (`overflow-y: auto`, tipicamente il primo blocco appena sotto la Topbar), la toolbar che
-  di norma sporge 12px sopra il blocco finirebbe tagliata da quello scroll — qui si
-  riancora dentro il margine superiore del blocco stesso, `position: absolute` invariato
-  (nessuno spostamento di layout, stesso principio di `.overlay` sopra).
+  di norma sporge sopra il blocco finirebbe tagliata da quello scroll — qui si riancora
+  dentro il margine superiore del blocco stesso, `left`/`transform` invariati (resta
+  centrata, solo il `top` cambia, stesso principio di `.overlay` sopra).
 */
 .overlayInside {
   top: 4px;
 }
 
+/*
+  Ogni pulsante della maniglia è largo/alto almeno 28px (RE-2, requisito esplicito del
+  task): `size={HANDLE_BUTTON_SIZE}` sui componenti Mantine (`BlockHoverOverlay.tsx`) già
+  lo garantisce (il numero è convertito in rem, applicato a `width`/`height`/`min-width`/
+  `min-height`), `min-width`/`min-height` qui sono solo una rete di sicurezza — non un
+  secondo meccanismo di dimensionamento indipendente.
+*/
 .overlayButton,
 .overlayButton:hover,
 .overlayButton:focus {
+  min-width: 28px;
+  min-height: 28px;
   color: var(--mantine-color-white) !important;
 }

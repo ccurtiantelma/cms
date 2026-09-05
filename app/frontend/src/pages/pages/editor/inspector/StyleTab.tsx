@@ -18,6 +18,12 @@
  * di gradiente (`styleGradientStart`/`styleGradientEnd`) sono filtrate da `visibleFields` in
  * base al valore corrente di `styleBackgroundType` — logica di presentazione, mai di
  * validazione (stesso principio di `maxWidth` sotto `contentWidth = full-width`, ADR-33 § 1).
+ *
+ * Terza eccezione, solo per `image` (ADR-58): `styleWidth`/`styleHeight` sono "significative
+ * solo con `styleSizePreset='custom'`" per il commento di testa del registro
+ * (`image.block.ts`), che dichiara esplicitamente questa convenzione come "responsabilità
+ * dell'editor" (il validator server-side non ha condizionali fra prop) — stesso principio di
+ * presentazione, mai di validazione, delle due eccezioni sopra.
  */
 import type { BlockPropDescriptor } from '../../../../types/blocks.types';
 import { Accordion } from '@mantine/core';
@@ -45,6 +51,9 @@ const IMAGE_ONLY_BACKGROUND_PROPS = new Set([
 ]);
 const GRADIENT_ONLY_BACKGROUND_PROPS = new Set(['styleGradientStart', 'styleGradientEnd']);
 
+/** ADR-58: prop del blocco `image` visibili solo quando `styleSizePreset='custom'`. */
+const CUSTOM_SIZE_ONLY_IMAGE_PROPS = new Set(['styleWidth', 'styleHeight']);
+
 export default function StyleTab({
   fields,
   draft,
@@ -64,6 +73,7 @@ export default function StyleTab({
   // validate server-side, l'inspector nasconde solo i campi che non si applicano al tipo di
   // sfondo attivo. `'color'` è il default del registro quando la prop è ancora assente.
   const backgroundType = asString(draft.styleBackgroundType) || 'color';
+  const imageSizePreset = asString(draft.styleSizePreset) || 'full';
   const visibleFields =
     nodeType === 'section'
       ? fields.filter((field) => {
@@ -71,7 +81,12 @@ export default function StyleTab({
           if (GRADIENT_ONLY_BACKGROUND_PROPS.has(field.name)) return backgroundType === 'gradient';
           return true;
         })
-      : fields;
+      : nodeType === 'image'
+        ? fields.filter((field) => {
+            if (CUSTOM_SIZE_ONLY_IMAGE_PROPS.has(field.name)) return imageSizePreset === 'custom';
+            return true;
+          })
+        : fields;
 
   function renderPropField(prop: BlockPropDescriptor): JSX.Element {
     return (

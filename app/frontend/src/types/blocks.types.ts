@@ -24,6 +24,7 @@ export interface BlockPropDescriptor {
     | 'url'
     | 'mediaRef'
     | 'pageRef'
+    | 'globalSectionRef'
     | 'color'
     | 'unitValue'
     | 'border'
@@ -86,7 +87,12 @@ export const ROOT_ALLOWED = [
   "image",
   "button",
   "container",
-  "navMenu"
+  "navMenu",
+  "globalRef",
+  "accordion",
+  "tabs",
+  "carousel",
+  "modalTrigger"
 ] as const;
 
 /** Limiti dell'envelope (SPEC-F02-blocchi.md § 1): per avvisare prima del 400, non per applicarli. */
@@ -108,7 +114,12 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
       "image",
       "button",
       "container",
-      "form"
+      "form",
+      "globalRef",
+      "accordion",
+      "tabs",
+      "carousel",
+      "modalTrigger"
     ],
     "props": [
       {
@@ -250,7 +261,9 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "values": [
           "equal",
           "33-66",
-          "66-33"
+          "66-33",
+          "30-70",
+          "70-30"
         ]
       },
       {
@@ -1478,6 +1491,67 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "required": false
       },
       {
+        "name": "styleSizePreset",
+        "kind": "enum",
+        "required": false,
+        "default": "full",
+        "values": [
+          "thumbnail",
+          "card",
+          "hero",
+          "og",
+          "full",
+          "custom"
+        ]
+      },
+      {
+        "name": "styleWidth",
+        "kind": "unitValue",
+        "required": false,
+        "units": [
+          "px",
+          "%",
+          "vw"
+        ],
+        "min": 0,
+        "max": 3840
+      },
+      {
+        "name": "styleHeight",
+        "kind": "unitValue",
+        "required": false,
+        "units": [
+          "px",
+          "%",
+          "vh"
+        ],
+        "min": 0,
+        "max": 2160
+      },
+      {
+        "name": "styleObjectFit",
+        "kind": "enum",
+        "required": false,
+        "default": "cover",
+        "values": [
+          "cover",
+          "contain",
+          "fill",
+          "none"
+        ]
+      },
+      {
+        "name": "styleAlign",
+        "kind": "enum",
+        "required": false,
+        "default": "left",
+        "values": [
+          "left",
+          "center",
+          "right"
+        ]
+      },
+      {
         "name": "customCssClass",
         "kind": "cssClassName",
         "required": false
@@ -1541,16 +1615,41 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "tab": "style",
           "order": 10
         },
+        "styleSizePreset": {
+          "label": "Formato predefinito",
+          "tab": "style",
+          "order": 11
+        },
+        "styleWidth": {
+          "label": "Larghezza personalizzata",
+          "tab": "style",
+          "order": 12
+        },
+        "styleHeight": {
+          "label": "Altezza personalizzata",
+          "tab": "style",
+          "order": 13
+        },
+        "styleObjectFit": {
+          "label": "Adattamento immagine",
+          "tab": "style",
+          "order": 14
+        },
+        "styleAlign": {
+          "label": "Allineamento",
+          "tab": "style",
+          "order": 15
+        },
         "customCssClass": {
           "label": "Classe CSS personalizzata",
           "tab": "advanced",
-          "order": 11,
+          "order": 16,
           "help": "Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore."
         },
         "customElementId": {
           "label": "ID elemento personalizzato",
           "tab": "advanced",
-          "order": 12,
+          "order": 17,
           "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
         }
       }
@@ -2490,6 +2589,243 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "target": {
           "label": "Apertura link",
           "order": 4
+        }
+      }
+    }
+  },
+  {
+    "type": "globalRef",
+    "v": 1,
+    "enabled": true,
+    "childrenAllow": [],
+    "props": [
+      {
+        "name": "globalSectionGuid",
+        "kind": "globalSectionRef",
+        "required": true
+      }
+    ],
+    "meta": {
+      "label": "Sezione Globale",
+      "category": "navigazione",
+      "icon": "puzzle",
+      "props": {
+        "globalSectionGuid": {
+          "label": "Sezione Globale",
+          "order": 1,
+          "help": "Sezione Globale referenziata: la modifica del suo contenuto si riflette qui e in ogni altro punto che la referenzia."
+        }
+      }
+    }
+  },
+  {
+    "type": "accordion",
+    "v": 1,
+    "enabled": true,
+    "childrenAllow": [
+      "accordionItem"
+    ],
+    "props": [
+      {
+        "name": "exclusive",
+        "kind": "boolean",
+        "required": false,
+        "default": false
+      }
+    ],
+    "meta": {
+      "label": "Accordion",
+      "category": "interattivo",
+      "icon": "list-details",
+      "props": {
+        "exclusive": {
+          "label": "Apertura esclusiva",
+          "order": 1,
+          "help": "Se attivo, aprire una voce chiude automaticamente le altre (comportamento CSS-only, degrada su browser molto datati)."
+        }
+      }
+    }
+  },
+  {
+    "type": "accordionItem",
+    "v": 1,
+    "enabled": true,
+    "childrenAllow": [
+      "heading",
+      "richText",
+      "image",
+      "button",
+      "container"
+    ],
+    "props": [
+      {
+        "name": "title",
+        "kind": "plainText",
+        "required": true,
+        "maxLength": 120
+      }
+    ],
+    "meta": {
+      "label": "Voce accordion",
+      "category": "interattivo",
+      "icon": "chevron-down",
+      "props": {
+        "title": {
+          "label": "Titolo",
+          "order": 1
+        }
+      }
+    }
+  },
+  {
+    "type": "tabs",
+    "v": 1,
+    "enabled": true,
+    "childrenAllow": [
+      "tabPanel"
+    ],
+    "props": [],
+    "meta": {
+      "label": "Tabs",
+      "category": "interattivo",
+      "icon": "layout-navbar"
+    }
+  },
+  {
+    "type": "tabPanel",
+    "v": 1,
+    "enabled": true,
+    "childrenAllow": [
+      "heading",
+      "richText",
+      "image",
+      "button",
+      "container"
+    ],
+    "props": [
+      {
+        "name": "label",
+        "kind": "plainText",
+        "required": true,
+        "maxLength": 60
+      }
+    ],
+    "meta": {
+      "label": "Pannello tab",
+      "category": "interattivo",
+      "icon": "square",
+      "props": {
+        "label": {
+          "label": "Etichetta",
+          "order": 1
+        }
+      }
+    }
+  },
+  {
+    "type": "carousel",
+    "v": 1,
+    "enabled": true,
+    "childrenAllow": [
+      "carouselSlide"
+    ],
+    "props": [
+      {
+        "name": "autoplay",
+        "kind": "boolean",
+        "required": false,
+        "default": false
+      },
+      {
+        "name": "transition",
+        "kind": "enum",
+        "required": false,
+        "default": "manual-scroll",
+        "values": [
+          "manual-scroll",
+          "fade-loop",
+          "slide-loop"
+        ]
+      }
+    ],
+    "meta": {
+      "label": "Carousel",
+      "category": "interattivo",
+      "icon": "carousel-horizontal",
+      "props": {
+        "autoplay": {
+          "label": "Avvio automatico",
+          "order": 1,
+          "help": "Nessun effetto se la transizione è impostata su 'Scorrimento manuale' (no-op silenzioso, ADR-57 § 4)."
+        },
+        "transition": {
+          "label": "Transizione",
+          "order": 2
+        }
+      }
+    }
+  },
+  {
+    "type": "carouselSlide",
+    "v": 1,
+    "enabled": true,
+    "childrenAllow": [
+      "heading",
+      "richText",
+      "image",
+      "button",
+      "container"
+    ],
+    "props": [],
+    "meta": {
+      "label": "Slide carousel",
+      "category": "interattivo",
+      "icon": "photo"
+    }
+  },
+  {
+    "type": "modalTrigger",
+    "v": 1,
+    "enabled": true,
+    "childrenAllow": [
+      "heading",
+      "richText",
+      "image",
+      "button",
+      "container"
+    ],
+    "props": [
+      {
+        "name": "triggerLabel",
+        "kind": "plainText",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "animation",
+        "kind": "enum",
+        "required": false,
+        "default": "fade",
+        "values": [
+          "none",
+          "fade",
+          "slide-down"
+        ]
+      }
+    ],
+    "meta": {
+      "label": "Modale",
+      "category": "interattivo",
+      "icon": "square-arrow-up",
+      "props": {
+        "triggerLabel": {
+          "label": "Etichetta del link",
+          "order": 1
+        },
+        "animation": {
+          "label": "Animazione",
+          "order": 2,
+          "help": "Solo presentazione: nessun JavaScript, tecnica CSS :target."
         }
       }
     }

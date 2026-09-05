@@ -35,6 +35,16 @@ export interface PropertyTabProps {
   onOpenCropper: (propName: string) => void;
   nodeType?: string;
   onSavePreset?: (name: string) => void;
+  /**
+   * `convertToGlobalSectionAction(node.id, title)` (ADR-55, estende ADR-40), già chiuso sul
+   * nodo selezionato da `PropertyInspector.tsx` — passato solo quando quel nodo è un
+   * contenitore/`section` di **primo livello** (`location.parentId === null`, l'unica
+   * informazione che `PropertyForm` possiede e questo tipo di scheda no): `undefined`
+   * altrimenti, mai una seconda verifica in `AdvancedTab.tsx` (stesso principio di
+   * `onSavePreset`). `AdvancedTab.tsx` monta `ConvertToGlobalSectionModal.tsx` e gli passa
+   * questa funzione come `onConfirm`.
+   */
+  onConvertToGlobalSection?: (title: string) => Promise<boolean>;
 }
 
 export default function ContentTab({

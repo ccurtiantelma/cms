@@ -2,6 +2,9 @@
   {
     "id": "hero-section",
     "label": "Hero Section",
+    "tags": ["hero", "introduzione", "cta"],
+    "category": "hero",
+    "thumbnail": "hero",
     "subtree": {
       "id": "preset-root",
       "type": "section",
@@ -31,6 +34,9 @@
   {
     "id": "features-grid-3col",
     "label": "Features Grid 3 colonne",
+    "tags": ["features", "funzionalità", "griglia", "3 colonne"],
+    "category": "feature-grid",
+    "thumbnail": "feature-grid",
     "subtree": {
       "id": "preset-root",
       "type": "section",
@@ -78,6 +84,9 @@
   {
     "id": "cta",
     "label": "Call to Action",
+    "tags": ["cta", "conversione", "invito all'azione"],
+    "category": "cta",
+    "thumbnail": "cta",
     "subtree": {
       "id": "preset-root",
       "type": "section",
@@ -101,6 +110,9 @@
   {
     "id": "text-media",
     "label": "Testo e Media",
+    "tags": ["testo", "immagine", "media", "due colonne"],
+    "category": "altro",
+    "thumbnail": "altro",
     "subtree": {
       "id": "preset-root",
       "type": "section",
@@ -124,6 +136,9 @@
   {
     "id": "testimonials-3col",
     "label": "Testimonianze 3 colonne",
+    "tags": ["testimonianze", "recensioni", "social proof", "3 colonne"],
+    "category": "altro",
+    "thumbnail": "altro",
     "subtree": {
       "id": "preset-root",
       "type": "section",
@@ -171,6 +186,9 @@
   {
     "id": "pricing-3plans",
     "label": "Tabella Prezzi 3 Piani",
+    "tags": ["prezzi", "piani", "pricing", "abbonamento"],
+    "category": "cta",
+    "thumbnail": "cta",
     "subtree": {
       "id": "preset-root",
       "type": "section",
@@ -236,6 +254,9 @@
   {
     "id": "faq-list",
     "label": "Domande Frequenti",
+    "tags": ["faq", "domande frequenti", "supporto"],
+    "category": "altro",
+    "thumbnail": "altro",
     "subtree": {
       "id": "preset-root",
       "type": "section",
@@ -295,6 +316,9 @@
   {
     "id": "stats-counter-4col",
     "label": "Contatori Statistiche 4 colonne",
+    "tags": ["statistiche", "numeri", "contatori", "4 colonne"],
+    "category": "feature-grid",
+    "thumbnail": "feature-grid",
     "subtree": {
       "id": "preset-root",
       "type": "section",
@@ -354,6 +378,9 @@
   {
     "id": "footer-modern-4col",
     "label": "Footer Moderno 4 colonne",
+    "tags": ["footer", "piè di pagina", "link", "contatti"],
+    "category": "altro",
+    "thumbnail": "altro",
     "subtree": {
       "id": "preset-root",
       "type": "section",

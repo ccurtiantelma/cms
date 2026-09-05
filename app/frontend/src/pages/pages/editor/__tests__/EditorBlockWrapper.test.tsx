@@ -12,6 +12,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { screen, fireEvent, createEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../../../test/utils';
 import { findNode, type BlockNode } from '../block-tree.utils';
 
@@ -459,5 +460,202 @@ describe('EditorBlockWrapper — hover overlay e toolbar di selezione (F04d-02)'
     fireEvent.click(screen.getByRole('button', { name: 'Elimina' }));
 
     expect(useBlockEditorStore.getState().tree).toHaveLength(0);
+  });
+
+  it('"+" apre la palette e inserisce un blocco prima di questo nodo (RE-2, primo controllo della maniglia)', async () => {
+    const user = userEvent.setup();
+    const child = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
+    const section = node('sec-1', 'section', { columns: { default: '1' } }, [child]);
+    useBlockEditorStore.getState().initTree([section]);
+    useBlockEditorStore.getState().selectNode('h-1');
+
+    renderWithProviders(<EditorBlockWrapper id="sec-1" />);
+
+    await user.click(screen.getByRole('button', { name: 'Aggiungi blocco sopra Titolo' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Titolo' }));
+
+    const updatedSection = findNode(useBlockEditorStore.getState().tree, 'sec-1');
+    expect(updatedSection?.children).toHaveLength(2);
+    // Il nuovo blocco è inserito **prima** del nodo originale (stesso `location.index`),
+    // non in coda: il figlio preesistente resta il secondo, non il primo.
+    expect(updatedSection?.children[0]?.id).not.toBe('h-1');
+    expect(updatedSection?.children[1]?.id).toBe('h-1');
+  });
+});
+
+/**
+ * Codice colore per livello di annidamento e demarcazione dei contenitori (RE-2, restyle
+ * chrome Elementor Pro): un solo calcolo del colore (`blockLevelColor`,
+ * `EditorBlockWrapper.tsx`), esposto come custom property CSS `--block-level-color`
+ * sull'inline `style` del wrapper — ereditata sia dalla maniglia contestuale
+ * (`BlockHoverOverlay.module.css`, `.overlay`) sia dai bordi di hover/selezione
+ * (`.hoveredChrome`/`.selectedChrome`, `EditorBlockWrapper.module.css`). jsdom non applica
+ * un motore CSS reale (i CSS Module qui sono solo nomi di classe): la copertura verifica
+ * quindi il valore della custom property impostata via `style` (il meccanismo di colore)
+ * e le classi applicate (il meccanismo di stato), non il pixel renderizzato.
+ */
+describe('EditorBlockWrapper — colore di livello di annidamento (RE-2)', () => {
+  beforeEach(() => {
+    useBlockEditorStore.getState().initTree([]);
+    useBlockEditorStore.getState().setActiveViewport('desktop');
+    useBlockEditorStore.getState().selectNode(null);
+  });
+
+  it('sezione di primo livello: --block-level-color viola (#9333ea)', () => {
+    const section = node('sec-1', 'section', {}, []);
+    useBlockEditorStore.getState().initTree([section]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="sec-1" />);
+    const wrapperEl = container.querySelector<HTMLElement>('[data-block-id="sec-1"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
+
+    expect(wrapperEl.style.getPropertyValue('--block-level-color')).toBe('#9333ea');
+  });
+
+  it('globalRef: --block-level-color viola (#9333ea), stesso livello di una sezione di primo livello', () => {
+    const globalRef = node('gr-1', 'globalRef', { globalSectionGuid: '0123456789abcdef' });
+    useBlockEditorStore.getState().initTree([globalRef]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="gr-1" />);
+    const wrapperEl = container.querySelector<HTMLElement>('[data-block-id="gr-1"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
+
+    expect(wrapperEl.style.getPropertyValue('--block-level-color')).toBe('#9333ea');
+  });
+
+  it('container annidato (figlio di una section): --block-level-color azzurro (#0284c7)', () => {
+    const nestedContainer = node('cont-child', 'container', {}, []);
+    const section = node('sec-1', 'section', {}, [nestedContainer]);
+    useBlockEditorStore.getState().initTree([section]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="sec-1" />);
+    const wrapperEl = container.querySelector<HTMLElement>('[data-block-id="cont-child"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
+
+    expect(wrapperEl.style.getPropertyValue('--block-level-color')).toBe('#0284c7');
+  });
+
+  it('section annidata (non di primo livello): --block-level-color azzurro (#0284c7), non viola', () => {
+    const nestedSection = node('sec-child', 'section', {}, []);
+    const outer = node('cont-outer', 'container', {}, [nestedSection]);
+    useBlockEditorStore.getState().initTree([outer]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="cont-outer" />);
+    const wrapperEl = container.querySelector<HTMLElement>('[data-block-id="sec-child"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
+
+    expect(wrapperEl.style.getPropertyValue('--block-level-color')).toBe('#0284c7');
+  });
+
+  it('widget foglia (heading): --block-level-color blu (#2563eb)', () => {
+    const heading = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
+    useBlockEditorStore.getState().initTree([heading]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="h-1" />);
+    const wrapperEl = container.querySelector<HTMLElement>('[data-block-id="h-1"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
+
+    expect(wrapperEl.style.getPropertyValue('--block-level-color')).toBe('#2563eb');
+  });
+
+  it('la maniglia contestuale (toolbar di selezione) è annidata nel wrapper e ne eredita il colore di livello', () => {
+    const section = node('sec-1', 'section', {}, []);
+    useBlockEditorStore.getState().initTree([section]);
+    useBlockEditorStore.getState().selectNode('sec-1');
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="sec-1" />);
+    const wrapperEl = container.querySelector<HTMLElement>('[data-block-id="sec-1"]');
+    const overlayEl = container.querySelector('[data-block-overlay="true"]');
+    if (!wrapperEl || !overlayEl) throw new Error('wrapper/overlay non trovati');
+
+    expect(wrapperEl.style.getPropertyValue('--block-level-color')).toBe('#9333ea');
+    // La custom property CSS eredita lungo il DOM: la maniglia deve essere un discendente
+    // del wrapper che la imposta, non un elemento portato altrove (`withinPortal` di un
+    // controllo interno non sposta l'intera toolbar fuori dal wrapper).
+    expect(wrapperEl.contains(overlayEl)).toBe(true);
+  });
+});
+
+/**
+ * Demarcazione statica dei contenitori/colonne (RE-2, punto 2 del task): guida
+ * tratteggiata `.containerGuide` sempre presente in edit-mode su ogni contenitore,
+ * **anche vuoto**, indipendentemente da hover/selezione — distinta dal bordo di stato
+ * (`.hoveredChrome`/`.selectedChrome`), che invece dipende dall'interazione.
+ */
+describe('EditorBlockWrapper — guida statica dei contenitori/colonne (RE-2, punto 2)', () => {
+  beforeEach(() => {
+    useBlockEditorStore.getState().initTree([]);
+    useBlockEditorStore.getState().setActiveViewport('desktop');
+    useBlockEditorStore.getState().selectNode(null);
+  });
+
+  it('section vuota: guida statica tratteggiata presente anche senza hover/selezione', () => {
+    const section = node('sec-empty', 'section', {}, []);
+    useBlockEditorStore.getState().initTree([section]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="sec-empty" />);
+    const wrapperEl = container.querySelector('[data-block-id="sec-empty"]');
+
+    expect(wrapperEl).toHaveClass(styles.containerGuide);
+  });
+
+  it('container vuoto: guida statica tratteggiata presente anche senza hover/selezione', () => {
+    const emptyContainer = node('cont-empty', 'container', {}, []);
+    useBlockEditorStore.getState().initTree([emptyContainer]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="cont-empty" />);
+    const wrapperEl = container.querySelector('[data-block-id="cont-empty"]');
+
+    expect(wrapperEl).toHaveClass(styles.containerGuide);
+  });
+
+  it('widget foglia (heading): mai la guida statica (solo contenitori/colonne)', () => {
+    const heading = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
+    useBlockEditorStore.getState().initTree([heading]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="h-1" />);
+    const wrapperEl = container.querySelector('[data-block-id="h-1"]');
+
+    expect(wrapperEl).not.toHaveClass(styles.containerGuide);
+  });
+
+  it('hover su un container (non selezionato): bordo di stato tratteggiato di livello (.hoveredChrome), distinto dalla guida statica', () => {
+    const emptyContainer = node('cont-1', 'container', {}, []);
+    useBlockEditorStore.getState().initTree([emptyContainer]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="cont-1" />);
+    const wrapperEl = container.querySelector('[data-block-id="cont-1"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
+
+    fireEvent.mouseOver(wrapperEl);
+
+    expect(wrapperEl).toHaveClass(styles.hoveredChrome);
+    expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
+  });
+
+  it("selezione di un container: bordo pieno marcato + ombreggiatura (.selectedChrome), distinto dall'hover tratteggiato", () => {
+    const emptyContainer = node('cont-1', 'container', {}, []);
+    useBlockEditorStore.getState().initTree([emptyContainer]);
+    useBlockEditorStore.getState().selectNode('cont-1');
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="cont-1" />);
+    const wrapperEl = container.querySelector('[data-block-id="cont-1"]');
+
+    expect(wrapperEl).toHaveClass(styles.selectedChrome);
+    expect(wrapperEl).not.toHaveClass(styles.hoveredChrome);
+  });
+
+  it('hover su un widget foglia (heading, non selezionato): nessun bordo di stato (mai su hover, solo su selezione)', () => {
+    const heading = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
+    useBlockEditorStore.getState().initTree([heading]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="h-1" />);
+    const wrapperEl = container.querySelector('[data-block-id="h-1"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
+
+    fireEvent.mouseOver(wrapperEl);
+
+    expect(wrapperEl).not.toHaveClass(styles.hoveredChrome);
+    expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
   });
 });

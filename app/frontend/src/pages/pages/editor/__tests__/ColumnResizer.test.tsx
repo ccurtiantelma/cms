@@ -29,7 +29,7 @@ function node(
 /**
  * jsdom non implementa il layout: ogni `getBoundingClientRect()` è a zero. Qui ogni elemento
  * misura 800px a partire da `left: 0`, così la matematica del gesto è verificabile:
- * `clientX: 240` è il 30% del padre (zona "33-66"), `clientX: 400` è il 50% ("equal").
+ * `clientX: 240` è il 30% del padre (stop "30-70", RFC-58), `clientX: 400` è il 50% ("equal").
  */
 const PARENT_WIDTH = 800;
 let originalGetRect: typeof HTMLElement.prototype.getBoundingClientRect;
@@ -152,24 +152,24 @@ describe('ColumnResizer — calcolo e anteprima', () => {
     expect(currentSection()?.props.columnRatio).toBeUndefined();
   });
 
-  it('un trascinamento a sinistra (30% del contenitore) mostra "33% / 67%"', () => {
+  it('un trascinamento a sinistra (30% del contenitore) mostra "30% / 70%" (stop "30-70", RFC-58: più vicino di "33-66" a una posizione esattamente al 30%)', () => {
     mountSection({ selected: true });
     const grip = handle() as HTMLElement;
 
     fireEvent.pointerDown(grip, { pointerId: 1, clientX: PARENT_WIDTH / 2 });
     fireEvent.pointerMove(grip, { pointerId: 1, clientX: PARENT_WIDTH * 0.3 });
 
-    expect(screen.getByTestId('column-resizer-badge').textContent).toBe('33% / 67%');
+    expect(screen.getByTestId('column-resizer-badge').textContent).toBe('30% / 70%');
   });
 
-  it('un trascinamento a destra (70% del contenitore) mostra "67% / 33%"', () => {
+  it('un trascinamento a destra (70% del contenitore) mostra "70% / 30%" (stop "70-30", RFC-58: più vicino di "66-33" a una posizione esattamente al 70%)', () => {
     mountSection({ selected: true });
     const grip = handle() as HTMLElement;
 
     fireEvent.pointerDown(grip, { pointerId: 1, clientX: PARENT_WIDTH / 2 });
     fireEvent.pointerMove(grip, { pointerId: 1, clientX: PARENT_WIDTH * 0.7 });
 
-    expect(screen.getByTestId('column-resizer-badge').textContent).toBe('67% / 33%');
+    expect(screen.getByTestId('column-resizer-badge').textContent).toBe('70% / 30%');
   });
 });
 
@@ -180,7 +180,7 @@ describe('ColumnResizer — commit e undo/redo', () => {
     const depthBefore = useBlockEditorStore.getState().undoStack.length;
 
     fireEvent.pointerDown(grip, { pointerId: 1, clientX: PARENT_WIDTH / 2 });
-    // Cinque posizioni che attraversano più volte le soglie fra i tre stop.
+    // Cinque posizioni che attraversano più volte le soglie fra i cinque stop (RFC-58).
     for (const x of [200, 700, 240, 560, 240]) {
       fireEvent.pointerMove(grip, { pointerId: 1, clientX: x });
     }
@@ -189,7 +189,10 @@ describe('ColumnResizer — commit e undo/redo', () => {
     fireEvent.pointerUp(grip, { pointerId: 1, clientX: 240 });
 
     expect(useBlockEditorStore.getState().undoStack.length).toBe(depthBefore + 1);
-    expect(currentSection()?.props.columnRatio).toBe('33-66');
+    // 240/800 = 30% esatto: con RFC-58 lo stop più vicino è "30-70" (distanza 0), non più
+    // "33-66" (distanza 3.33%) — comportamento cambiato legittimamente dal nuovo stop più
+    // esterno, non una regressione.
+    expect(currentSection()?.props.columnRatio).toBe('30-70');
     expect(useBlockEditorStore.getState().columnResize).toBeNull();
   });
 

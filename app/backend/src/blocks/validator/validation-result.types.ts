@@ -5,7 +5,8 @@ export type BlockValidationErrorCode =
   | 'BLOCK_TYPE_UNKNOWN'
   | 'BLOCK_NESTING_NOT_ALLOWED'
   | 'BLOCK_PROP_NOT_DECLARED'
-  | 'BLOCK_PROP_INVALID';
+  | 'BLOCK_PROP_INVALID'
+  | 'BLOCK_TYPE_NOT_ALLOWED_IN_GLOBAL_SECTION';
 
 /**
  * Insieme chiuso dei `reason` di `BLOCK_PROP_INVALID` (SPEC-F02-blocchi.md § 4.1).
@@ -65,11 +66,23 @@ export interface BlockPropInvalidDetails {
   actual?: number;
 }
 
+/**
+ * Nodo `globalRef` incontrato dentro l'albero di una Sezione Globale
+ * (ADR-55, "Cicli chiusi per contratto"): stesso shape di
+ * {@link BlockTypeUnknownDetails}, codice distinto perché il tipo **esiste**
+ * nel registro, non è sconosciuto — è solo vietato in questo contesto.
+ */
+export interface BlockTypeNotAllowedInGlobalSectionDetails {
+  path: string;
+  type: string;
+}
+
 export type BlockValidationErrorDetails =
   | BlockTypeUnknownDetails
   | BlockNestingNotAllowedDetails
   | BlockPropNotDeclaredDetails
-  | BlockPropInvalidDetails;
+  | BlockPropInvalidDetails
+  | BlockTypeNotAllowedInGlobalSectionDetails;
 
 /** Un singolo errore prodotto dall'interprete, con il path del nodo colpevole. */
 export interface BlockValidationError {

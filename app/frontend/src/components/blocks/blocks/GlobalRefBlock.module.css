@@ -1,0 +1,22 @@
+/*
+ * Segnaposto del nodo puntatore `globalRef` (ADR-55, estende ADR-40). Non renderizza mai
+ * il contenuto vero della Sezione Globale referenziata: quella risoluzione avviene a monte,
+ * nel job di export (`ExportService`, `app/backend/`) — questo componente esiste solo
+ * perché il Canvas dell'editor (`EditorBlockWrapper.tsx`) monta l'albero grezzo della
+ * Pagina, dove un `globalRef` non ancora risolto deve comunque occupare uno spazio visibile
+ * (altrimenti il bordo/badge distintivo dell'editor avvolgerebbe una riga a altezza zero).
+ * Nessuna dipendenza Mantine, solo CSS Modules (CLAUDE.md § confine Mantine/blocchi).
+ */
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+  padding: 16px;
+  border: 1px dashed #8b5cf6;
+  border-radius: 6px;
+  background: rgba(139, 92, 246, 0.06);
+  color: #6d28d9;
+  font-size: 13px;
+  text-align: center;
+}

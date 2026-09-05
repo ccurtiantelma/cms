@@ -19,6 +19,10 @@ import {
   type BlockTypeDescriptor,
 } from '../../../types/blocks.types';
 import { findNode, isDescendantOf, type BlockNode } from './block-tree.utils';
+import ctaThumbnail from './assets/preset-thumbnails/cta.svg';
+import featureGridThumbnail from './assets/preset-thumbnails/feature-grid.svg';
+import heroThumbnail from './assets/preset-thumbnails/hero.svg';
+import altroThumbnail from './assets/preset-thumbnails/altro.svg';
 
 /**
  * Valore iniziale di una prop appena creata. Rispetta il `default` dichiarato dal
@@ -141,7 +145,7 @@ export function canDropInto(
  */
 export function nestingRejectionMessage(parentType: string | undefined, type: string): string {
   if (parentType === 'section' && type === 'section') {
-    return 'Impossibile inserire una Sezione all\'interno di un\'altra Sezione.';
+    return "Impossibile inserire una Sezione all'interno di un'altra Sezione.";
   }
   return `Il blocco "${type}" non è ammesso in questo contenitore.`;
 }
@@ -160,11 +164,58 @@ export interface SectionPresetNode {
   children: SectionPresetNode[];
 }
 
-/** Una voce della libreria di preset: id/etichetta della tessera più il sottoalbero. */
+/**
+ * Categoria fissa di un preset (ADR-56 § 4): usata dai chip di filtro di
+ * `TemplateLibraryModal.tsx`. Enum chiuso — **mai** `pagina-intera` (ADR-56 § 5, collide con
+ * un concetto di dominio non ancora costruito): un quinto valore richiede una nuova ADR, non
+ * un aggiornamento additivo di questo file.
+ */
+export type SectionPresetCategory = 'hero' | 'feature-grid' | 'cta' | 'altro';
+
+/**
+ * Una voce della libreria di preset: id/etichetta della tessera, il sottoalbero, più i
+ * metadati di scoperta aggiunti da ADR-56 § 4 (`tags`/`category`/`thumbnail`) — estensione
+ * additiva e retrocompatibile dell'interfaccia originale di ADR-34 § 1.
+ */
 export interface SectionPreset {
   id: string;
   label: string;
   subtree: SectionPresetNode;
+  /** Parole chiave di ricerca client-side (`TemplateLibraryModal.tsx`), oltre a `label`. */
+  tags: string[];
+  category: SectionPresetCategory;
+  /**
+   * Identificatore stabile dell'asset SVG bundlato (oggi coincide con `category`, un solo
+   * thumbnail per categoria — ADR-56 § 4). Il file JSON statico non può importare moduli:
+   * porta solo l'identificatore, risolto nell'URL reale da {@link resolvePresetThumbnailUrl}.
+   */
+  thumbnail: string;
+}
+
+/**
+ * Mappa identificatore→URL dell'asset bundlato: Vite risolve l'import `.svg` in una stringa
+ * (`vite/client.d.ts`, già attivo via `/// <reference types="vite/client" />` in
+ * `vite-env.d.ts` — nessuna dichiarazione di modulo nuova). Quattro thumbnail statici, uno
+ * per categoria (ADR-56 § 4): non un asset per preset, sproporzionato per un catalogo di 9
+ * voci manutenuto a mano.
+ */
+const PRESET_THUMBNAIL_URLS: Record<SectionPresetCategory, string> = {
+  hero: heroThumbnail,
+  'feature-grid': featureGridThumbnail,
+  cta: ctaThumbnail,
+  altro: altroThumbnail,
+};
+
+/**
+ * Risolve il `thumbnail` di un preset nell'URL bundlato reale da usare in `<img src>`
+ * (`TemplateLibraryModal.tsx`). Fallback al thumbnail di `altro` se l'identificatore non è
+ * fra i quattro noti: un preset del file statico con un `thumbnail` disallineato è un errore
+ * di manutenzione del file da non propagare a un'`<img>` rotta nella libreria.
+ */
+export function resolvePresetThumbnailUrl(preset: SectionPreset): string {
+  return (
+    PRESET_THUMBNAIL_URLS[preset.thumbnail as SectionPresetCategory] ?? PRESET_THUMBNAIL_URLS.altro
+  );
 }
 
 /**

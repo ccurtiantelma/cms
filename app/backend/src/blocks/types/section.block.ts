@@ -79,7 +79,7 @@ export const sectionBlock: BlockDefinition = {
     columnRatio: {
       kind: 'enum',
       required: false,
-      values: ['equal', '33-66', '66-33'],
+      values: ['equal', '33-66', '66-33', '30-70', '70-30'],
       default: 'equal',
     },
     styleBackgroundColor: {
@@ -236,7 +236,24 @@ export const sectionBlock: BlockDefinition = {
       required: false,
     },
   },
-  children: { allow: ['heading', 'richText', 'image', 'button', 'container', 'form'] },
+  children: {
+    // 'accordion'/'tabs'/'carousel'/'modalTrigger' aggiunti da ADR-57 § 3: i
+    // quattro contenitori dei widget interattivi CSS-only, così componibili
+    // dentro il contenuto di pagina senza dover passare da un `container`.
+    allow: [
+      'heading',
+      'richText',
+      'image',
+      'button',
+      'container',
+      'form',
+      'globalRef',
+      'accordion',
+      'tabs',
+      'carousel',
+      'modalTrigger',
+    ],
+  },
   migrations: [],
   enabled: true,
   meta: {

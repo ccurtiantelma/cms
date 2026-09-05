@@ -29,6 +29,9 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
+  IconAlignCenter,
+  IconAlignLeft,
+  IconAlignRight,
   IconArrowDown,
   IconArrowLeft,
   IconArrowRight,
@@ -83,6 +86,18 @@ const FLEX_DIRECTION_ICON: Record<string, Icon> = {
 };
 
 /**
+ * Icona per ciascun valore di `styleAlign` (ADR-58, blocco `image`): stesso principio di
+ * {@link FLEX_DIRECTION_ICON} — un allineamento orizzontale ha una mappatura icona/valore
+ * universale e senza ambiguità, a differenza di `styleObjectFit` (nessuna icona standard per
+ * "cover"/"contain"/"fill"/"none"), che resta un `Select` semplice.
+ */
+const TEXT_ALIGN_ICON: Record<string, Icon> = {
+  left: IconAlignLeft,
+  center: IconAlignCenter,
+  right: IconAlignRight,
+};
+
+/**
  * Etichette leggibili per i valori `enum` di alcune prop, quando il token grezzo del
  * registro (es. `'6'`/`'12'` di `colSpan`, ADR-51) non è già il testo da mostrare —
  * riconosciute per nome, mai per `kind`, stesso principio di `CONTAINER_FLEX_SEGMENTED_PROPS`.
@@ -91,6 +106,23 @@ const FLEX_DIRECTION_ICON: Record<string, Icon> = {
  */
 const ENUM_VALUE_LABELS: Record<string, Record<string, string>> = {
   colSpan: { '6': '50%', '12': '100%' },
+  // ADR-58 (blocco `image`): i token grezzi del registro (`og`, `fill`...) non sono già il
+  // testo da mostrare, stesso principio di `colSpan` sopra.
+  styleSizePreset: {
+    thumbnail: 'Thumbnail (1:1)',
+    card: 'Card (16:9)',
+    hero: 'Hero (21:9)',
+    og: 'Social OG (1.91:1)',
+    full: 'Originale',
+    custom: 'Personalizzata',
+  },
+  styleObjectFit: {
+    cover: 'Riempi (cover)',
+    contain: 'Adatta (contain)',
+    fill: 'Estendi (fill)',
+    none: 'Nessuno',
+  },
+  styleAlign: { left: 'Sinistra', center: 'Centro', right: 'Destra' },
 };
 
 /**
@@ -292,13 +324,60 @@ export default function PropField({
           />
         );
       }
+      // `styleAlign` (ADR-58, blocco `image`): `SegmentedControl` a icone invece del `Select`
+      // generico — stesso principio di `CONTAINER_FLEX_SEGMENTED_PROPS` sopra, ma per nome
+      // (nessun secondo insieme di prop responsive: `styleAlign` non lo è).
+      if (prop.name === 'styleAlign') {
+        const currentValue = asString(value) || (prop.values?.[0] ?? '');
+        const segments = (prop.values ?? []).map((token) => {
+          const AlignIcon = TEXT_ALIGN_ICON[token];
+          return {
+            value: token,
+            label: AlignIcon ? (
+              <Group gap={4} wrap="nowrap">
+                <AlignIcon size={14} aria-hidden />
+                <span>{ENUM_VALUE_LABELS[prop.name]?.[token] ?? token}</span>
+              </Group>
+            ) : (
+              token
+            ),
+          };
+        });
+        return (
+          <div>
+            <Text size="sm" fw={500} mb={4}>
+              {label}
+              {required && (
+                <Text component="span" c="red" inherit>
+                  {' '}
+                  *
+                </Text>
+              )}
+            </Text>
+            <SegmentedControl
+              fullWidth
+              data={segments}
+              value={currentValue}
+              onChange={(next) => onSetAndCommit(next)}
+            />
+            {error && (
+              <Text size="xs" c="red" mt={4}>
+                {error}
+              </Text>
+            )}
+          </div>
+        );
+      }
       return (
         <Select
           label={label}
           withAsterisk={required}
           allowDeselect={false}
           comboboxProps={{ zIndex: 1100 }}
-          data={[...(prop.values ?? [])]}
+          data={(prop.values ?? []).map((token) => ({
+            value: token,
+            label: ENUM_VALUE_LABELS[prop.name]?.[token] ?? token,
+          }))}
           value={asString(value) || null}
           error={error}
           onChange={(next) => onSetAndCommit(next ?? '')}
@@ -786,6 +865,23 @@ export default function PropField({
           value={asString(value)}
           error={error}
           placeholder="Es. a1b2c3d4e5f6a7b8 (guid della Pagina)"
+          onChange={(event) => onLocal(event.currentTarget.value)}
+          onBlur={() => onCommit(asString(value))}
+        />
+      );
+
+    case 'globalSectionRef':
+      // ADR-55 § 1: stessa forma di `pageRef` (guid di 16 esadecimali), nessun Picker
+      // dedicato. Il valore è normalmente scritto dall'azione di conversione (mai digitato
+      // a mano), ma un `TextInput` resta coerente col resto del registro: nessuna verifica
+      // di esistenza/stato a scrittura, la risoluzione è a valle nel job di export.
+      return (
+        <TextInput
+          label={label}
+          withAsterisk={required}
+          value={asString(value)}
+          error={error}
+          placeholder="Es. a1b2c3d4e5f6a7b8 (guid della Sezione Globale)"
           onChange={(event) => onLocal(event.currentTarget.value)}
           onBlur={() => onCommit(asString(value))}
         />

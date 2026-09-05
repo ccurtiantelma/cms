@@ -171,7 +171,22 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
           path: 'blocks[0].children[0]',
           type: 'section',
           parentType: 'section',
-          allowed: ['heading', 'richText', 'image', 'button', 'container', 'form'],
+          // 'globalRef' aggiunto da ADR-55 § 1 (dodicesimo tipo); 'accordion'/
+          // 'tabs'/'carousel'/'modalTrigger' aggiunti da ADR-57 § 3 (i
+          // quattro contenitori dei widget interattivi CSS-only).
+          allowed: [
+            'heading',
+            'richText',
+            'image',
+            'button',
+            'container',
+            'form',
+            'globalRef',
+            'accordion',
+            'tabs',
+            'carousel',
+            'modalTrigger',
+          ],
         },
       });
     });
@@ -635,6 +650,285 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
           reason: 'type',
         },
       });
+    });
+  });
+
+  // ─── image — controlli di dimensionamento (ADR-58) ─────────────────────
+
+  describe('image — 5 prop opzionali di dimensionamento (ADR-58)', () => {
+    it('image senza nessuna delle 5 prop di ADR-58 resta valida (additive, nessuna regressione sui contenuti esistenti)', () => {
+      const result = validator.validateTree([
+        node({ type: 'image', props: { mediaRef: '0123456789abcdef', alt: 'alt valido' } }),
+      ]);
+      expect(result).toEqual({ valid: true, errors: [] });
+    });
+
+    it.each(['thumbnail', 'card', 'hero', 'og', 'full', 'custom'])(
+      'image.styleSizePreset = "%s" è accettato',
+      (styleSizePreset) => {
+        const result = validator.validateTree([
+          node({
+            type: 'image',
+            props: { mediaRef: '0123456789abcdef', alt: 'alt valido', styleSizePreset },
+          }),
+        ]);
+        expect(result.valid).toBe(true);
+      },
+    );
+
+    it('image.styleSizePreset fuori dall\'elenco chiuso produce reason "enum", constraint coi 6 valori ammessi', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'image',
+          props: { mediaRef: '0123456789abcdef', alt: 'alt valido', styleSizePreset: 'square' },
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleSizePreset',
+          type: 'image',
+          prop: 'styleSizePreset',
+          kind: 'enum',
+          reason: 'enum',
+          constraint: ['thumbnail', 'card', 'hero', 'og', 'full', 'custom'],
+        },
+      });
+    });
+
+    it.each(['cover', 'contain', 'fill', 'none'])(
+      'image.styleObjectFit = "%s" è accettato',
+      (styleObjectFit) => {
+        const result = validator.validateTree([
+          node({
+            type: 'image',
+            props: { mediaRef: '0123456789abcdef', alt: 'alt valido', styleObjectFit },
+          }),
+        ]);
+        expect(result.valid).toBe(true);
+      },
+    );
+
+    it('image.styleObjectFit fuori dall\'elenco chiuso produce reason "enum"', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'image',
+          props: { mediaRef: '0123456789abcdef', alt: 'alt valido', styleObjectFit: 'stretch' },
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleObjectFit',
+          type: 'image',
+          prop: 'styleObjectFit',
+          kind: 'enum',
+          reason: 'enum',
+          constraint: ['cover', 'contain', 'fill', 'none'],
+        },
+      });
+    });
+
+    it.each(['left', 'center', 'right'])('image.styleAlign = "%s" è accettato', (styleAlign) => {
+      const result = validator.validateTree([
+        node({
+          type: 'image',
+          props: { mediaRef: '0123456789abcdef', alt: 'alt valido', styleAlign },
+        }),
+      ]);
+      expect(result.valid).toBe(true);
+    });
+
+    it('image.styleAlign fuori dall\'elenco chiuso produce reason "enum"', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'image',
+          props: { mediaRef: '0123456789abcdef', alt: 'alt valido', styleAlign: 'justify' },
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleAlign',
+          type: 'image',
+          prop: 'styleAlign',
+          kind: 'enum',
+          reason: 'enum',
+          constraint: ['left', 'center', 'right'],
+        },
+      });
+    });
+
+    it('image.styleWidth con value/unit dentro i vincoli dichiarati (px, 0-3840) è accettato', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'image',
+          props: {
+            mediaRef: '0123456789abcdef',
+            alt: 'alt valido',
+            styleSizePreset: 'custom',
+            styleWidth: { value: 350, unit: 'px' },
+          },
+        }),
+      ]);
+      expect(result.valid).toBe(true);
+    });
+
+    it.each(['%', 'vw'])('image.styleWidth con unit "%s" (nell\'elenco chiuso) è accettato', (unit) => {
+      const result = validator.validateTree([
+        node({
+          type: 'image',
+          props: {
+            mediaRef: '0123456789abcdef',
+            alt: 'alt valido',
+            styleSizePreset: 'custom',
+            styleWidth: { value: 50, unit },
+          },
+        }),
+      ]);
+      expect(result.valid).toBe(true);
+    });
+
+    it('image.styleWidth con value oltre il massimo (3840) produce reason "range" sul sotto-path .value', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'image',
+          props: {
+            mediaRef: '0123456789abcdef',
+            alt: 'alt valido',
+            styleSizePreset: 'custom',
+            styleWidth: { value: 4000, unit: 'px' },
+          },
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleWidth.value',
+          type: 'image',
+          prop: 'styleWidth',
+          kind: 'unitValue',
+          reason: 'range',
+          constraint: [0, 3840],
+          actual: 4000,
+        },
+      });
+    });
+
+    it('image.styleWidth con unit "vh" (fuori dall\'elenco chiuso di styleWidth: px|%|vw) produce reason "enum" sul sotto-path .unit', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'image',
+          props: {
+            mediaRef: '0123456789abcdef',
+            alt: 'alt valido',
+            styleSizePreset: 'custom',
+            styleWidth: { value: 100, unit: 'vh' },
+          },
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleWidth.unit',
+          type: 'image',
+          prop: 'styleWidth',
+          kind: 'unitValue',
+          reason: 'enum',
+          constraint: ['px', '%', 'vw'],
+        },
+      });
+    });
+
+    it('image.styleHeight con value/unit dentro i vincoli dichiarati (px, 0-2160) è accettato', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'image',
+          props: {
+            mediaRef: '0123456789abcdef',
+            alt: 'alt valido',
+            styleSizePreset: 'custom',
+            styleHeight: { value: 200, unit: 'px' },
+          },
+        }),
+      ]);
+      expect(result.valid).toBe(true);
+    });
+
+    it('image.styleHeight con value oltre il massimo (2160) produce reason "range" sul sotto-path .value', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'image',
+          props: {
+            mediaRef: '0123456789abcdef',
+            alt: 'alt valido',
+            styleSizePreset: 'custom',
+            styleHeight: { value: 3000, unit: 'px' },
+          },
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleHeight.value',
+          type: 'image',
+          prop: 'styleHeight',
+          kind: 'unitValue',
+          reason: 'range',
+          constraint: [0, 2160],
+          actual: 3000,
+        },
+      });
+    });
+
+    it('image.styleHeight con unit "vw" (fuori dall\'elenco chiuso di styleHeight: px|%|vh) produce reason "enum" sul sotto-path .unit', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'image',
+          props: {
+            mediaRef: '0123456789abcdef',
+            alt: 'alt valido',
+            styleSizePreset: 'custom',
+            styleHeight: { value: 100, unit: 'vw' },
+          },
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.styleHeight.unit',
+          type: 'image',
+          prop: 'styleHeight',
+          kind: 'unitValue',
+          reason: 'enum',
+          constraint: ['px', '%', 'vh'],
+        },
+      });
+    });
+
+    it('image con tutte e 5 le prop ADR-58 valorizzate insieme è accettata (nessuna interazione cross-prop nel validator, per contratto ADR-58)', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'image',
+          props: {
+            mediaRef: '0123456789abcdef',
+            alt: 'alt valido',
+            styleSizePreset: 'custom',
+            styleWidth: { value: 350, unit: 'px' },
+            styleHeight: { value: 200, unit: 'px' },
+            styleObjectFit: 'contain',
+            styleAlign: 'center',
+          },
+        }),
+      ]);
+      expect(result).toEqual({ valid: true, errors: [] });
     });
   });
 
@@ -1627,6 +1921,626 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
           },
         },
       ]);
+    });
+  });
+
+  // ─── globalRef — dodicesimo tipo (ADR-55 § 1) ───────────────────────────
+
+  describe('globalRef — kind "globalSectionRef" (ADR-55 § 1)', () => {
+    it('globalRef con globalSectionGuid valido (16 hex minuscoli) alla radice di una Pagina (contesto senza insideGlobalSection) è accettato', () => {
+      const result = validator.validateTree([
+        node({ type: 'globalRef', props: { globalSectionGuid: '0123456789abcdef' } }),
+      ]);
+      expect(result).toEqual({ valid: true, errors: [] });
+    });
+
+    it('globalRef è ammesso come figlio diretto di section (children.allow aggiornato da ADR-55 § 1)', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'sec',
+          type: 'section',
+          props: {},
+          children: [node({ id: 'gr', type: 'globalRef', props: { globalSectionGuid: '0123456789abcdef' } })],
+        }),
+      ]);
+      expect(result).toEqual({ valid: true, errors: [] });
+    });
+
+    it.each(['troppo-corto', 'ABCDEF0123456789', '0123456789abcdeg', '0123456789abcde'])(
+      'globalRef.globalSectionGuid = %j (non 16 hex minuscoli) è respinto con reason "guidFormat", path del nodo colpevole in details',
+      (globalSectionGuid) => {
+        const result = validator.validateTree([
+          node({ type: 'globalRef', props: { globalSectionGuid } }),
+        ]);
+
+        expect(result.valid).toBe(false);
+        expect(result.errors).toEqual([
+          {
+            code: 'BLOCK_PROP_INVALID',
+            details: {
+              path: 'blocks[0].props.globalSectionGuid',
+              type: 'globalRef',
+              prop: 'globalSectionGuid',
+              kind: 'globalSectionRef',
+              reason: 'guidFormat',
+            },
+          },
+        ]);
+      },
+    );
+
+    it('globalRef senza globalSectionGuid (prop obbligatoria assente) produce reason "required"', () => {
+      const result = validator.validateTree([node({ type: 'globalRef', props: {} })]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.globalSectionGuid',
+          type: 'globalRef',
+          prop: 'globalSectionGuid',
+          kind: 'globalSectionRef',
+          reason: 'required',
+        },
+      });
+    });
+
+    it('globalRef è una foglia: un figlio dichiarato viene comunque validato (children.allow: [] su globalRef, ADR-55)', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'gr',
+          type: 'globalRef',
+          props: { globalSectionGuid: '0123456789abcdef' },
+          children: [node({ id: 'child', type: 'heading', props: { level: 'h2', text: 'T' } })],
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_NESTING_NOT_ALLOWED',
+        details: {
+          path: 'blocks[0].children[0]',
+          type: 'heading',
+          parentType: 'globalRef',
+          allowed: [],
+        },
+      });
+    });
+
+    describe('BLOCK_TYPE_NOT_ALLOWED_IN_GLOBAL_SECTION — divieto di ciclo per contratto (ADR-55, "Cicli chiusi per contratto")', () => {
+      it('un globalRef validato con context.insideGlobalSection:true è respinto con BLOCK_TYPE_NOT_ALLOWED_IN_GLOBAL_SECTION, path del nodo colpevole in details', () => {
+        const result = validator.validateTree(
+          [node({ type: 'globalRef', props: { globalSectionGuid: '0123456789abcdef' } })],
+          DEFAULT_BLOCK_REGISTRY,
+          { insideGlobalSection: true },
+        );
+
+        expect(result.valid).toBe(false);
+        expect(result.errors).toEqual([
+          {
+            code: 'BLOCK_TYPE_NOT_ALLOWED_IN_GLOBAL_SECTION',
+            details: { path: 'blocks[0]', type: 'globalRef' },
+          },
+        ]);
+      });
+
+      it('un globalRef annidato dentro una section, con insideGlobalSection:true, è comunque respinto (l\'intero albero, non solo la radice)', () => {
+        const result = validator.validateTree(
+          [
+            node({
+              id: 'sec',
+              type: 'section',
+              props: {},
+              children: [
+                node({ id: 'gr', type: 'globalRef', props: { globalSectionGuid: '0123456789abcdef' } }),
+              ],
+            }),
+          ],
+          DEFAULT_BLOCK_REGISTRY,
+          { insideGlobalSection: true },
+        );
+
+        expect(result.valid).toBe(false);
+        expect(result.errors).toEqual([
+          {
+            code: 'BLOCK_TYPE_NOT_ALLOWED_IN_GLOBAL_SECTION',
+            details: { path: 'blocks[0].children[0]', type: 'globalRef' },
+          },
+        ]);
+      });
+
+      it('un globalRef con guid malformato E insideGlobalSection:true produce solo BLOCK_TYPE_NOT_ALLOWED_IN_GLOBAL_SECTION (il nodo è respinto prima della validazione di forma della prop)', () => {
+        const result = validator.validateTree(
+          [node({ type: 'globalRef', props: { globalSectionGuid: 'non-valido' } })],
+          DEFAULT_BLOCK_REGISTRY,
+          { insideGlobalSection: true },
+        );
+
+        expect(result.errors).toEqual([
+          {
+            code: 'BLOCK_TYPE_NOT_ALLOWED_IN_GLOBAL_SECTION',
+            details: { path: 'blocks[0]', type: 'globalRef' },
+          },
+        ]);
+      });
+
+      it('senza insideGlobalSection (default {}), lo stesso albero con globalRef resta valido: il divieto è specifico al contesto Sezione Globale', () => {
+        const result = validator.validateTree([
+          node({ type: 'globalRef', props: { globalSectionGuid: '0123456789abcdef' } }),
+        ]);
+        expect(result.valid).toBe(true);
+      });
+
+      it('un albero con un globalRef (respinto) e un altro nodo colpevole distinto colleziona entrambi gli errori (regola 4, mai il primo soltanto)', () => {
+        const result = validator.validateTree(
+          [
+            node({ id: 'gr', type: 'globalRef', props: { globalSectionGuid: '0123456789abcdef' } }),
+            node({ id: 'h', type: 'heading', props: {} }), // level/text mancanti
+          ],
+          DEFAULT_BLOCK_REGISTRY,
+          { insideGlobalSection: true },
+        );
+
+        const codes = result.errors.map((e) => e.code).sort();
+        expect(codes).toEqual(
+          ['BLOCK_TYPE_NOT_ALLOWED_IN_GLOBAL_SECTION', 'BLOCK_PROP_INVALID', 'BLOCK_PROP_INVALID'].sort(),
+        );
+      });
+    });
+  });
+
+  // ─── Widget interattivi CSS-only — tredicesimo-diciannovesimo tipo (ADR-57) ─
+
+  describe('widget interattivi CSS-only — accordion/accordionItem, tabs/tabPanel, carousel/carouselSlide, modalTrigger (ADR-57 § Decisione punto 1/2)', () => {
+    const minimalLeafProps: Record<string, Record<string, unknown>> = {
+      heading: { level: 'h2', text: 'T' },
+      richText: { html: '<p>ok</p>' },
+      image: { mediaRef: '0123456789abcdef', alt: 'alt' },
+      button: { label: 'Vai', href: 'https://esempio.it' },
+      container: {},
+    };
+
+    // ─── Happy path: ciascuna coppia contenitore/voce, radice e dentro section ─
+
+    it('accordion con un accordionItem figlio, contenente i cinque tipi ammessi, è valido alla radice', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'acc',
+          type: 'accordion',
+          props: { exclusive: true },
+          children: [
+            node({
+              id: 'item1',
+              type: 'accordionItem',
+              props: { title: 'Domanda 1' },
+              children: [
+                node({ id: 'h', type: 'heading', props: minimalLeafProps.heading }),
+                node({ id: 'r', type: 'richText', props: minimalLeafProps.richText }),
+                node({ id: 'i', type: 'image', props: minimalLeafProps.image }),
+                node({ id: 'b', type: 'button', props: minimalLeafProps.button }),
+                node({ id: 'c', type: 'container', props: minimalLeafProps.container }),
+              ],
+            }),
+          ],
+        }),
+      ]);
+
+      expect(result).toEqual({ valid: true, errors: [] });
+    });
+
+    it('tabs con un tabPanel figlio è valido alla radice', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'tabs1',
+          type: 'tabs',
+          props: {},
+          children: [
+            node({
+              id: 'panel1',
+              type: 'tabPanel',
+              props: { label: 'Scheda 1' },
+              children: [node({ id: 'h', type: 'heading', props: minimalLeafProps.heading })],
+            }),
+          ],
+        }),
+      ]);
+
+      expect(result).toEqual({ valid: true, errors: [] });
+    });
+
+    it('carousel con una carouselSlide figlia è valido alla radice, autoplay:true con transition:"manual-scroll" non produce errore (no-op silenzioso, ADR-57 § 4)', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'car1',
+          type: 'carousel',
+          props: { autoplay: true, transition: 'manual-scroll' },
+          children: [
+            node({
+              id: 'slide1',
+              type: 'carouselSlide',
+              props: {},
+              children: [node({ id: 'i', type: 'image', props: minimalLeafProps.image })],
+            }),
+          ],
+        }),
+      ]);
+
+      expect(result).toEqual({ valid: true, errors: [] });
+    });
+
+    it('modalTrigger con contenuto figlio è valido alla radice', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'modal1',
+          type: 'modalTrigger',
+          props: { triggerLabel: 'Apri modale', animation: 'slide-down' },
+          children: [node({ id: 'r', type: 'richText', props: minimalLeafProps.richText })],
+        }),
+      ]);
+
+      expect(result).toEqual({ valid: true, errors: [] });
+    });
+
+    it.each(['accordion', 'tabs', 'carousel', 'modalTrigger'])(
+      '%s è ammesso come figlio diretto di section (section.children.allow esteso da ADR-57 § 3)',
+      (type) => {
+        const propsByType: Record<string, Record<string, unknown>> = {
+          accordion: {},
+          tabs: {},
+          carousel: {},
+          modalTrigger: { triggerLabel: 'Apri' },
+        };
+        const childByType: Record<string, ValidatableBlockNode> = {
+          accordion: node({
+            id: 'item',
+            type: 'accordionItem',
+            props: { title: 'T' },
+          }),
+          tabs: node({ id: 'panel', type: 'tabPanel', props: { label: 'L' } }),
+          carousel: node({ id: 'slide', type: 'carouselSlide', props: {} }),
+          modalTrigger: node({ id: 'h', type: 'heading', props: minimalLeafProps.heading }),
+        };
+
+        const result = validator.validateTree([
+          node({
+            id: 'sec',
+            type: 'section',
+            props: {},
+            children: [
+              node({
+                id: 'widget',
+                type,
+                props: propsByType[type],
+                children: [childByType[type]],
+              }),
+            ],
+          }),
+        ]);
+
+        expect(result.valid).toBe(true);
+      },
+    );
+
+    // ─── Voce in radice → BLOCK_NESTING_NOT_ALLOWED (mai in ROOT_ALLOWED) ───
+
+    it.each([
+      ['accordionItem', { title: 'T' }],
+      ['tabPanel', { label: 'L' }],
+      ['carouselSlide', {}],
+    ] as const)(
+      '%s alla radice dell\'albero è respinto con BLOCK_NESTING_NOT_ALLOWED, parentType null (ADR-57 § Decisione punto 2: mai in ROOT_ALLOWED)',
+      (type, props) => {
+        const result = validator.validateTree([node({ type, props })]);
+
+        expect(result.valid).toBe(false);
+        expect(result.errors).toContainEqual({
+          code: 'BLOCK_NESTING_NOT_ALLOWED',
+          details: {
+            path: 'blocks[0]',
+            type,
+            parentType: null,
+            allowed: DEFAULT_BLOCK_REGISTRY.rootAllowed,
+          },
+        });
+      },
+    );
+
+    // ─── Mismatch fra coppie: una voce dentro il contenitore sbagliato ──────
+
+    it('un accordionItem dentro un tabs è respinto con BLOCK_NESTING_NOT_ALLOWED (mismatch fra coppie contenitore/voce, ADR-57 § Decisione punto 2)', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'tabs1',
+          type: 'tabs',
+          props: {},
+          children: [node({ id: 'item', type: 'accordionItem', props: { title: 'T' } })],
+        }),
+      ]);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_NESTING_NOT_ALLOWED',
+        details: {
+          path: 'blocks[0].children[0]',
+          type: 'accordionItem',
+          parentType: 'tabs',
+          allowed: ['tabPanel'],
+        },
+      });
+    });
+
+    it('un tabPanel dentro un accordion è respinto con BLOCK_NESTING_NOT_ALLOWED (mismatch inverso)', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'acc1',
+          type: 'accordion',
+          props: {},
+          children: [node({ id: 'panel', type: 'tabPanel', props: { label: 'L' } })],
+        }),
+      ]);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_NESTING_NOT_ALLOWED',
+        details: {
+          path: 'blocks[0].children[0]',
+          type: 'tabPanel',
+          parentType: 'accordion',
+          allowed: ['accordionItem'],
+        },
+      });
+    });
+
+    it('un carouselSlide dentro un tabs è respinto con BLOCK_NESTING_NOT_ALLOWED', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'tabs1',
+          type: 'tabs',
+          props: {},
+          children: [node({ id: 'slide', type: 'carouselSlide', props: {} })],
+        }),
+      ]);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_NESTING_NOT_ALLOWED',
+        details: {
+          path: 'blocks[0].children[0]',
+          type: 'carouselSlide',
+          parentType: 'tabs',
+          allowed: ['tabPanel'],
+        },
+      });
+    });
+
+    // ─── Nessun altro widget interattivo di questo gruppo dentro le voci ───
+
+    it.each(['accordionItem', 'tabPanel', 'carouselSlide', 'modalTrigger'])(
+      'un accordion annidato dentro un %s è respinto con BLOCK_NESTING_NOT_ALLOWED (ADR-57 § 2: mai un altro widget interattivo di questo gruppo tra le voci)',
+      (parentType) => {
+        const propsByType: Record<string, Record<string, unknown>> = {
+          accordionItem: { title: 'T' },
+          tabPanel: { label: 'L' },
+          carouselSlide: {},
+          modalTrigger: { triggerLabel: 'Apri' },
+        };
+
+        const result = validator.validateTree([
+          node({
+            id: 'parent',
+            type: parentType,
+            props: propsByType[parentType],
+            children: [node({ id: 'nested', type: 'accordion', props: {} })],
+          }),
+        ]);
+
+        expect(result.valid).toBe(false);
+        expect(result.errors).toContainEqual({
+          code: 'BLOCK_NESTING_NOT_ALLOWED',
+          details: {
+            path: 'blocks[0].children[0]',
+            type: 'accordion',
+            parentType,
+            allowed: ['heading', 'richText', 'image', 'button', 'container'],
+          },
+        });
+      },
+    );
+
+    // ─── BLOCK_PROP_NOT_DECLARED ─────────────────────────────────────────
+
+    it.each(['accordion', 'accordionItem', 'tabs', 'tabPanel', 'carousel', 'carouselSlide', 'modalTrigger'])(
+      '%s con una prop non dichiarata produce BLOCK_PROP_NOT_DECLARED',
+      (type) => {
+        const requiredPropsByType: Record<string, Record<string, unknown>> = {
+          accordion: {},
+          accordionItem: { title: 'T' },
+          tabs: {},
+          tabPanel: { label: 'L' },
+          carousel: {},
+          carouselSlide: {},
+          modalTrigger: { triggerLabel: 'Apri' },
+        };
+
+        const result = validator.validateTree([
+          node({ type, props: { ...requiredPropsByType[type], nonEsiste: true } }),
+        ]);
+
+        expect(result.errors).toContainEqual({
+          code: 'BLOCK_PROP_NOT_DECLARED',
+          details: expect.objectContaining({
+            path: 'blocks[0].props.nonEsiste',
+            type,
+            prop: 'nonEsiste',
+          }),
+        });
+      },
+    );
+
+    // ─── BLOCK_PROP_INVALID — reason "required" su title/label/triggerLabel ─
+
+    it('accordionItem senza title (obbligatoria) produce BLOCK_PROP_INVALID reason required', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'acc',
+          type: 'accordion',
+          props: {},
+          children: [node({ id: 'item', type: 'accordionItem', props: {} })],
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].children[0].props.title',
+          type: 'accordionItem',
+          prop: 'title',
+          kind: 'plainText',
+          reason: 'required',
+        },
+      });
+    });
+
+    it('tabPanel senza label (obbligatoria) produce BLOCK_PROP_INVALID reason required', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'tabs1',
+          type: 'tabs',
+          props: {},
+          children: [node({ id: 'panel', type: 'tabPanel', props: {} })],
+        }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].children[0].props.label',
+          type: 'tabPanel',
+          prop: 'label',
+          kind: 'plainText',
+          reason: 'required',
+        },
+      });
+    });
+
+    it('modalTrigger senza triggerLabel (obbligatoria) produce BLOCK_PROP_INVALID reason required', () => {
+      const result = validator.validateTree([node({ type: 'modalTrigger', props: {} })]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.triggerLabel',
+          type: 'modalTrigger',
+          prop: 'triggerLabel',
+          kind: 'plainText',
+          reason: 'required',
+        },
+      });
+    });
+
+    // ─── boolean/enum propri (exclusive/autoplay/transition/animation) ─────
+
+    it.each([true, false])('accordion.exclusive = %j è accettato', (exclusive) => {
+      const result = validator.validateTree([node({ type: 'accordion', props: { exclusive } })]);
+      expect(result.valid).toBe(true);
+    });
+
+    it('accordion.exclusive non booleano produce BLOCK_PROP_INVALID reason type', () => {
+      const result = validator.validateTree([
+        node({ type: 'accordion', props: { exclusive: 'si' } }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.exclusive',
+          type: 'accordion',
+          prop: 'exclusive',
+          kind: 'boolean',
+          reason: 'type',
+        },
+      });
+    });
+
+    it.each(['manual-scroll', 'fade-loop', 'slide-loop'])(
+      'carousel.transition = %j è accettato',
+      (transition) => {
+        const result = validator.validateTree([node({ type: 'carousel', props: { transition } })]);
+        expect(result.valid).toBe(true);
+      },
+    );
+
+    it('carousel.transition fuori dall\'elenco chiuso produce BLOCK_PROP_INVALID reason enum', () => {
+      const result = validator.validateTree([
+        node({ type: 'carousel', props: { transition: 'auto' } }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.transition',
+          type: 'carousel',
+          prop: 'transition',
+          kind: 'enum',
+          reason: 'enum',
+          constraint: ['manual-scroll', 'fade-loop', 'slide-loop'],
+        },
+      });
+    });
+
+    it.each(['none', 'fade', 'slide-down'])('modalTrigger.animation = %j è accettato', (animation) => {
+      const result = validator.validateTree([
+        node({ type: 'modalTrigger', props: { triggerLabel: 'Apri', animation } }),
+      ]);
+      expect(result.valid).toBe(true);
+    });
+
+    it('modalTrigger.animation fuori dall\'elenco chiuso produce BLOCK_PROP_INVALID reason enum', () => {
+      const result = validator.validateTree([
+        node({ type: 'modalTrigger', props: { triggerLabel: 'Apri', animation: 'bounce' } }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.animation',
+          type: 'modalTrigger',
+          prop: 'animation',
+          kind: 'enum',
+          reason: 'enum',
+          constraint: ['none', 'fade', 'slide-down'],
+        },
+      });
+    });
+
+    // ─── title/label/triggerLabel oltre maxLength NON respinti qui (correzione T3, come ogni plainText) ─
+
+    it('accordionItem.title oltre 120 code point NON è respinto qui: la verifica di maxLength su plainText è del sanitizzatore, dopo la pulizia', () => {
+      const longTitle = 'a'.repeat(200);
+      const result = validator.validateTree([
+        node({
+          id: 'acc',
+          type: 'accordion',
+          props: {},
+          children: [node({ id: 'item', type: 'accordionItem', props: { title: longTitle } })],
+        }),
+      ]);
+      expect(result.valid).toBe(true);
+    });
+
+    // ─── Regola 4: albero con più nodi colpevoli fra i sette tipi colleziona tutti gli errori ─
+
+    it('un albero con un accordionItem in radice e un tabPanel senza label colleziona entrambi gli errori (regola 4, mai il primo soltanto)', () => {
+      const result = validator.validateTree([
+        node({ id: 'orphan', type: 'accordionItem', props: { title: 'T' } }),
+        node({
+          id: 'tabs1',
+          type: 'tabs',
+          props: {},
+          children: [node({ id: 'panel', type: 'tabPanel', props: {} })],
+        }),
+      ]);
+
+      const codes = result.errors.map((e) => e.code).sort();
+      expect(codes).toEqual(['BLOCK_NESTING_NOT_ALLOWED', 'BLOCK_PROP_INVALID'].sort());
     });
   });
 });

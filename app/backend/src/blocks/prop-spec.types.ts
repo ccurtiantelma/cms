@@ -9,7 +9,10 @@
  * sanitizzazione (ADR-21 § 4). Estenderlo è "nuovo schema di blocco" ai fini
  * di `CLAUDE.md` § Ask first — richiede firma, non si aggiunge qui. Include
  * `pageRef` (ADR-52 § 3): stessa forma di `mediaRef` ma semantica distinta
- * (una Pagina ha stato di pubblicazione, un file no), firmata a sé.
+ * (una Pagina ha stato di pubblicazione, un file no), firmata a sé. Include
+ * `globalSectionRef` (ADR-55 § 1): stessa forma di `pageRef`/`mediaRef` (16
+ * hex, nessuna verifica di esistenza/stato a scrittura), semantica distinta
+ * perché il bersaglio è una riga `global_sections`, non una Pagina o un file.
  */
 export type PropKind =
   | 'richText'
@@ -20,6 +23,7 @@ export type PropKind =
   | 'url'
   | 'mediaRef'
   | 'pageRef'
+  | 'globalSectionRef'
   | 'color'
   | 'unitValue'
   | 'border'
@@ -140,6 +144,18 @@ export interface PageRefPropSpec extends BasePropSpec {
 }
 
 /**
+ * Riferimento a una Sezione Globale (ADR-55 § 1): solo forma di `guid` (16
+ * hex), nessuna verifica di esistenza a scrittura — la risoluzione avviene a
+ * valle nel job di export (stesso principio di `pageRef`, ADR-52 § 4). Kind
+ * distinto da `pageRef`: il bersaglio è sempre una riga `global_sections`,
+ * mai una Pagina, e il divieto di ciclo (ADR-55, `insideGlobalSection`) si
+ * applica solo a questo `kind`/tipo di nodo, non a `pageRef`.
+ */
+export interface GlobalSectionRefPropSpec extends BasePropSpec {
+  kind: 'globalSectionRef';
+}
+
+/**
  * Colore libero (ADR-33 § 3), primo uso reale di questo `kind`. Validato da
  * un pattern **fisso e stretto**, non un campo `pattern` generico riusabile
  * altrove: solo esadecimale a 3 o 6 cifre, niente `rgb()`/`hsl()`/`url()`/
@@ -236,6 +252,7 @@ export type PropSpec =
   | UrlPropSpec
   | MediaRefPropSpec
   | PageRefPropSpec
+  | GlobalSectionRefPropSpec
   | ColorPropSpec
   | UnitValuePropSpec
   | BorderPropSpec

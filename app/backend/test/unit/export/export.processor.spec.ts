@@ -459,6 +459,218 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
         `<html><head><link rel="stylesheet" href="/assets/style.test.css"/></head><body>${expectedPicture}</body></html>`,
       );
     });
+
+    it('con data-media-preset="card" sul tag, filtra la famiglia di varianti al solo preset card: srcset senza le larghezze hero (correzione ADR-58 del mescolamento fra preset)', async () => {
+      const originalName = 'foto-originale.jpg';
+      const heroWebpGuid = 'bbbbbbbbbbbbbbbb';
+      const heroAvifGuid = 'cccccccccccccccc';
+      const cardWebpGuid = 'dddddddddddddddd';
+      const cardAvifGuid = 'eeeeeeeeeeeeeeee';
+
+      const jpegOriginalRow = {
+        id: 20,
+        guid,
+        parentFileId: null,
+        originalName,
+        mimeType: 'image/jpeg',
+        entity: 'page-media',
+        isActive: true,
+      };
+      const heroWebpRow = {
+        id: 21,
+        guid: heroWebpGuid,
+        parentFileId: 20,
+        originalName: buildDerivedFileName(MediaTransformPreset.Hero, originalName, 'webp'),
+        mimeType: 'image/webp',
+        entity: 'page-media',
+        isActive: true,
+      };
+      const heroAvifRow = {
+        id: 22,
+        guid: heroAvifGuid,
+        parentFileId: 20,
+        originalName: buildDerivedFileName(MediaTransformPreset.Hero, originalName, 'avif'),
+        mimeType: 'image/avif',
+        entity: 'page-media',
+        isActive: true,
+      };
+      const cardWebpRow = {
+        id: 23,
+        guid: cardWebpGuid,
+        parentFileId: 20,
+        originalName: buildDerivedFileName(MediaTransformPreset.Card, originalName, 'webp'),
+        mimeType: 'image/webp',
+        entity: 'page-media',
+        isActive: true,
+      };
+      const cardAvifRow = {
+        id: 24,
+        guid: cardAvifGuid,
+        parentFileId: 20,
+        originalName: buildDerivedFileName(MediaTransformPreset.Card, originalName, 'avif'),
+        mimeType: 'image/avif',
+        entity: 'page-media',
+        isActive: true,
+      };
+
+      const html =
+        `<html><head><link rel="stylesheet" href="/assets/style.test.css"/></head><body>` +
+        `<img src="http://cdn/x" alt="card" data-media-ref="${guid}" data-media-preset="card"></body></html>`;
+      fetchMock.mockResolvedValue({ ok: true, status: 200, text: () => Promise.resolve(html) });
+      fileEntityFindFirst.mockResolvedValueOnce(jpegOriginalRow);
+      fileEntityFindMany.mockResolvedValueOnce([
+        jpegOriginalRow,
+        heroWebpRow,
+        heroAvifRow,
+        cardWebpRow,
+        cardAvifRow,
+      ]);
+
+      const blobByGuid: Record<string, { buffer: Buffer; mimeType: string }> = {
+        [guid]: { buffer: Buffer.from('originale'), mimeType: 'image/jpeg' },
+        [heroWebpGuid]: { buffer: Buffer.from('hero-webp'), mimeType: 'image/webp' },
+        [heroAvifGuid]: { buffer: Buffer.from('hero-avif'), mimeType: 'image/avif' },
+        [cardWebpGuid]: { buffer: Buffer.from('card-webp'), mimeType: 'image/webp' },
+        [cardAvifGuid]: { buffer: Buffer.from('card-avif'), mimeType: 'image/avif' },
+      };
+      publicMediaService.serve.mockImplementation((requestedGuid: string) =>
+        Promise.resolve(blobByGuid[requestedGuid]),
+      );
+      sharp.mockReturnValue({
+        metadata: jest.fn().mockResolvedValue({ width: 2000, height: 1000 }),
+      });
+
+      await processor.process(
+        buildJob({ kind: 'page', pageId: 'guid-4b', locale: 'it-IT', path: '/pagina-4b' }),
+      );
+
+      // Le varianti hero vengono comunque copiate una sola volta a fini di
+      // dedupe di `copyMediaAsset` solo se referenziate: qui il filtro esclude
+      // hero dal `srcset` prima ancora di copiarne i bytes.
+      expect(publicMediaService.serve).toHaveBeenCalledWith(guid);
+      expect(publicMediaService.serve).toHaveBeenCalledWith(cardWebpGuid);
+      expect(publicMediaService.serve).toHaveBeenCalledWith(cardAvifGuid);
+      expect(publicMediaService.serve).not.toHaveBeenCalledWith(heroWebpGuid);
+      expect(publicMediaService.serve).not.toHaveBeenCalledWith(heroAvifGuid);
+
+      const writtenHtml = writtenContent('it-IT/pagina-4b/index.html');
+      expect(writtenHtml).toContain(`/assets/media/${cardAvifGuid}.avif 800w`);
+      expect(writtenHtml).toContain(`/assets/media/${cardWebpGuid}.webp 800w`);
+      expect(writtenHtml).not.toContain('1600w');
+      expect(writtenHtml).not.toContain(heroAvifGuid);
+      expect(writtenHtml).not.toContain(heroWebpGuid);
+      expect(writtenHtml).toContain(`data-media-preset="card"`);
+    });
+
+    it('due tag con lo stesso guid ma preset diversi (card vs hero) risolvono due famiglie filtrate distinte, senza mescolare i due srcset (cache per guid+preset, ADR-58)', async () => {
+      const originalName = 'foto-originale.jpg';
+      const heroWebpGuid = 'bbbbbbbbbbbbbbbb';
+      const heroAvifGuid = 'cccccccccccccccc';
+      const cardWebpGuid = 'dddddddddddddddd';
+      const cardAvifGuid = 'eeeeeeeeeeeeeeee';
+
+      const jpegOriginalRow = {
+        id: 20,
+        guid,
+        parentFileId: null,
+        originalName,
+        mimeType: 'image/jpeg',
+        entity: 'page-media',
+        isActive: true,
+      };
+      const heroWebpRow = {
+        id: 21,
+        guid: heroWebpGuid,
+        parentFileId: 20,
+        originalName: buildDerivedFileName(MediaTransformPreset.Hero, originalName, 'webp'),
+        mimeType: 'image/webp',
+        entity: 'page-media',
+        isActive: true,
+      };
+      const heroAvifRow = {
+        id: 22,
+        guid: heroAvifGuid,
+        parentFileId: 20,
+        originalName: buildDerivedFileName(MediaTransformPreset.Hero, originalName, 'avif'),
+        mimeType: 'image/avif',
+        entity: 'page-media',
+        isActive: true,
+      };
+      const cardWebpRow = {
+        id: 23,
+        guid: cardWebpGuid,
+        parentFileId: 20,
+        originalName: buildDerivedFileName(MediaTransformPreset.Card, originalName, 'webp'),
+        mimeType: 'image/webp',
+        entity: 'page-media',
+        isActive: true,
+      };
+      const cardAvifRow = {
+        id: 24,
+        guid: cardAvifGuid,
+        parentFileId: 20,
+        originalName: buildDerivedFileName(MediaTransformPreset.Card, originalName, 'avif'),
+        mimeType: 'image/avif',
+        entity: 'page-media',
+        isActive: true,
+      };
+
+      const html =
+        `<html><head><link rel="stylesheet" href="/assets/style.test.css"/></head><body>` +
+        `<img src="http://cdn/x" alt="card" data-media-ref="${guid}" data-media-preset="card">` +
+        `<img src="http://cdn/x" alt="hero" data-media-ref="${guid}" data-media-preset="hero">` +
+        `</body></html>`;
+      fetchMock.mockResolvedValue({ ok: true, status: 200, text: () => Promise.resolve(html) });
+      fileEntityFindFirst.mockResolvedValue(jpegOriginalRow);
+      fileEntityFindMany.mockResolvedValue([
+        jpegOriginalRow,
+        heroWebpRow,
+        heroAvifRow,
+        cardWebpRow,
+        cardAvifRow,
+      ]);
+
+      const blobByGuid: Record<string, { buffer: Buffer; mimeType: string }> = {
+        [guid]: { buffer: Buffer.from('originale'), mimeType: 'image/jpeg' },
+        [heroWebpGuid]: { buffer: Buffer.from('hero-webp'), mimeType: 'image/webp' },
+        [heroAvifGuid]: { buffer: Buffer.from('hero-avif'), mimeType: 'image/avif' },
+        [cardWebpGuid]: { buffer: Buffer.from('card-webp'), mimeType: 'image/webp' },
+        [cardAvifGuid]: { buffer: Buffer.from('card-avif'), mimeType: 'image/avif' },
+      };
+      publicMediaService.serve.mockImplementation((requestedGuid: string) =>
+        Promise.resolve(blobByGuid[requestedGuid]),
+      );
+      sharp.mockReturnValue({
+        metadata: jest.fn().mockResolvedValue({ width: 2000, height: 1000 }),
+      });
+
+      await processor.process(
+        buildJob({ kind: 'page', pageId: 'guid-4c', locale: 'it-IT', path: '/pagina-4c' }),
+      );
+
+      const writtenHtml = writtenContent('it-IT/pagina-4c/index.html') as string;
+      const cardImgIndex = writtenHtml.indexOf('data-media-preset="card"');
+      const heroImgIndex = writtenHtml.indexOf('data-media-preset="hero"');
+      const cardPictureStart = writtenHtml.lastIndexOf('<picture>', cardImgIndex);
+      const cardPictureEnd = writtenHtml.indexOf('</picture>', cardImgIndex);
+      const cardMarkup = writtenHtml.slice(cardPictureStart, cardPictureEnd);
+      const heroPictureStart = writtenHtml.lastIndexOf('<picture>', heroImgIndex);
+      const heroPictureEnd = writtenHtml.indexOf('</picture>', heroImgIndex);
+      const heroMarkup = writtenHtml.slice(heroPictureStart, heroPictureEnd);
+
+      expect(cardMarkup).toContain('800w');
+      expect(cardMarkup).not.toContain('1600w');
+      expect(heroMarkup).toContain('1600w');
+      expect(heroMarkup).not.toContain('800w');
+    });
+
+    // Il path retro-compatibile (`<img data-media-ref>` senza
+    // `data-media-preset`, tutte le varianti nominate della famiglia
+    // confluiscono nello stesso `srcset`) è già coperto dal test
+    // "con varianti a preset nominato in AVIF/WebP, compone un <picture> con
+    // srcset multi-risoluzione" sopra: non duplicato qui (CLAUDE.md, ordine
+    // Test Engineer — "check what's already covered there and don't
+    // duplicate").
   });
 
   describe('kind: tombstone', () => {

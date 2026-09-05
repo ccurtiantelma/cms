@@ -33,11 +33,14 @@
  * funzionano solo condividendo la stessa istanza di `DndContext`, e questo componente è il
  * primo antenato comune fra i due.
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { ActionIcon, Button, Paper, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
+import { notifications } from '@mantine/notifications';
 import {
   IconEye,
+  IconFileExport,
+  IconFileImport,
   IconHistory,
   IconLayoutGrid,
   IconLayoutSidebarRight,
@@ -67,11 +70,13 @@ import {
 import { BLOCK_TYPES } from '../../../types/blocks.types';
 import type { PageRecord, PageStatus } from '../../../types/pages.types';
 import { blockIcon, defaultPropsFor } from './BlockPalette';
+import { findNode } from './block-tree.utils';
 import EditorSidebar from './sidebar/EditorSidebar';
 import Toolbar from './Toolbar';
 import HistoryDrawer from './HistoryDrawer';
 import LocaleSwitcher from './LocaleSwitcher';
 import TemplateLibraryModal from './TemplateLibraryModal';
+import { exportSubtreeToJson, importJsonFile } from './utils/template-io.utils';
 import { useEditorShortcuts } from './useEditorShortcuts';
 import styles from './FullScreenEditorLayout.module.css';
 
@@ -226,6 +231,12 @@ export default function FullScreenEditorLayout({
   // sezioni (ADR-34 § 5) sempre in coda alla radice — nessuna sottoscrizione all'intero
   // `tree` solo per un numero.
   const rootBlocksCount = useBlockEditorStore((state) => state.tree.length);
+  // Selettore granulare (ADR-56 § 3): solo l'id selezionato, per abilitare/disabilitare
+  // "Esporta JSON" — mai una sottoscrizione all'intero `tree` solo per poter risolvere il
+  // nodo da esportare al click: quella lettura è imperativa (`getState()`, sotto), stesso
+  // idioma già in uso per il salvataggio (`BlockEditorPanel.tsx`).
+  const selectedId = useBlockEditorStore((state) => state.selectedId);
+  const insertSubtreeAction = useBlockEditorStore((state) => state.insertSubtreeAction);
 
   const [draggedBlock, setDraggedBlock] = useState<DraggedBlockInfo | null>(null);
   // ADR-34 § 5: secondo punto di apertura della libreria sezioni, accanto agli altri
@@ -233,6 +244,52 @@ export default function FullScreenEditorLayout({
   // in coda alla radice.
   const [templateLibraryOpened, setTemplateLibraryOpened] = useState(false);
   const [historyOpened, { toggle: toggleHistory, close: closeHistory }] = useDisclosure(false);
+  // Input file nascosto (ADR-56 § 3): nessuna libreria di upload, un `<input type="file">`
+  // ref-triggered dall'`ActionIcon` "Importa JSON" è sufficiente per un file locale letto
+  // interamente lato client (`FileReader`), mai inviato a un endpoint.
+  const importFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  /** Esporta il sottoalbero selezionato come file JSON (ADR-56 § 2/§ 3): no-op se nulla è selezionato (pulsante comunque `disabled` in quel caso). */
+  function handleExportSelected(): void {
+    if (!selectedId) return;
+    const node = findNode(useBlockEditorStore.getState().tree, selectedId);
+    if (!node) return;
+    exportSubtreeToJson(node);
+  }
+
+  /** Apre il selettore file nativo dietro l'`ActionIcon` "Importa JSON". */
+  function handleImportClick(): void {
+    importFileInputRef.current?.click();
+  }
+
+  /**
+   * Legge il file selezionato, lo valida con {@link importJsonFile} e, se conforme, lo
+   * inserisce in coda alla radice con la stessa `insertSubtreeAction` già usata dalla
+   * Libreria Sezioni (ADR-56 § 1 — nessuna azione store nuova). Il rigetto notifica l'utente
+   * (mai un'eccezione non gestita, mai un inserimento parziale) e non svuota comunque
+   * l'input: il reset del `value` avviene sempre, cosi riselezionare lo stesso file rilancia
+   * `onChange` anche dopo un rigetto.
+   */
+  function handleImportFileChange(event: ChangeEvent<HTMLInputElement>): void {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const raw = typeof reader.result === 'string' ? reader.result : '';
+      const result = importJsonFile(raw);
+      if (result.ok) {
+        insertSubtreeAction(null, rootBlocksCount, result.subtree);
+      } else {
+        notifications.show({
+          color: 'red',
+          title: 'Importazione non riuscita',
+          message: result.error,
+        });
+      }
+    };
+    reader.readAsText(file);
+  }
 
   // Motore delle scorciatoie da tastiera dell'editor (undo/redo/elimina/deseleziona/
   // duplica): sempre attivo — questo componente è la chrome di un'intera rotta dedicata
@@ -418,6 +475,28 @@ export default function FullScreenEditorLayout({
             >
               <IconLayoutGrid size={18} />
             </ActionIcon>
+            {/* Import/Export JSON (ADR-56 § 3): utilità di migrazione contenuto, mai "I
+                miei Template" — nessuna libreria personale, solo un file scaricato/caricato
+                dal browser. "Esporta JSON" agisce sul blocco selezionato in radice o
+                annidato: `disabled` quando nulla è selezionato, invece di un click che non
+                farebbe nulla. */}
+            <ActionIcon
+              variant="subtle"
+              size="lg"
+              aria-label="Esporta blocco selezionato in JSON"
+              disabled={!selectedId}
+              onClick={handleExportSelected}
+            >
+              <IconFileExport size={18} />
+            </ActionIcon>
+            <ActionIcon
+              variant="subtle"
+              size="lg"
+              aria-label="Importa blocco da JSON"
+              onClick={handleImportClick}
+            >
+              <IconFileImport size={18} />
+            </ActionIcon>
             <ActionIcon
               variant={isStructurePanelOpen ? 'filled' : 'subtle'}
               size="lg"
@@ -544,6 +623,17 @@ export default function FullScreenEditorLayout({
         onClose={() => setTemplateLibraryOpened(false)}
         parentId={null}
         index={rootBlocksCount}
+      />
+
+      {/* Input file nascosto dietro l'`ActionIcon` "Importa JSON" sopra (ADR-56 § 3):
+          `display: none` via `hidden`, mai un elemento visibile — il click è delegato dal
+          `ref` (`handleImportClick`). */}
+      <input
+        ref={importFileInputRef}
+        type="file"
+        accept="application/json"
+        hidden
+        onChange={handleImportFileChange}
       />
 
       <HistoryDrawer opened={historyOpened} onClose={closeHistory} />

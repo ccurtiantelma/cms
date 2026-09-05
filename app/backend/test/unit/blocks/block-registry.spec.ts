@@ -11,13 +11,73 @@ import {
 describe('block-registry (unit) — invarianti di ADR-29/ADR-30', () => {
   // ─── Token del registro invariato (ADR-29 § 5) ─────────────────────────
 
-  it('il token del registro resta invariato rispetto al valore pre-round: nessun "v" o "migrations" toccato dalle sette props di stile', () => {
-    // Valore ricalcolato dopo ADR-52 (aggiunta di `navMenu:1:0`/
-    // `navMenuItem:1:0` al registro, decimo/undicesimo tipo — dipende solo
-    // da type/v/migrations.length, MAI dalle props): un cambiamento qui
-    // segnalerebbe un `v` incrementato per errore, non l'aggiunta di due tipi
-    // interi (attesa e coperta da questo aggiornamento).
-    expect(computeBlockRegistryToken(DEFAULT_BLOCK_REGISTRY)).toBe('c5d5f872');
+  it('il token del registro riflette l\'aggiunta dei sette tipi di ADR-57, non un bump di "v" accidentale', () => {
+    // Valore ricalcolato dopo ADR-57 (aggiunta di `accordion:1:0`,
+    // `accordionItem:1:0`, `tabs:1:0`, `tabPanel:1:0`, `carousel:1:0`,
+    // `carouselSlide:1:0`, `modalTrigger:1:0` al registro, tredicesimo–
+    // diciannovesimo tipo — dipende solo da type/v/migrations.length, MAI
+    // dalle props): un cambiamento qui segnalerebbe un `v` incrementato per
+    // errore su un tipo esistente, non l'aggiunta di sette tipi interi
+    // (attesa e coperta da questo aggiornamento, conseguenza dichiarata di
+    // ADR-57 sul token del registro/prefisso di cache, ADR-23 § 2).
+    expect(computeBlockRegistryToken(DEFAULT_BLOCK_REGISTRY)).toBe('b42e572e');
+  });
+
+  it('il registro contiene esattamente diciannove tipi dopo ADR-57 § Decisione punto 1', () => {
+    expect(DEFAULT_BLOCK_REGISTRY.definitions.size).toBe(19);
+  });
+
+  it.each(['accordion', 'tabs', 'carousel', 'modalTrigger'])(
+    '%s (contenitore) è ammesso in ROOT_ALLOWED (ADR-57 § Decisione punto 1)',
+    (type) => {
+      expect(DEFAULT_BLOCK_REGISTRY.rootAllowed).toContain(type);
+    },
+  );
+
+  it.each(['accordionItem', 'tabPanel', 'carouselSlide'])(
+    '%s (voce) NON è ammesso in ROOT_ALLOWED, stesso trattamento di navMenuItem (ADR-57 § Decisione punto 2)',
+    (type) => {
+      expect(DEFAULT_BLOCK_REGISTRY.rootAllowed).not.toContain(type);
+    },
+  );
+
+  it.each([
+    ['accordion', ['accordionItem']],
+    ['tabs', ['tabPanel']],
+    ['carousel', ['carouselSlide']],
+  ] as const)(
+    '%s dichiara children.allow: %j (ADR-57 § Decisione punto 2)',
+    (type, allow) => {
+      expect(DEFAULT_BLOCK_REGISTRY.definitions.get(type)?.children.allow).toEqual(allow);
+    },
+  );
+
+  it.each(['accordionItem', 'tabPanel', 'carouselSlide', 'modalTrigger'])(
+    '%s dichiara children.allow limitato a heading/richText/image/button/container, mai un altro widget interattivo (ADR-57 § Decisione punto 2)',
+    (type) => {
+      expect(DEFAULT_BLOCK_REGISTRY.definitions.get(type)?.children.allow).toEqual([
+        'heading',
+        'richText',
+        'image',
+        'button',
+        'container',
+      ]);
+    },
+  );
+
+  it.each([
+    'accordion',
+    'accordionItem',
+    'tabs',
+    'tabPanel',
+    'carousel',
+    'carouselSlide',
+    'modalTrigger',
+  ])('%s è a v:1, enabled:true, senza minRole (ADR-57 § Decisione punto 1)', (type) => {
+    const definition = DEFAULT_BLOCK_REGISTRY.definitions.get(type);
+    expect(definition?.v).toBe(1);
+    expect(definition?.enabled).toBe(true);
+    expect(definition?.minRole).toBeUndefined();
   });
 
   // ─── Invariante metadati d'editor (ADR-30 § 4) ─────────────────────────

@@ -74,8 +74,14 @@ interface BlockPaletteProps {
   index?: number;
   /** Etichetta del pulsante che apre la palette. */
   label?: string;
-  /** Dimensione del pulsante Mantine (le palette annidate sono più compatte). */
-  size?: 'xs' | 'sm';
+  /**
+   * Dimensione del pulsante Mantine (le palette annidate sono più compatte). Accetta anche
+   * un numero di px (RE-2, restyle chrome Elementor Pro): la maniglia contestuale di
+   * `BlockHoverOverlay.tsx` la usa per garantire l'altezza minima di 28px richiesta dal
+   * task su ogni pulsante della toolbar, coerente con gli `ActionIcon` dei controlli vicini
+   * (`size={28}`) — stesso prop Mantine, mai una seconda scala di taglie inventata qui.
+   */
+  size?: 'xs' | 'sm' | number;
   /** Variante del pulsante Mantine. */
   variant?: string;
   /**
@@ -175,7 +181,16 @@ export default function BlockPalette({
               </ActionIcon>
             </Tooltip>
           ) : (
-            <Button size={size} variant={variant} leftSection={<IconPlus size={14} />}>
+            // `Button.size` non accetta un numero di px (a differenza di `ActionIcon.size`
+            // sopra, RE-2): la variante testuale non è mai usata dalla maniglia contestuale
+            // a 28px (solo `iconOnly`, vedi `BlockHoverOverlay.tsx`), quindi qui basta un
+            // fallback alla taglia Mantine più vicina — nessun blocco reale passa oggi un
+            // `size` numerico insieme a `iconOnly={false}`.
+            <Button
+              size={typeof size === 'number' ? 'sm' : size}
+              variant={variant}
+              leftSection={<IconPlus size={14} />}
+            >
               {label}
             </Button>
           )}
@@ -193,7 +208,12 @@ export default function BlockPalette({
                     onClick={() =>
                       descriptor.type === 'section'
                         ? setSectionModalOpened(true)
-                        : addBlockAction(parentId, descriptor.type, index, defaultPropsFor(descriptor))
+                        : addBlockAction(
+                            parentId,
+                            descriptor.type,
+                            index,
+                            defaultPropsFor(descriptor),
+                          )
                     }
                   >
                     {descriptor.meta?.label ?? descriptor.type}

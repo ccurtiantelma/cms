@@ -1,0 +1,73 @@
+/* `manual-scroll` (default, nessuna classe extra): slide a piena larghezza del contenitore
+ * scrollabile, con "aggancio" allo scroll-snap del genitore (`CarouselBlock.module.css`). */
+.slide {
+  flex: 0 0 100%;
+  scroll-snap-align: center;
+}
+
+.fade {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  animation-name: cmsCarouselFade;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.slideLoop {
+  position: absolute;
+  inset: 0;
+  animation-name: cmsCarouselSlide;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+/*
+ * Approssimazione deliberata (documentata in `CarouselSlideBlock.tsx`): le percentuali dei
+ * keyframe sono fisse, non calcolate per il numero reale di slide (`@keyframes` in CSS non
+ * ammette percentuali dinamiche) — l'esclusività perfetta fra slide è garantita solo per un
+ * numero di slide "tipico" (2-6). ADR-57 § 4 chiede solo "durata fissa uguale per slide" e
+ * "@keyframes", non una sincronizzazione matematicamente esatta per N arbitrario.
+ */
+@keyframes cmsCarouselFade {
+  0%,
+  92%,
+  100% {
+    opacity: 0;
+  }
+  4%,
+  88% {
+    opacity: 1;
+  }
+}
+
+@keyframes cmsCarouselSlide {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  4% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  25% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  33%,
+  100% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+/* Pausa unica su hover/focus (ADR-57 § 4): guidata dall'attributo `data-transition` del
+ * genitore `.carousel` (`CarouselBlock.tsx`), non da una classe — attributo semplice, non
+ * soggetto allo scoping dei CSS Modules, leggibile qui pur vivendo in un file diverso da
+ * `CarouselBlock.module.css`. */
+[data-transition='fade-loop']:hover .fade,
+[data-transition='fade-loop']:focus-within .fade,
+[data-transition='slide-loop']:hover .slideLoop,
+[data-transition='slide-loop']:focus-within .slideLoop {
+  animation-play-state: paused;
+}

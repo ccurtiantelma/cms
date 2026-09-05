@@ -20,11 +20,17 @@
  * **Split hover/selezione (round successivo, F04d-02).** I due stati ora portano segnali
  * distinti, mai sovrapposti sullo stesso blocco: hover senza selezione mostra solo il
  * bordo di categoria (v. `overlayBorderClassName` sotto) più un badge nome in alto a
- * sinistra (`.hoverBadge`); la toolbar di cinque controlli sopra è montata **solo** su
- * `isSelected`, ancorata in alto a destra (`BlockHoverOverlay.module.css`), non più al
- * centro del bordo superiore. Nessun controllo si è spostato: stessa toolbar, stesse
- * cinque azioni, solo la condizione di montaggio e la posizione sono cambiate.
+ * sinistra (`.hoverBadge`); la toolbar dei controlli è montata **solo** su `isSelected`.
  *
+ * **Maniglia centrale (RE-2, restyle Elementor Pro).** La toolbar è tornata ad essere
+ * ancorata in alto **al centro** del bordo superiore (`BlockHoverOverlay.module.css`),
+ * non più in alto a destra come nel round F04d-02 sopra — richiesta esplicita del task:
+ * le maniglie contestuali "posizionate in angolo" erano il deficit da correggere. Sei
+ * controlli oggi (era "cinque" quando questo commento fu scritto): "+" (aggiungi sopra) si
+ * aggiunge a trascina/seleziona genitore/duplica/modifica/elimina, più i controlli
+ * opzionali (Salva Preset/Converti in Sezione Globale/Esporta JSON) invariati.
+ *
+
  * Ogni azione che cambia la struttura passa dallo store, che la verifica contro il
  * registro dei blocchi prima di applicarla: qui si decide solo se *offrirla* (es.
  * `canDropInto` per il drag & drop) — mai una regola scritta due volte.
@@ -61,10 +67,13 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
 import { Button, Group, Modal, Stack, Text, TextInput } from '@mantine/core';
+import { IconWorld } from '@tabler/icons-react';
 import { useShallow } from 'zustand/react/shallow';
 import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core';
 import { notifications } from '@mantine/notifications';
@@ -79,7 +88,7 @@ import {
   useNodeById,
   type EditorViewport,
 } from '../../../hooks/useBlockEditorStore';
-import { findLocation, findNode, type BlockNode } from './block-tree.utils';
+import { findLocation, findNode, type BlockLocation, type BlockNode } from './block-tree.utils';
 import { canDropInto } from './block-registry.utils';
 import {
   containerWidthPercentFromPointer,
@@ -102,12 +111,26 @@ import Section from '../../../components/blocks/blocks/Section';
 import Container from '../../../components/blocks/blocks/Container';
 import FormBlock from '../../../components/blocks/blocks/FormBlock';
 import NavMenuBlock from '../../../components/blocks/blocks/NavMenuBlock';
+import AccordionBlock from '../../../components/blocks/blocks/AccordionBlock';
+import AccordionItemBlock from '../../../components/blocks/blocks/AccordionItemBlock';
+import TabsBlock from '../../../components/blocks/blocks/TabsBlock';
+import TabPanelBlock from '../../../components/blocks/blocks/TabPanelBlock';
+import CarouselBlock, {
+  resolveCarouselTransition,
+} from '../../../components/blocks/blocks/CarouselBlock';
+import CarouselSlideBlock from '../../../components/blocks/blocks/CarouselSlideBlock';
+import ModalTriggerBlock from '../../../components/blocks/blocks/ModalTriggerBlock';
 import tokenStyles from '../../../components/blocks/style-tokens.module.css';
-import { resolveHideClassName, resolveResponsiveClassNames } from '../../../components/blocks/style-tokens';
+import {
+  resolveHideClassName,
+  resolveResponsiveClassNames,
+} from '../../../components/blocks/style-tokens';
 import ConfirmModal from '../../../components/ConfirmModal';
 import BlockPalette, { blockIcon } from './BlockPalette';
 import BlockHoverOverlay from './components/BlockHoverOverlay';
 import { usePresetStore } from './usePresetStore';
+import { exportSubtreeToJson } from './utils/template-io.utils';
+import ConvertToGlobalSectionModal from './ConvertToGlobalSectionModal';
 import InlineFloatingToolbar from './InlineFloatingToolbar';
 import InlineFormattingToolbar, {
   HEADING_LEVELS,
@@ -189,35 +212,229 @@ interface NavMenuContainerProps {
 }
 
 /**
+ * Props dei sette widget compositi CSS-only (ADR-57 § 2, ADR-59): a differenza di
+ * `section`/`container`/`form`/`navMenu` sopra, i componenti puri di `accordionItem`/
+ * `tabPanel`/`carousel`/`carouselSlide`/`modalTrigger` dichiarano props strutturali
+ * **obbligatorie** e tipizzate in modo stretto (`title: string`, `groupName: string`,
+ * `transition: CarouselEffectiveTransition`, ecc. — mai `unknown`), perché sono componenti
+ * "puri" condivisi con `BlockRenderer.tsx`/il sito pubblico, non riscritti qui (CLAUDE.md §
+ * confine Mantine/blocchi, invariati bit-per-bit da questo task). Queste interfacce restano
+ * invece nello stesso stile "largo" di ogni altra voce di `CONTAINER_COMPONENTS` sopra
+ * (solo `children` obbligatoria, il resto opzionale/`unknown`) — un piccolo componente
+ * adapter per ciascuna (sotto) restringe i valori all'ultimo istante, con la stessa identica
+ * logica difensiva già scritta in `BlockRenderer.tsx` (mai una seconda regola divergente):
+ * qui la narrowing serve solo a soddisfare la forma del `Record` sotto, il *valore* è già
+ * stato derivato correttamente da {@link resolveContainerComponentProps}. `accordion`/`tabs`
+ * non compaiono qui: i loro componenti puri accettano solo un `children` opzionale, già
+ * strutturalmente compatibili con l'unione senza bisogno di un adapter.
+ */
+interface AccordionItemContainerProps {
+  children: ReactNode;
+  title?: unknown;
+  groupName?: unknown;
+}
+
+interface TabPanelContainerProps {
+  children: ReactNode;
+  label?: unknown;
+  groupName?: unknown;
+  defaultChecked?: unknown;
+}
+
+interface CarouselContainerProps {
+  children: ReactNode;
+  transition?: unknown;
+}
+
+interface CarouselSlideContainerProps {
+  children: ReactNode;
+  slideId?: unknown;
+  transition?: unknown;
+  index?: unknown;
+  count?: unknown;
+}
+
+interface ModalTriggerContainerProps {
+  children: ReactNode;
+  nodeId?: unknown;
+  triggerLabel?: unknown;
+  animation?: unknown;
+}
+
+/** Adapter di `accordionItem` verso `AccordionItemBlock` (vedi il commento sopra {@link AccordionItemContainerProps}). */
+function AccordionItemContainer({
+  children,
+  title,
+  groupName,
+}: AccordionItemContainerProps): JSX.Element {
+  return (
+    <AccordionItemBlock
+      title={typeof title === 'string' ? title : ''}
+      groupName={typeof groupName === 'string' ? groupName : undefined}
+    >
+      {children}
+    </AccordionItemBlock>
+  );
+}
+
+/** Adapter di `tabPanel` verso `TabPanelBlock` (vedi il commento sopra {@link TabPanelContainerProps}). */
+function TabPanelContainer({
+  children,
+  label,
+  groupName,
+  defaultChecked,
+}: TabPanelContainerProps): JSX.Element {
+  return (
+    <TabPanelBlock
+      label={typeof label === 'string' ? label : ''}
+      groupName={typeof groupName === 'string' ? groupName : ''}
+      defaultChecked={defaultChecked === true}
+    >
+      {children}
+    </TabPanelBlock>
+  );
+}
+
+/** Adapter di `carousel` verso `CarouselBlock` (vedi il commento sopra {@link CarouselContainerProps}). */
+function CarouselContainer({ children, transition }: CarouselContainerProps): JSX.Element {
+  return (
+    <CarouselBlock
+      transition={
+        transition === 'fade-loop' || transition === 'slide-loop' ? transition : 'manual-scroll'
+      }
+    >
+      {children}
+    </CarouselBlock>
+  );
+}
+
+/** Adapter di `carouselSlide` verso `CarouselSlideBlock` (vedi il commento sopra {@link CarouselSlideContainerProps}). */
+function CarouselSlideContainer({
+  children,
+  slideId,
+  transition,
+  index,
+  count,
+}: CarouselSlideContainerProps): JSX.Element {
+  return (
+    <CarouselSlideBlock
+      slideId={typeof slideId === 'string' ? slideId : ''}
+      transition={
+        transition === 'fade-loop' || transition === 'slide-loop' ? transition : 'manual-scroll'
+      }
+      index={typeof index === 'number' ? index : 0}
+      count={typeof count === 'number' ? count : 1}
+    >
+      {children}
+    </CarouselSlideBlock>
+  );
+}
+
+/** Adapter di `modalTrigger` verso `ModalTriggerBlock` (vedi il commento sopra {@link ModalTriggerContainerProps}). */
+function ModalTriggerContainer({
+  children,
+  nodeId,
+  triggerLabel,
+  animation,
+}: ModalTriggerContainerProps): JSX.Element {
+  return (
+    <ModalTriggerBlock
+      nodeId={typeof nodeId === 'string' ? nodeId : ''}
+      triggerLabel={typeof triggerLabel === 'string' ? triggerLabel : ''}
+      animation={animation === 'none' || animation === 'slide-down' ? animation : 'fade'}
+    >
+      {children}
+    </ModalTriggerBlock>
+  );
+}
+
+/**
  * Unione delle props ammesse da un componente montato in `CONTAINER_COMPONENTS`: ogni
- * tipo contenitore del registro dichiara il proprio schema — qui `section`, `container`
- * (ADR-39), `form` (ADR-46) e `navMenu` (ADR-52). Tutte le interfacce dichiarano solo
- * `children` come obbligatoria e ogni altra prop opzionale (`unknown`): strutturalmente
- * compatibili con l'unione, senza bisogno di `any` per tipizzare il record qui sotto.
+ * tipo contenitore del registro dichiara il proprio schema — `section`, `container`
+ * (ADR-39), `form` (ADR-46), `navMenu` (ADR-52) e i sette widget compositi CSS-only
+ * (ADR-57 § 2, ADR-59: `accordion`/`accordionItem`/`tabs`/`tabPanel`/`carousel`/
+ * `carouselSlide`/`modalTrigger`). Tutte le interfacce dichiarano solo `children` come
+ * obbligatoria e ogni altra prop opzionale (`unknown`): strutturalmente compatibili con
+ * l'unione, senza bisogno di `any` per tipizzare il record qui sotto.
  */
 type ContainerComponentProps =
-  SectionContainerProps | ContainerBlockProps | FormBlockContainerProps | NavMenuContainerProps;
+  | SectionContainerProps
+  | ContainerBlockProps
+  | FormBlockContainerProps
+  | NavMenuContainerProps
+  | AccordionItemContainerProps
+  | TabPanelContainerProps
+  | CarouselContainerProps
+  | CarouselSlideContainerProps
+  | ModalTriggerContainerProps;
 
+/**
+ * Ricorsione dei figli dei sette widget compositi (ADR-59): non più `BlockRenderer.tsx`
+ * (unico dispatcher per `app/public-site`, invariato) ma questo stesso componente, come già
+ * avviene per `section`/`container`/`form`/`navMenu` sopra — un `EditorBlockWrapper` per
+ * ogni figlio, con la propria chrome (selezione/drag/eliminazione) indipendentemente da
+ * quanto in profondità si trovi nell'albero.
+ */
 const CONTAINER_COMPONENTS: Record<string, (props: ContainerComponentProps) => JSX.Element> = {
   section: Section,
   container: Container,
   form: FormBlock,
   navMenu: NavMenuBlock,
+  accordion: AccordionBlock,
+  accordionItem: AccordionItemContainer,
+  tabs: TabsBlock,
+  tabPanel: TabPanelContainer,
+  carousel: CarouselContainer,
+  carouselSlide: CarouselSlideContainer,
+  modalTrigger: ModalTriggerContainer,
 };
+
+/** Posizione di un nodo (`BlockLocation`) più il tipo del genitore — stessa forma calcolata da `location` nel corpo del componente più sotto. */
+interface NodeLocationWithParentType extends BlockLocation {
+  parentType: string | undefined;
+}
+
+/**
+ * Props del genitore rilevanti solo per i tre "item" dei widget compositi (ADR-59,
+ * `accordionItem`/`tabPanel`/`carouselSlide`): `exclusive` (accordion), `autoplay`/
+ * `transition` (carousel) — mai l'intero oggetto props del genitore, per non far
+ * ri-renderizzare l'item ad ogni modifica di una prop del genitore che non gli interessa
+ * (vedi il selettore Zustand dedicato nel corpo del componente, `parentCompositeProps`).
+ */
+interface WidgetParentCompositeProps {
+  exclusive?: unknown;
+  autoplay?: unknown;
+  transition?: unknown;
+}
 
 /**
  * Props da passare al componente di contenuto quando il nodo è un contenitore
  * (`CONTAINER_COMPONENTS`): ogni tipo ha il proprio insieme di props di registro,
  * incompatibili l'uno con l'altro (`section` è layout a colonne/stile, `container` è
  * layout flex puro, ADR-39) — mai un solo oggetto condiviso passato a entrambi.
+ *
+ * `location`/`parentCompositeProps` servono solo ai sette widget compositi (ADR-57 § 2,
+ * ADR-59): `BlockRenderer.tsx` calcola `groupName`/`exclusive`/`defaultChecked`/
+ * `transition`/`index`/`count` da dentro il `case` del genitore, che possiede l'intero
+ * gruppo di fratelli in un colpo solo — qui ogni nodo è un `EditorBlockWrapper`
+ * indipendente montato per `id`, quindi la stessa informazione va derivata guardando lo
+ * store (nodo genitore + posizione fra i fratelli) invece che ricevuta da un genitore JSX.
+ * Stessa identica logica di calcolo di `BlockRenderer.tsx`, mai divergente.
  */
 function resolveContainerComponentProps(
   node: BlockNode,
+  location: NodeLocationWithParentType,
+  parentCompositeProps: WidgetParentCompositeProps | undefined,
 ):
   | Omit<SectionContainerProps, 'children'>
   | Omit<ContainerBlockProps, 'children'>
   | Omit<FormBlockContainerProps, 'children'>
-  | Omit<NavMenuContainerProps, 'children'> {
+  | Omit<NavMenuContainerProps, 'children'>
+  | Omit<AccordionItemContainerProps, 'children'>
+  | Omit<TabPanelContainerProps, 'children'>
+  | Omit<CarouselContainerProps, 'children'>
+  | Omit<CarouselSlideContainerProps, 'children'>
+  | Omit<ModalTriggerContainerProps, 'children'> {
   if (node.type === 'navMenu') {
     // Nessuna prop propria (vedi {@link NavMenuContainerProps}).
     return {};
@@ -239,6 +456,66 @@ function resolveContainerComponentProps(
   if (node.type === 'form') {
     return {
       formKey: node.props.formKey,
+    };
+  }
+  if (node.type === 'accordion' || node.type === 'tabs') {
+    // Wrapper puri (ADR-57 § 2): nessuna prop propria — `exclusive`/il raggruppamento
+    // vivono sui figli, ciascuno li deriva guardando questo stesso genitore (vedi i due
+    // case sotto), mai passati in giù da qui.
+    return {};
+  }
+  if (node.type === 'accordionItem') {
+    // Stessa regola di `BlockRenderer.tsx` case `'accordion'`/`'accordionItem'`: `groupName`
+    // solo se il genitore è davvero un `accordion` con `exclusive:true` — un `accordionItem`
+    // raggiunto isolato (contenuto malformato/legacy, o genitore diverso) non riceve alcun
+    // `groupName`, stessa resa "difensiva" del dispatcher pubblico.
+    const parentIsAccordion = location.parentType === 'accordion';
+    const exclusive = parentIsAccordion && parentCompositeProps?.exclusive === true;
+    return {
+      title: node.props.title,
+      groupName: exclusive ? `accordion-${location.parentId}` : undefined,
+    };
+  }
+  if (node.type === 'tabPanel') {
+    // Stessa regola di `BlockRenderer.tsx` case `'tabs'`/`'tabPanel'`: `groupName`
+    // condiviso e `defaultChecked` solo sul primo pannello quando il genitore è davvero
+    // `tabs`; un `tabPanel` isolato riceve un `groupName` tutto suo e resta sempre aperto
+    // (difensivo).
+    const parentIsTabs = location.parentType === 'tabs';
+    return {
+      label: node.props.label,
+      groupName: parentIsTabs ? `tabs-${location.parentId}` : `tabpanel-${node.id}`,
+      defaultChecked: parentIsTabs ? location.index === 0 : true,
+    };
+  }
+  if (node.type === 'carousel') {
+    return {
+      transition: resolveCarouselTransition(node.props.autoplay, node.props.transition),
+    };
+  }
+  if (node.type === 'carouselSlide') {
+    // Stessa regola di `BlockRenderer.tsx` case `'carousel'`/`'carouselSlide'`: `transition`
+    // effettiva del genitore (mai ricalcolata dalle proprie props — una slide non dichiara
+    // né `autoplay` né `transition`), `index`/`count` dalla posizione fra i fratelli.
+    // Isolata (difensivo): nessun genitore `carousel` noto, resa come singola slide statica.
+    const parentIsCarousel = location.parentType === 'carousel';
+    return {
+      slideId: node.id,
+      transition: parentIsCarousel
+        ? resolveCarouselTransition(
+            parentCompositeProps?.autoplay,
+            parentCompositeProps?.transition,
+          )
+        : 'manual-scroll',
+      index: parentIsCarousel ? location.index : 0,
+      count: parentIsCarousel ? location.siblingsCount : 1,
+    };
+  }
+  if (node.type === 'modalTrigger') {
+    return {
+      nodeId: node.id,
+      triggerLabel: node.props.triggerLabel,
+      animation: node.props.animation,
     };
   }
   return {
@@ -291,6 +568,14 @@ const VIEWPORT_LABEL: Record<EditorViewport, string> = {
 
 /** Millisecondi di inattività prima che un `onTextInput`/`onHtmlInput`/`onLabelInput` raggiunga lo store (punto 1 del task). */
 const EDIT_DEBOUNCE_MS = 300;
+
+/**
+ * I tre "item" dei widget compositi (ADR-57 § 2, ADR-59) che hanno bisogno di leggere
+ * props del proprio genitore (`parentCompositeProps`, vedi il selettore dedicato nel corpo
+ * del componente) — `accordion`/`tabs`/`carousel` stessi non ne fanno parte: sono loro il
+ * genitore, non il figlio che lo consulta.
+ */
+const WIDGET_ITEM_TYPES = new Set(['accordionItem', 'tabPanel', 'carouselSlide']);
 
 /** Id del nodo respinto dall'ultima validazione server-side, o `null`. */
 const InvalidBlockContext = createContext<string | null>(null);
@@ -393,9 +678,44 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   id,
 }: EditorBlockWrapperProps): JSX.Element | null {
   const node = useNodeById(id);
-  const location = useBlockEditorStore(useShallow((state) => findLocation(state.tree, id)));
+  /**
+   * Posizione del nodo, con in più il **tipo** del genitore (`parentType`, `undefined`
+   * alla radice): stesso `findLocation` di sempre, arricchito qui perché il primo
+   * controllo "+" della toolbar di selezione (`BlockHoverOverlay.tsx`, RE-2) deve filtrare
+   * i tipi ammessi da `BlockPalette` sul contenitore di destinazione — la stessa
+   * informazione che `resolveContainerComponentProps` già ricava altrove per il nodo
+   * stesso, qui serve per il suo genitore. Un solo selettore Zustand mirato per id, non
+   * due sottoscrizioni separate.
+   */
+  const location = useBlockEditorStore(
+    useShallow((state) => {
+      const found = findLocation(state.tree, id);
+      if (!found) return undefined;
+      const parentType = found.parentId ? findNode(state.tree, found.parentId)?.type : undefined;
+      return { ...found, parentType };
+    }),
+  );
   const childIds = useBlockEditorStore(
     useShallow((state) => findNode(state.tree, id)?.children.map((child) => child.id) ?? []),
+  );
+  /**
+   * Props del genitore rilevanti solo per i tre "item" dei widget compositi (ADR-59,
+   * {@link WIDGET_ITEM_TYPES}): `exclusive`/`autoplay`/`transition` — mai l'intero oggetto
+   * props del genitore (una modifica a una prop del genitore estranea a queste tre, es. lo
+   * sfondo di un `container`, non deve ri-renderizzare questo nodo figlio). `undefined` per
+   * ogni altro tipo di nodo: nessuna sottoscrizione utile da mantenere.
+   */
+  const parentCompositeProps = useBlockEditorStore(
+    useShallow((state) => {
+      if (!node || !WIDGET_ITEM_TYPES.has(node.type) || !location?.parentId) return undefined;
+      const parent = findNode(state.tree, location.parentId);
+      if (!parent) return undefined;
+      return {
+        exclusive: parent.props.exclusive,
+        autoplay: parent.props.autoplay,
+        transition: parent.props.transition,
+      };
+    }),
   );
   const isSelected = useBlockEditorStore((state) => state.selectedId === id);
   const isInvalid = useContext(InvalidBlockContext) === id;
@@ -415,6 +735,10 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const commitColumnRatioAction = useBlockEditorStore((state) => state.commitColumnRatioAction);
   /** "Salva come Preset Globale" (F14-01): stesso `usePresetStore` già usato da `AdvancedTab.tsx` per container/section — nessun secondo registro di preset. */
   const savePreset = usePresetStore((state) => state.savePreset);
+  /** "Converti in Sezione Globale" (ADR-55): unica azione, nessuna duplicazione con `AdvancedTab.tsx` (stesso store, stesso `ConvertToGlobalSectionModal.tsx`). */
+  const convertToGlobalSectionAction = useBlockEditorStore(
+    (state) => state.convertToGlobalSectionAction,
+  );
   /** "Occhio" del pannello Struttura/Navigator (`EditorStructureNavigator.tsx`): nascosto solo qui nel canvas, mai persistito. */
   const isHiddenInCanvas = useIsHiddenInCanvas(id);
   /** Riga corrispondente sotto il puntatore nel pannello Struttura/Navigator — stesso trattamento visivo dell'hover nel canvas. */
@@ -424,12 +748,27 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   /** Modal "Salva come Preset Globale" (F14-01), aperto dal sesto controllo di `BlockHoverOverlay.tsx` — solo su `section` (vedi `isSaveAsPresetOffered` più sotto). */
   const [presetModalOpened, setPresetModalOpened] = useState(false);
   const [presetName, setPresetName] = useState('');
+  /** Modal "Converti in Sezione Globale" (ADR-55), aperto dal settimo controllo di `BlockHoverOverlay.tsx` — solo su un contenitore/`section` di primo livello (vedi `isTopLevelContainerOrSection` più sotto). */
+  const [convertModalOpened, setConvertModalOpened] = useState(false);
   /** Solo il nodo direttamente sotto il puntatore (vedi commento di testa). */
   const [isHovered, setIsHovered] = useState(false);
 
   /**
+   * Apertura visiva del pannello `modalTrigger` nel Canvas (ADR-59 § 2): mai `location.hash`
+   * — il Canvas gira in `BrowserRouter` reale (`main.tsx`), non `HashRouter`/iframe, quindi
+   * lasciare che il click sul trigger navighi davvero verso `#modal-{id}` altererebbe
+   * `location.hash`/la cronologia della vera URL admin. Stato locale React, mai Zustand
+   * (effimero, mai su undo/redo — stesso principio di `hiddenInCanvasIds`/`hoveredBlockId`,
+   * `useBlockEditorStore.ts`): resettato implicitamente a `false` ad ogni nuovo mount (questo
+   * componente è già rimontato per `key={childId}` ad ogni cambio di nodo, mai riusato fra id
+   * diversi). Letto solo per `node.type === 'modalTrigger'` (vedi `data-modal-open` e
+   * {@link handleModalTriggerAnchorClick} più sotto), ignorato per ogni altro tipo.
+   */
+  const [isModalTriggerOpen, setIsModalTriggerOpen] = useState(false);
+
+  /**
    * Anti-clipping della toolbar di selezione (`BlockHoverOverlay.tsx`, ancorata a
-   * `top: -12px`, cioè sopra il bordo superiore del blocco): `true` quando quel bordo è
+   * `top: -14px`, cioè sopra il bordo superiore del blocco): `true` quando quel bordo è
    * troppo vicino al confine scrollabile reale del canvas (`[data-canvas-scroll-area]`,
    * `FullScreenEditorLayout.tsx`) perché la toolbar ci stia sopra senza finire tagliata da
    * quell'`overflow-y: auto` — tipicamente il primo blocco della pagina, appena sotto la
@@ -810,6 +1149,33 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   // di funzione.
   const currentNode = node;
 
+  /**
+   * Intercetta il click sul trigger (`<a href="#modal-{id}">`) o sul "Chiudi"
+   * (`href="#"`) di un `modalTrigger` (ADR-59 § 2): mai lasciar navigare il browser verso
+   * quel frammento, sostituito da {@link isModalTriggerOpen} + la regola CSS mirata
+   * `[data-modal-open='true']` (`EditorBlockWrapper.module.css`) sullo stesso identico
+   * pannello del componente puro (`ModalTriggerBlock.tsx`, invariato). `closest('a')`: il
+   * bersaglio del click può essere un discendente testuale dell'ancora (es. il carattere
+   * "×"), mai l'ancora stessa. No-op per ogni altro click su questo nodo — in particolare un
+   * `heading`/`richText` annidato dentro il pannello (che deve restare selezionabile/
+   * editabile come ogni altro figlio, punto E del task) non passa mai da qui: quel click
+   * viene fermato prima dal proprio `EditorBlockWrapper` (`stopPropagation` sul suo stesso
+   * `onClick`, invariato) e non risale fino a questo genitore.
+   */
+  function handleModalTriggerAnchorClick(event: ReactMouseEvent<HTMLDivElement>): void {
+    if (currentNode.type !== 'modalTrigger') return;
+    const anchor = (event.target as HTMLElement).closest('a');
+    if (!anchor) return;
+    const href = anchor.getAttribute('href') ?? '';
+    if (href.startsWith('#modal-')) {
+      event.preventDefault();
+      setIsModalTriggerOpen(true);
+    } else if (href === '#') {
+      event.preventDefault();
+      setIsModalTriggerOpen(false);
+    }
+  }
+
   const descriptor = BLOCK_TYPES.find((entry) => entry.type === node.type);
   const label = descriptor?.meta?.label ?? node.type;
   const ContainerComponent = CONTAINER_COMPONENTS[node.type];
@@ -839,6 +1205,32 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
    * ha in più solo la linguetta d'azione sostitutiva più sotto.
    */
   const isSection = node.type === 'section';
+
+  /**
+   * Nodo puntatore a una Sezione Globale (ADR-55, estende ADR-40): foglia (`children: []`),
+   * mai un contenitore — governa solo il segnale visivo distintivo più sotto (bordo/badge
+   * viola `#9333ea` "Sezione Globale" (RE-2), mai la disponibilità di "Converti in Sezione Globale",
+   * che è l'opposto: offerta solo su un contenitore/`section` che *non* lo sia già, vedi
+   * {@link isTopLevelContainerOrSection}).
+   */
+  const isGlobalRef = node.type === 'globalRef';
+
+  /**
+   * "Converti in Sezione Globale" (ADR-55): offerta solo su un contenitore o una `section`
+   * di **primo livello** (`location.parentId === null`) — un `globalRef` non può contenere
+   * altri blocchi da estrarre (cicli chiusi per contratto lato server, ADR-55), e un
+   * contenitore/sezione annidato più in profondità resta fuori scope di questo round
+   * (deviazione dichiarata, coerente con l'ADR: "Floating Toolbar/Inspector per
+   * contenitori/sezioni di primo livello"). Il registro dei blocchi decide comunque
+   * l'ammissibilità reale in scrittura: qui si decide solo se *offrire* l'azione, mai una
+   * seconda validazione (stesso principio di ogni altra azione strutturale di questo file).
+   */
+  const isTopLevelContainerOrSection =
+    // `node.type === 'container'` diretto e non `isContainerBlockType`: quella costante è
+    // dichiarata più sotto in questo stesso corpo funzione (vicino a
+    // `showContainerResizeHandle`, con cui condivide più contesto) — un riferimento
+    // anticipato qui lancerebbe in fase di esecuzione (temporal dead zone di `const`).
+    location.parentId === null && (isSection || node.type === 'container');
 
   /** Salva l'intero sottoalbero della Sezione corrente nel registro locale dei preset (F14-01). */
   function handleSavePreset(): void {
@@ -1112,37 +1504,72 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   }
 
   /**
-   * Bordo di hover/selezione (restyle Elementor Pro, richiesta esplicita del task, punto
-   * 4): un solo azzurro `#2271b1` in tutto l'editor, ma con un trattamento diverso per
-   * categoria di blocco — non più lo stesso `.hovered`/`.selected` indifferenziato di
-   * prima.
-   * - Sezioni (`isSection`): bordo sottile pieno su hover **o** selezione (`.hovered`).
-   * - Colonne (`isContainerBlockType`, il solo contenitore diverso da `section` nel
-   *   registro attuale, ADR-39): bordo tratteggiato (`.columnHovered`) — la spec lo lega
-   *   esplicitamente al solo hover; esteso qui anche alla selezione, altrimenti un
-   *   `container` selezionato ma non sotto il puntatore resterebbe privo di qualunque
-   *   segnale visivo (deviazione dichiarata in consegna).
-   * - Widget singoli (foglie): bordo pieno solo su selezione (`.selected`), mai su hover
-   *   — lettura letterale della spec ("bordo continuo azzurro ... su selezione").
+   * Colore di livello di annidamento (RE-2, restyle chrome Elementor Pro): un solo calcolo
+   * qui, letto sia dalla maniglia contestuale (`BlockHoverOverlay.tsx`, via la custom
+   * property `--block-level-color` impostata più sotto sullo `style` del wrapper — le
+   * property CSS ereditano lungo il DOM, nessun prop-drilling del colore) sia dal bordo di
+   * hover/selezione (`overlayBorderClassName` sotto) — mai due fonti indipendenti dello
+   * stesso segnale visivo.
+   * - Viola: Sezioni di **primo livello** (`isTopLevelSection`) e Sezioni Globali
+   *   (`isGlobalRef`, ADR-55) — il confine strutturale più esterno della pagina.
+   * - Azzurro: `section` annidata (non di primo livello) e `container` (ADR-39,
+   *   "container figli e colonne") — qualunque profondità.
+   * - Blu: tutto il resto — i widget foglia, più `form`/`navMenu` (ADR-46/ADR-52, nessuna
+   *   categoria propria richiesta dal task: restano nel gruppo "widget", stessa
+   *   classificazione già in uso prima di questo restyle per quei due tipi).
    */
-  // L'hover del navigator (riga sorvolata nel pannello Struttura/Navigator) conta come
-  // hover del canvas per la sola evidenziazione del bordo — stesso principio dell'hover
-  // locale del puntatore, mai una terza variante di colore.
+  const LEVEL_COLOR_TOP_SECTION = '#9333ea';
+  const LEVEL_COLOR_NESTED_CONTAINER = '#0284c7';
+  const LEVEL_COLOR_LEAF_WIDGET = '#2563eb';
+  const isTopLevelSection = isSection && location.parentId === null;
+  const isContainerOrSection = isSection || isContainerBlockType;
+  const blockLevelColor =
+    isGlobalRef || isTopLevelSection
+      ? LEVEL_COLOR_TOP_SECTION
+      : isContainerOrSection
+        ? LEVEL_COLOR_NESTED_CONTAINER
+        : LEVEL_COLOR_LEAF_WIDGET;
+
+  /**
+   * Bordo di hover/selezione (RE-2, restyle Elementor Pro — sostituisce l'azzurro unico
+   * `#2271b1` di un round precedente): il colore viene ora da {@link blockLevelColor}
+   * (via `var(--block-level-color)`, CSS), qui si decide solo *quale* trattamento di
+   * bordo applicare.
+   * - `globalRef` (ADR-55): bordo pieno **sempre** visibile (`.globalRefBorder`), non solo
+   *   su hover/selezione — segnala l'impatto trasversale del nodo (modificarlo altrove
+   *   aggiorna ogni Pagina che lo referenzia) indipendentemente da un'interazione in
+   *   corso, stesso principio informativo di `.hiddenBadge` più sotto.
+   * - Selezione attiva (`isSelected`, qualunque categoria): bordo pieno marcato più
+   *   ombreggiatura (`.selectedChrome`) — distinto chiaramente dall'hover tratteggiato
+   *   sotto, richiesta esplicita del task ("bordo continuo marcato... distinto
+   *   dall'hover/dashed").
+   * - Hover senza selezione, solo su Sezioni/Container (`isContainerOrSection`): bordo
+   *   tratteggiato (`.hoveredChrome`) — mai sui widget foglia (lettura letterale della
+   *   spec pre-esistente, invariata da questo restyle).
+   */
   const isHoveredEffective = isHovered || isHoveredFromNavigator;
-  const overlayBorderClassName = isContainerBlockType
-    ? isHoveredEffective || isSelected
-      ? styles.columnHovered
-      : ''
-    : isSection
-      ? isHoveredEffective || isSelected
-        ? styles.hovered
-        : ''
-      : isSelected
-        ? styles.selected
+  const overlayBorderClassName = isGlobalRef
+    ? styles.globalRefBorder
+    : isSelected
+      ? styles.selectedChrome
+      : isHoveredEffective && isContainerOrSection
+        ? styles.hoveredChrome
         : '';
+
+  /**
+   * Guida statica dell'ingombro (RE-2, punto 2 del task): bordo tratteggiato leggero
+   * `#cbd5e1`, sempre visibile in edit-mode su ogni contenitore/colonna — **anche vuoto**
+   * — indipendentemente da hover/selezione, così l'autore vede dove finisce un
+   * contenitore anche senza interagirci. `isContainer` (non solo `isContainerOrSection`):
+   * copre anche `form`/`navMenu`, entrambi contenitori nel registro anche se non
+   * categorizzati per colore sopra. Soppressa in "Anteprima Pura"
+   * (`[data-preview-mode='true']`, CSS) insieme a `.hoveredChrome`/`.selectedChrome`.
+   */
+  const containerGuideClassName = isContainer && !isGlobalRef ? styles.containerGuide : '';
 
   const className = [
     styles.wrapper,
+    containerGuideClassName,
     overlayBorderClassName,
     formFieldColSpanClassName,
     isInvalid ? styles.invalid : '',
@@ -1167,15 +1594,31 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           wrapperRef.current = element;
         }}
         className={className}
-        // Larghezza del container ridimensionato (E03): anteprima durante il gesto, valore
-        // persistito a riposo, `undefined` per ogni altro blocco — mai un `style` inline
-        // vuoto sui blocchi che non c'entrano.
-        style={widthStyle}
+        // Larghezza del container ridimensionato (E03: anteprima durante il gesto, valore
+        // persistito a riposo, assente per ogni altro blocco) più `--block-level-color`
+        // (RE-2), sempre presente: la custom property che `BlockHoverOverlay`/`.overlay`
+        // e i bordi `.hoveredChrome`/`.selectedChrome` (EditorBlockWrapper.module.css)
+        // leggono per il colore di livello — un solo `style` inline per entrambi gli scopi,
+        // mai due assegnazioni separate sullo stesso nodo. Il cast è necessario perché
+        // `CSSProperties` di React non tipizza le custom property native, non un `any`.
+        style={
+          {
+            ...widthStyle,
+            '--block-level-color': blockLevelColor,
+          } as CSSProperties
+        }
         data-block-type={node.type}
         // Bersaglio dello scroll-sync del pannello Struttura/Navigator
         // (`EditorStructureNavigator.tsx`): `querySelector('[data-block-id="…"]')` dal
         // navigator porta il blocco selezionato in vista nel canvas.
         data-block-id={node.id}
+        // Apertura visiva del pannello `modalTrigger` nel Canvas (ADR-59 § 2): presente solo
+        // per questo tipo di nodo e solo mentre aperto — la regola CSS mirata
+        // (`EditorBlockWrapper.module.css`) forza `display:flex` sul pannello del componente
+        // puro senza mai toccare `location.hash` (vedi {@link isModalTriggerOpen} sopra).
+        data-modal-open={
+          currentNode.type === 'modalTrigger' && isModalTriggerOpen ? 'true' : undefined
+        }
         // Bersaglio di selezione da tastiera (T-canvas-cleanup): rimpiazza l'`UnstyledButton`
         // testuale rimosso dalla toolbar, che era l'unico modo di selezionare senza mouse.
         // `aria-label` porta il tipo di blocco che prima si leggeva nel badge/etichetta
@@ -1189,6 +1632,8 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           // Il click seleziona il nodo più interno: senza stop, la selezione risalirebbe
           // fino alla sezione che lo contiene.
           event.stopPropagation();
+          // No-op per ogni tipo diverso da `modalTrigger` (vedi la guardia interna).
+          handleModalTriggerAnchorClick(event);
           selectNode(id);
         }}
         onKeyDown={(event) => {
@@ -1339,6 +1784,12 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
             id={id}
             label={label}
             parentId={location.parentId}
+            // Primo controllo "+" (RE-2): inserisce un blocco fratello **prima** di
+            // questo nodo, quindi stesso `location.parentId` di sopra ma indice/tipo del
+            // genitore dedicati — non il contenuto di questo nodo (quello userebbe `id`
+            // come parent, non `location.parentId`).
+            addBeforeIndex={location.index}
+            addBeforeParentType={location.parentType}
             attributes={attributes}
             listeners={listeners}
             anchorInside={overlayAnchoredInside}
@@ -1348,6 +1799,18 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
             // `AdvancedTab.tsx` resta l'unico altro punto d'ingresso, lì esteso anche a
             // `container`.
             onSaveAsPreset={isSection ? () => setPresetModalOpened(true) : undefined}
+            // Settimo controllo (ADR-55, estende ADR-40): solo su un contenitore/`section`
+            // di primo livello — vedi {@link isTopLevelContainerOrSection}. Apre lo stesso
+            // `ConvertToGlobalSectionModal.tsx` montato anche da `AdvancedTab.tsx`
+            // (Property Inspector), mai una seconda implementazione del modal.
+            onConvertToGlobalSection={
+              isTopLevelContainerOrSection ? () => setConvertModalOpened(true) : undefined
+            }
+            // Ottavo controllo (ADR-56 § 2/§ 3): esporta il sottoalbero di questo nodo come
+            // file JSON — offerto solo su un contenitore (`isContainer`, già calcolato sopra
+            // per la stessa domanda di ammissibilità strutturale di questo file), mai una
+            // seconda regola duplicata in `BlockHoverOverlay.tsx`.
+            onExportJson={isContainer ? () => exportSubtreeToJson(currentNode) : undefined}
           />
         )}
 
@@ -1357,14 +1820,33 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           hover **senza** selezione (`isHovered && !isSelected`), lasciando il posto alla
           toolbar di selezione sopra appena il nodo viene selezionato. `pointer-events:
           none`: puramente informativo, il click-to-select del wrapper (`onClick` sul `div`
-          principale) resta l'unico modo di selezionare questo nodo, invariato.
+          principale) resta l'unico modo di selezionare questo nodo, invariato. Mai su un
+          `globalRef` (`!isGlobalRef`): quel tipo mostra invece il proprio badge dedicato
+          poco sotto, sempre visibile e non solo su hover — due badge nello stesso angolo si
+          sovrapporrebbero.
         */}
-        {isHovered && !isSelected && (
+        {isHovered && !isSelected && !isGlobalRef && (
           <span className={styles.hoverBadge} aria-hidden="true">
             {badgeIconElement}
             <Text size="xs" fw={500} className={styles.hoverBadgeLabel}>
               {label}
             </Text>
+          </span>
+        )}
+
+        {/*
+          Badge "Sezione Globale" (ADR-55, estende ADR-40): sempre visibile su un nodo
+          `globalRef`, non solo su hover/selezione — stesso principio informativo di
+          `.hiddenBadge` sotto, qui per segnalare che il contenuto vero vive altrove
+          (modulo Sezioni Globali) e che modificarlo da lì ha impatto su ogni Pagina che
+          referenzia la stessa riga. `aria-hidden`: puramente informativo, nessuna azione
+          (la sola azione disponibile su questo nodo resta "Elimina il riferimento", già
+          coperta dalla toolbar di selezione comune).
+        */}
+        {isGlobalRef && (
+          <span className={styles.globalRefBadge} aria-hidden="true">
+            <IconWorld size={12} />
+            Sezione Globale
           </span>
         )}
 
@@ -1384,7 +1866,7 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
         {isContainer && ContainerComponent ? (
           <BlockErrorBoundary>
             <ContainerComponent
-              {...resolveContainerComponentProps(currentNode)}
+              {...resolveContainerComponentProps(currentNode, location, parentCompositeProps)}
               // Anteprima in tempo reale della ripartizione delle colonne (60fps, task): la
               // Section riceve lo stop effettivo (anteprima durante il trascinamento,
               // altrimenti quello persistito) invece del solo valore già salvato — le due
@@ -1622,6 +2104,23 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
               </Group>
             </Stack>
           </Modal>
+        )}
+
+        {/*
+          "Converti in Sezione Globale" (ADR-55): stesso `ConvertToGlobalSectionModal.tsx`
+          montato anche da `AdvancedTab.tsx` (Property Inspector) — un solo componente, mai
+          due implementazioni del nome+conferma. `key={id}` azzera il nome digitato e lo
+          stato di caricamento se l'utente cambia selezione a modal aperto (raro, ma
+          altrimenti un secondo blocco erediterebbe lo stato residuo del primo).
+        */}
+        {convertModalOpened && (
+          <ConvertToGlobalSectionModal
+            key={id}
+            opened
+            onClose={() => setConvertModalOpened(false)}
+            onConfirm={(title) => convertToGlobalSectionAction(id, title)}
+            blockLabel={label}
+          />
         )}
 
         {/*

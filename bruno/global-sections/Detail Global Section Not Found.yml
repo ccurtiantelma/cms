@@ -1,0 +1,26 @@
+info:
+  name: Detail Global Section Not Found
+  type: http
+  seq: 5
+
+http:
+  method: GET
+  url: "{{baseUrl}}/app/global-sections/:guid"
+  params:
+    - name: guid
+      value: "0000000000000000"
+      type: path
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 404 (guid inesistente o soft-eliminata)", function() {
+    expect(res.getStatus()).to.equal(404);
+  });

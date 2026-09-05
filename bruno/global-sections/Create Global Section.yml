@@ -1,0 +1,54 @@
+info:
+  name: Create Global Section
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/global-sections"
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Header principale",
+        "content": {
+          "version": 1,
+          "blocks": [
+            {
+              "id": "h1",
+              "type": "heading",
+              "v": 1,
+              "props": { "level": "h2", "text": "Benvenuti" },
+              "children": []
+            }
+          ]
+        }
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  `{{token}}` deve essere di un utente Manager+ (`GuardManager`). `layoutSlot`
+  non specificato ⇒ default `none`: da ADR-55, anche una Sezione in questo
+  stato accoda sempre un full-site export a ogni scrittura di `content`
+  (referenziabile ovunque via `globalRef`, non solo header/footer).
+
+tests: |-
+  test("status is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("risposta contiene guid/slug/version, layoutSlot di default none", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("guid");
+    expect(body).to.have.property("slug", "header-principale");
+    expect(body).to.have.property("version", 1);
+    expect(body).to.have.property("layoutSlot", "none");
+  });

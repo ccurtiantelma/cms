@@ -1,0 +1,79 @@
+.root {
+  display: inline-block;
+}
+
+.trigger {
+  color: var(--cms-text-color-accent, #4338ca);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Nascosto per default: `:target` (guidato dalla navigazione del browser verso il frammento
+ * dell'URL, mai da uno script) è l'unico interruttore di visibilità. `display: none` esclude
+ * anche il pannello dall'albero di accessibilità quando non è il bersaglio corrente. */
+.panel {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.panel:target {
+  display: flex;
+}
+
+.body {
+  position: relative;
+  width: calc(100% - 2rem);
+  max-width: 640px;
+  max-height: calc(100% - 2rem);
+  overflow-y: auto;
+  background-color: var(--cms-bg-none, #ffffff);
+  border-radius: var(--cms-radius-sm, 4px);
+  padding: var(--cms-padding-lg, 1.5rem);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+
+.close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--cms-text-color-default, #1a1a1a);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Solo presentazione (ADR-57 § 4: "nessun JavaScript, tecnica CSS :target"): l'animazione
+ * gioca alla comparsa del pannello, quando la navigazione lo rende `:target`. */
+.panel.fade:target .body {
+  animation: cmsModalFadeIn 0.2s ease-out;
+}
+
+.panel.slideDown:target .body {
+  animation: cmsModalSlideDown 0.25s ease-out;
+}
+
+@keyframes cmsModalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cmsModalSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

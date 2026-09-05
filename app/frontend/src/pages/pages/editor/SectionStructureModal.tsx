@@ -23,10 +23,11 @@
  *
  * Icone dei preset verificate pixel-per-pixel contro lo "Select Your Structure" reale di
  * Elementor (screenshot del produttore, non una ricostruzione a memoria): riga "Flexbox"
- * = le sette tessere di struttura piatta (colonna/riga direzionali + 5 varianti a colonne,
- * inclusa la coppia simmetrica 33/67 e 67/33 — gap-analysis T-editor-refinement: il
+ * = le nove tessere di struttura piatta (colonna/riga direzionali + 7 varianti a colonne,
+ * incluse la coppia simmetrica 33/67 e 67/33 — gap-analysis T-editor-refinement: il
  * "66-33" di `SectionColumnRatioValue` era un valore di tipo già valido ma orfano di
- * preset), riga "Griglia" = le sei tessere a celle annidate/asimmetriche. Le tessere
+ * preset — e la coppia 30/70 e 70/30 aggiunta da RFC-58), riga "Griglia" = le sei tessere
+ * a celle annidate/asimmetriche. Le tessere
  * annidate della Griglia (ADR-39, `container` con `flexDirection`/`styleFlexBasis`) non
  * hanno un equivalente nella prop `columns`/`columnRatio` di `section` — nessuna
  * scorciatoia, nessuna nuova prop: si compone `section` + `container` già approvati,
@@ -55,7 +56,7 @@ type Step = 'chooseType' | 'flexbox' | 'grid';
 
 /** Valori ammessi per `columns`/`columnRatio` (`section.block.ts`): niente oltre questi. */
 type SectionColumnsToken = '1' | '2' | '3' | '4';
-type SectionColumnRatioValue = 'equal' | '33-66' | '66-33';
+type SectionColumnRatioValue = 'equal' | '33-66' | '66-33' | '30-70' | '70-30';
 
 /** Forma persistita della prop responsive `columns` (ADR-29). */
 interface SectionColumnsValue {
@@ -70,8 +71,8 @@ interface SectionColumnsValue {
  * fonti che potrebbero divergere. Foglia = nessun `children` (una cella piena); ramo =
  * `direction` + `children` (righe/colonne annidate, ADR-39). `weight` è insieme il peso
  * `flex-grow` dell'anteprima e la percentuale `styleFlexBasis` del nodo reale — l'insieme
- * dei valori usati (25/33/34/35/40/50/60/65/67) è chiuso ed esaurito dalle classi
- * `.w25`…`.w67` di `SectionStructureModal.module.css`, mai un valore libero.
+ * dei valori usati (25/30/33/34/35/40/50/60/65/67/70) è chiuso ed esaurito dalle classi
+ * `.w25`…`.w70` di `SectionStructureModal.module.css`, mai un valore libero.
  */
 interface StructureNode {
   weight: number;
@@ -126,6 +127,20 @@ const FLEXBOX_PRESETS: readonly FlexboxPreset[] = [
     columns: { default: '2' },
     columnRatio: '66-33',
     rows: [{ weight: 1, direction: 'row', children: [{ weight: 67 }, { weight: 33 }] }],
+  },
+  {
+    id: '2-30-70',
+    label: '2 colonne (30/70)',
+    columns: { default: '2' },
+    columnRatio: '30-70',
+    rows: [{ weight: 1, direction: 'row', children: [{ weight: 30 }, { weight: 70 }] }],
+  },
+  {
+    id: '2-70-30',
+    label: '2 colonne (70/30)',
+    columns: { default: '2' },
+    columnRatio: '70-30',
+    rows: [{ weight: 1, direction: 'row', children: [{ weight: 70 }, { weight: 30 }] }],
   },
   {
     id: '4-equal',

@@ -1,0 +1,30 @@
+info:
+  name: List Global Sections
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{baseUrl}}/app/global-sections"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("risposta paginata (items/totalItems/currentPage/itemsPerPage)", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("items");
+    expect(body).to.have.property("totalItems");
+    expect(body).to.have.property("currentPage");
+    expect(body).to.have.property("itemsPerPage");
+  });

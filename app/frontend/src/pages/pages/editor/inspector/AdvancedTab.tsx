@@ -10,7 +10,7 @@
  */
 import { useState } from 'react';
 import { Accordion, Button, Group, Modal, Stack, TextInput } from '@mantine/core';
-import { IconDeviceFloppy } from '@tabler/icons-react';
+import { IconDeviceFloppy, IconWorld } from '@tabler/icons-react';
 import PropField from './PropField';
 import styles from './inspector.module.css';
 import {
@@ -21,6 +21,7 @@ import {
 } from './inspector.utils';
 import type { PropertyTabProps } from './ContentTab';
 import ResponsiveVisibilityControls from '../ResponsiveVisibilityControls';
+import ConvertToGlobalSectionModal from '../ConvertToGlobalSectionModal';
 
 const VISIBILITY_PROP_NAMES = ['styleHideDesktop', 'styleHideTablet', 'styleHideMobile'] as const;
 
@@ -36,14 +37,24 @@ export default function AdvancedTab({
   onOpenCropper,
   nodeType,
   onSavePreset,
+  onConvertToGlobalSection,
 }: PropertyTabProps): JSX.Element {
   const [presetModalOpened, setPresetModalOpened] = useState(false);
   const [presetName, setPresetName] = useState('');
+  /** Modal "Converti in Sezione Globale" (ADR-55), aperto dal pulsante montato solo quando `onConvertToGlobalSection` è definito — vedi il suo commento in `ContentTab.tsx`. */
+  const [convertModalOpened, setConvertModalOpened] = useState(false);
   const activeBreakpoint = breakpointKey(activeViewport);
   const sections = groupPropsBySection(fields, advancedSectionFor, ADVANCED_SECTION_ORDER);
   const visibilityFields = new Set<string>(VISIBILITY_PROP_NAMES);
 
   const canSavePreset = (nodeType === 'section' || nodeType === 'container') && onSavePreset;
+  /**
+   * Nessun ulteriore controllo su `nodeType`/posizione qui: `onConvertToGlobalSection`
+   * arriva già `undefined` da `PropertyInspector.tsx` per ogni nodo che non sia un
+   * contenitore/`section` di primo livello (unica fonte di verità sull'ammissibilità, mai
+   * duplicata in questa scheda).
+   */
+  const canConvertToGlobalSection = Boolean(onConvertToGlobalSection);
 
   function handleSavePreset(): void {
     const name = presetName.trim();
@@ -116,6 +127,16 @@ export default function AdvancedTab({
           Salva come Preset
         </Button>
       )}
+      {canConvertToGlobalSection && (
+        <Button
+          variant="light"
+          color="violet"
+          leftSection={<IconWorld size={16} />}
+          onClick={() => setConvertModalOpened(true)}
+        >
+          Converti in Sezione Globale
+        </Button>
+      )}
       <Modal
         opened={presetModalOpened}
         onClose={() => setPresetModalOpened(false)}
@@ -143,6 +164,20 @@ export default function AdvancedTab({
           </Group>
         </Stack>
       </Modal>
+      {/*
+        "Converti in Sezione Globale" (ADR-55): stesso `ConvertToGlobalSectionModal.tsx`
+        montato anche da `EditorBlockWrapper.tsx` (Floating Toolbar) — un solo componente,
+        mai due implementazioni del nome+conferma. `onConfirm` è già chiuso sul nodo
+        selezionato da `PropertyInspector.tsx`, questa scheda non conosce l'id del nodo.
+      */}
+      {convertModalOpened && onConvertToGlobalSection && (
+        <ConvertToGlobalSectionModal
+          opened
+          onClose={() => setConvertModalOpened(false)}
+          onConfirm={onConvertToGlobalSection}
+          blockLabel={nodeType === 'section' ? 'Sezione' : 'Contenitore'}
+        />
+      )}
     </Stack>
   );
 }

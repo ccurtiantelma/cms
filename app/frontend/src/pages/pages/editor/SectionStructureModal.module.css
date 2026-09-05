@@ -112,6 +112,7 @@
 */
 .w1 { flex: 1 1 0%; }
 .w25 { flex: 25 1 0%; }
+.w30 { flex: 30 1 0%; }
 .w33 { flex: 33 1 0%; }
 .w34 { flex: 34 1 0%; }
 .w35 { flex: 35 1 0%; }
@@ -120,6 +121,7 @@
 .w60 { flex: 60 1 0%; }
 .w65 { flex: 65 1 0%; }
 .w67 { flex: 67 1 0%; }
+.w70 { flex: 70 1 0%; }
 
 /*
   Tessera "Colonna"/"Riga" (`FlexboxPreset.directionIcon`): icona direzionale centrata al

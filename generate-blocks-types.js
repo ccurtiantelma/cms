@@ -64,6 +64,7 @@ export interface BlockPropDescriptor {
     | 'url'
     | 'mediaRef'
     | 'pageRef'
+    | 'globalSectionRef'
     | 'color'
     | 'unitValue'
     | 'border'
