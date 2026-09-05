@@ -5,17 +5,17 @@
  *
  * **Redirect condizionato dopo il successo.** La richiesta chiede di reindirizzare l'editor
  * alla nuova bozza appena creata — ma questo componente vive dentro l'editor full-screen
- * (`FullScreenEditorLayout`), la cui `useUnsavedChangesGuard` intercetta solo i click su
- * `<a href>`: una `navigate()` imperativa la bypasserebbe, scartando in silenzio eventuali
- * modifiche ai blocchi non ancora salvate sulla Pagina *corrente* (mai overwrite silenzioso,
- * CLAUDE.md). Con l'albero pulito si reindirizza subito (`navigate`); con modifiche pendenti
- * si resta sulla pagina corrente e si offre il link come notifica persistente — un vero
- * `<a href>` (`Button component="a"`), così un click ci passa comunque attraverso la stessa
- * guardia, stesso principio di "Torna alla Dashboard" in `FullScreenEditorLayout.tsx`.
+ * (`FullScreenEditorLayout`, montato sulla rotta `/studio/:guid`, ADR-54), la cui
+ * `useUnsavedChangesGuard` intercetta solo i click su `<a href>`: una `navigate()` imperativa
+ * la bypasserebbe, scartando in silenzio eventuali modifiche ai blocchi non ancora salvate
+ * sulla Pagina *corrente* (mai overwrite silenzioso, CLAUDE.md). Con l'albero pulito si
+ * reindirizza subito (`navigate`); con modifiche pendenti si resta sulla pagina corrente e si
+ * offre il link come notifica persistente — un vero `<a href>` (`Button component="a"`), così
+ * un click ci passa comunque attraverso la stessa guardia, stesso principio di "Torna alla
+ * Dashboard" in `FullScreenEditorLayout.tsx`.
  *
- * `?tab=content` nella destinazione: la rotta reale è `pages/:guid` (nessuna `/editor`
- * dedicata, verificato su `App.tsx`) — il parametro fa aprire `PagePageDetail` direttamente
- * sulla scheda "Contenuto" invece che su "Metadati" di default.
+ * Destinazione `/studio/:guid` (non più `pages/:guid?tab=content`, superata da ADR-54): la
+ * nuova traduzione apre direttamente l'Editor Visivo a blocchi sulla propria rotta isolata.
  */
 import { useEffect, useState } from 'react';
 import { Button, Group, Modal, Stack, Text, TextInput } from '@mantine/core';
@@ -68,7 +68,7 @@ export default function CreateTranslationModal({
       onCreated(created);
       onClose();
 
-      const destination = `/pages/${created.guid}?tab=content`;
+      const destination = `/studio/${created.guid}`;
       if (!hasUnsavedChanges) {
         navigate(destination);
       } else {

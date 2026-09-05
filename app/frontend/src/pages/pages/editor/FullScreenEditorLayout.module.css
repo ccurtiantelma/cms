@@ -1,10 +1,11 @@
 /*
- * Chrome dell'editor visivo full-screen (FullScreenEditorLayout.tsx). `position: fixed`
- * con z-index sopra l'AppShell di LayoutProtected: è così che si sgancia dal layout
- * standard senza toccare il routing (vedi commento del componente).
+ * Chrome dell'editor visivo full-screen (FullScreenEditorLayout.tsx). `position: fixed` con
+ * z-index elevato: copre l'intera viewport a prescindere dal contenitore in cui è montato —
+ * la rotta isolata `/studio/:guid` (ADR-54, `LayoutStudio.tsx`) o il Builder Sezioni Globali
+ * dentro `LayoutProtected` (vedi commento del componente).
  *
  * `top`/`left`/`right`/`bottom` in forma estesa rendono esplicita la copertura dell'intera
- * viewport quando la scheda "Contenuto" è attiva.
+ * viewport.
  */
 
 .root {

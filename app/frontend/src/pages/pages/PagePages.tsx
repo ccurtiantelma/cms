@@ -250,10 +250,9 @@ export default function PagePages(): JSX.Element {
       const created = await createPage(payload);
       notifications.show({ color: 'green', message: 'Pagina creata con successo' });
       closeCreate();
-      // `?tab=content` apre subito l'Editor Visivo a schermo intero: appena creata,
-      // l'unica cosa sensata da fare è iniziare a comporre il contenuto (stesso
-      // meccanismo di lettura una tantum di `activeTab` usato da `CreateTranslationModal`).
-      navigate(`/pages/${created.guid}?tab=content`);
+      // Apre subito l'Editor Visivo a blocchi sulla rotta isolata `/studio/:guid` (ADR-54):
+      // appena creata, l'unica cosa sensata da fare è iniziare a comporre il contenuto.
+      navigate(`/studio/${created.guid}`);
     } catch (err) {
       notifications.show({
         color: 'red',

@@ -1,0 +1,13 @@
+/*
+ * Shell a piena finestra della rotta Studio (LayoutStudio.tsx, ADR-54): occupa l'intera
+ * viewport senza margini/padding esterni — la chrome vera (topbar/sidebar/canvas) è quella
+ * di `FullScreenEditorLayout.tsx`, montata dentro `<Outlet/>`.
+ */
+
+.root {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}

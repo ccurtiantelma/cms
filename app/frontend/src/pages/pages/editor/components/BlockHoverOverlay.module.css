@@ -17,6 +17,18 @@
   pointer-events: auto;
 }
 
+/*
+  Anti-clipping (EditorBlockWrapper.tsx, `overlayAnchoredInside`): quando il bordo
+  superiore del blocco è troppo vicino al confine scrollabile reale del canvas
+  (`overflow-y: auto`, tipicamente il primo blocco appena sotto la Topbar), la toolbar che
+  di norma sporge 12px sopra il blocco finirebbe tagliata da quello scroll — qui si
+  riancora dentro il margine superiore del blocco stesso, `position: absolute` invariato
+  (nessuno spostamento di layout, stesso principio di `.overlay` sopra).
+*/
+.overlayInside {
+  top: 4px;
+}
+
 .overlayButton,
 .overlayButton:hover,
 .overlayButton:focus {

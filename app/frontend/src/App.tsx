@@ -9,6 +9,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import PageNotFound from './components/PageNotFound';
 import PageServerError from './components/PageServerError';
 import LayoutProtected from './layouts/LayoutProtected';
+import LayoutStudio from './layouts/LayoutStudio';
 import { getToken, homePathForRole } from './utils/auth.utils';
 import { useAuthInit, useAuthStore } from './hooks/useAuth';
 import { AppUserRoles } from './types/common.types';
@@ -36,6 +37,7 @@ const PageDashboard = lazy(() => import('./pages/dashboard/PageDashboard'));
 const PageProfile = lazy(() => import('./pages/profile/PageProfile'));
 const PagePages = lazy(() => import('./pages/pages/PagePages'));
 const PagePageDetail = lazy(() => import('./pages/pages/PagePageDetail'));
+const PageStudio = lazy(() => import('./pages/pages/PageStudio'));
 const PageUsers = lazy(() => import('./pages/admin/PageUsers'));
 const PageThemeEditor = lazy(() => import('./pages/theme-editor/PageThemeEditor'));
 const PageGlobalSections = lazy(() => import('./pages/global-sections/PageGlobalSections'));
@@ -185,6 +187,22 @@ export default function App(): JSX.Element {
                 </RequireRole>
               }
             />
+          </Route>
+
+          {/*
+            Editor Visivo a blocchi (ADR-54): rotta isolata, fuori da `LayoutProtected` (nessuna
+            sidebar/topbar admin, `LayoutStudio` è una shell a piena finestra) ma dentro
+            `RequireAuth` — l'autenticazione resta un guard di rotta, non chrome.
+          */}
+          <Route
+            path="/studio/:guid"
+            element={
+              <RequireAuth>
+                <LayoutStudio />
+              </RequireAuth>
+            }
+          >
+            <Route index element={<PageStudio />} />
           </Route>
 
           <Route path="*" element={<PageNotFound />} />

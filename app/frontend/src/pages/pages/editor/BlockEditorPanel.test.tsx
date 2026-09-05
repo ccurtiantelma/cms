@@ -62,7 +62,6 @@ function renderPanel(
         page={basePage}
         onPageUpdated={vi.fn()}
         onVersionConflict={vi.fn()}
-        active
         pageStatus={props.pageStatus ?? 'draft'}
         visibleTransitions={props.visibleTransitions ?? ['review', 'scheduled', 'published']}
         onRequestStatusChange={vi.fn()}
@@ -116,7 +115,6 @@ describe('BlockEditorPanel — E01', () => {
           page={basePage}
           onPageUpdated={vi.fn()}
           onVersionConflict={vi.fn()}
-          active
           pageStatus="draft"
           visibleTransitions={['review']}
           onRequestStatusChange={onRequestStatusChange}

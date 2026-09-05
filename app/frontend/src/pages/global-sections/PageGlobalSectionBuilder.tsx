@@ -1,9 +1,9 @@
 /**
  * Visual Builder di una Sezione Globale (F06, ADR-40).
  *
- * A differenza dell'editor di Pagina — montato dentro la scheda "Contenuto" del
- * dettaglio (`BlockEditorPanel.tsx`) — questa **è** una rotta a sé
- * (`/global-sections/:guid/builder`): una Sezione Globale non ha un dettaglio con
+ * Come l'editor di Pagina (`/studio/:guid`, ADR-54) questa **è** una rotta a sé
+ * (`/global-sections/:guid/builder`), dentro `LayoutProtected` (a differenza di
+ * `/studio/:guid`, che ne è fuori): una Sezione Globale non ha un dettaglio con
  * schede SEO/revisioni/stato in cui innestarsi, il suo unico contenuto è l'albero
  * di blocchi. Da qui la destinazione dedicata invece di una scheda su una pagina
  * che non esiste.
@@ -202,7 +202,6 @@ export default function PageGlobalSectionBuilder(): JSX.Element {
         saving={saving}
         onSaveDraft={() => void handleSave()}
         structurePanel={<EditorStructureNavigator />}
-        active
       >
         <InvalidBlockProvider invalidBlockId={invalidBlockId}>
           <EditorCanvas />

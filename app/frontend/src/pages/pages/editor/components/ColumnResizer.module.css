@@ -1,0 +1,82 @@
+/*
+  Maniglia di ridimensionamento inter-colonna di `section` — regole spostate qui da
+  `EditorBlockWrapper.module.css` (`.columnResizer`) quando la maniglia è stata estratta nel
+  proprio componente. Stesso idioma della maniglia di `container`
+  (`ContainerResizeHandle.module.css`, `.handle`): `position: absolute` per restare fuori dal
+  posizionamento automatico della griglia CSS del genitore, striscia larga per
+  l'afferrabilità e linea sottile per la resa visiva. Accento magenta (#a333c8), invariato
+  rispetto alla maniglia precedente — distinto dal viola (#7048e8) di `container`, così le
+  due restano riconoscibili quando un container è annidato in una section.
+*/
+.handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  transform: translateX(-50%);
+  z-index: 4;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: transparent;
+  transition: background-color 100ms ease;
+}
+
+.handle:hover::before,
+.handleActive::before {
+  background: rgba(163, 51, 200, 0.5);
+}
+
+.handleActive::before {
+  background: #a333c8;
+  width: 3px;
+}
+
+/* Presa centrale: rende afferrabile a colpo d'occhio una striscia che altrimenti si
+   leggerebbe come un semplice bordo — stesso idioma di `ContainerResizeHandle.module.css`. */
+.grip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 28px;
+  transform: translate(-50%, -50%);
+  border-radius: 3px;
+  background: #a333c8;
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+
+.handle:hover .grip,
+.handleActive .grip {
+  opacity: 1;
+}
+
+/*
+  Badge della ripartizione in tempo reale: appare solo durante il trascinamento
+  (`ColumnResizer.tsx` lo monta solo con `isResizing`), ancorato alla maniglia.
+  `pointer-events: none` — non deve mai rubare la cattura del puntatore alla maniglia che lo
+  ospita.
+*/
+.badge {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 6px);
+  transform: translateY(-50%);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #a333c8;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}

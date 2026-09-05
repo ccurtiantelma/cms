@@ -49,6 +49,15 @@ export interface BlockHoverOverlayProps {
   /** Listener dnd-kit del drag di questo nodo (`useDraggable`, calcolati dal wrapper chiamante). */
   listeners: DraggableSyntheticListeners;
   /**
+   * Anti-clipping (calcolato dal chiamante, `EditorBlockWrapper.tsx`, contro il bordo
+   * scrollabile reale del canvas): `true` quando il blocco è troppo vicino al bordo
+   * superiore scrollabile perché la toolbar, ancorata di default appena sopra il blocco
+   * (`.overlay`), non finisca tagliata da quell'`overflow-y: auto` — la riancora invece
+   * dentro il margine superiore del blocco (`.overlayInside`). Nessun calcolo di geometria
+   * qui: solo la classe da applicare.
+   */
+  anchorInside?: boolean;
+  /**
    * Apre il `ConfirmModal` di eliminazione già montato in `EditorBlockWrapper.tsx`:
    * l'overlay non gestisce un secondo modal di conferma, solo lo richiede.
    */
@@ -71,6 +80,7 @@ export default function BlockHoverOverlay({
   parentId,
   attributes,
   listeners,
+  anchorInside,
   onDelete,
   onSaveAsPreset,
 }: BlockHoverOverlayProps): JSX.Element {
@@ -79,7 +89,9 @@ export default function BlockHoverOverlay({
 
   return (
     <Group
-      className={styles.overlay}
+      className={[styles.overlay, anchorInside ? styles.overlayInside : '']
+        .filter(Boolean)
+        .join(' ')}
       gap={0}
       wrap="nowrap"
       // Aggancio per `EditorBlockWrapper.module.css` (`.selected:has(...) >

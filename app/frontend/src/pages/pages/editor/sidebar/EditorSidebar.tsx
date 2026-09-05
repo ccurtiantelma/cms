@@ -1,6 +1,8 @@
 /**
- * Sidebar sinistra dell'editor full-screen, stile Elementor: due schede, "Widgets" (libreria
- * trascinabile, `WidgetPalette`) e "Proprietà" (`PropertyInspector` del blocco selezionato).
+ * Sidebar sinistra dell'editor full-screen, stile Elementor: "Widgets" (libreria trascinabile,
+ * `WidgetPalette`), "Struttura" (albero dei blocchi, `EditorStructureNavigator` — stesso
+ * componente del pannello destro toggleabile di `FullScreenEditorLayout`, montato qui in più
+ * senza stato duplicato) e "Proprietà" (`PropertyInspector` del blocco selezionato).
  *
  * La scheda attiva vive in `useBlockEditorStore` (`activeSidebarTab`) e non in uno stato
  * locale: deve poter essere cambiata da fuori questo componente. Selezionare un blocco nel
@@ -13,7 +15,7 @@
  * contenitore scrollabile indipendente dall'header, che `Tabs.Panel` non offre da solo.
  */
 import { Tabs, Text } from '@mantine/core';
-import { IconAdjustments, IconSettings, IconStack2 } from '@tabler/icons-react';
+import { IconAdjustments, IconListTree, IconSettings, IconStack2 } from '@tabler/icons-react';
 import {
   useActiveSidebarTab,
   useBlockEditorStore,
@@ -22,6 +24,7 @@ import {
 } from '../../../../hooks/useBlockEditorStore';
 import type { PageRecord } from '../../../../types/pages.types';
 import PropertyInspector from '../PropertyInspector';
+import EditorStructureNavigator from '../EditorStructureNavigator';
 import WidgetSidebar from './WidgetSidebar';
 import PageSettingsTab from './PageSettingsTab';
 import styles from './EditorSidebar.module.css';
@@ -60,6 +63,9 @@ export default function EditorSidebar({
           <Tabs.Tab value="widgets" leftSection={<IconStack2 size={16} />}>
             Widgets
           </Tabs.Tab>
+          <Tabs.Tab value="structure" leftSection={<IconListTree size={16} />}>
+            Struttura
+          </Tabs.Tab>
           <Tabs.Tab value="properties" leftSection={<IconAdjustments size={16} />}>
             Proprietà
           </Tabs.Tab>
@@ -73,6 +79,10 @@ export default function EditorSidebar({
         {activeTab === 'widgets' ? (
           <div className={styles.panel}>
             <WidgetSidebar />
+          </div>
+        ) : activeTab === 'structure' ? (
+          <div className={styles.panel}>
+            <EditorStructureNavigator />
           </div>
         ) : activeTab === 'page' ? (
           <div className={styles.panel}>

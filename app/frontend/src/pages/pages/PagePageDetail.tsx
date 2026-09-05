@@ -1,23 +1,31 @@
 /**
- * Dettaglio Pagina (F01/T8 + F04): l'unica destinazione di una Pagina. Metadati, SEO e
- * GEO su schede separate — sono cose diverse e si compilano in momenti diversi —,
- * contenuto modificato dall'editor visivo a blocchi (F04, `editor/BlockEditorPanel.tsx`)
- * nella scheda "Contenuto", cronologia Revisioni + ripristino in nuova bozza.
+ * Dettaglio Pagina (F01/T8 + F04): Metadati, SEO e GEO su schede separate — sono cose
+ * diverse e si compilano in momenti diversi —, cronologia Revisioni + ripristino in nuova
+ * bozza. Dopo ADR-54 non ospita più il contenuto: l'editor visivo a blocchi vive sulla
+ * rotta isolata `/studio/:guid` (`PageStudio.tsx`), non in una scheda di questa pagina — un
+ * pulsante linka lì, senza montare `BlockEditorPanel` qui.
  *
  * Due scelte di interfaccia con un motivo, non estetiche:
  * - **Lo stato è una tendina nell'intestazione**, non una scheda: una scheda per una sola
  *   voce è spazio sprecato, e lo stato va letto sempre, non cercato. La tendina offre solo
  *   le transizioni ammesse da `PAGE_STATUS_TRANSITIONS` per lo stato corrente — mai
  *   l'elenco completo degli stati, che porterebbe l'utente a scegliere qualcosa che il
- *   server rifiuta con `400`.
+ *   server rifiuta con `400`. La macchina a stati (menu, conferma, programmazione data/ora)
+ *   è condivisa con `PageStudio.tsx` via `usePageStatusTransition`/`PageStatusTransitionModals`
+ *   — un solo posto, non due copie quasi identiche.
  * - **"Vedi pagina" compare solo su una Pagina pubblicata**, perché la superficie pubblica
  *   serve solo contenuto `published` (ADR-24). **"Anteprima" compare solo su una Pagina in
  *   `draft`**, speculare: il backend nega il token (`403`) su ogni altro stato (ADR-25), e
  *   mostrare un pulsante che risponderebbe sempre con un errore non aiuta nessuno. Genera un
  *   token JWT effimero (15 minuti, non rinnovabile) e apre `{PUBLIC_SITE_URL}/__preview/:token`
  *   in una nuova scheda — il token non viene mai persistito lato client.
+ *
+ * **Pubblicazione senza pre-salvataggio.** Non avendo più accesso all'editor (montato altrove,
+ * su un'altra rotta), "Pubblica" da qui pubblica sempre la bozza già salvata sul server — a
+ * differenza di `PageStudio.tsx`, che HA accesso al salvataggio dell'albero e lo esegue prima
+ * di pubblicare da lì. Vedi il commento su `presaveDraft` in `usePageStatusTransition.ts`.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActionIcon,
   Badge,
@@ -40,13 +48,13 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core';
-import { DateTimePicker } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import {
   IconAlertTriangle,
   IconChevronDown,
   IconCirclePlus,
+  IconEdit,
   IconExternalLink,
   IconEye,
   IconGitCompare,
@@ -55,13 +63,12 @@ import {
   IconRestore,
   IconTrash,
 } from '@tabler/icons-react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import type { AxiosError } from 'axios';
 import { getErrorMessage } from '../../utils/api.utils';
 import { formatDate } from '../../utils/date.utils';
 import type { PaginationParams } from '../../types/common.types';
 import {
-  changePageStatus,
   fetchPage,
   fetchPageRevisions,
   getPageRevision,
@@ -72,9 +79,7 @@ import {
 import {
   PAGE_STATUS_COLORS,
   PAGE_STATUS_LABELS,
-  PAGE_STATUS_TRANSITIONS,
   statusActionLabel,
-  type ChangeStatusPayload,
   type PageFaqEntry,
   type PageRecord,
   type PageRevisionDetail,
@@ -87,8 +92,8 @@ import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { PUBLIC_SITE_URL, usePublicPageUrl } from '../../hooks/usePublicPageUrl';
 import { usePublicSiteHealth } from '../../hooks/usePublicSiteHealth';
 import { useAuthStore } from '../../hooks/useAuth';
-import { AppUserRoles } from '../../types/common.types';
-import BlockEditorPanel from './editor/BlockEditorPanel';
+import { usePageStatusTransition } from './hooks/usePageStatusTransition';
+import PageStatusTransitionModals from './components/PageStatusTransitionModals';
 import RevisionDiffModal from './editor/RevisionDiffModal';
 import SeoSerpPreview from './editor/SeoSerpPreview';
 import SeoSocialPreview from './editor/SeoSocialPreview';
@@ -110,21 +115,6 @@ import styles from './PagePageDetail.module.css';
  * corto non può mascherare una modifica reale, che arriva sempre da una richiesta separata.
  */
 const PUBLISH_TIMESTAMP_TOLERANCE_MS = 2000;
-
-/**
- * Filtra le transizioni ammesse dallo stato corrente in base al ruolo (`docs/business-rules.md`
- * § Permessi editoriali): un `User` può solo inviare in revisione (`review`) — mai pubblicare,
- * programmare, archiviare o riportare in bozza. Gli altri ruoli (Manager/Admin/SuperAdmin) vedono
- * tutte le transizioni ammesse. La barriera reale resta il backend (guard RBAC + ownership per
- * riga, ADR-18): questo filtro evita solo di mostrare un'azione che il server rifiuterebbe.
- */
-function visibleTransitionsForRole(
-  transitions: readonly PageStatus[],
-  role: AppUserRoles | undefined,
-): readonly PageStatus[] {
-  if (role !== AppUserRoles.User) return transitions;
-  return transitions.filter((target) => target === 'review');
-}
 
 /** Valori del form Metadati + SEO/GEO (locale e contenuto non sono editabili qui). */
 interface MetadataFormValues {
@@ -235,9 +225,10 @@ function pageToFormValues(page: PageRecord): MetadataFormValues {
   };
 }
 
-/** Pagina di dettaglio di una Pagina (chrome amministrativa, F01/T8 + editor F04). */
+/** Pagina di dettaglio di una Pagina (chrome amministrativa, F01/T8). */
 export default function PagePageDetail(): JSX.Element {
   const { guid } = useParams<{ guid: string }>();
+  const navigate = useNavigate();
   const authUser = useAuthStore((s) => s.user);
 
   const [page, setPage] = useState<PageRecord | null>(null);
@@ -247,22 +238,17 @@ export default function PagePageDetail(): JSX.Element {
   const [mediaLibraryOpened, setMediaLibraryOpened] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  const [transitionTarget, setTransitionTarget] = useState<PageStatus | null>(null);
-  const [scheduleOpened, setScheduleOpened] = useState(false);
-  const [scheduledAt, setScheduledAt] = useState<Date | null>(null);
-
   const [restoreTarget, setRestoreTarget] = useState<PageRevisionSummary | null>(null);
   const [viewRevision, setViewRevision] = useState<PageRevisionDetail | null>(null);
   const [viewRevisionLoading, setViewRevisionLoading] = useState(false);
   const [diffModalOpened, setDiffModalOpened] = useState(false);
-  const saveDraftRef = useRef<(() => Promise<PageRecord | null>) | null>(null);
 
   /**
-   * `Tabs` controllato per comunicare al layout persistente se l'editor è attivo.
-   * `?tab=` iniziale (letto una sola volta, mai risincronizzato dopo il mount): usato dal
-   * redirect di `CreateTranslationModal.tsx` per aprire la nuova traduzione direttamente
-   * sulla scheda "Contenuto" invece che su "Metadati" — l'unico consumer oggi, ma un valore
-   * non riconosciuto ricade silenziosamente sul default invece di rompere il rendering.
+   * `?tab=` iniziale (letto una sola volta, mai risincronizzato dopo il mount): non ha più
+   * consumer dedicati dopo ADR-54 (l'ex scheda "Contenuto" è ora la rotta `/studio/:guid`,
+   * `CreateTranslationModal.tsx` reindirizza lì) — resta come convenienza generica per
+   * linkare direttamente su "seo"/"geo"/"revisions", un valore non riconosciuto ricade
+   * silenziosamente sul default invece di rompere il rendering.
    */
   const [activeTab, setActiveTab] = useState<string | null>(
     () => new URLSearchParams(window.location.search).get('tab') ?? 'metadata',
@@ -422,76 +408,18 @@ export default function PagePageDetail(): JSX.Element {
     }
   }
 
-  /** Esegue la transizione di stato (`POST /app/pages/:guid/status`). */
-  async function doChangeStatus(target: PageStatus, scheduledAtIso?: string): Promise<void> {
-    if (!page) return;
-    setSubmitting(true);
-    try {
-      const payload: ChangeStatusPayload = { status: target, scheduledAt: scheduledAtIso };
-      const pageToTransition =
-        target === 'published' && saveDraftRef.current ? await saveDraftRef.current() : page;
-      if (!pageToTransition) return;
-      const updated = await changePageStatus(pageToTransition.guid, payload);
-      setPage(updated);
-      notifications.show({
-        color: 'green',
-        message: `Stato aggiornato a "${PAGE_STATUS_LABELS[target]}"`,
-      });
-      setTransitionTarget(null);
-      setScheduleOpened(false);
-      setScheduledAt(null);
-    } catch (err) {
-      const error = err as AxiosError<PagesErrorData>;
-      const code = error.response?.data?.code;
-      if (code === 'PAGE_VERSION_CONFLICT') {
-        notifyVersionConflict();
-        setTransitionTarget(null);
-        setScheduleOpened(false);
-      } else if (error.response?.status === 403) {
-        // Il ruolo/ownership non consente questa transizione: il filtro in UI (`visibleTransitionsForRole`)
-        // la esclude già dal menu in condizioni normali — questo resta il caso limite (ruolo
-        // cambiato o ownership persa a sessione già aperta). Si ricarica la Pagina per riallineare
-        // lo stato mostrato a quello reale sul server.
-        notifications.show({
-          color: 'red',
-          title: 'Operazione non consentita',
-          message: 'Non hai i permessi per eseguire questo cambio di stato su questa Pagina.',
-        });
-        setTransitionTarget(null);
-        setScheduleOpened(false);
-        void loadPage();
-      } else if (error.response?.status === 400 && error.response.data?.details?.transition) {
-        notifications.show({
-          color: 'red',
-          message: `Transizione non ammessa: ${error.response.data.details.transition}`,
-        });
-      } else {
-        notifications.show({
-          color: 'red',
-          message: getErrorMessage(err, 'Errore nel cambio di stato'),
-        });
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   /**
-   * Avvia una transizione di stato: apre il selettore di data (`scheduled`) o il
-   * `ConfirmModal` di conferma (ogni altro target, `doChangeStatus` sopra) — la stessa
-   * funzione dietro la tendina di stato dell'intestazione E la voce "Cambia Stato" della
-   * topbar dell'editor full-screen (E01, `editor/Toolbar.tsx`, passata giù come
-   * `onRequestStatusChange` a `BlockEditorPanel`): un solo punto che decide come reagire a
-   * ciascun target, mai due copie della stessa diramazione `scheduled`/resto.
+   * Macchina a stati condivisa con `PageStudio.tsx` (`usePageStatusTransition`, ADR-54):
+   * nessun `presaveDraft` qui — questa pagina non monta più l'editor (rotta separata), quindi
+   * "Pubblica" pubblica sempre la bozza già salvata sul server (vedi commento di testa).
    */
-  function requestStatusTransition(target: PageStatus): void {
-    if (target === 'scheduled') {
-      setScheduledAt(null);
-      setScheduleOpened(true);
-    } else {
-      setTransitionTarget(target);
-    }
-  }
+  const statusApi = usePageStatusTransition({
+    page,
+    setPage,
+    onVersionConflict: notifyVersionConflict,
+    role: authUser?.role,
+    onReload: () => void loadPage(),
+  });
 
   /** Ripristina la Revisione selezionata in una nuova bozza (Manager+). */
   async function handleRestoreConfirm(): Promise<void> {
@@ -580,8 +508,6 @@ export default function PagePageDetail(): JSX.Element {
   }
 
   const status = page.status as PageStatus;
-  const allowedTransitions = PAGE_STATUS_TRANSITIONS[status] ?? [];
-  const visibleTransitions = visibleTransitionsForRole(allowedTransitions, authUser?.role);
 
   /**
    * La bozza è stata toccata dopo l'ultima pubblicazione: online c'è ancora la Revisione
@@ -640,19 +566,7 @@ export default function PagePageDetail(): JSX.Element {
 
       <ContentCard>
         <Group justify="space-between" mb="md">
-          {/*
-            `position: relative` + `zIndex: 1100`: stessa quota della `Menu.Dropdown` sotto
-            (stesso motivo, vedi il suo commento) — senza, non è solo il `Dropdown` a restare
-            dietro la chrome full-screen dell'editor (z-index 1000,
-            `FullScreenEditorLayout.module.css`) quando la scheda "Contenuto" è attiva: anche
-            il `Menu.Target` (il pulsante di stato "Bozza"/"Pubblicata" stesso, nel normale
-            flusso del documento, quota 0) resta coperto e non riceve più click — l'unico modo
-            di pubblicare da dentro l'editor sparisce.
-          */}
-          <Group
-            gap="sm"
-            style={{ position: 'relative', zIndex: activeTab === 'content' ? 0 : 1100 }}
-          >
+          <Group gap="sm">
             {/*
               Tendina di stato: le voci sono le sole transizioni ammesse dallo stato
               corrente, non l'elenco completo degli stati — un menu con tutti gli stati
@@ -663,37 +577,30 @@ export default function PagePageDetail(): JSX.Element {
               un no-op travestito da transizione — crea comunque una nuova Revisione e
               sostituisce il contenuto online — quindi `statusActionLabel` gli dà
               un'etichetta distinta ("Ripubblica") invece di riusare "Pubblica" così com'è.
-
-              `zIndex={1100}`: sopra la chrome full-screen dell'editor (z-index 1000,
-              `FullScreenEditorLayout.module.css`) — stesso motivo/stesso valore del
-              `ConfirmModal` di `BlockEditorPanel.tsx`. Il `Menu.Dropdown` è montato in
-              portale (`withinPortal`) fuori dall'intestazione locale che lo ospita: senza
-              questo z-index esplicito resterebbe dietro l'overlay quando la tendina si apre.
             */}
             <Menu
               shadow="md"
               position="bottom-start"
               withinPortal
-              zIndex={1100}
-              disabled={submitting}
+              disabled={submitting || statusApi.submitting}
             >
               <Menu.Target>
                 <Button
                   variant="light"
                   color={PAGE_STATUS_COLORS[status] ?? 'gray'}
                   rightSection={<IconChevronDown size={16} />}
-                  disabled={visibleTransitions.length === 0}
+                  disabled={statusApi.visibleTransitions.length === 0}
                 >
                   {PAGE_STATUS_LABELS[status] ?? status}
                 </Button>
               </Menu.Target>
               <Menu.Dropdown>
                 <Menu.Label>Transizioni ammesse</Menu.Label>
-                {visibleTransitions.map((target) => (
+                {statusApi.visibleTransitions.map((target) => (
                   <Menu.Item
                     key={target}
                     color={PAGE_STATUS_COLORS[target]}
-                    onClick={() => requestStatusTransition(target)}
+                    onClick={() => statusApi.requestStatusTransition(target)}
                   >
                     {statusActionLabel(target, status)}
                   </Menu.Item>
@@ -723,6 +630,18 @@ export default function PagePageDetail(): JSX.Element {
             </Text>
           </Group>
           <Group gap="sm">
+            {/*
+              Ingresso all'Editor Visivo a blocchi (ADR-54): rotta isolata `/studio/:guid`,
+              non più una scheda di questa pagina. `navigate()` (SPA), non `<a href>`: nessuno
+              stato non salvato da proteggere qui (l'albero di blocchi vive solo dentro
+              `/studio/:guid`), stesso pattern dell'azione "Apri" di `PagePages.tsx`.
+            */}
+            <Button
+              leftSection={<IconEdit size={16} />}
+              onClick={() => navigate(`/studio/${page.guid}`)}
+            >
+              Apri Editor
+            </Button>
             {/*
               Solo su Pagina pubblicata: è l'unico stato che la superficie pubblica serve.
               È un vero `href` (non un `onClick` che apre una finestra) così restano
@@ -765,14 +684,12 @@ export default function PagePageDetail(): JSX.Element {
               solo su `published`. `onClick`, non `href`: il token va generato al momento,
               mai anticipato in un URL statico.
 
-              `activeTab !== 'content'`: sulla scheda "Contenuto" lo stesso pulsante esiste
-              già nel topbar di `FullScreenEditorLayout` (`onPreview` sotto, stessa
-              `handlePreview`) — il doppio non è solo ridondante, è un secondo bottone con
-              lo stesso nome accessibile "Anteprima" nel DOM (`getByRole('button', { name:
-              'Anteprima' })` in E2E lo trova due volte, `page-preview.spec.ts`), la stessa
-              classe di collisione risolta in `EditorBlockWrapper.tsx`.
+              Dopo ADR-54 questo è l'unico pulsante "Anteprima" del dettaglio: l'editor (che
+              ha il proprio, nella topbar di `FullScreenEditorLayout`) vive sulla rotta
+              separata `/studio/:guid`, non più co-locato in questa pagina — nessun doppio
+              bottone da disambiguare.
             */}
-            {status === 'draft' && activeTab !== 'content' && (
+            {status === 'draft' && (
               <Button
                 variant="default"
                 leftSection={<IconEye size={16} />}
@@ -783,11 +700,7 @@ export default function PagePageDetail(): JSX.Element {
               </Button>
             )}
             <Tooltip label="Ricarica" withArrow>
-              <ActionIcon
-                variant="default"
-                aria-label="Ricarica"
-                onClick={() => void loadPage()}
-              >
+              <ActionIcon variant="default" aria-label="Ricarica" onClick={() => void loadPage()}>
                 <IconRefresh size={16} />
               </ActionIcon>
             </Tooltip>
@@ -795,32 +708,12 @@ export default function PagePageDetail(): JSX.Element {
         </Group>
 
         {/*
-          `keepMounted` (default) e non `false`: l'albero in editing della scheda
-          "Contenuto" vive in uno store di sessione, ma smontare il pannello lo
-          reinizializzerebbe dalla bozza persistita — passare a "SEO" e tornare indietro
-          butterebbe via le modifiche ai blocchi non ancora salvate.
-
-          `value`/`onChange` (controllato) invece di `defaultValue`: `activeTab` deve essere
-          leggibile qui per governare `FullScreenEditorLayout` (vedi commento su
-          `activeTab` sopra).
+          `value`/`onChange` (controllato) invece di `defaultValue`: `activeTab` resta
+          leggibile dall'iniziale `?tab=` dell'URL (vedi commento sopra).
         */}
         <Tabs value={activeTab} onChange={setActiveTab}>
-          {/*
-            A differenza della riga di stato più sopra, `Tabs.List` NON è sollevata sopra
-            `FullScreenEditorLayout`: a differenza del `Menu` di stato (una sola voce,
-            reso in portale una volta aperto), qui i cinque tab occupano una fascia intera
-            di larghezza che nel layout della pagina cade nella stessa banda verticale del
-            canvas dell'editor sottostante — sollevarla lascerebbe passare i click sui tab,
-            ma intercetterebbe anche quelli sui blocchi del canvas alla stessa altezza
-            (verificato in E2E, `page-editor.spec.ts`/`page-editor-undo-redo.spec.ts`: click
-            su "Aggiungi blocco in fondo"/"Aggiungi dentro" respinti dal tab "SEO"). Non
-            serve comunque: nessun test clicca un'altra scheda mentre "Contenuto" è già
-            quella attiva — si esce dall'editor da "Torna alla Dashboard"
-            (`FullScreenEditorLayout`) o ricaricando la pagina, mai da qui.
-          */}
           <Tabs.List>
             <Tabs.Tab value="metadata">Metadati</Tabs.Tab>
-            <Tabs.Tab value="content">Contenuto</Tabs.Tab>
             <Tabs.Tab value="seo">SEO</Tabs.Tab>
             <Tabs.Tab value="geo">GEO</Tabs.Tab>
             <Tabs.Tab value="revisions" leftSection={<IconHistory size={14} />}>
@@ -890,25 +783,6 @@ export default function PagePageDetail(): JSX.Element {
                 </Group>
               </Stack>
             </form>
-          </Tabs.Panel>
-
-          {/* --- Contenuto: l'editor visivo a blocchi (F04) --- */}
-          <Tabs.Panel value="content" pt="md">
-            <BlockEditorPanel
-              page={page}
-              onPageUpdated={setPage}
-              onVersionConflict={notifyVersionConflict}
-              onSaveDraftReady={(saveDraft) => {
-                saveDraftRef.current = saveDraft;
-              }}
-              onPreview={status === 'draft' ? () => void handlePreview() : undefined}
-              previewLoading={previewLoading}
-              active={activeTab === 'content'}
-              pageStatus={status}
-              visibleTransitions={visibleTransitions}
-              statusSubmitting={submitting}
-              onRequestStatusChange={requestStatusTransition}
-            />
           </Tabs.Panel>
 
           {/* --- SEO (motori di ricerca classici) --- */}
@@ -1203,87 +1077,12 @@ export default function PagePageDetail(): JSX.Element {
       </ContentCard>
 
       {/*
-        Modal conferma transizione di stato (tutte tranne "scheduled"). `zIndex={1100}`:
-        raggiungibile dalla tendina di stato (sopra) anche mentre la scheda "Contenuto" è
-        quella nominalmente attiva — stesso motivo del `zIndex` sulla tendina stessa.
+        Modali di conferma/programmazione della transizione di stato: condivisi con
+        `PageStudio.tsx` (`usePageStatusTransition`/`PageStatusTransitionModals`, ADR-54).
+        Nessun `zIndex` esplicito: questa pagina non ha più una chrome full-screen sotto
+        (l'editor vive sulla rotta separata `/studio/:guid`), il default Mantine basta.
       */}
-      <ConfirmModal
-        opened={!!transitionTarget}
-        onClose={() => setTransitionTarget(null)}
-        onConfirm={() => transitionTarget && void doChangeStatus(transitionTarget)}
-        loading={submitting}
-        title="Conferma cambio di stato"
-        confirmLabel={transitionTarget ? statusActionLabel(transitionTarget, status) : 'Conferma'}
-        zIndex={1100}
-      >
-        {transitionTarget === 'published' &&
-          (status === 'published' ? (
-            <>
-              Questa Pagina è già pubblicata. Ripubblicarla creerà una nuova Revisione immutabile
-              con la bozza <strong>salvata</strong> e sostituirà immediatamente il contenuto
-              attualmente online: le modifiche ai blocchi non ancora salvate dalla scheda
-              &laquo;Contenuto&raquo; restano fuori dalla Revisione.
-            </>
-          ) : (
-            <>
-              Pubblicare questa Pagina creerà una nuova Revisione immutabile e sostituirà
-              immediatamente il contenuto pubblicato online. Viene pubblicata la bozza{' '}
-              <strong>salvata</strong>: le modifiche ai blocchi non ancora salvate dalla scheda
-              &laquo;Contenuto&raquo; restano fuori dalla Revisione.
-            </>
-          ))}
-        {transitionTarget === 'archived' && (
-          <>La Pagina non sarà più raggiungibile pubblicamente.</>
-        )}
-        {transitionTarget === 'draft' && (
-          <>
-            La bozza tornerà modificabile. Se la Pagina era pubblicata, il contenuto pubblicato
-            resta online finché non ripubblichi.
-          </>
-        )}
-        {transitionTarget === 'review' && <>La bozza verrà inviata in revisione.</>}
-      </ConfirmModal>
-
-      {/*
-        Modal programmazione pubblicazione: richiede data/ora futura. `zIndex={1100}`, stesso
-        motivo del `ConfirmModal` di conferma transizione sopra.
-      */}
-      <Modal
-        opened={scheduleOpened}
-        onClose={() => setScheduleOpened(false)}
-        title="Programma pubblicazione"
-        centered
-        zIndex={1100}
-      >
-        <Stack gap="md">
-          <DateTimePicker
-            label="Data e ora di pubblicazione"
-            placeholder="Scegli data e ora"
-            value={scheduledAt}
-            onChange={(value) => setScheduledAt(value ? new Date(value) : null)}
-            minDate={new Date()}
-            withAsterisk
-          />
-          <Group justify="flex-end">
-            <Button
-              variant="default"
-              onClick={() => setScheduleOpened(false)}
-              disabled={submitting}
-            >
-              Annulla
-            </Button>
-            <Button
-              loading={submitting}
-              disabled={!scheduledAt}
-              onClick={() =>
-                scheduledAt && void doChangeStatus('scheduled', scheduledAt.toISOString())
-              }
-            >
-              Programma
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
+      <PageStatusTransitionModals status={status} api={statusApi} />
 
       {/* Modal conferma ripristino Revisione — nuova bozza, non ripubblica. */}
       <ConfirmModal

@@ -1,32 +1,25 @@
 /**
  * Chrome dell'editor visivo full-screen (PLAN-F04-editor-visivo.md, evoluzione full-screen):
- * sostituisce, per la sola superficie di editing dei blocchi, la sidebar/topbar standard di
- * `LayoutProtected` con una chrome propria a piena finestra — l'obiettivo dichiarato è
- * massimizzare lo spazio dedicato al canvas, come in un editor visivo stile Elementor.
+ * topbar + area di lavoro a tre colonne (sidebar widget/props, canvas, pannello struttura),
+ * pensata per massimizzare lo spazio dedicato al canvas, come in un editor visivo stile
+ * Elementor.
  *
- * **Come si sgancia dal layout standard.** Non tocca il routing: la rotta resta
- * `pages/:guid` dentro `LayoutProtected` (nessuna nuova rotta, nessuna modifica ad `App.tsx`).
- * Questo componente si posiziona in `position: fixed` con uno z-index superiore all'`AppShell`
- * (`FullScreenEditorLayout.module.css`), coprendo sidebar/topbar dell'admin finché la scheda
- * "Contenuto" del dettaglio Pagina è quella attiva. È lo stesso principio già usato altrove
- * nell'app per overlay a piena finestra (`Modal`/`Drawer` di Mantine), applicato qui a un
- * componente non-Mantine perché la chrome dell'editor a blocchi ha bisogno di un controllo
- * pixel-preciso sulle tre colonne (sidebar/canvas/struttura) che un `Modal` non offre.
+ * **Chrome di una rotta dedicata, non un overlay.** Dopo ADR-54 questo componente è montato
+ * dentro `PageStudio.tsx`, a sua volta dentro la rotta isolata `/studio/:guid`
+ * (`LayoutStudio.tsx`, fuori da `LayoutProtected`): non c'è più una sidebar/topbar admin da
+ * coprire né una scheda "Contenuto" che lo smonta/rimonta, quindi nessuna prop `active` da
+ * propagare. Resta `position: fixed` a piena viewport (`FullScreenEditorLayout.module.css`,
+ * z-index sopra il contenuto standard) — ridondante con `LayoutStudio` (già `100vw`×`100vh`),
+ * ma innocuo: copre l'intera finestra per costruzione, a prescindere dall'albero di antenati
+ * in cui viene montato (anche il Builder delle Sezioni Globali, sotto, che non passa da
+ * `/studio/:guid`).
  *
- * **`active` e copertura da `inset: 0`.** Il pannello "Contenuto"
- * resta sempre montato (`keepMounted`, `PagePageDetail.tsx`): smontarlo reinizializzerebbe
- * l'albero in editing dalla bozza persistita, buttando via modifiche non salvate. Montato
- * per sempre, però, significa che l'overlay `position: fixed` di questo componente esiste
- * nel DOM anche quando un'altra scheda è quella attiva — e un `Tabs.Panel` inattivo lo nasconde
- * con `display:none` (verificato sul sorgente installato di `@mantine/core`, non assunto:
- * `TabsPanel.mjs` applica `display:none` all'elemento del pannello stesso, che nasconde
- * correttamente **ogni** discendente incluso uno `position: fixed`, senza eccezioni — non è
- * quindi questo il meccanismo che si è rotto). L'editor deve coprire l'intera viewport
- * quando è attivo, come nella modalità full-page originale.
- * `active` (governato da `PagePageDetail.tsx`, `Tabs` ora controllato) rende esplicito, sul
- * nodo radice di questo componente, se è la scheda selezionata — quando non lo è si rende
- * `display:none` da sé, in aggiunta al `display:none` di Mantine sull'antenato, per non
- * dipendere da un solo meccanismo.
+ * Riusato anche dal Builder delle Sezioni Globali (`PageGlobalSectionBuilder.tsx`, ADR-40),
+ * anch'esso una rotta a sé (`/global-sections/:guid/builder`, dentro `LayoutProtected`) — è
+ * lo stesso principio già usato altrove nell'app per overlay a piena finestra
+ * (`Modal`/`Drawer` di Mantine), applicato qui a un componente non-Mantine perché la chrome
+ * dell'editor a blocchi ha bisogno di un controllo pixel-preciso sulle tre colonne che un
+ * `Modal` non offre.
  *
  * **Viewport switcher e pannello struttura** leggono/scrivono `activeViewport` e
  * `isStructurePanelOpen` di `useBlockEditorStore` direttamente (non via props): sono stato di
@@ -166,19 +159,6 @@ export interface FullScreenEditorLayoutProps {
   /** Contenuto del canvas centrale (l'albero di blocchi in editing). */
   children: ReactNode;
   /**
-   * `true` quando la scheda "Contenuto" è quella nominalmente selezionata in
-   * `PagePageDetail.tsx`. Governa esplicitamente la visibilità del nodo radice di questo
-   * componente (vedi commento di testa) — quando `false`, si rende `display:none` da sé,
-   * senza dipendere soltanto dal `display:none` che Mantine applica al `Tabs.Panel`
-   * antenato.
-   */
-  active: boolean;
-  /**
-   * Distanza in pixel dal bordo superiore del viewport da cui l'overlay inizia a coprire —
-   * il bordo inferiore di `Tabs.List`, misurato da `PagePageDetail.tsx`. Ignorato quando
-   * `active` è `false` (il nodo è `display:none`, la posizione non conta).
-   */
-  /**
    * Propaga a `EditorSidebar` (scheda "Pagina", E01) il salvataggio riuscito/il conflitto di
    * versione del form compatto Titolo/Slug/SEO essenziale — stessi callback già passati a
    * `BlockEditorPanel` dal dettaglio, non una seconda coppia. Assenti quando `page` non è
@@ -215,7 +195,6 @@ export default function FullScreenEditorLayout({
   previewLoading,
   structurePanel,
   children,
-  active,
   onPageUpdated,
   onVersionConflict,
   pageStatus,
@@ -256,9 +235,9 @@ export default function FullScreenEditorLayout({
   const [historyOpened, { toggle: toggleHistory, close: closeHistory }] = useDisclosure(false);
 
   // Motore delle scorciatoie da tastiera dell'editor (undo/redo/elimina/deseleziona/
-  // duplica): attivo solo quando la scheda "Contenuto" è quella selezionata, stesso
-  // principio del resto del componente (vedi commento di testa su `active`).
-  useEditorShortcuts(active);
+  // duplica): sempre attivo — questo componente è la chrome di un'intera rotta dedicata
+  // (`/studio/:guid`), non più un pannello che condivide il DOM con altre schede.
+  useEditorShortcuts();
 
   /*
    * Nessuna idratazione dei Global Design Tokens qui: l'aspetto del Canvas — colori,
@@ -370,7 +349,7 @@ export default function FullScreenEditorLayout({
   }, [isDragActive]);
 
   return (
-    <div className={styles.root} style={active ? undefined : { display: 'none' }}>
+    <div className={styles.root}>
       <Toolbar
         pageTitle={pageTitle}
         backHref={backHref}
@@ -506,6 +485,13 @@ export default function FullScreenEditorLayout({
               // `EditorBlockWrapper.module.css`, gate CSS puro, nessuna prop nuova sul
               // wrapper di ogni blocco.
               data-preview-mode={isPreviewMode || undefined}
+              // Confine reale di clipping (`overflow-y: auto`) usato da
+              // `EditorBlockWrapper.tsx` (anti-clip della toolbar di selezione,
+              // `BlockHoverOverlay.tsx`) per sapere se il blocco selezionato è troppo
+              // vicino al bordo superiore scrollabile per ospitare la toolbar sopra di sé —
+              // trovato con `closest()`, mai un secondo ref passato in giù per questo solo
+              // scopo.
+              data-canvas-scroll-area="true"
             >
               {/*
               `data-viewport` non pilota nessuna media query nuova (il sync col rendering

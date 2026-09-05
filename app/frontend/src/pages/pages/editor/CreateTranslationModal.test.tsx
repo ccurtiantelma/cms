@@ -119,9 +119,7 @@ describe('CreateTranslationModal — creazione riuscita', () => {
     expect(onCreated).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
     await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent(
-        '/pages/newguid00000001?tab=content',
-      ),
+      expect(screen.getByTestId('location')).toHaveTextContent('/studio/newguid00000001'),
     );
     expect(notificationsShow).not.toHaveBeenCalled();
   });

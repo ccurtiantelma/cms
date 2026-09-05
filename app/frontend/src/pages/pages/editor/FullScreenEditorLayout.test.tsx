@@ -37,7 +37,6 @@ function renderLayout() {
       hasUnsavedChanges={false}
       saving={false}
       onSaveDraft={() => undefined}
-      active
     >
       <div>contenuto</div>
     </FullScreenEditorLayout>,

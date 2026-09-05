@@ -58,6 +58,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -71,6 +72,7 @@ import { BLOCK_TYPES } from '../../../types/blocks.types';
 import {
   useActiveViewport,
   useBlockEditorStore,
+  useColumnResizeRatio,
   useContainerResizePercent,
   useIsHiddenInCanvas,
   useIsHoveredFromNavigator,
@@ -87,7 +89,13 @@ import {
   resolveLayoutParentWidth,
   CONTAINER_WIDTH_PROP,
 } from './container-resize.utils';
+import {
+  resolveColumnRatio,
+  resolveColumnRatioFromFraction,
+  type ColumnRatioValue,
+} from './column-resize.utils';
 import ContainerResizeHandle from './components/ContainerResizeHandle';
+import ColumnResizer from './components/ColumnResizer';
 import BlockRenderer from '../../../components/blocks/BlockRenderer';
 import BlockErrorBoundary from '../../../components/blocks/BlockErrorBoundary';
 import Section from '../../../components/blocks/blocks/Section';
@@ -110,13 +118,6 @@ import InlineFormattingToolbar, {
 import styles from './EditorBlockWrapper.module.css';
 
 const CONTAINER_WIDTH_SPEC = resolveContainerWidthSpec();
-const COLUMN_RATIO_VALUES = ['equal', '33-66', '66-33'] as const;
-type ColumnRatioValue = (typeof COLUMN_RATIO_VALUES)[number];
-const COLUMN_RATIO_BOUNDARY_PERCENT: Record<ColumnRatioValue, number> = {
-  equal: 50,
-  '33-66': 33.333,
-  '66-33': 66.667,
-};
 
 interface SectionContainerProps {
   children: ReactNode;
@@ -409,6 +410,9 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const commitContainerWidthAction = useBlockEditorStore(
     (state) => state.commitContainerWidthAction,
   );
+  const setColumnResizePreview = useBlockEditorStore((state) => state.setColumnResizePreview);
+  const clearColumnResizePreview = useBlockEditorStore((state) => state.clearColumnResizePreview);
+  const commitColumnRatioAction = useBlockEditorStore((state) => state.commitColumnRatioAction);
   /** "Salva come Preset Globale" (F14-01): stesso `usePresetStore` già usato da `AdvancedTab.tsx` per container/section — nessun secondo registro di preset. */
   const savePreset = usePresetStore((state) => state.savePreset);
   /** "Occhio" del pannello Struttura/Navigator (`EditorStructureNavigator.tsx`): nascosto solo qui nel canvas, mai persistito. */
@@ -422,6 +426,17 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const [presetName, setPresetName] = useState('');
   /** Solo il nodo direttamente sotto il puntatore (vedi commento di testa). */
   const [isHovered, setIsHovered] = useState(false);
+
+  /**
+   * Anti-clipping della toolbar di selezione (`BlockHoverOverlay.tsx`, ancorata a
+   * `top: -12px`, cioè sopra il bordo superiore del blocco): `true` quando quel bordo è
+   * troppo vicino al confine scrollabile reale del canvas (`[data-canvas-scroll-area]`,
+   * `FullScreenEditorLayout.tsx`) perché la toolbar ci stia sopra senza finire tagliata da
+   * quell'`overflow-y: auto` — tipicamente il primo blocco della pagina, appena sotto la
+   * Topbar. In quel caso `BlockHoverOverlay.tsx` si riancora **dentro** il margine
+   * superiore del blocco (`.overlayInside`) invece che fuori, mai un secondo modal/overlay.
+   */
+  const [overlayAnchoredInside, setOverlayAnchoredInside] = useState(false);
 
   /**
    * Debounce (punto 1 del task) per `onTextInput`/`onHtmlInput`/`onLabelInput`: il DOM
@@ -455,15 +470,27 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   const [isEditingText, setIsEditingText] = useState(false);
 
   /**
-   * Stato del drag del resizer inter-colonna (punto 1 del task), mai in Zustand: nessun
-   * altro componente lo consulta, e durante il drag cambia ad ogni `pointermove` — uno
-   * stato React (o peggio, di store) qui produrrebbe un re-render per pixel spostato.
-   * `null` a riposo; `lastValue` evita `updateBlockPropsAction` ridondanti quando il
-   * puntatore si muove dentro la stessa zona di snap.
+   * Dati del gesto in corso sul resizer inter-colonna, mai in Zustand: `containerEl` (il
+   * DOM della `<section>`, misurato una volta sola al `pointerdown`) e `lastRatio` (lo stop
+   * committato al rilascio) vivono in un ref e non in uno stato React perché cambiano ad
+   * ogni `pointermove` — un re-render per pixel spostato qui non serve, l'anteprima visiva
+   * passa dallo store ({@link setColumnResizePreview}), che già filtra i valori invariati.
+   * `lastRatio` è anche ciò che evita `setColumnResizePreview` ridondanti quando il
+   * puntatore si muove dentro la stessa zona di snap, stesso principio di
+   * `widthResizeRef.lastPercent` sotto.
    */
-  const columnResizeRef = useRef<{ containerEl: HTMLElement; lastValue: ColumnRatioValue } | null>(
+  const columnResizeRef = useRef<{ containerEl: HTMLElement; lastRatio: ColumnRatioValue } | null>(
     null,
   );
+
+  /**
+   * `true` mentre la maniglia inter-colonna di questa `section` è sotto trascinamento:
+   * disabilita il drag dnd-kit dello stesso nodo (`useDraggable({ disabled })` sotto), stesso
+   * principio e stessa ragione di {@link isResizingWidth} due righe sotto (E03, punto 2) —
+   * lo stesso `pointermove` non deve poter essere interpretato dal `PointerSensor` del
+   * `DndContext` come l'inizio di uno spostamento dell'intera section.
+   */
+  const [isResizingColumns, setIsResizingColumns] = useState(false);
 
   /**
    * `true` mentre la maniglia di ridimensionamento di questo `container` è sotto
@@ -690,6 +717,38 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
     return () => cancelDebouncedUpdate();
   }, [id, isSelected]);
 
+  // Anti-clipping della toolbar di selezione (vedi il commento di {@link
+  // overlayAnchoredInside} sopra): ricalcolato solo mentre il blocco è selezionato (la
+  // toolbar non è montata altrimenti), alla selezione, allo scroll del canvas e al resize
+  // della finestra — mai un timer, i tre eventi bastano a coprire ogni modo in cui la
+  // distanza dal bordo scrollabile può cambiare.
+  useLayoutEffect(() => {
+    if (!isSelected) return undefined;
+    const wrapperEl = wrapperRef.current;
+    const scrollAreaEl = wrapperEl?.closest<HTMLElement>('[data-canvas-scroll-area]') ?? null;
+    if (!wrapperEl || !scrollAreaEl) return undefined;
+
+    // 12px = l'offset negativo di `.overlay` (`BlockHoverOverlay.module.css`), più un
+    // margine di sicurezza per il bordo/ombra della toolbar stessa: sotto questa soglia
+    // l'overlay esterno finirebbe scrollato fuori dalla propria area (`overflow-y: auto`),
+    // indistinguibile da un ritaglio sotto la Topbar.
+    const ANTI_CLIP_THRESHOLD_PX = 20;
+
+    function recomputeOverlayAnchor(): void {
+      const distanceFromScrollTop =
+        wrapperEl!.getBoundingClientRect().top - scrollAreaEl!.getBoundingClientRect().top;
+      setOverlayAnchoredInside(distanceFromScrollTop < ANTI_CLIP_THRESHOLD_PX);
+    }
+
+    recomputeOverlayAnchor();
+    scrollAreaEl.addEventListener('scroll', recomputeOverlayAnchor, { passive: true });
+    window.addEventListener('resize', recomputeOverlayAnchor);
+    return () => {
+      scrollAreaEl.removeEventListener('scroll', recomputeOverlayAnchor);
+      window.removeEventListener('resize', recomputeOverlayAnchor);
+    };
+  }, [isSelected]);
+
   /**
    * Drag & drop (dnd-kit, T7). Lo stato del trascinamento in corso non entra mai nello
    * store Zustand: `active`/`isOver` vivono nel `DndContext` di `EditorCanvas.tsx`, letti
@@ -704,9 +763,10 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
     id,
     data: { type: node?.type },
     // Il trascinamento generale del nodo cede sempre il passo a un gesto più specifico già
-    // in corso sullo stesso puntatore: editing di testo (punto 2 di T9) o ridimensionamento
-    // della maniglia (E03, punto 2).
-    disabled: isEditingText || isResizingWidth,
+    // in corso sullo stesso puntatore: editing di testo (punto 2 di T9), ridimensionamento
+    // della maniglia di `container` (E03, punto 2) o della maniglia inter-colonna di
+    // `section`.
+    disabled: isEditingText || isResizingWidth || isResizingColumns,
   });
   const { setNodeRef: setDropBeforeRef, isOver: isOverBefore } = useDroppable({
     id: `before:${id}`,
@@ -733,6 +793,13 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
    * wrapper. Chiamato qui, sopra la guardia di uscita, perché è un hook.
    */
   const resizePreviewPercent = useContainerResizePercent(id);
+
+  /**
+   * Stop di `columnRatio` che questa `section` sta assumendo mentre la sua maniglia
+   * inter-colonna è sotto trascinamento, `null` a riposo o se il gesto riguarda un'altra
+   * section. Stesso principio di {@link resizePreviewPercent} due righe sopra.
+   */
+  const columnResizePreviewRatio = useColumnResizeRatio(id);
 
   // Il nodo può sparire dall'albero fra un render e l'altro (eliminato da questa stessa
   // toolbar): non è un errore, semplicemente non c'è più nulla da renderizzare.
@@ -793,11 +860,15 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
     isSection &&
     childIds.length === 2 &&
     resolveEffectiveResponsiveValue(currentNode.props.columns, activeViewport) === '2';
-  const currentColumnRatio: ColumnRatioValue = COLUMN_RATIO_VALUES.includes(
-    currentNode.props.columnRatio as ColumnRatioValue,
-  )
-    ? (currentNode.props.columnRatio as ColumnRatioValue)
-    : 'equal';
+  /** Stop persistito sul nodo, `'equal'` di ripiego — stesso default del registro. */
+  const persistedColumnRatio = resolveColumnRatio(currentNode.props.columnRatio);
+  /**
+   * Stop da disegnare: l'anteprima del trascinamento vince sul valore persistito finché il
+   * gesto dura, poi torna a essere quella persistita — che nel frattempo il commit ha reso
+   * uguale, quindi nessuno sfarfallio al rilascio. Stesso principio di
+   * `effectiveWidthPercent` (E03) più sotto.
+   */
+  const effectiveColumnRatio = columnResizePreviewRatio ?? persistedColumnRatio;
 
   /** Livello corrente del titolo per il controllo rapido H2-H6 (gap #4): stesso fallback `'h2'` già usato dal menu "Cambia livello del titolo" della toolbar integrata. */
   const currentHeadingLevel: HeadingLevel = HEADING_LEVELS.includes(
@@ -821,18 +892,13 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
     return Number.isInteger(parsed) && parsed >= 1 && parsed <= 4 ? parsed : 1;
   })();
 
-  /** Enum più vicino fra i tre stop di `columnRatio` in base alla frazione [0,1] corrente. */
-  function resolveColumnRatioFromFraction(fraction: number): ColumnRatioValue {
-    if (fraction < 0.4) return '33-66';
-    if (fraction > 0.6) return '66-33';
-    return 'equal';
-  }
-
   /**
    * Avvia il drag: il contenitore di riferimento per il calcolo della frazione è il DOM
-   * vero della `<section>` — non un ref dedicato (Section.tsx non forwarda ref, e non va
-   * toccato per questo task): `.childrenArea` (`display: contents`, sotto) è il genitore
-   * DOM diretto della maniglia, e la `<section>` è il genitore di `.childrenArea`.
+   * vero della `<section>` — non un ref dedicato (Section.tsx non forwarda ref):
+   * `.childrenArea` (`display: contents`, sotto) è il genitore DOM diretto della maniglia,
+   * e la `<section>` è il genitore di `.childrenArea`. L'anteprima parte dallo stop già
+   * persistito, cosi il badge mostra subito la ripartizione corrente invece che un valore
+   * vuoto.
    */
   function handleColumnResizerPointerDown(event: ReactPointerEvent<HTMLDivElement>): void {
     event.stopPropagation();
@@ -840,13 +906,17 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
     const containerEl = handle.parentElement?.parentElement;
     if (!containerEl) return;
     handle.setPointerCapture(event.pointerId);
-    columnResizeRef.current = { containerEl, lastValue: currentColumnRatio };
+    columnResizeRef.current = { containerEl, lastRatio: persistedColumnRatio };
+    setIsResizingColumns(true);
+    setColumnResizePreview(id, persistedColumnRatio);
   }
 
   /**
-   * Soglia minima 10% (task): già naturalmente rispettata, i tre stop disponibili (50/50,
-   * 33/66, 66/33) sono tutti a distanza ≥10% dai bordi — nessun clamp aggiuntivo necessario
-   * oltre al `Math.min`/`Math.max` che tiene la frazione dentro [0,1].
+   * Trascinamento: solo anteprima visiva nello store, mai una voce di history (stesso
+   * principio di E03, punto 3). Soglia minima 10% (task): già naturalmente rispettata, i
+   * tre stop disponibili (50/50, 33/66, 66/33) sono tutti a distanza ≥10% dai bordi —
+   * nessun clamp aggiuntivo necessario oltre al `Math.min`/`Math.max` che tiene la frazione
+   * dentro [0,1].
    */
   function handleColumnResizerPointerMove(event: ReactPointerEvent<HTMLDivElement>): void {
     const drag = columnResizeRef.current;
@@ -854,18 +924,40 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
     const rect = drag.containerEl.getBoundingClientRect();
     if (rect.width === 0) return;
     const fraction = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
-    const nextValue = resolveColumnRatioFromFraction(fraction);
-    if (nextValue !== drag.lastValue) {
-      drag.lastValue = nextValue;
-      updateBlockPropsAction(id, { columnRatio: nextValue });
+    const nextRatio = resolveColumnRatioFromFraction(fraction);
+    if (nextRatio !== drag.lastRatio) {
+      drag.lastRatio = nextRatio;
+      setColumnResizePreview(id, nextRatio);
     }
   }
 
-  /** Fine drag (`pointerup`/`pointercancel`): rilascia la cattura, azzera lo stato. */
-  function handleColumnResizerPointerEnd(event: ReactPointerEvent<HTMLDivElement>): void {
+  /**
+   * Rilascio: **un solo** punto di undo/redo per l'intero trascinamento
+   * (`commitColumnRatioAction`), che azzera anche l'anteprima. Il valore committato viene
+   * dal ref del gesto (`drag.lastRatio`), mai dallo stato reattivo dell'anteprima: stesso
+   * principio di `widthResizeRef.lastPercent` (E03) — un valore chiuso per closure non
+   * dipende dal timing del re-render fra un `pointermove` e il successivo `pointerup`.
+   */
+  function handleColumnResizerPointerUp(event: ReactPointerEvent<HTMLDivElement>): void {
+    const handle = event.currentTarget;
+    if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
+    const drag = columnResizeRef.current;
+    columnResizeRef.current = null;
+    setIsResizingColumns(false);
+    if (!drag) return;
+    commitColumnRatioAction(id, drag.lastRatio);
+  }
+
+  /**
+   * Gesto interrotto dal sistema (`pointercancel`): l'anteprima si butta via **senza**
+   * committare — un trascinamento mai concluso non è una modifica che l'utente ha chiesto.
+   */
+  function handleColumnResizerPointerCancel(event: ReactPointerEvent<HTMLDivElement>): void {
     const handle = event.currentTarget;
     if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
     columnResizeRef.current = null;
+    setIsResizingColumns(false);
+    clearColumnResizePreview();
   }
 
   /**
@@ -1249,6 +1341,7 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
             parentId={location.parentId}
             attributes={attributes}
             listeners={listeners}
+            anchorInside={overlayAnchoredInside}
             onDelete={() => setConfirmOpened(true)}
             // Sesto controllo (F14-01), solo su `section`: nessun'altra categoria di
             // blocco offre oggi "Salva come Preset Globale" dalla toolbar di selezione —
@@ -1290,7 +1383,17 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
 
         {isContainer && ContainerComponent ? (
           <BlockErrorBoundary>
-            <ContainerComponent {...resolveContainerComponentProps(currentNode)}>
+            <ContainerComponent
+              {...resolveContainerComponentProps(currentNode)}
+              // Anteprima in tempo reale della ripartizione delle colonne (60fps, task): la
+              // Section riceve lo stop effettivo (anteprima durante il trascinamento,
+              // altrimenti quello persistito) invece del solo valore già salvato — le due
+              // classi CSS statiche di `columnRatio_*` (`style-tokens`) cambiano subito
+              // senza attendere il commit al rilascio. Solo quando la maniglia è offerta:
+              // per ogni altro nodo il valore raw di `resolveContainerComponentProps` resta
+              // l'unico, senza alcuna sovrascrittura.
+              {...(showColumnResizer ? { columnRatio: effectiveColumnRatio } : {})}
+            >
               {/*
                 Evidenziazione "dentro questo contenitore" (dnd-kit T7): overlay a sé
                 (`position: absolute; inset: 0`, EditorBlockWrapper.module.css), non più
@@ -1391,25 +1494,20 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
                     <EditorBlockWrapper key={childId} id={childId} />
                   ))}
                   {/*
-                    Maniglia di resize inter-colonna (punto 1 del task): `position: absolute`
-                    (EditorBlockWrapper.module.css) la esclude dal posizionamento automatico
+                    Maniglia di resize inter-colonna: `position: absolute`
+                    (ColumnResizer.module.css) la esclude dal posizionamento automatico
                     della griglia CSS (stesso principio di `.containerDropZone`/`.dropZone`
-                    sopra), quindi non conta come terzo grid item. `left` inline: percentuale
-                    calcolata dal valore corrente di `columnRatio`, non esprimibile come
-                    classe statica (stesso idioma di `.contextMenuAnchor` più sopra).
+                    sopra), quindi non conta come terzo grid item.
                   */}
                   {showColumnResizer && (
-                    <div
-                      className={styles.columnResizer}
-                      style={{ left: `${COLUMN_RATIO_BOUNDARY_PERCENT[currentColumnRatio]}%` }}
-                      role="separator"
-                      aria-orientation="vertical"
-                      aria-label={`Ridimensiona le colonne della Section (attuale: ${currentColumnRatio})`}
-                      onClick={(event) => event.stopPropagation()}
+                    <ColumnResizer
+                      ratio={effectiveColumnRatio}
+                      isResizing={isResizingColumns}
+                      ariaLabel={`Ridimensiona le colonne della Section (attuale: ${effectiveColumnRatio})`}
                       onPointerDown={handleColumnResizerPointerDown}
                       onPointerMove={handleColumnResizerPointerMove}
-                      onPointerUp={handleColumnResizerPointerEnd}
-                      onPointerCancel={handleColumnResizerPointerEnd}
+                      onPointerUp={handleColumnResizerPointerUp}
+                      onPointerCancel={handleColumnResizerPointerCancel}
                     />
                   )}
                 </div>

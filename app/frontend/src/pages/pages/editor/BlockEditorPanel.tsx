@@ -1,14 +1,11 @@
 /**
- * Editor visivo dei blocchi (PLAN-F04-editor-visivo.md T2/T4/T5), montato nella scheda
- * "Contenuto" del dettaglio Pagina.
- *
- * **Non è una rotta a sé.** L'editor resta montato dentro il dettaglio Pagina (nessuna
- * voce di `App.tsx`, nessun caricamento proprio della Pagina: arriva come prop dal
- * dettaglio) e nessun pulsante di pubblicazione: la transizione di stato è una sola, nella
- * tendina di stato dell'intestazione del dettaglio, non duplicata qui. Ciò che è cambiato è
- * la *presentazione*: mentre la scheda "Contenuto" è attiva, `FullScreenEditorLayout` copre
- * la chrome admin standard con una chrome full-screen propria (topbar, viewport switcher,
- * pannello struttura) — un overlay `position: fixed`, non una nuova destinazione.
+ * Editor visivo dei blocchi (PLAN-F04-editor-visivo.md T2/T4/T5), chrome della rotta isolata
+ * `/studio/:guid` (ADR-54, `PageStudio.tsx`, dentro `LayoutStudio`) — non più un overlay
+ * dentro il dettaglio Pagina: la Pagina in editing arriva come prop dal chiamante (`PageStudio`,
+ * che la carica dal `guid` di rotta), e l'intera rotta è dedicata a questo componente, senza
+ * bisogno di governarne la visibilità in base a una scheda selezionata altrove. Nessun
+ * pulsante di pubblicazione proprio: la transizione di stato passa dalla stessa
+ * `usePageStatusTransition` condivisa col dettaglio Pagina (`onRequestStatusChange`).
  *
  * Resta qui la sola azione che appartiene al contenuto: il salvataggio della bozza, con
  * il lock ottimistico e la traduzione del `400` di validazione nel blocco colpevole.
@@ -50,42 +47,29 @@ import EditorStructureNavigator from './EditorStructureNavigator';
 const SAVE_ERROR_NOTIFICATION_ID = 'page-draft-save-error';
 
 interface BlockEditorPanelProps {
-  /** La Pagina in editing, già caricata dal dettaglio. */
+  /** La Pagina in editing, già caricata dal chiamante (`PageStudio.tsx`, dal `guid` di rotta). */
   page: PageRecord;
-  /** Propaga al dettaglio la Pagina restituita da un salvataggio riuscito (nuova `version`). */
+  /** Propaga al chiamante la Pagina restituita da un salvataggio riuscito (nuova `version`). */
   onPageUpdated: (page: PageRecord) => void;
-  /** Notifica di conflitto di editing del dettaglio: mai sovrascrittura silenziosa. */
+  /** Notifica di conflitto di editing: mai sovrascrittura silenziosa. */
   onVersionConflict: () => void;
   /**
-   * Genera e apre l'anteprima in una nuova scheda (delegato al dettaglio, che possiede il
+   * Genera e apre l'anteprima in una nuova scheda (delegato al chiamante, che possiede il
    * token effimero, ADR-25). `undefined` quando la Pagina non è in bozza — il pulsante
    * "Anteprima" della topbar full-screen resta nascosto in quel caso.
    */
   onPreview?: () => void;
   /** Stato di caricamento della generazione del token di anteprima. */
   previewLoading?: boolean;
-  /** Registra il salvataggio della bozza per le transizioni avviate dall'intestazione. */
+  /** Registra il salvataggio della bozza per le transizioni di stato avviate dal chiamante. */
   onSaveDraftReady?: (saveDraft: () => Promise<PageRecord | null>) => void;
   /**
-   * `true` quando la scheda "Contenuto" è quella nominalmente selezionata in
-   * `PagePageDetail.tsx` — inoltrato a `FullScreenEditorLayout`, che lo usa per rendersi
-   * `display:none` sul proprio nodo quando `false`, invece di affidarsi soltanto al
-   * `display:none` che Mantine applica al `Tabs.Panel` antenato (bug corretto, vedi
-   * `FullScreenEditorLayout.tsx`).
-   */
-  active: boolean;
-  /**
-   * Distanza in pixel dal bordo superiore del viewport da cui l'overlay a piena finestra
-   * inizia a coprire, misurata dal dettaglio sul bordo inferiore di `Tabs.List` — non
-   * inoltrato oltre `FullScreenEditorLayout`.
-   */
-  /**
    * Stato corrente della Pagina e transizioni ammesse dal ruolo (`visibleTransitionsForRole`,
-   * `PagePageDetail.tsx`) — alimentano il badge di stato e il menu "Cambia Stato" della
-   * topbar full-screen (E01, `Toolbar.tsx`). `onRequestStatusChange` è la stessa funzione
-   * dietro la tendina di stato dell'intestazione (`requestStatusTransition`): nessuna
-   * seconda implementazione della macchina a stati qui, solo un secondo punto da cui
-   * invocarla — il `ConfirmModal`/il selettore di data restano montati nel dettaglio.
+   * `pages/hooks/usePageStatusTransition.ts`) — alimentano il badge di stato e il menu "Cambia
+   * Stato" della topbar full-screen (E01, `Toolbar.tsx`). `onRequestStatusChange` è la stessa
+   * `requestStatusTransition` usata dalla tendina di stato di `PagePageDetail.tsx`: nessuna
+   * seconda implementazione della macchina a stati qui, solo un secondo punto da cui invocarla —
+   * `ConfirmModal`/il selettore di data sono montati dal chiamante (`PageStatusTransitionModals`).
    */
   pageStatus: PageStatus;
   visibleTransitions: readonly PageStatus[];
@@ -102,7 +86,6 @@ export default function BlockEditorPanel({
   onPreview,
   previewLoading,
   onSaveDraftReady,
-  active,
   pageStatus,
   visibleTransitions,
   statusSubmitting,
@@ -235,9 +218,8 @@ export default function BlockEditorPanel({
   return (
     <>
       {/*
-        Chrome full-screen (`position: fixed`, z-index sopra `LayoutProtected`): finché la
-        scheda "Contenuto" è montata, l'editor copre per intero sidebar/topbar admin — non è
-        una destinazione separata nel routing, solo la sua presentazione mentre è attiva.
+        Chrome full-screen della rotta `/studio/:guid` (ADR-54): copre per intero la
+        viewport di `LayoutStudio`, che non ha sidebar/topbar admin da sovrapporre.
       */}
       <FullScreenEditorLayout
         pageTitle={page.title}
@@ -251,7 +233,6 @@ export default function BlockEditorPanel({
         onPreview={onPreview}
         previewLoading={previewLoading}
         structurePanel={<EditorStructureNavigator />}
-        active={active}
         onPageUpdated={onPageUpdated}
         onVersionConflict={onVersionConflict}
         pageStatus={pageStatus}

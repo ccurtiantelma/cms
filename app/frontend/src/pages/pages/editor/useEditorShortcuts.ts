@@ -32,10 +32,9 @@ function isTypingTarget(target: EventTarget | null): boolean {
  * Registra le scorciatoie da tastiera dell'editor sull'intera finestra, finché il
  * componente chiamante resta montato e `enabled` è `true`.
  *
- * `enabled` di default `true`: `FullScreenEditorLayout` resta sempre montato (vedi il suo
- * commento di testa — smontarlo butterebbe via l'albero in editing), quindi il chiamante
- * passa `active` per disattivare le scorciatoie quando la scheda "Contenuto" non è quella
- * selezionata — altrimenti Ctrl+Z/Delete agirebbero su un editor invisibile.
+ * `enabled` di default `true`: `FullScreenEditorLayout` è la chrome di una rotta dedicata
+ * (`/studio/:guid`, ADR-54) o del Builder Sezioni Globali — in entrambi i casi, se è montato è
+ * sempre quello che occupa lo schermo, quindi non serve un interruttore esterno.
  * @param enabled `false` per non registrare il listener (o rimuoverlo se già presente).
  */
 export function useEditorShortcuts(enabled = true): void {

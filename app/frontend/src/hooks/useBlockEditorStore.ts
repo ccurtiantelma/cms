@@ -36,6 +36,10 @@ import {
   CONTAINER_WIDTH_PROP,
   toContainerWidthValue,
 } from '../pages/pages/editor/container-resize.utils';
+import {
+  resolveColumnRatio,
+  type ColumnRatioValue,
+} from '../pages/pages/editor/column-resize.utils';
 import { BLOCK_TYPES, CONTENT_TREE_LIMITS } from '../types/blocks.types';
 import {
   compileTokensToCss,
@@ -120,7 +124,7 @@ function isDirty(state: BlockEditorState): boolean {
 export type EditorViewport = 'desktop' | 'tablet' | 'mobile';
 
 /** Scheda attiva della sidebar sinistra dell'editor full-screen (`EditorSidebar`). */
-export type EditorSidebarTab = 'widgets' | 'properties' | 'page';
+export type EditorSidebarTab = 'widgets' | 'structure' | 'properties' | 'page';
 
 /**
  * Ampiezza che un nodo `container` sta assumendo **mentre** il puntatore trascina la sua
@@ -132,6 +136,17 @@ export interface ContainerResizeState {
   id: string;
   /** Percentuale della larghezza del contenitore padre, gia clampata nell'intervallo del registro. */
   percent: number;
+}
+
+/**
+ * Stop di `columnRatio` che una `section` a due colonne sta assumendo **mentre** il
+ * puntatore trascina la sua maniglia inter-colonna (`ColumnResizer.tsx`). Un solo nodo per
+ * volta, stesso principio di {@link ContainerResizeState}: il gesto è esclusivo per
+ * costruzione (`setPointerCapture`).
+ */
+export interface ColumnResizeState {
+  id: string;
+  ratio: ColumnRatioValue;
 }
 
 /** Prop di stile copiate temporaneamente durante la sessione dell'editor. */
@@ -236,6 +251,17 @@ interface BlockEditorState {
    * il trascinamento di un container non ri-renderizza i wrapper degli altri.
    */
   containerResize: ContainerResizeState | null;
+  /**
+   * Ridimensionamento inter-colonna di una `section` a due colonne in corso, oppure `null`
+   * a riposo. Stato **visivo ed effimero**, stesso principio di {@link containerResize}:
+   * nessun comando sulla history mentre il puntatore si muove — un'unica voce di undo/redo
+   * viene registrata al rilascio, da {@link commitColumnRatioAction}. Vive nello store e non
+   * in uno stato locale del wrapper perché il valore in corso deve poter essere letto da un
+   * componente diverso da quello che lo produce; il selettore {@link useColumnResizeRatio}
+   * lo sottoscrive per id, così il trascinamento di una section non ri-renderizza i wrapper
+   * delle altre.
+   */
+  columnResize: ColumnResizeState | null;
   styleClipboard: StyleClipboard | null;
   /**
    * "Anteprima Pura" della topbar full-screen (E01): nasconde la sidebar sinistra e
@@ -364,6 +390,20 @@ interface BlockEditorState {
    * nodo sparito): il gesto e' finito comunque.
    */
   commitContainerWidthAction: (id: string, percent: number) => void;
+  /**
+   * Aggiorna lo stop di `columnRatio` che la `section` `id` sta assumendo durante il
+   * trascinamento della maniglia inter-colonna. Non tocca l'albero e non tocca la history —
+   * stesso principio di {@link setContainerResizePreview}.
+   */
+  setColumnResizePreview: (id: string, ratio: ColumnRatioValue) => void;
+  /** Abbandona l'anteprima senza scrivere nulla (`pointercancel`, gesto interrotto). */
+  clearColumnResizePreview: () => void;
+  /**
+   * Chiude il gesto: scrive lo stop finale su `columnRatio` del nodo `id` e registra **un
+   * solo** punto nella history di undo/redo per l'intero trascinamento. Azzera sempre
+   * l'anteprima, anche quando non c'è nulla da scrivere (valore invariato, nodo sparito).
+   */
+  commitColumnRatioAction: (id: string, ratio: ColumnRatioValue) => void;
 }
 
 /**
@@ -448,6 +488,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   hoveredBlockId: null,
   globalTokens: null,
   containerResize: null,
+  columnResize: null,
   styleClipboard: null,
   isPreviewMode: false,
 
@@ -472,6 +513,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       // Stesso principio per un ridimensionamento eventualmente rimasto aperto: l'albero
       // sotto di lui non esiste più.
       containerResize: null,
+      columnResize: null,
       styleClipboard: null,
     }));
   },
@@ -867,6 +909,42 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       };
     });
   },
+
+  setColumnResizePreview: (id, ratio) =>
+    set((state) => {
+      // Nessun `set` a valore identico: un `pointermove` che resta nella stessa zona di
+      // snap non deve ri-renderizzare nulla.
+      const current = state.columnResize;
+      if (current && current.id === id && current.ratio === ratio) return {};
+      return { columnResize: { id, ratio } };
+    }),
+
+  clearColumnResizePreview: () => set({ columnResize: null }),
+
+  commitColumnRatioAction: (id, ratio) => {
+    set((state) => {
+      const node = findNode(state.tree, id);
+      if (!node) return { columnResize: null };
+
+      const previousValue = node.props.columnRatio;
+      // Un trascinamento che torna esattamente da dove è partito non è una modifica:
+      // nessuna voce di history, nessun contenuto marcato come non salvato.
+      if (resolveColumnRatio(previousValue) === ratio) return { columnResize: null };
+
+      // Stesso comando invertibile di `commitContainerWidthAction` — una sola prop, il
+      // valore precedente catturato per chiusura. È qui che l'intero trascinamento diventa
+      // **un** punto di undo/redo.
+      const command: TreeCommand = {
+        kind: 'tree',
+        apply: (tree) => updateBlockProps(tree, id, { columnRatio: ratio }),
+        invert: (tree) => updateBlockProps(tree, id, { columnRatio: previousValue }),
+      };
+      return {
+        ...pushCommand(state, command, `Modificata ripartizione colonne ${id}`),
+        columnResize: null,
+      };
+    });
+  },
 }));
 
 /**
@@ -1029,5 +1107,17 @@ export function useGlobalTokens(): GlobalTokens | null {
 export function useContainerResizePercent(id: string): number | null {
   return useBlockEditorStore((state) =>
     state.containerResize && state.containerResize.id === id ? state.containerResize.percent : null,
+  );
+}
+
+/**
+ * Selettore granulare: lo stop di `columnRatio` in corso di trascinamento **per questo
+ * nodo**, o `null` se il gesto riguarda un'altra section (o nessuno). Sottoscrive solo il
+ * proprio id: il ridimensionamento di una section non ri-renderizza i wrapper delle
+ * sorelle.
+ */
+export function useColumnResizeRatio(id: string): ColumnRatioValue | null {
+  return useBlockEditorStore((state) =>
+    state.columnResize && state.columnResize.id === id ? state.columnResize.ratio : null,
   );
 }
