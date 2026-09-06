@@ -20,6 +20,13 @@
  * derivato via HMAC (mai una stringa fissa) — qui è solo iniettato, mai calcolato: nessun
  * secret in questo file, che è condiviso col bundle browser dell'admin (CLAUDE.md, nessuna
  * chiave lato client).
+ *
+ * `successMessage`/`errorMessage` (ADR-60, entrambe opzionali con default dichiarato nel
+ * registro): esposte come `data-success-message`/`data-error-message` — lo stesso pattern
+ * di `data-submit-url` sopra — perché `form-submit.js` (non questo componente) le legge a
+ * submit avvenuto. Quando assenti (form pubblicato prima di questa ADR, o `formKey`
+ * mancante come sopra) l'attributo semplicemente non compare: lo script pubblico ricade sul
+ * testo hardcoded attuale, comportamento identico a oggi.
  */
 import type { ReactNode } from 'react';
 import styles from './FormBlock.module.css';
@@ -34,10 +41,22 @@ interface FormBlockProps {
   children: ReactNode;
   formKey?: unknown;
   submission?: FormSubmissionProps;
+  successMessage?: unknown;
+  errorMessage?: unknown;
 }
 
-export default function FormBlock({ children, formKey, submission }: FormBlockProps) {
+export default function FormBlock({
+  children,
+  formKey,
+  submission,
+  successMessage,
+  errorMessage,
+}: FormBlockProps) {
   const formKeyValue = typeof formKey === 'string' && formKey ? formKey : undefined;
+  const successMessageValue =
+    typeof successMessage === 'string' && successMessage ? successMessage : undefined;
+  const errorMessageValue =
+    typeof errorMessage === 'string' && errorMessage ? errorMessage : undefined;
 
   return (
     <form
@@ -45,6 +64,8 @@ export default function FormBlock({ children, formKey, submission }: FormBlockPr
       data-form-key={formKeyValue}
       data-form-id={formKeyValue}
       data-submit-url={submission?.submitUrl}
+      data-success-message={successMessageValue}
+      data-error-message={errorMessageValue}
     >
       <div className={styles.message} data-form-message hidden />
       {submission ? (

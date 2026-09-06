@@ -243,6 +243,55 @@ describe('FormsService (unit)', () => {
     expect(dbMock.insert).not.toHaveBeenCalled();
   });
 
+  it('rifiuta con 400 un campo obbligatorio vuoto anche se il blocco pubblicato dichiara defaultValue (ADR-60: markup-only, mai un fallback server-side)', async () => {
+    dbMock.query.pageRevisionEntity.findFirst.mockResolvedValue({
+      content: {
+        version: ENVELOPE_VERSION,
+        blocks: [
+          {
+            id: 'section-1',
+            type: 'section',
+            props: {},
+            children: [
+              {
+                id: 'form-1',
+                type: 'form',
+                props: { formKey: FORM_KEY },
+                children: [
+                  {
+                    id: 'field-1',
+                    type: 'form-field',
+                    props: {
+                      fieldType: 'text',
+                      name: 'nome',
+                      label: 'Nome',
+                      required: true,
+                      defaultValue: 'Mario',
+                    },
+                    children: [],
+                  },
+                  { id: 'submit-1', type: 'form-submit', props: {}, children: [] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    const dto = buildDto({ nome: '' });
+
+    await expect(
+      service.submitForm(
+        FORM_KEY,
+        dto,
+        { signature: dto.signature, values: dto.values },
+        '1.2.3.4',
+        'ua',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(dbMock.insert).not.toHaveBeenCalled();
+  });
+
   it("persiste comunque l'Invio se app_settings è assente, ma non accoda alcuna notifica (persistenza prima della notifica)", async () => {
     dbMock.query.appSettingEntity.findFirst.mockResolvedValue(undefined);
     const dto = buildDto({ nome: 'Mario' });

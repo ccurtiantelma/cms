@@ -325,6 +325,12 @@ export class FormsService {
    * `form-field` realmente pubblicati, con `required` rispettato e i valori
    * `select`/`checkbox` ammessi (RFC-46 D4.3). `options` è una stringa CSV
    * (nessun `kind` array nel registro, vedi `form-field.block.ts`).
+   *
+   * `defaultValue`/`defaultChecked`/`validationMessage` (ADR-60) non sono
+   * lette qui di proposito: sono puro markup d'editor per il consumer
+   * (valore iniziale del campo, `setCustomValidity()`), non regole di
+   * validazione server-side — un campo `required` vuoto resta invalido a
+   * prescindere dal `defaultValue`/`defaultChecked` impostato in editor.
    */
   private validateValuesAgainstFields(
     values: Record<string, unknown>,

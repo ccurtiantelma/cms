@@ -2356,6 +2356,20 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "required": true,
         "maxLength": 100,
         "nonEmpty": true
+      },
+      {
+        "name": "successMessage",
+        "kind": "plainText",
+        "required": false,
+        "default": "Grazie, il messaggio è stato inviato con successo.",
+        "maxLength": 300
+      },
+      {
+        "name": "errorMessage",
+        "kind": "plainText",
+        "required": false,
+        "default": "Non è stato possibile inviare il modulo. Controlla i campi compilati e riprova.",
+        "maxLength": 300
       }
     ],
     "meta": {
@@ -2367,6 +2381,16 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Chiave del modulo",
           "order": 1,
           "help": "Identificatore stabile del modulo: collega questo blocco alla configurazione dei destinatari (app_settings) e agli Invii storici. Non cambia duplicando il blocco."
+        },
+        "successMessage": {
+          "label": "Messaggio di successo",
+          "order": 2,
+          "help": "Mostrato dopo l'invio riuscito del modulo."
+        },
+        "errorMessage": {
+          "label": "Messaggio di errore",
+          "order": 3,
+          "help": "Mostrato se l'invio del modulo fallisce (errore del server o di rete)."
         }
       }
     }
@@ -2432,6 +2456,24 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "12"
         ],
         "responsive": true
+      },
+      {
+        "name": "defaultValue",
+        "kind": "plainText",
+        "required": false,
+        "maxLength": 500
+      },
+      {
+        "name": "defaultChecked",
+        "kind": "boolean",
+        "required": false,
+        "default": false
+      },
+      {
+        "name": "validationMessage",
+        "kind": "plainText",
+        "required": false,
+        "maxLength": 200
       }
     ],
     "meta": {
@@ -2469,6 +2511,21 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "label": "Larghezza campo",
           "order": 7,
           "help": "50% per affiancare due campi sulla stessa riga, 100% per occupare l'intera larghezza."
+        },
+        "defaultValue": {
+          "label": "Valore predefinito",
+          "order": 8,
+          "help": "Valore iniziale del campo. Ignorato per \"Checkbox\" (vedi \"Selezionato di default\")."
+        },
+        "defaultChecked": {
+          "label": "Selezionato di default",
+          "order": 9,
+          "help": "Solo per \"Checkbox\": se attivo, il campo parte selezionato."
+        },
+        "validationMessage": {
+          "label": "Messaggio di validazione",
+          "order": 10,
+          "help": "Messaggio mostrato quando il campo obbligatorio non viene compilato correttamente."
         }
       }
     }

@@ -19,6 +19,21 @@ import { BlockDefinition } from '../block-definition.types';
  * `colSpan` (ADR-51): larghezza del campo nella griglia a 12 colonne del `form`
  * che lo contiene, riuso di `enum`+`responsive` (ADR-29 §2/§3) — nessun nuovo
  * `kind`. Additiva con `default` dichiarato, `v` resta 1.
+ *
+ * `defaultValue`/`defaultChecked`/`validationMessage` (ADR-60): tre prop
+ * additive, tutte con `default` implicito di "assente" (`required: false`,
+ * nessun `default` dichiarato per `defaultValue`/`validationMessage`, `false`
+ * per `defaultChecked`) — nessun bump di `v`. `defaultValue` è dichiarata su
+ * tutti i `form-field` ma usata solo per `fieldType` `text`/`email`/
+ * `textarea`/`select` (ignorata per `checkbox`): stesso principio già in uso
+ * per `options`, dichiarata su tutti i tipi ma consumata solo da `select`
+ * (vedi JSDoc sopra). `defaultChecked` è l'equivalente per `checkbox`, kind
+ * `boolean` invece di `plainText` perché lo stato iniziale di una checkbox
+ * non è testo. `validationMessage` è il messaggio custom mostrato dal
+ * consumer (frontend/`public-site`) via `setCustomValidity()` quando il
+ * campo obbligatorio fallisce la validazione nativa — puro markup d'editor,
+ * mai letto da `FormsService.validateValuesAgainstFields` lato submit
+ * (validazione server-side invariata, ADR-60 § Decisione).
  */
 export const formFieldBlock: BlockDefinition = {
   type: 'form-field',
@@ -66,6 +81,32 @@ export const formFieldBlock: BlockDefinition = {
       values: ['6', '12'],
       default: { default: '12' },
     },
+    /**
+     * Valore iniziale del campo (ADR-60): usato solo per `fieldType`
+     * `text`/`email`/`textarea`/`select`, ignorato per `checkbox` (vedi
+     * `defaultChecked`) — stesso principio già in uso per `options`.
+     */
+    defaultValue: {
+      kind: 'plainText',
+      required: false,
+      maxLength: 500,
+    },
+    /** Stato iniziale (ADR-60): usato solo quando `fieldType: 'checkbox'`. */
+    defaultChecked: {
+      kind: 'boolean',
+      required: false,
+      default: false,
+    },
+    /**
+     * Messaggio custom (ADR-60) mostrato via `setCustomValidity()` quando il
+     * campo obbligatorio fallisce la validazione nativa lato consumer — non
+     * influenza la validazione server-side di `FormsService`.
+     */
+    validationMessage: {
+      kind: 'plainText',
+      required: false,
+      maxLength: 200,
+    },
   },
   children: { allow: [] },
   migrations: [],
@@ -93,6 +134,21 @@ export const formFieldBlock: BlockDefinition = {
         label: 'Larghezza campo',
         order: 7,
         help: "50% per affiancare due campi sulla stessa riga, 100% per occupare l'intera larghezza.",
+      },
+      defaultValue: {
+        label: 'Valore predefinito',
+        order: 8,
+        help: 'Valore iniziale del campo. Ignorato per "Checkbox" (vedi "Selezionato di default").',
+      },
+      defaultChecked: {
+        label: 'Selezionato di default',
+        order: 9,
+        help: 'Solo per "Checkbox": se attivo, il campo parte selezionato.',
+      },
+      validationMessage: {
+        label: 'Messaggio di validazione',
+        order: 10,
+        help: 'Messaggio mostrato quando il campo obbligatorio non viene compilato correttamente.',
       },
     },
   },

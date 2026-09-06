@@ -64,4 +64,71 @@ describe('FormFieldBlock', () => {
 
     expect(html).toContain('colSpan_default_12');
   });
+
+  it('applica defaultValue a un input di testo (ADR-60)', () => {
+    const html = renderToStaticMarkup(
+      <FormFieldBlock fieldType="text" name="nome" label="Nome" defaultValue="Mario Rossi" />,
+    );
+
+    expect(html).toContain('value="Mario Rossi"');
+  });
+
+  it('ignora defaultValue su una checkbox e applica defaultChecked (ADR-60)', () => {
+    const html = renderToStaticMarkup(
+      <FormFieldBlock
+        fieldType="checkbox"
+        name="consenso"
+        label="Accetto"
+        defaultValue="qualcosa"
+        defaultChecked
+      />,
+    );
+
+    expect(html).toContain('checked=""');
+    expect(html).not.toContain('value="qualcosa"');
+  });
+
+  it('non pre-seleziona la checkbox quando defaultChecked è assente (comportamento identico a oggi)', () => {
+    const html = renderToStaticMarkup(
+      <FormFieldBlock fieldType="checkbox" name="consenso" label="Accetto" />,
+    );
+
+    expect(html).not.toContain('checked=""');
+  });
+
+  it('applica defaultValue a una select come opzione preselezionata (ADR-60)', () => {
+    const html = renderToStaticMarkup(
+      <FormFieldBlock
+        fieldType="select"
+        name="area"
+        label="Area"
+        options="Nord,Centro,Sud"
+        defaultValue="Centro"
+      />,
+    );
+
+    expect(html).toContain('value="Centro" selected=""');
+  });
+
+  it('espone validationMessage come data-validation-message sul controllo (ADR-60)', () => {
+    const html = renderToStaticMarkup(
+      <FormFieldBlock
+        fieldType="email"
+        name="email"
+        label="Email"
+        required
+        validationMessage="Inserisci un indirizzo email valido"
+      />,
+    );
+
+    expect(html).toContain('data-validation-message="Inserisci un indirizzo email valido"');
+  });
+
+  it('omette data-validation-message quando validationMessage è assente', () => {
+    const html = renderToStaticMarkup(
+      <FormFieldBlock fieldType="text" name="nome" label="Nome" />,
+    );
+
+    expect(html).not.toContain('data-validation-message');
+  });
 });

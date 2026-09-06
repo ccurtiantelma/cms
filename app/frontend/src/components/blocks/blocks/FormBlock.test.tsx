@@ -72,4 +72,30 @@ describe('FormBlock', () => {
     expect(html).toContain('data-form-fields');
     expect(html.match(/colSpan_default_6/g) ?? []).toHaveLength(2);
   });
+
+  it('espone successMessage/errorMessage come data-attribute (ADR-60)', () => {
+    const html = renderToStaticMarkup(
+      <FormBlock
+        formKey="contatti-home"
+        successMessage="Fatto! Ti risponderemo entro 24 ore."
+        errorMessage="Qualcosa è andato storto, riprova più tardi."
+      >
+        <p>Campo</p>
+      </FormBlock>,
+    );
+
+    expect(html).toContain('data-success-message="Fatto! Ti risponderemo entro 24 ore."');
+    expect(html).toContain('data-error-message="Qualcosa è andato storto, riprova più tardi."');
+  });
+
+  it('omette data-success-message/data-error-message quando assenti, comportamento identico a oggi', () => {
+    const html = renderToStaticMarkup(
+      <FormBlock formKey="contatti-home">
+        <p>Campo</p>
+      </FormBlock>,
+    );
+
+    expect(html).not.toContain('data-success-message');
+    expect(html).not.toContain('data-error-message');
+  });
 });

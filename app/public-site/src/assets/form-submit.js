@@ -11,6 +11,14 @@
  * campo honeypot come chiave **top-level** a nome dinamico — mai dentro `values`, che deve
  * contenere **esattamente** i nomi dei `form-field` pubblicati (un nome imprevisto è un
  * `400`).
+ *
+ * `data-success-message`/`data-error-message` (ADR-60): letti dal `<form>` stesso
+ * (`FormBlock.tsx`), con fallback al testo storico se assenti — un form pubblicato prima di
+ * questa ADR si comporta identico a oggi. Errore HTTP e di rete condividono ora un solo
+ * messaggio generico personalizzabile (ADR-60, non più due stringhe distinte). Ogni campo
+ * con `data-validation-message` (`FormFieldBlock.tsx`) riceve `setCustomValidity()` prima di
+ * `checkValidity()`, per sostituire il messaggio nativo del browser sul campo obbligatorio
+ * mancante.
  */
 (function () {
   "use strict";
@@ -75,27 +83,52 @@
 
   /**
    * Esito positivo (istruzione "Success"): nasconde i campi compilati (pulsante incluso,
-   * è dentro lo stesso contenitore) e mostra solo il messaggio di conferma.
+   * è dentro lo stesso contenitore) e mostra solo il messaggio di conferma. Testo da
+   * `data-success-message` (ADR-60), fallback al messaggio storico se assente.
    */
   function showSuccess(form) {
     var fields = form.querySelector("[data-form-fields]");
     if (fields) fields.hidden = true;
-    showMessage(
-      form,
-      "success",
-      "Grazie, il messaggio è stato inviato con successo.",
-    );
+    var text =
+      form.getAttribute("data-success-message") ||
+      "Grazie, il messaggio è stato inviato con successo.";
+    showMessage(form, "success", text);
   }
 
-  /** Esito negativo (istruzione "Error"): messaggio sopra i campi, valori utente intatti. */
-  function showError(form, text) {
+  /**
+   * Esito negativo (istruzione "Error"): messaggio sopra i campi, valori utente intatti.
+   * Testo da `data-error-message` (ADR-60) — stesso messaggio generico sia per un fallimento
+   * HTTP sia per un errore di rete, fallback al messaggio storico se assente.
+   */
+  function showError(form) {
+    var text =
+      form.getAttribute("data-error-message") ||
+      "Non è stato possibile inviare il modulo. Controlla i campi compilati e riprova.";
     showMessage(form, "error", text);
+  }
+
+  /**
+   * Applica `setCustomValidity()` ai campi con `data-validation-message` (ADR-60) prima
+   * della validazione nativa: un campo obbligatorio vuoto mostra il messaggio custom
+   * dell'editor invece di quello di default del browser. Ripristinato a `''` quando il
+   * campo torna valido, per non bloccare `checkValidity()` una volta compilato.
+   */
+  function applyCustomValidationMessages(form) {
+    var fields = form.querySelectorAll("[data-validation-message]");
+    for (var i = 0; i < fields.length; i += 1) {
+      var field = fields[i];
+      var message = field.getAttribute("data-validation-message");
+      if (!message) continue;
+      field.setCustomValidity(field.validity.valueMissing ? message : "");
+    }
   }
 
   function handleSubmit(event) {
     var form = event.currentTarget;
     var submitUrl = form.getAttribute("data-submit-url");
     if (!submitUrl) return; // Nessun URL calcolato lato server: submit nativo disabilitato a monte, non qui.
+
+    applyCustomValidationMessages(form);
 
     if (!form.checkValidity()) {
       form.reportValidity();
@@ -119,18 +152,12 @@
         if (response.ok) {
           showSuccess(form);
         } else {
-          showError(
-            form,
-            "Non è stato possibile inviare il modulo. Controlla i campi compilati e riprova.",
-          );
+          showError(form);
         }
       })
       .catch(function () {
         setSubmitting(form, false);
-        showError(
-          form,
-          "Errore di rete: non è stato possibile inviare il modulo. Riprova.",
-        );
+        showError(form);
       });
   }
 

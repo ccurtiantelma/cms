@@ -659,3 +659,232 @@ describe('EditorBlockWrapper — guida statica dei contenitori/colonne (RE-2, pu
     expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
   });
 });
+
+/**
+ * Interattività in-canvas dei widget a `children` (RE-4/ADR-59): `EditorBlockWrapper`
+ * possiede ora la ricorsione dei figli di `accordion`/`accordionItem`/`tabs`/`tabPanel`/
+ * `carousel`/`carouselSlide`/`modalTrigger` (`CONTAINER_COMPONENTS`,
+ * `resolveContainerComponentProps`), sullo stesso modello già coperto sopra per
+ * `section`/`container`. I sette componenti puri (ADR-57 § 2, T4 di
+ * `PLAN-widget-interattivi-enterprise.md`) restano bit-per-bit invariati — la loro
+ * regressione sorgente (`expect(source).not.toMatch(/onClick|useState|useEffect/)`) vive
+ * già nei rispettivi `.test.tsx` e non si duplica qui: questa suite verifica solo il
+ * comportamento risultante nel Canvas (apertura nativa di `<details>`/radio-hack — governata
+ * dal browser, non da un handler React scritto in questo file —, editing in-place generico
+ * già esistente, dropzone vuota riusata, mitigazione ADR-59 § 2 sul click di
+ * `modalTrigger`).
+ */
+describe('EditorBlockWrapper — interattività in-canvas widget a children (RE-4/ADR-59)', () => {
+  beforeEach(() => {
+    useBlockEditorStore.getState().initTree([]);
+    useBlockEditorStore.getState().setActiveViewport('desktop');
+    useBlockEditorStore.getState().selectNode(null);
+  });
+
+  it('accordionItem: click su <summary> apre nativamente il <details> (comportamento del browser, zero JS/handler in questo file)', () => {
+    const item = node('item-1', 'accordionItem', { title: 'Voce 1' }, []);
+    const accordion = node('acc-1', 'accordion', { exclusive: false }, [item]);
+    useBlockEditorStore.getState().initTree([accordion]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="acc-1" />);
+
+    const details = container.querySelector('details');
+    if (!details) throw new Error('<details> non trovato nel markup renderizzato');
+    expect(details).not.toHaveAttribute('open');
+
+    fireEvent.click(screen.getByText('Voce 1'));
+
+    expect(details).toHaveAttribute('open');
+  });
+
+  it('tabPanel: click sulla <label> marca il relativo <input type="radio"> come checked (radio-hack CSS-only)', () => {
+    const panel1 = node('panel-1', 'tabPanel', { label: 'Tab 1' }, []);
+    const panel2 = node('panel-2', 'tabPanel', { label: 'Tab 2' }, []);
+    const tabs = node('tabs-1', 'tabs', {}, [panel1, panel2]);
+    useBlockEditorStore.getState().initTree([tabs]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="tabs-1" />);
+
+    const radios = container.querySelectorAll<HTMLInputElement>('input[type="radio"]');
+    expect(radios).toHaveLength(2);
+    // Primo pannello `checked` di default (ADR-57 § "Tabs produce ... primo pannello
+    // checked di default"), calcolato da `resolveContainerComponentProps` guardando la
+    // posizione fra i fratelli.
+    expect(radios[0].checked).toBe(true);
+    expect(radios[1].checked).toBe(false);
+
+    fireEvent.click(screen.getByText('Tab 2'));
+
+    expect(radios[1].checked).toBe(true);
+    // Stesso `name` (radio group condiviso, `groupName` derivato dal genitore): selezionarne
+    // uno deseleziona nativamente l'altro, nessuno stato React coinvolto.
+    expect(radios[0].checked).toBe(false);
+    expect(radios[0].name).toBe(radios[1].name);
+  });
+
+  it('heading annidato in un accordionItem, selezionato, entra in editing in-place e committa su blur (stesso canale generico `editing` di BlockRenderer)', () => {
+    const heading = node('h-nested', 'heading', { level: 'h3', text: 'Titolo annidato' });
+    const item = node('item-1', 'accordionItem', { title: 'Voce 1' }, [heading]);
+    const accordion = node('acc-1', 'accordion', {}, [item]);
+    useBlockEditorStore.getState().initTree([accordion]);
+    useBlockEditorStore.getState().selectNode('h-nested');
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="acc-1" />);
+
+    const headingEl = container.querySelector('[data-block-id="h-nested"] [contenteditable="true"]');
+    if (!headingEl) throw new Error('heading annidato in editing non trovato');
+
+    headingEl.textContent = 'Titolo modificato';
+    fireEvent.blur(headingEl);
+
+    const updated = findNode(useBlockEditorStore.getState().tree, 'h-nested');
+    expect(updated?.props.text).toBe('Titolo modificato');
+  });
+
+  it('richText annidato in un tabPanel, selezionato, entra in editing in-place e committa `html` su blur', () => {
+    const richText = node('rt-nested', 'richText', { html: '<p>Ciao</p>' });
+    const panel = node('panel-1', 'tabPanel', { label: 'Tab 1' }, [richText]);
+    const tabs = node('tabs-1', 'tabs', {}, [panel]);
+    useBlockEditorStore.getState().initTree([tabs]);
+    useBlockEditorStore.getState().selectNode('rt-nested');
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="tabs-1" />);
+
+    const richTextEl = container.querySelector('[data-block-id="rt-nested"] [contenteditable="true"]');
+    if (!richTextEl) throw new Error('richText annidato in editing non trovato');
+
+    richTextEl.innerHTML = '<p>Modificato</p>';
+    fireEvent.blur(richTextEl);
+
+    const updated = findNode(useBlockEditorStore.getState().tree, 'rt-nested');
+    expect(updated?.props.html).toBe('<p>Modificato</p>');
+  });
+
+  it('button annidato in un carouselSlide, selezionato, entra in editing in-place e committa `label` su blur', () => {
+    const button = node('btn-nested', 'button', { label: 'Vai', href: '/pagina' });
+    const slide = node('slide-1', 'carouselSlide', {}, [button]);
+    const carousel = node('car-1', 'carousel', { autoplay: false, transition: 'manual-scroll' }, [
+      slide,
+    ]);
+    useBlockEditorStore.getState().initTree([carousel]);
+    useBlockEditorStore.getState().selectNode('btn-nested');
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="car-1" />);
+
+    const buttonEl = container.querySelector('[data-block-id="btn-nested"] [contenteditable="true"]');
+    if (!buttonEl) throw new Error('button annidato in editing non trovato');
+
+    buttonEl.textContent = 'Scopri di più';
+    fireEvent.blur(buttonEl);
+
+    const updated = findNode(useBlockEditorStore.getState().tree, 'btn-nested');
+    expect(updated?.props.label).toBe('Scopri di più');
+  });
+
+  it('accordionItem senza figli: placeholder generico "Contenitore vuoto" + BlockPalette (nessun nuovo componente, riuso di container/section)', () => {
+    const item = node('item-empty', 'accordionItem', { title: 'Voce vuota' }, []);
+    const accordion = node('acc-1', 'accordion', {}, [item]);
+    useBlockEditorStore.getState().initTree([accordion]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="acc-1" />);
+
+    const wrapperEl = container.querySelector('[data-block-id="item-empty"]');
+    if (!wrapperEl) throw new Error('wrapper di item-empty non trovato');
+    expect(wrapperEl.querySelector(`.${styles.emptyContainer}`)).toBeInTheDocument();
+    expect(wrapperEl).toHaveTextContent('Contenitore vuoto — trascina qui un blocco');
+  });
+
+  it('tabPanel senza figli: stesso placeholder generico "Contenitore vuoto" + BlockPalette', () => {
+    const panel = node('panel-empty', 'tabPanel', { label: 'Tab vuoto' }, []);
+    const tabs = node('tabs-1', 'tabs', {}, [panel]);
+    useBlockEditorStore.getState().initTree([tabs]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="tabs-1" />);
+
+    const wrapperEl = container.querySelector('[data-block-id="panel-empty"]');
+    if (!wrapperEl) throw new Error('wrapper di panel-empty non trovato');
+    expect(wrapperEl.querySelector(`.${styles.emptyContainer}`)).toBeInTheDocument();
+    expect(wrapperEl).toHaveTextContent('Contenitore vuoto — trascina qui un blocco');
+  });
+
+  it('carouselSlide senza figli: stesso placeholder generico "Contenitore vuoto" + BlockPalette', () => {
+    const slide = node('slide-empty', 'carouselSlide', {}, []);
+    const carousel = node('car-1', 'carousel', {}, [slide]);
+    useBlockEditorStore.getState().initTree([carousel]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="car-1" />);
+
+    const wrapperEl = container.querySelector('[data-block-id="slide-empty"]');
+    if (!wrapperEl) throw new Error('wrapper di slide-empty non trovato');
+    expect(wrapperEl.querySelector(`.${styles.emptyContainer}`)).toBeInTheDocument();
+    expect(wrapperEl).toHaveTextContent('Contenitore vuoto — trascina qui un blocco');
+  });
+
+  it('accordionItem senza figli: la palette del segnaposto accetta un inserimento reale (stessa infrastruttura di container/section, mai un secondo meccanismo)', async () => {
+    const user = userEvent.setup();
+    const item = node('item-empty', 'accordionItem', { title: 'Voce vuota' }, []);
+    const accordion = node('acc-1', 'accordion', {}, [item]);
+    useBlockEditorStore.getState().initTree([accordion]);
+
+    renderWithProviders(<EditorBlockWrapper id="acc-1" />);
+
+    await user.click(screen.getByRole('button', { name: 'Aggiungi blocco' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Titolo' }));
+
+    const updatedItem = findNode(useBlockEditorStore.getState().tree, 'item-empty');
+    expect(updatedItem?.children).toHaveLength(1);
+    expect(updatedItem?.children[0]?.type).toBe('heading');
+  });
+
+  it('modalTrigger: click sul trigger e poi sulla chiusura non modifica mai `window.location.hash` (ADR-59 § 2, mitigazione preventDefault, mai un secondo `<iframe>`/HashRouter)', () => {
+    const heading = node('h-modal', 'heading', { level: 'h3', text: 'Contenuto modale' });
+    const modalTrigger = node(
+      'modal-1',
+      'modalTrigger',
+      { triggerLabel: 'Apri modale', animation: 'fade' },
+      [heading],
+    );
+    useBlockEditorStore.getState().initTree([modalTrigger]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="modal-1" />);
+    const hashBeforeOpen = window.location.hash;
+    const wrapperEl = container.querySelector('[data-block-id="modal-1"]');
+    if (!wrapperEl) throw new Error('wrapper di modal-1 non trovato');
+
+    fireEvent.click(screen.getByText('Apri modale'));
+
+    expect(window.location.hash).toBe(hashBeforeOpen);
+    // Apertura visiva mitigata via attributo (regola CSS mirata in
+    // EditorBlockWrapper.module.css), mai via navigazione verso `#modal-{id}`.
+    expect(wrapperEl).toHaveAttribute('data-modal-open', 'true');
+
+    fireEvent.click(screen.getByLabelText('Chiudi'));
+
+    expect(window.location.hash).toBe(hashBeforeOpen);
+    expect(wrapperEl).not.toHaveAttribute('data-modal-open');
+  });
+
+  it('modalTrigger: un heading annidato dentro il pannello resta selezionabile ed editabile, il click su di esso non passa mai da `handleModalTriggerAnchorClick` del genitore', () => {
+    const heading = node('h-modal', 'heading', { level: 'h3', text: 'Contenuto modale' });
+    const modalTrigger = node(
+      'modal-1',
+      'modalTrigger',
+      { triggerLabel: 'Apri modale', animation: 'fade' },
+      [heading],
+    );
+    useBlockEditorStore.getState().initTree([modalTrigger]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="modal-1" />);
+    const headingWrapperEl = container.querySelector('[data-block-id="h-modal"]');
+    if (!headingWrapperEl) throw new Error('wrapper di h-modal non trovato');
+
+    fireEvent.click(headingWrapperEl);
+
+    // Il click seleziona il proprio nodo (heading), non riapre/richiude il modale del
+    // genitore — `stopPropagation` sul wrapper più interno impedisce la risalita
+    // dell'evento fino a `handleModalTriggerAnchorClick`.
+    expect(useBlockEditorStore.getState().selectedId).toBe('h-modal');
+    const wrapperEl = container.querySelector('[data-block-id="modal-1"]');
+    expect(wrapperEl).not.toHaveAttribute('data-modal-open');
+  });
+});
