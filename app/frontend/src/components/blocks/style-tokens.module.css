@@ -151,10 +151,17 @@
 
 /* ─── columns / gap / alignItems (ADR-31) — solo section ────────────────── */
 
-.columns_default_1 { grid-template-columns: repeat(1, 1fr); }
-.columns_default_2 { grid-template-columns: repeat(2, 1fr); }
-.columns_default_3 { grid-template-columns: repeat(3, 1fr); }
-.columns_default_4 { grid-template-columns: repeat(4, 1fr); }
+/*
+ * `minmax(0, 1fr)`, non `1fr`: senza il minimo esplicito a `0`, il minimo implicito di ogni
+ * traccia è `auto` (il min-content dei figli), e una colonna con contenuto largo — testo
+ * lungo non spezzabile, immagine, form — si rifiuta di restringersi sotto quella soglia,
+ * spingendo le tracce successive fuori dalla riga ed esaurendo la larghezza disponibile
+ * (footer pubblico a 4 colonne). Stesso principio applicato sotto a `columnRatio_*`.
+ */
+.columns_default_1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.columns_default_2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.columns_default_3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.columns_default_4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
 /* ─── colSpan (ADR-51) — solo form-field, responsive, griglia 12 colonne del form ── */
 
@@ -206,11 +213,11 @@
    foglio decide — `columnRatio_*` vince quando entrambe le classi sono
    applicate allo stesso nodo (`columns === '2'`). */
 
-.columnRatio_equal { grid-template-columns: repeat(2, 1fr); }
-.columnRatio_33-66 { grid-template-columns: 1fr 2fr; }
-.columnRatio_66-33 { grid-template-columns: 2fr 1fr; }
-.columnRatio_30-70 { grid-template-columns: 3fr 7fr; }
-.columnRatio_70-30 { grid-template-columns: 7fr 3fr; }
+.columnRatio_equal { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.columnRatio_33-66 { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+.columnRatio_66-33 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+.columnRatio_30-70 { grid-template-columns: minmax(0, 3fr) minmax(0, 7fr); }
+.columnRatio_70-30 { grid-template-columns: minmax(0, 7fr) minmax(0, 3fr); }
 
 /* ─── stylePaddingTop/Right/Bottom/Left, styleMarginTop/Right/Bottom/Left
    (ADR-33 § 4) — solo section, responsive, scala chiusa 0-96px ─────────── */
@@ -351,10 +358,10 @@
   .fontFamily_tablet_montserrat { font-family: var(--cms-font-family-montserrat); }
   .fontFamily_tablet_monospace { font-family: var(--cms-font-family-monospace); }
 
-  .columns_tablet_1 { grid-template-columns: repeat(1, 1fr); }
-  .columns_tablet_2 { grid-template-columns: repeat(2, 1fr); }
-  .columns_tablet_3 { grid-template-columns: repeat(3, 1fr); }
-  .columns_tablet_4 { grid-template-columns: repeat(4, 1fr); }
+  .columns_tablet_1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+  .columns_tablet_2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .columns_tablet_3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .columns_tablet_4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
   .colSpan_tablet_6 { grid-column: span 6; }
   .colSpan_tablet_12 { grid-column: span 12; }
@@ -521,10 +528,10 @@
   .fontFamily_mobile_montserrat { font-family: var(--cms-font-family-montserrat); }
   .fontFamily_mobile_monospace { font-family: var(--cms-font-family-monospace); }
 
-  .columns_mobile_1 { grid-template-columns: repeat(1, 1fr); }
-  .columns_mobile_2 { grid-template-columns: repeat(2, 1fr); }
-  .columns_mobile_3 { grid-template-columns: repeat(3, 1fr); }
-  .columns_mobile_4 { grid-template-columns: repeat(4, 1fr); }
+  .columns_mobile_1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+  .columns_mobile_2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .columns_mobile_3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .columns_mobile_4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
   .colSpan_mobile_6 { grid-column: span 6; }
   .colSpan_mobile_12 { grid-column: span 12; }
@@ -750,10 +757,10 @@
   .fontFamily_tablet_montserrat { font-family: var(--cms-font-family-montserrat); }
   .fontFamily_tablet_monospace { font-family: var(--cms-font-family-monospace); }
 
-  .columns_tablet_1 { grid-template-columns: repeat(1, 1fr); }
-  .columns_tablet_2 { grid-template-columns: repeat(2, 1fr); }
-  .columns_tablet_3 { grid-template-columns: repeat(3, 1fr); }
-  .columns_tablet_4 { grid-template-columns: repeat(4, 1fr); }
+  .columns_tablet_1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+  .columns_tablet_2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .columns_tablet_3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .columns_tablet_4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
   .colSpan_tablet_6 { grid-column: span 6; }
   .colSpan_tablet_12 { grid-column: span 12; }
@@ -918,10 +925,10 @@
   .fontFamily_mobile_montserrat { font-family: var(--cms-font-family-montserrat); }
   .fontFamily_mobile_monospace { font-family: var(--cms-font-family-monospace); }
 
-  .columns_mobile_1 { grid-template-columns: repeat(1, 1fr); }
-  .columns_mobile_2 { grid-template-columns: repeat(2, 1fr); }
-  .columns_mobile_3 { grid-template-columns: repeat(3, 1fr); }
-  .columns_mobile_4 { grid-template-columns: repeat(4, 1fr); }
+  .columns_mobile_1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+  .columns_mobile_2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .columns_mobile_3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .columns_mobile_4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
   .colSpan_mobile_6 { grid-column: span 6; }
   .colSpan_mobile_12 { grid-column: span 12; }

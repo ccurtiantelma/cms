@@ -17,6 +17,19 @@
 .section {
   display: grid;
   position: relative;
+  /*
+   * Difesa allo scroll orizzontale della pagina: un figlio con una stringa lunga non
+   * spezzabile (URL, parola senza spazi) può eccedere la propria colonna anche con
+   * `minmax(0, 1fr)` sulla traccia (`style-tokens.module.css`) — quel minimo impedisce
+   * alla traccia di rifiutarsi di restringersi, ma non impedisce al testo dentro di
+   * spingere oltre il proprio contenitore. `overflow-wrap: anywhere` spezza dove serve
+   * (a differenza di `break-word`, riduce anche il min-content riportato al layout, non
+   * solo la resa visiva); `word-break` resta come fallback per i motori che non lo
+   * supportano ancora.
+   */
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /*

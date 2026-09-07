@@ -577,49 +577,62 @@ describe('EditorBlockWrapper — colore di livello di annidamento (RE-2)', () =>
 });
 
 /**
- * Demarcazione statica dei contenitori/colonne (RE-2, punto 2 del task): guida
- * tratteggiata `.containerGuide` sempre presente in edit-mode su ogni contenitore,
- * **anche vuoto**, indipendentemente da hover/selezione — distinta dal bordo di stato
- * (`.hoveredChrome`/`.selectedChrome`), che invece dipende dall'interazione.
+ * De-duplicazione delle guide visive (canvas overhaul, parità Elementor Pro): il wrapper
+ * esterno non porta più una guida statica sempre visibile (`.containerGuide`, rimossa) —
+ * quel bordo permanente su *ogni* contenitore annidato (Sezione + Container + Colonne)
+ * produceva l'effetto "gabbia tripla" di bordi sovrapposti lamentato dal task. Un
+ * contenitore vuoto resta comunque segnalato da un bordo tratteggiato, ma vive **solo**
+ * nel segnaposto interno (`.emptyContainer`, un div distinto dal wrapper) — mai un
+ * secondo bordo annidato sullo stesso confine. Il wrapper mostra un bordo di stato
+ * (`.hoveredChrome`/`.selectedChrome`) solo quando l'interazione lo giustifica.
  */
-describe('EditorBlockWrapper — guida statica dei contenitori/colonne (RE-2, punto 2)', () => {
+describe('EditorBlockWrapper — de-duplicazione delle guide visive (canvas overhaul)', () => {
   beforeEach(() => {
     useBlockEditorStore.getState().initTree([]);
     useBlockEditorStore.getState().setActiveViewport('desktop');
     useBlockEditorStore.getState().selectNode(null);
   });
 
-  it('section vuota: guida statica tratteggiata presente anche senza hover/selezione', () => {
+  it('section vuota: nessun bordo statico sul wrapper esterno, il segnaposto interno porta il proprio bordo', () => {
     const section = node('sec-empty', 'section', {}, []);
     useBlockEditorStore.getState().initTree([section]);
 
     const { container } = renderWithProviders(<EditorBlockWrapper id="sec-empty" />);
     const wrapperEl = container.querySelector('[data-block-id="sec-empty"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
 
-    expect(wrapperEl).toHaveClass(styles.containerGuide);
+    expect(wrapperEl).not.toHaveClass(styles.hoveredChrome);
+    expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
+    expect(wrapperEl.querySelector(`.${styles.emptyContainer}`)).toBeInTheDocument();
   });
 
-  it('container vuoto: guida statica tratteggiata presente anche senza hover/selezione', () => {
+  it('container vuoto: nessun bordo statico sul wrapper esterno, il segnaposto interno porta il proprio bordo', () => {
     const emptyContainer = node('cont-empty', 'container', {}, []);
     useBlockEditorStore.getState().initTree([emptyContainer]);
 
     const { container } = renderWithProviders(<EditorBlockWrapper id="cont-empty" />);
     const wrapperEl = container.querySelector('[data-block-id="cont-empty"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
 
-    expect(wrapperEl).toHaveClass(styles.containerGuide);
+    expect(wrapperEl).not.toHaveClass(styles.hoveredChrome);
+    expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
+    expect(wrapperEl.querySelector(`.${styles.emptyContainer}`)).toBeInTheDocument();
   });
 
-  it('widget foglia (heading): mai la guida statica (solo contenitori/colonne)', () => {
-    const heading = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
-    useBlockEditorStore.getState().initTree([heading]);
+  it('container con figli, senza hover/selezione: nessuna classe di bordo sul wrapper (niente gabbia permanente)', () => {
+    const child = node('h-child', 'heading', { level: 'h2', text: 'Titolo' });
+    const containerWithChild = node('cont-full', 'container', {}, [child]);
+    useBlockEditorStore.getState().initTree([containerWithChild]);
 
-    const { container } = renderWithProviders(<EditorBlockWrapper id="h-1" />);
-    const wrapperEl = container.querySelector('[data-block-id="h-1"]');
+    const { container } = renderWithProviders(<EditorBlockWrapper id="cont-full" />);
+    const wrapperEl = container.querySelector('[data-block-id="cont-full"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
 
-    expect(wrapperEl).not.toHaveClass(styles.containerGuide);
+    expect(wrapperEl).not.toHaveClass(styles.hoveredChrome);
+    expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
   });
 
-  it('hover su un container (non selezionato): bordo di stato tratteggiato di livello (.hoveredChrome), distinto dalla guida statica', () => {
+  it('hover su un container (non selezionato): bordo di stato tratteggiato di livello (.hoveredChrome)', () => {
     const emptyContainer = node('cont-1', 'container', {}, []);
     useBlockEditorStore.getState().initTree([emptyContainer]);
 
@@ -791,7 +804,7 @@ describe('EditorBlockWrapper — interattività in-canvas widget a children (RE-
     const wrapperEl = container.querySelector('[data-block-id="item-empty"]');
     if (!wrapperEl) throw new Error('wrapper di item-empty non trovato');
     expect(wrapperEl.querySelector(`.${styles.emptyContainer}`)).toBeInTheDocument();
-    expect(wrapperEl).toHaveTextContent('Contenitore vuoto — trascina qui un blocco');
+    expect(wrapperEl.querySelector('[aria-label="Aggiungi blocco"]')).toBeInTheDocument();
   });
 
   it('tabPanel senza figli: stesso placeholder generico "Contenitore vuoto" + BlockPalette', () => {
@@ -804,7 +817,7 @@ describe('EditorBlockWrapper — interattività in-canvas widget a children (RE-
     const wrapperEl = container.querySelector('[data-block-id="panel-empty"]');
     if (!wrapperEl) throw new Error('wrapper di panel-empty non trovato');
     expect(wrapperEl.querySelector(`.${styles.emptyContainer}`)).toBeInTheDocument();
-    expect(wrapperEl).toHaveTextContent('Contenitore vuoto — trascina qui un blocco');
+    expect(wrapperEl.querySelector('[aria-label="Aggiungi blocco"]')).toBeInTheDocument();
   });
 
   it('carouselSlide senza figli: stesso placeholder generico "Contenitore vuoto" + BlockPalette', () => {
@@ -817,7 +830,7 @@ describe('EditorBlockWrapper — interattività in-canvas widget a children (RE-
     const wrapperEl = container.querySelector('[data-block-id="slide-empty"]');
     if (!wrapperEl) throw new Error('wrapper di slide-empty non trovato');
     expect(wrapperEl.querySelector(`.${styles.emptyContainer}`)).toBeInTheDocument();
-    expect(wrapperEl).toHaveTextContent('Contenitore vuoto — trascina qui un blocco');
+    expect(wrapperEl.querySelector('[aria-label="Aggiungi blocco"]')).toBeInTheDocument();
   });
 
   it('accordionItem senza figli: la palette del segnaposto accetta un inserimento reale (stessa infrastruttura di container/section, mai un secondo meccanismo)', async () => {

@@ -6,9 +6,24 @@
  * con tutti e tre i breakpoint deve produrre tutte e tre le classi nell'HTML reso, mai solo
  * `default` — stesso principio già coperto per `Section.tsx`.
  */
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import Container from './Container';
+
+/**
+ * Lettura diretta da filesystem, non `import … from './Container.module.css?raw'`: sotto
+ * Vitest (`vitest.config.ts`, `test.css: false`) qualunque import che termina in
+ * `.module.css` risolve al Proxy di classi hashate a prescindere dalla query string — lo
+ * stesso limite documentato in `style-tokens.test.ts`, non aggirabile con `?raw`.
+ * `process.cwd()`, non `import.meta.url`: sotto `environment: 'jsdom'` quest'ultimo risolve
+ * a un'origine fittizia del browser (`http://…`), non a un percorso `file://` reale.
+ */
+const containerCss = readFileSync(
+  resolve(process.cwd(), 'src/components/blocks/blocks/Container.module.css'),
+  'utf-8',
+);
 
 describe('Container', () => {
   it('senza alcuna prop di stile: nessun attributo style, solo la classe di base', () => {
@@ -165,6 +180,19 @@ describe('Container', () => {
       );
 
       expect(html).toContain('style="background-color:#111111;color:#ffffff"');
+    });
+  });
+
+  /**
+   * Regressione overflow orizzontale: come `Section.test.tsx`, asserzioni sul CSS sorgente
+   * via import `?raw` — sotto `test.css: false` (`vitest.config.ts`) l'HTML reso da
+   * `renderToStaticMarkup` non porta le regole delle classi CSS Modules.
+   */
+  describe('anti-overflow orizzontale', () => {
+    it('.container azzera il proprio min-width e spezza il testo troppo lungo per la propria porzione flex', () => {
+      expect(containerCss).toMatch(/\.container\s*{[^}]*min-width:\s*0;/s);
+      expect(containerCss).toMatch(/\.container\s*{[^}]*overflow-wrap:\s*anywhere;/s);
+      expect(containerCss).toMatch(/\.container\s*{[^}]*word-break:\s*break-word;/s);
     });
   });
 });

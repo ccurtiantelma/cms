@@ -1,16 +1,15 @@
 /**
  * Modal "Seleziona la tua struttura" (ADR-33 § 7): selettore a due passi per un nuovo
- * blocco `section` — prima il tipo di layout (Flexbox/Griglia), poi il preset — fedele a
- * Elementor Pro. Unico proprietario di questa UI: era divisa fra questo modal (cinque
- * preset piatti) e il box inline a due passi di `CanvasAddSectionZone.tsx`; ora è tutta
- * qui, montata da due punti (`BlockPalette.tsx` per la voce "Sezione" del suo menu —
- * quindi raggiungibile anche dalla toolbar integrata di `EditorBlockWrapper.tsx` via
- * "Inserisci sopra/sotto" — e `CanvasAddSectionZone.tsx` per il "+" della zona sempre
- * visibile in fondo al canvas) che condividono lo stesso componente controllato — nessuna
- * copia. Un terzo punto di montaggio, il "+" della `sectionActionTab` di
- * `EditorBlockWrapper.tsx`, è stato rimosso insieme a quella barra (T-canvas-declutter,
- * consolidata nella Handle Bar unica): la stessa azione resta raggiungibile dal primo
- * punto sopra.
+ * blocco `section` — prima il tipo di layout, poi il preset — fedele a Elementor Pro.
+ * Unico proprietario di questa UI: era divisa fra questo modal (cinque preset piatti) e il
+ * box inline a due passi di `CanvasAddSectionZone.tsx`; ora è tutta qui, montata da due
+ * punti (`BlockPalette.tsx` per la voce "Sezione" del suo menu — quindi raggiungibile anche
+ * dalla toolbar integrata di `EditorBlockWrapper.tsx` via "Inserisci sopra/sotto" — e
+ * `CanvasAddSectionZone.tsx` per il "+" della zona sempre visibile in fondo al canvas) che
+ * condividono lo stesso componente controllato — nessuna copia. Un terzo punto di
+ * montaggio, il "+" della `sectionActionTab` di `EditorBlockWrapper.tsx`, è stato rimosso
+ * insieme a quella barra (T-canvas-declutter, consolidata nella Handle Bar unica): la
+ * stessa azione resta raggiungibile dal primo punto sopra.
  *
  * Componente frontend puro nella palette, stesso principio di `WidgetPalette`/
  * `BlockPalette` (ADR-32 § 4): la selezione chiama `addBlockAction` già esistente con un
@@ -22,18 +21,38 @@
  * asimmetrico — `columnRatio` (ADR-33 § 2) fornisce ora quel dato.
  *
  * Icone dei preset verificate pixel-per-pixel contro lo "Select Your Structure" reale di
- * Elementor (screenshot del produttore, non una ricostruzione a memoria): riga "Flexbox"
- * = le nove tessere di struttura piatta (colonna/riga direzionali + 7 varianti a colonne,
- * incluse la coppia simmetrica 33/67 e 67/33 — gap-analysis T-editor-refinement: il
- * "66-33" di `SectionColumnRatioValue` era un valore di tipo già valido ma orfano di
- * preset — e la coppia 30/70 e 70/30 aggiunta da RFC-58), riga "Griglia" = le sei tessere
- * a celle annidate/asimmetriche. Le tessere
- * annidate della Griglia (ADR-39, `container` con `flexDirection`/`styleFlexBasis`) non
- * hanno un equivalente nella prop `columns`/`columnRatio` di `section` — nessuna
- * scorciatoia, nessuna nuova prop: si compone `section` + `container` già approvati,
- * esattamente come la sua ADR li ha pensati. `columnRatio` di `section` produce solo lo
- * split flessibile "33/67"/"67/33", mai le celle annidate — quelle attraversano
- * `buildGridSectionSubtree` sotto.
+ * Elementor (screenshot del produttore, non una ricostruzione a memoria): una riga di nove
+ * tessere di struttura piatta (colonna/riga direzionali + 7 varianti a colonne, incluse la
+ * coppia simmetrica 33/67 e 67/33 — gap-analysis T-editor-refinement: il "66-33" di
+ * `SectionColumnRatioValue` era un valore di tipo già valido ma orfano di preset — e la
+ * coppia 30/70 e 70/30 aggiunta da RFC-58), una riga di sei tessere a celle
+ * annidate/asimmetriche. Le tessere annidate (ADR-39, `container` con
+ * `flexDirection`/`styleFlexBasis`) non hanno un equivalente nella prop
+ * `columns`/`columnRatio` di `section` — nessuna scorciatoia, nessuna nuova prop: si
+ * compone `section` + `container` già approvati, esattamente come la sua ADR li ha
+ * pensati. `columnRatio` di `section` produce solo lo split flessibile "33/67"/"67/33", mai
+ * le celle annidate — quelle attraversano `buildGridSectionSubtree` sotto.
+ *
+ * **Etichette dei due tab vs. motore CSS reale (fix emergenza, non toccare senza rileggere
+ * questo paragrafo)**: la riga dei nove preset piatti (`FLEXBOX_PRESETS`/
+ * `handleSelectFlexbox`) scrive `columns`/`columnRatio` su una `section`, che per ADR-31
+ * è sempre `display: grid` — il motore reale è CSS Grid. La riga delle sei tessere annidate
+ * (`GRID_PRESETS`/`handleSelectGrid`/`buildGridSectionSubtree`) compone `container`
+ * annidati, che per ADR-39 sono sempre `display: flex` — il motore reale è CSS Flexbox.
+ * L'accoppiamento nome-variabile/motore è quindi rovesciato rispetto al motore che genera
+ * davvero: non si può correggerlo spostando i preset da un tab all'altro, perché
+ * `section.columns` non sa esprimere le sei strutture annidate/asimmetriche (CSS Grid a un
+ * solo livello, niente `grid-template-areas`, e `section` non può contenere `section` —
+ * children.allow di `section.block.ts` non lo prevede, cambiarlo è una modifica di schema
+ * blocco che richiede una nuova ADR) e spostarli avrebbe comunque rotto l'arrangiamento
+ * verificato pixel-per-pixel sopra. La correzione applicata è solo sull'**etichetta
+ * esposta all'utente**: il pulsante del primo step che porta al tab dei nove preset piatti
+ * (motore Grid) è etichettato "Griglia"; quello che porta al tab delle sei tessere annidate
+ * (motore Flexbox) è etichettato "Flexbox" — coerenti col motore reale che l'utente ottiene.
+ * I nomi interni (`Step` = `'flexbox' | 'grid'`, `FLEXBOX_PRESETS`, `GRID_PRESETS`,
+ * `handleSelectFlexbox`, `handleSelectGrid`) restano legati al motore che costruiscono
+ * (Flexbox/Grid), non alla nuova etichetta del pulsante che vi porta — non rinominarli per
+ * "allinearli" al testo del pulsante, sarebbe il bug opposto.
  */
 import { useEffect, useState, type ComponentType } from 'react';
 import { ActionIcon, Group, Modal, SimpleGrid, Text } from '@mantine/core';
@@ -438,24 +457,31 @@ export default function SectionStructureModal({
       overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}
     >
       {step === 'chooseType' && (
+        // Etichette scambiate rispetto agli id di step interni (fix emergenza, vedi
+        // commento di testa del file, paragrafo "Etichette dei due tab vs. motore CSS
+        // reale"): `step: 'flexbox'` porta ai nove preset piatti che sotto costruiscono
+        // davvero una `section` a CSS Grid, quindi il pulsante che ci porta è etichettato
+        // "Griglia"; `step: 'grid'` porta alle sei tessere annidate che compongono
+        // `container` a CSS Flexbox, quindi il pulsante è etichettato "Flexbox" — l'utente
+        // deve vedere il nome del motore che ottiene davvero, non l'id di step interno.
         <SimpleGrid cols={2} spacing="md">
           <button
             type="button"
             className={styles.typeCard}
-            aria-label="Flexbox"
+            aria-label="Griglia"
             onClick={() => setStep('flexbox')}
           >
-            <IconLayoutColumns size={28} />
-            <Text size="sm">Flexbox</Text>
+            <IconGridDots size={28} />
+            <Text size="sm">Griglia</Text>
           </button>
           <button
             type="button"
             className={styles.typeCard}
-            aria-label="Griglia"
+            aria-label="Flexbox"
             onClick={() => setStep('grid')}
           >
-            <IconGridDots size={28} />
-            <Text size="sm">Griglia</Text>
+            <IconLayoutColumns size={28} />
+            <Text size="sm">Flexbox</Text>
           </button>
         </SimpleGrid>
       )}

@@ -55,3 +55,16 @@
   color: #8c8d99;
   opacity: 0.8;
 }
+
+/*
+  Segnaposto del Canvas fuori editing (RichText.tsx, `isCanvasPreview`): stesso principio
+  di `.previewPlaceholder` in `Heading.module.css` — mai applicata insieme a `.editable`
+  (mutuamente esclusive in `RichText.tsx`), mai raggiunta dal sito pubblico (la classe non
+  viene mai emessa lì, `isCanvasPreview` resta sempre `undefined`).
+*/
+.previewPlaceholder:empty::before {
+  content: attr(data-placeholder);
+  color: #8c8d99;
+  opacity: 0.7;
+  font-style: italic;
+}

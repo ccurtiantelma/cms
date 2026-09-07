@@ -1556,20 +1556,8 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
         ? styles.hoveredChrome
         : '';
 
-  /**
-   * Guida statica dell'ingombro (RE-2, punto 2 del task): bordo tratteggiato leggero
-   * `#cbd5e1`, sempre visibile in edit-mode su ogni contenitore/colonna — **anche vuoto**
-   * — indipendentemente da hover/selezione, così l'autore vede dove finisce un
-   * contenitore anche senza interagirci. `isContainer` (non solo `isContainerOrSection`):
-   * copre anche `form`/`navMenu`, entrambi contenitori nel registro anche se non
-   * categorizzati per colore sopra. Soppressa in "Anteprima Pura"
-   * (`[data-preview-mode='true']`, CSS) insieme a `.hoveredChrome`/`.selectedChrome`.
-   */
-  const containerGuideClassName = isContainer && !isGlobalRef ? styles.containerGuide : '';
-
   const className = [
     styles.wrapper,
-    containerGuideClassName,
     overlayBorderClassName,
     formFieldColSpanClassName,
     isInvalid ? styles.invalid : '',
@@ -1932,13 +1920,12 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
                         <BlockPalette
                           parentId={id}
                           parentType={node.type}
-                          label="Aggiungi Blocco"
-                          size="xs"
-                          variant="light"
+                          label="Aggiungi blocco"
+                          size="sm"
+                          variant="default"
+                          iconOnly
+                          triggerClassName={styles.emptyContainerTrigger}
                         />
-                        <Text size="xs" c="dimmed" className={styles.emptyContainerHint}>
-                          Colonna vuota — trascina qui un blocco
-                        </Text>
                       </div>
                     ))}
                   </div>
@@ -1955,13 +1942,10 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
                       parentType={node.type}
                       label="Aggiungi blocco"
                       size="sm"
-                      variant="light"
+                      variant="default"
                       iconOnly
                       triggerClassName={styles.emptyContainerTrigger}
                     />
-                    <Text size="xs" c="dimmed" className={styles.emptyContainerHint}>
-                      Contenitore vuoto — trascina qui un blocco
-                    </Text>
                   </div>
                 )
               ) : (
@@ -1999,6 +1983,10 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
         ) : (
           <BlockRenderer
             node={node}
+            // Segnaposto "titolo/testo vuoto" (BlockRenderer.tsx § isEditorCanvas): sempre
+            // vero per ogni foglia montata da questo wrapper, selezionata o meno — mai dal
+            // sito pubblico, che non passa questa prop.
+            isEditorCanvas
             // Editing in-place (T9): solo sul nodo selezionato, mai su hover — coerente con
             // "editing del testo direttamente nel canvas quando il blocco è selezionato".
             // `onTextChange`/`onHtmlChange`/`onLabelChange` (commit su `blur`) passano sempre

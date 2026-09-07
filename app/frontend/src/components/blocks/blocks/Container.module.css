@@ -14,4 +14,12 @@
 .container {
   display: flex;
   position: relative;
+  /* Stessa difesa anti-overflow-orizzontale di `.section` (`Section.module.css`): un
+     `container` è quasi sempre lui stesso un figlio flex (di un altro `container` o di una
+     `section` a griglia) e senza `min-width: 0` non si restringe sotto il min-content del
+     proprio contenuto — `overflow-wrap`/`word-break` coprono poi il testo che eccede anche
+     la propria porzione già ridotta. */
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }

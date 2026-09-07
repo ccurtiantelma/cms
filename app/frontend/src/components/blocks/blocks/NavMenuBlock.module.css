@@ -9,6 +9,26 @@
 .nav {
   container-type: inline-size;
   position: relative;
+  /*
+   * Bug reale dietro "hamburger visibile anche su desktop": `container-type: inline-size`
+   * impone size containment sull'asse inline — l'elemento non può più usare il proprio
+   * contenuto per calcolare la propria larghezza (altrimenti la query dei figli dipenderebbe
+   * dalla stessa dimensione che i figli concorrono a determinare). Nel layout reale
+   * (`antelma-global-sections.seed.ts`, riga header) `<nav>` è un figlio flex a
+   * `flex-basis: auto`/shrink-to-fit dentro un `container` con `justify-content:
+   * space-between` — senza containment userebbe la larghezza del proprio `<ul>`, ma CON
+   * containment quella strada è preclusa e il motore ricade su una larghezza vicina a zero,
+   * facendo scattare sempre `@container (max-width: 768px)` sotto, anche a 1920px di
+   * viewport. `flex: 1 1 0%` dà a `<nav>` una base di dimensionamento definita (0%) che non
+   * dipende dal contenuto: il motore la espande poi con lo spazio residuo della riga tramite
+   * `flex-grow`, del tutto compatibile con `justify-content: space-between` sul genitore
+   * (`.list` resta allineata a sinistra dentro la propria box, nessuna differenza visiva).
+   * La soluzione non è passare a `@media` (si perderebbe la simulazione mobile del Canvas
+   * dell'editor, vedi commento di testa di `NavMenuBlock.tsx`): il meccanismo a container
+   * query resta corretto, la sua sorgente di dimensionamento era il difetto.
+   */
+  flex: 1 1 0%;
+  min-width: 0;
 }
 
 /* Checkbox di stato, non un controllo visibile: guida solo i selettori CSS sotto. */

@@ -13,6 +13,15 @@
  * ricorsione dentro `Section`: `BlockRenderer` per un contenitore è montato solo dal sito
  * pubblico (l'editor usa `CONTAINER_COMPONENTS` direttamente, vedi `EditorBlockWrapper.tsx`),
  * dove l'editing non esiste.
+ *
+ * `isEditorCanvas` (gap "titolo vuoto invisibile nel canvas"): stesso principio di
+ * `editing`, ma indipendente dalla selezione — `EditorBlockWrapper.tsx` lo passa sempre
+ * `true` per il singolo nodo foglia che monta via questo dispatcher, mai dal sito
+ * pubblico. Pass-through verso `Heading`/`RichText` (`isCanvasPreview`, vedi il loro
+ * commento di testa) e in ricorsione con lo stesso principio di `formSubmission`/
+ * `resolvePageUrl` sotto — mai riletto da `EditorBlockWrapper.tsx` per un contenitore
+ * (stesso motivo di `editing` sopra: la ricorsione di questo file non è mai esercitata
+ * dall'editor).
  */
 import { BLOCK_TYPES } from '../../types/blocks.types';
 import type { RenderableBlockNode } from './types';
@@ -83,6 +92,8 @@ interface BlockRendererProps {
   node: RenderableBlockNode;
   /** Vedi {@link BlockEditingProps} e il commento di testa del file. */
   editing?: BlockEditingProps;
+  /** Vedi il commento di testa del file, paragrafo `isEditorCanvas`. */
+  isEditorCanvas?: boolean;
   /** Vedi {@link FormSubmissionData}. */
   formSubmission?: (formKey: string) => FormSubmissionData;
   /**
@@ -97,7 +108,13 @@ interface BlockRendererProps {
 }
 
 /** Renderizza un nodo dell'albero e, ricorsivamente, i suoi figli ammessi. */
-export default function BlockRenderer({ node, editing, formSubmission, resolvePageUrl }: BlockRendererProps) {
+export default function BlockRenderer({
+  node,
+  editing,
+  isEditorCanvas,
+  formSubmission,
+  resolvePageUrl,
+}: BlockRendererProps) {
   const descriptor = KNOWN_TYPES.get(node.type);
 
   if (!descriptor || !descriptor.enabled) {
@@ -105,13 +122,16 @@ export default function BlockRenderer({ node, editing, formSubmission, resolvePa
   }
 
   return (
-    <BlockErrorBoundary>{renderNode(node, editing, formSubmission, resolvePageUrl)}</BlockErrorBoundary>
+    <BlockErrorBoundary>
+      {renderNode(node, editing, isEditorCanvas, formSubmission, resolvePageUrl)}
+    </BlockErrorBoundary>
   );
 }
 
 function renderNode(
   node: RenderableBlockNode,
   editing: BlockEditingProps | undefined,
+  isEditorCanvas: boolean | undefined,
   formSubmission: ((formKey: string) => FormSubmissionData) | undefined,
   resolvePageUrl: ((pageGuid: string) => string | null | undefined) | undefined,
 ) {
@@ -223,6 +243,7 @@ function renderNode(
           editable={editing?.editable}
           onTextChange={editing?.onTextChange}
           onTextInput={editing?.onTextInput}
+          isCanvasPreview={isEditorCanvas}
         />
       );
     }
@@ -244,6 +265,7 @@ function renderNode(
           editable={editing?.editable}
           onHtmlChange={editing?.onHtmlChange}
           onHtmlInput={editing?.onHtmlInput}
+          isCanvasPreview={isEditorCanvas}
         />
       );
     }

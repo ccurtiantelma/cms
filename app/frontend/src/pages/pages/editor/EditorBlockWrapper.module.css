@@ -17,21 +17,6 @@
 }
 
 /*
-  Guida statica dell'ingombro (RE-2, restyle chrome Elementor Pro, punto 2 del task):
-  bordo tratteggiato leggero grigio, sempre visibile in edit-mode su ogni
-  contenitore/colonna — **anche vuoto** — indipendentemente da hover/selezione
-  (`containerGuideClassName`, `EditorBlockWrapper.tsx`). Stesso `border-style: dashed`
-  già impostato da `.wrapper` a riposo: qui si ricolora soltanto. Specificità di classe
-  singola, identica a `.hoveredChrome`/`.selectedChrome` sotto: l'ordine delle regole in
-  questo file (questa prima, quelle dopo) decide chi vince quando entrambe le classi sono
-  applicate allo stesso nodo — nessuna necessità di `!important` o di selettori più
-  specifici.
-*/
-.containerGuide {
-  border-color: #cbd5e1;
-}
-
-/*
   Bordo di hover/selezione — restyle Elementor Pro (RE-2, requisito esplicito del task:
   "maniglie... poco contrasto", "manca gerarchia visiva"). Il colore non è più fisso
   (`#2271b1` di un round precedente): viene da `var(--block-level-color)`, la custom
@@ -102,7 +87,6 @@
   esattamente la stessa selezione di prima.
 */
 [data-preview-mode='true'] .wrapper:focus-visible,
-[data-preview-mode='true'] .containerGuide,
 [data-preview-mode='true'] .hoveredChrome,
 [data-preview-mode='true'] .selectedChrome {
   border-color: transparent;
@@ -132,66 +116,39 @@
 }
 
 /*
-  Contenitore senza figli (F08 STEP 3): segnaposto interattivo, non solo un testo — bordo
-  tratteggiato neutro, sfondo leggermente opaco (distinto da `.canvasArea` sotto), pulsante
-  "+" centrale (`BlockPalette`, stesso menu della voce "Aggiungi dentro" già in toolbar,
-  qui solo con un trigger più prominente) che seleziona questo nodo come target
-  (`onClick` sul contenitore, sotto) e apre il menu di inserimento. `cursor: pointer` e
-  l'hover qui sotto segnalano l'intera area come bersaglio del drop, coerente con
-  `.containerDropZone` (`position: absolute; inset: 0`, sopra) che la ricopre per intero
-  durante un trascinamento.
+  Contenitore/colonna senza figli (canvas overhaul, parità Elementor Pro): box
+  trasparente — nessuno sfondo proprio, il canvas resta a vista com'è — con un bordo
+  tratteggiato grigio chiaro sottile e un solo pulsante "+" centrato sia
+  orizzontalmente che verticalmente (`BlockPalette` iconOnly, sotto). Questo è anche
+  l'**unico** bordo tratteggiato che segnala un contenitore vuoto: il wrapper esterno
+  (`.wrapper`, `EditorBlockWrapper.tsx`) non porta più una guida statica propria, altrimenti
+  qui apparirebbero due bordi annidati per lo stesso confine. `cursor: pointer` sull'intera
+  area: click ovunque nel box (non solo sul "+") seleziona il contenitore e apre il menu di
+  inserimento (`onClick`, `EditorBlockWrapper.tsx`), coerente con `.containerDropZone`
+  (`position: absolute; inset: 0`, sopra) che la ricopre per intero durante un trascinamento.
 */
 .emptyContainer {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  min-height: 120px;
-  border: 1px dashed #c3c4c7;
-  border-radius: 8px;
-  padding: 24px 20px;
-  text-align: center;
-  font-size: 13px;
-  color: #5d6771;
-  background: #dfead4;
+  min-height: 80px;
+  border: 1px dashed #d5d8dc;
+  border-radius: 6px;
+  background: transparent;
   cursor: pointer;
-  transition:
-    background-color 120ms ease,
-    border-color 120ms ease,
-    box-shadow 120ms ease;
-}
-
-.emptyContainerTrigger {
-  width: 52px;
-  height: 52px;
-  border-radius: 9999px;
-  background: rgba(156, 179, 191, 0.3);
-  border: 1px solid rgba(123, 146, 159, 0.55);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
-  color: #ffffff;
-}
-
-.emptyContainerTrigger:hover {
-  background: rgba(156, 179, 191, 0.38);
-}
-
-[data-mantine-color-scheme='dark'] .emptyContainer {
-  background-color: var(--mantine-color-dark-6);
+  transition: border-color 120ms ease;
 }
 
 .emptyContainer:hover {
   border-color: var(--mantine-color-blue-4);
-  background-color: var(--mantine-color-blue-0);
 }
 
-[data-mantine-color-scheme='dark'] .emptyContainer:hover {
-  background-color: var(--mantine-color-dark-5);
+.emptyContainerTrigger {
+  color: var(--mantine-color-gray-6);
 }
 
-/* Suggerimento sotto il pulsante "+" (`.emptyContainer`): solo un'etichetta, nessuna interazione propria. */
-.emptyContainerHint {
-  pointer-events: none;
+[data-mantine-color-scheme='dark'] .emptyContainerTrigger {
+  color: var(--mantine-color-dark-2);
 }
 
 /*

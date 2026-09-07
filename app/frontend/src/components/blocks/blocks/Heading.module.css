@@ -41,3 +41,18 @@
   letter-spacing: -0.04em;
   font-size: clamp(2.5rem, 3vw, 4rem);
 }
+
+/*
+  Segnaposto del Canvas fuori editing (Heading.tsx, `isCanvasPreview`): stile leggero, in
+  corsivo — a differenza del segnaposto "hero" di `.editable:empty::before` sopra (che
+  simula la dimensione reale del titolo mentre lo si sta scrivendo), qui il titolo non è
+  ancora in editing e il segnaposto deve solo segnalare "questo blocco esiste ma è vuoto",
+  mai impersonare un titolo vero già scritto. Mai applicata insieme a `.editable` (vedi
+  `Heading.tsx`, mutuamente esclusive).
+*/
+.previewPlaceholder:empty::before {
+  content: attr(data-placeholder);
+  color: #9aa1ab;
+  font-style: italic;
+  font-weight: 400;
+}

@@ -15,6 +15,18 @@
  * dell'editor (CLAUDE.md § confine Mantine/blocchi): l'unica concessione è
  * `contentEditable` nativo, nessuna dipendenza nuova (niente TipTap).
  *
+ * `isCanvasPreview` (gap "titolo vuoto invisibile nel canvas", parità Elementor Pro):
+ * booleano indipendente da `editable`, valorizzato solo da `EditorBlockWrapper.tsx` e mai
+ * dal sito pubblico (che chiama questo componente senza questa prop, sempre `undefined`).
+ * A differenza di `editable` — vero solo sul nodo selezionato — resta vero per ogni nodo
+ * `heading` montato nel Canvas, selezionato o meno: senza, un titolo appena inserito e
+ * ancora senza testo rendeva un tag vuoto invisibile, indistinguibile da "nessun blocco
+ * qui" (a differenza di `container`/`section`, che hanno già un segnaposto interattivo,
+ * `EditorBlockWrapper.module.css` `.emptyContainer`). Il segnaposto risultante è puro CSS
+ * (`:empty::before`, `.previewPlaceholder` sotto), mai testo scritto nel DOM: non finisce
+ * mai nel `textContent` letto da `onTextChange`/`onTextInput`, quindi non rischia di essere
+ * salvato come contenuto vero.
+ *
  * Sincronizzazione DOM ↔ `text` (Canvas Sync, editing in-place): il nodo `contentEditable`
  * non riceve mai `text` come figlio JSX in editing — un `useLayoutEffect` scrive
  * `textContent` sul nodo referenziato **solo se differisce** da quanto già presente nel
@@ -63,6 +75,8 @@ interface HeadingProps {
   onTextChange?: (nextText: string) => void;
   /** Notifica ad ogni tasto (debounce lato chiamante) — non è un commit definitivo. */
   onTextInput?: (nextText: string) => void;
+  /** Vedi il commento di testa del file — solo editor, indipendente da `editable`. */
+  isCanvasPreview?: boolean;
 }
 
 export default function Heading({
@@ -83,6 +97,7 @@ export default function Heading({
   editable = false,
   onTextChange,
   onTextInput,
+  isCanvasPreview = false,
 }: HeadingProps) {
   /** Nodo DOM del titolo in editing — vedi il commento di testa del file. */
   const elementRef = useRef<HTMLHeadingElement | null>(null);
@@ -102,6 +117,9 @@ export default function Heading({
   const className = [
     styles.heading,
     editable ? styles.editable : '',
+    // Mai insieme a `.editable`: i due stati sono mutuamente esclusivi (`editable` è vero
+    // solo sul nodo selezionato, questo solo quando non lo è — vedi commento di testa).
+    !editable && isCanvasPreview ? styles.previewPlaceholder : '',
     resolveResponsiveClassNames(tokenStyles, 'spaceBefore', styleSpaceBefore),
     resolveResponsiveClassNames(tokenStyles, 'spaceAfter', styleSpaceAfter),
     resolveResponsiveClassNames(tokenStyles, 'textColor', styleTextColor),
@@ -129,7 +147,11 @@ export default function Heading({
 
   if (!editable) {
     return (
-      <Level className={className} style={resolvedInlineStyle}>
+      <Level
+        className={className}
+        style={resolvedInlineStyle}
+        data-placeholder={isCanvasPreview ? placeholder : undefined}
+      >
         {text}
       </Level>
     );

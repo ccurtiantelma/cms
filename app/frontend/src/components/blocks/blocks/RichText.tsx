@@ -49,6 +49,13 @@ interface RichTextProps {
   onHtmlChange?: (nextHtml: string) => void;
   /** Notifica ad ogni tasto (debounce lato chiamante) — non è un commit definitivo. */
   onHtmlInput?: (nextHtml: string) => void;
+  /**
+   * Vero per ogni nodo `richText` montato nel Canvas dell'editor, selezionato o meno — mai
+   * dal sito pubblico (stesso principio di `isCanvasPreview` in `Heading.tsx`, vedi il suo
+   * commento di testa). A differenza di `editable`, che è vero solo durante l'editing,
+   * questo segnala solo "mostra un segnaposto se vuoto", indipendentemente dalla selezione.
+   */
+  isCanvasPreview?: boolean;
 }
 
 export default function RichText({
@@ -66,9 +73,11 @@ export default function RichText({
   editable = false,
   onHtmlChange,
   onHtmlInput,
+  isCanvasPreview = false,
 }: RichTextProps) {
   /** Nodo DOM del blocco in editing — vedi il commento di testa del file. */
   const elementRef = useRef<HTMLDivElement | null>(null);
+  const placeholder = 'Testo';
 
   // Scrive `html` nel DOM solo quando differisce da ciò che c'è già: mount iniziale (il
   // `div` in editing parte senza `dangerouslySetInnerHTML`, vedi sotto) e cambi genuini
@@ -84,6 +93,7 @@ export default function RichText({
   const className = [
     styles.richText,
     editable ? styles.editable : '',
+    !editable && isCanvasPreview ? styles.previewPlaceholder : '',
     resolveResponsiveClassNames(tokenStyles, 'spaceBefore', styleSpaceBefore),
     resolveResponsiveClassNames(tokenStyles, 'spaceAfter', styleSpaceAfter),
     resolveResponsiveClassNames(tokenStyles, 'textColor', styleTextColor),
@@ -99,7 +109,13 @@ export default function RichText({
     .join(' ');
 
   if (!editable) {
-    return <div className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+    return (
+      <div
+        className={className}
+        data-placeholder={isCanvasPreview ? placeholder : undefined}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
   }
 
   // `dangerouslySetInnerHTML` resta il modo in cui il DOM riceve il contenuto iniziale;
@@ -128,7 +144,7 @@ export default function RichText({
       className={className}
       contentEditable
       suppressContentEditableWarning
-      data-placeholder="Testo"
+      data-placeholder={placeholder}
       onFocus={() => document.execCommand('defaultParagraphSeparator', false, 'p')}
       onInput={(event) => onHtmlInput?.(event.currentTarget.innerHTML)}
       onBlur={(event) => onHtmlChange?.(event.currentTarget.innerHTML)}

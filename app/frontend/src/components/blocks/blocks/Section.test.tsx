@@ -1,6 +1,25 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import Section from './Section';
+
+/**
+ * Lettura diretta da filesystem, non `import … from './Section.module.css?raw'`: sotto
+ * Vitest (`vitest.config.ts`, `test.css: false`) qualunque import che termina in
+ * `.module.css` risolve al Proxy di classi hashate a prescindere dalla query string — lo
+ * stesso limite documentato in `style-tokens.test.ts`, non aggirabile con `?raw`.
+ * `process.cwd()`, non `import.meta.url`: sotto `environment: 'jsdom'` quest'ultimo risolve
+ * a un'origine fittizia del browser (`http://…`), non a un percorso `file://` reale.
+ */
+const sectionCss = readFileSync(
+  resolve(process.cwd(), 'src/components/blocks/blocks/Section.module.css'),
+  'utf-8',
+);
+const tokenCss = readFileSync(
+  resolve(process.cwd(), 'src/components/blocks/style-tokens.module.css'),
+  'utf-8',
+);
 
 describe('Section', () => {
   it('renderizza il colore di sfondo nell attributo style', () => {
@@ -189,6 +208,36 @@ describe('Section', () => {
       );
 
       expect(html).toContain('maxWidth_lg');
+    });
+  });
+
+  /**
+   * Regressione overflow orizzontale (footer pubblico a 4 colonne): asserzioni sul CSS
+   * sorgente via import `?raw`, non su HTML reso — sotto Vitest (`vitest.config.ts`,
+   * `test.css: false`) le regole delle classi CSS Modules non sono osservabili dall'HTML
+   * prodotto da `renderToStaticMarkup` (nessun `<style>` iniettato, nessun layout jsdom
+   * reale). È lo stesso limite già documentato in `style-tokens.test.ts` per il mock di
+   * `resolveResponsiveClassNames`.
+   */
+  describe('anti-overflow orizzontale — griglia a colonne e testo lungo', () => {
+    it('ogni traccia di columns_* usa minmax(0, 1fr), mai 1fr da solo', () => {
+      expect(tokenCss).not.toMatch(/grid-template-columns:\s*repeat\(\d,\s*1fr\)/);
+      expect(tokenCss).toContain('repeat(2, minmax(0, 1fr))');
+      expect(tokenCss).toContain('repeat(3, minmax(0, 1fr))');
+      expect(tokenCss).toContain('repeat(4, minmax(0, 1fr))');
+    });
+
+    it('ogni columnRatio_* asimmetrico usa minmax(0, Nfr) su entrambe le tracce', () => {
+      expect(tokenCss).toContain('.columnRatio_33-66 { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }');
+      expect(tokenCss).toContain('.columnRatio_66-33 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }');
+      expect(tokenCss).toContain('.columnRatio_30-70 { grid-template-columns: minmax(0, 3fr) minmax(0, 7fr); }');
+      expect(tokenCss).toContain('.columnRatio_70-30 { grid-template-columns: minmax(0, 7fr) minmax(0, 3fr); }');
+    });
+
+    it('.section azzera il proprio min-width e spezza il testo troppo lungo per la propria colonna', () => {
+      expect(sectionCss).toMatch(/\.section\s*{[^}]*min-width:\s*0;/s);
+      expect(sectionCss).toMatch(/\.section\s*{[^}]*overflow-wrap:\s*anywhere;/s);
+      expect(sectionCss).toMatch(/\.section\s*{[^}]*word-break:\s*break-word;/s);
     });
   });
 });
