@@ -12,6 +12,32 @@
 }
 
 /*
+  Wrapper "Layout" del tema (v8, `theme.ts` § `ThemeLayoutConfig`) — stesso markup/stesse
+  variabili `--theme-layout-*` di `.pageOuter`/`.pageBoxed` in `app/public-site/src/PageView.css`,
+  qui duplicate perché il Canvas gira in un bundle separato e non può importare CSS
+  dall'altro package. `useCanvasTheme` (EditorCanvas.tsx) scopa già queste custom
+  property su `.${GLOBAL_TOKENS_CANVAS_SCOPE_CLASS}` (= `.canvasRoot`), quindi sono
+  disponibili qui senza altro aggancio. Senza questo wrapper il Canvas non rifletteva mai
+  "Pagina boxed"/Margine/Rientro: solo il sito pubblico li applicava, così l'editor
+  mostrava sempre il contenuto a piena larghezza indipendentemente dal tema.
+*/
+.pageOuter {
+  padding-top: var(--theme-layout-margin-top, 0px);
+  padding-right: var(--theme-layout-margin-right, 0px);
+  padding-bottom: var(--theme-layout-margin-bottom, 0px);
+  padding-left: var(--theme-layout-margin-left, 0px);
+}
+
+.pageBoxed {
+  max-width: var(--theme-layout-boxed-width, none);
+  margin-inline: auto;
+  padding-top: var(--theme-layout-padding-top, 0px);
+  padding-right: var(--theme-layout-padding-right, 0px);
+  padding-bottom: var(--theme-layout-padding-bottom, 0px);
+  padding-left: var(--theme-layout-padding-left, 0px);
+}
+
+/*
   Stato vuoto dell'albero, solo drop-zone (`root-empty-dropzone`): la resa visiva
   "Aggiungi sezione" è ora di `CanvasAddSectionZone` (montata subito dopo in
   `EditorCanvas.tsx`), quindi questo div non porta più contenuto proprio — a riposo è una

@@ -15,7 +15,7 @@
  * deve bastare ("aggiungere una prop nel registro non richiede toccare questo file").
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../../test/utils';
 import type { BlockNode } from './block-tree.utils';
@@ -319,7 +319,13 @@ describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
       }),
     );
 
-    const flexStartRadio = screen.getByRole('radio', { name: 'flex-start' });
+    // `justifyContent` condivide lo stesso set di valori di `alignItems` ("flex-start" ecc.):
+    // il gruppo va disambiguato risalendo dalla label "Allineamento verticale" al contenitore
+    // che racchiude sia l'etichetta sia il SegmentedControl, per non colpire il radio omonimo
+    // del gruppo "Allineamento orizzontale" (justifyContent).
+    const alignItemsGroup = screen.getByText('Allineamento verticale').closest('div')
+      ?.parentElement as HTMLElement;
+    const flexStartRadio = within(alignItemsGroup).getByRole('radio', { name: 'flex-start' });
     await user.click(flexStartRadio);
 
     expect(propsInStore('sec-align').alignItems).toEqual({

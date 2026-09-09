@@ -35,3 +35,33 @@ body {
   max-width: 100%;
   overflow-x: hidden;
 }
+
+/*
+ * Wrapper di pagina dell'Editor tema, sezione "Layout" (v8, `theme.ts` § `ThemeLayoutConfig`).
+ * `.pageOuter` è il "Margine": gutter orizzontale reale (`padding-inline`, non
+ * `margin-inline` — incompatibile con l'auto-centraggio di `.pageBoxed`) più margine
+ * verticale reale sopra/sotto l'intero documento. `.pageBoxed` è la "Pagina boxed" +
+ * "Rientro": tetto di larghezza centrato (`margin-inline: auto`, stesso principio di
+ * `.maxWidth_*` in `style-tokens.module.css`) con padding interno. Variabili compilate da
+ * `utils/theme-css.utils.ts` (`generateThemeCss`) e iniettate da `ThemeStyleTag.tsx`;
+ * `PreviewDocument.tsx`/`ErrorDocument.tsx` condividono lo stesso `<style>` — nessun
+ * `themeConfig` risolto ⇒ nessuna variabile `--theme-layout-*` emessa e queste regole
+ * ricadono sul valore iniziale nativo del browser (`0`), documento invariato.
+ */
+.pageOuter {
+  padding-top: var(--theme-layout-margin-top, 0px);
+  padding-right: var(--theme-layout-margin-right, 0px);
+  padding-bottom: var(--theme-layout-margin-bottom, 0px);
+  padding-left: var(--theme-layout-margin-left, 0px);
+}
+
+.pageBoxed {
+  width: 100%;
+  max-width: var(--theme-layout-boxed-width, none);
+  margin-inline: auto;
+  box-sizing: border-box;
+  padding-top: var(--theme-layout-padding-top, 0px);
+  padding-right: var(--theme-layout-padding-right, 0px);
+  padding-bottom: var(--theme-layout-padding-bottom, 0px);
+  padding-left: var(--theme-layout-padding-left, 0px);
+}

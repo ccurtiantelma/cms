@@ -146,6 +146,7 @@ function renderNode(
           columns={node.props.columns}
           gap={node.props.gap}
           alignItems={node.props.alignItems}
+          justifyContent={node.props.justifyContent}
           contentWidth={node.props.contentWidth}
           maxWidth={node.props.maxWidth}
           columnRatio={node.props.columnRatio}

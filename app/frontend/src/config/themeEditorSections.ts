@@ -8,6 +8,7 @@ import {
   IconClick,
   IconForms,
   IconId,
+  IconLayoutGrid,
   IconLayoutSidebar,
   IconLetterCase,
   IconPalette,
@@ -43,6 +44,15 @@ export const THEME_EDITOR_SECTIONS: ThemeEditorSection[] = [
     description:
       'Palette primaria (nativa o custom con sfumature generate), shade per scheme, raggio di default, sfondo pagina e comportamento globale (gradiente).',
     icon: IconPalette,
+    tokens: null,
+    scopedByScheme: false,
+  },
+  {
+    key: 'layout',
+    label: 'Layout',
+    description:
+      'Larghezza massima della pagina in modalità boxed, margine esterno e rientro interno del wrapper di pagina del sito pubblico.',
+    icon: IconLayoutGrid,
     tokens: null,
     scopedByScheme: false,
   },

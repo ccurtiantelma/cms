@@ -429,6 +429,8 @@ export function ThemeEditorSectionDemo({
       return <DemoPrimary config={config} />;
     case 'typography':
       return <DemoTypography config={config} scheme={scheme} />;
+    // 'layout': nessuna demo nella colonna centrale — il wrapper "boxed"/margine/
+    // rientro veste l'intero documento del sito pubblico, non un componente isolabile.
     case 'scales':
       return <DemoScales />;
     case 'buttons':

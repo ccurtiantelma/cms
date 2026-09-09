@@ -232,6 +232,23 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         "responsive": true
       },
       {
+        "name": "justifyContent",
+        "kind": "enum",
+        "required": false,
+        "default": {
+          "default": "flex-start"
+        },
+        "values": [
+          "flex-start",
+          "flex-end",
+          "center",
+          "space-between",
+          "space-around",
+          "space-evenly"
+        ],
+        "responsive": true
+      },
+      {
         "name": "contentWidth",
         "kind": "enum",
         "required": false,
@@ -612,170 +629,175 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           "tab": "style",
           "order": 7
         },
+        "justifyContent": {
+          "label": "Allineamento orizzontale",
+          "tab": "style",
+          "order": 8
+        },
         "contentWidth": {
           "label": "Larghezza contenuto",
           "tab": "style",
-          "order": 8
+          "order": 9
         },
         "maxWidth": {
           "label": "Larghezza massima",
           "tab": "style",
-          "order": 9
+          "order": 10
         },
         "columnRatio": {
           "label": "Proporzione colonne",
           "tab": "style",
-          "order": 10,
+          "order": 11,
           "help": "Significativa solo con 2 colonne"
         },
         "styleBackgroundColor": {
           "label": "Colore di sfondo",
           "tab": "style",
-          "order": 11
+          "order": 12
         },
         "styleColor": {
           "label": "Colore testo",
           "tab": "style",
-          "order": 12
+          "order": 13
         },
         "backgroundColor": {
           "label": "Colore di sfondo (fallback)",
           "tab": "style",
-          "order": 13
+          "order": 14
         },
         "color": {
           "label": "Colore testo (fallback)",
           "tab": "style",
-          "order": 14
+          "order": 15
         },
         "stylePaddingTop": {
           "label": "Padding superiore",
           "tab": "style",
-          "order": 12
+          "order": 16
         },
         "stylePaddingRight": {
           "label": "Padding destro",
           "tab": "style",
-          "order": 13
+          "order": 17
         },
         "stylePaddingBottom": {
           "label": "Padding inferiore",
           "tab": "style",
-          "order": 14
+          "order": 18
         },
         "stylePaddingLeft": {
           "label": "Padding sinistro",
           "tab": "style",
-          "order": 15
+          "order": 19
         },
         "styleMarginTop": {
           "label": "Margine superiore",
           "tab": "style",
-          "order": 16
+          "order": 20
         },
         "styleMarginRight": {
           "label": "Margine destro",
           "tab": "style",
-          "order": 17
+          "order": 21
         },
         "styleMarginBottom": {
           "label": "Margine inferiore",
           "tab": "style",
-          "order": 18
+          "order": 22
         },
         "styleMarginLeft": {
           "label": "Margine sinistro",
           "tab": "style",
-          "order": 19
+          "order": 23
         },
         "styleLayer": {
           "label": "Livello di sovrapposizione",
           "tab": "advanced",
-          "order": 20
+          "order": 24
         },
         "styleHideDesktop": {
           "label": "Nascondi su Desktop",
           "tab": "advanced",
-          "order": 21
+          "order": 25
         },
         "styleHideTablet": {
           "label": "Nascondi su Tablet",
           "tab": "advanced",
-          "order": 22
+          "order": 26
         },
         "styleHideMobile": {
           "label": "Nascondi su Mobile",
           "tab": "advanced",
-          "order": 23
+          "order": 27
         },
         "styleBorder": {
           "label": "Bordo",
           "tab": "style",
-          "order": 24
+          "order": 28
         },
         "styleShadow": {
           "label": "Ombra",
           "tab": "style",
-          "order": 25
+          "order": 29
         },
         "customCssClass": {
           "label": "Classe CSS personalizzata",
           "tab": "advanced",
-          "order": 26,
+          "order": 30,
           "help": "Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore."
         },
         "customElementId": {
           "label": "ID elemento personalizzato",
           "tab": "advanced",
-          "order": 27,
+          "order": 31,
           "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
         },
         "styleBackgroundImageRef": {
           "label": "Immagine di sfondo",
           "tab": "style",
-          "order": 28,
+          "order": 32,
           "help": "Riferimento a un file della media library."
         },
         "styleOverlayColor": {
           "label": "Colore overlay",
           "tab": "style",
-          "order": 29,
+          "order": 33,
           "help": "Colore esadecimale sovrapposto all'immagine di sfondo."
         },
         "styleOverlayOpacity": {
           "label": "Opacità overlay",
           "tab": "style",
-          "order": 30,
+          "order": 34,
           "help": "Valore da 0 (trasparente) a 1 (opaco)."
         },
         "styleBackgroundType": {
           "label": "Tipo sfondo",
           "tab": "style",
-          "order": 31,
+          "order": 35,
           "help": "Colore, immagine o gradiente."
         },
         "styleBackgroundPosition": {
           "label": "Posizione sfondo",
           "tab": "style",
-          "order": 32,
+          "order": 36,
           "help": "Applicata solo quando il tipo sfondo è Immagine."
         },
         "styleBackgroundSize": {
           "label": "Dimensione sfondo",
           "tab": "style",
-          "order": 33,
+          "order": 37,
           "help": "Applicata solo quando il tipo sfondo è Immagine."
         },
         "styleGradientStart": {
           "label": "Colore iniziale gradiente",
           "tab": "style",
-          "order": 34,
+          "order": 38,
           "help": "Applicato solo quando il tipo sfondo è Gradiente."
         },
         "styleGradientEnd": {
           "label": "Colore finale gradiente",
           "tab": "style",
-          "order": 35,
+          "order": 39,
           "help": "Applicato solo quando il tipo sfondo è Gradiente."
         }
       }

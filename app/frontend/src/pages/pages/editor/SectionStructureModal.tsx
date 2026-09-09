@@ -457,23 +457,16 @@ export default function SectionStructureModal({
       overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}
     >
       {step === 'chooseType' && (
-        // Etichette scambiate rispetto agli id di step interni (fix emergenza, vedi
-        // commento di testa del file, paragrafo "Etichette dei due tab vs. motore CSS
-        // reale"): `step: 'flexbox'` porta ai nove preset piatti che sotto costruiscono
-        // davvero una `section` a CSS Grid, quindi il pulsante che ci porta è etichettato
-        // "Griglia"; `step: 'grid'` porta alle sei tessere annidate che compongono
-        // `container` a CSS Flexbox, quindi il pulsante è etichettato "Flexbox" — l'utente
-        // deve vedere il nome del motore che ottiene davvero, non l'id di step interno.
+        // Ordine allineato allo "Select Your Structure" reale di Elementor (screenshot del
+        // produttore): "Flexbox" a sinistra, "Griglia" a destra. Etichette scambiate rispetto
+        // agli id di step interni (fix emergenza, vedi commento di testa del file, paragrafo
+        // "Etichette dei due tab vs. motore CSS reale"): `step: 'flexbox'` porta ai nove
+        // preset piatti che sotto costruiscono davvero una `section` a CSS Grid, quindi il
+        // pulsante che ci porta è etichettato "Griglia"; `step: 'grid'` porta alle sei tessere
+        // annidate che compongono `container` a CSS Flexbox, quindi il pulsante è etichettato
+        // "Flexbox" — l'utente deve vedere il nome del motore che ottiene davvero, non l'id di
+        // step interno. Solo la posizione (sinistra/destra) è cambiata qui, non la mappatura.
         <SimpleGrid cols={2} spacing="md">
-          <button
-            type="button"
-            className={styles.typeCard}
-            aria-label="Griglia"
-            onClick={() => setStep('flexbox')}
-          >
-            <IconGridDots size={28} />
-            <Text size="sm">Griglia</Text>
-          </button>
           <button
             type="button"
             className={styles.typeCard}
@@ -482,6 +475,15 @@ export default function SectionStructureModal({
           >
             <IconLayoutColumns size={28} />
             <Text size="sm">Flexbox</Text>
+          </button>
+          <button
+            type="button"
+            className={styles.typeCard}
+            aria-label="Griglia"
+            onClick={() => setStep('flexbox')}
+          >
+            <IconGridDots size={28} />
+            <Text size="sm">Griglia</Text>
           </button>
         </SimpleGrid>
       )}

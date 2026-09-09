@@ -15,6 +15,10 @@
  * onorare; `styleBackgroundPosition`/`styleBackgroundSize` rendono configurabili posizione e
  * dimensione dell'immagine (prima fisse a `center`/`cover`); `styleGradientStart`/
  * `styleGradientEnd` (`kind: 'color'`, riuso ADR-33/38/47) alimentano un gradiente lineare.
+ * `justifyContent` (`enum` responsive, stessi 6 valori e stesso schema `{ default, tablet?,
+ * mobile? }` già usati da `container`, ADR-39): allineamento orizzontale dei figli diretti
+ * della griglia — le classi `.justifyContent_*` sono generiche in `style-tokens.module.css`
+ * (non namespaced per tipo di blocco), quindi condivise senza duplicazione di CSS.
  */
 import type { CSSProperties, ReactNode } from 'react';
 import styles from './Section.module.css';
@@ -36,6 +40,8 @@ interface SectionProps {
   columns?: unknown;
   gap?: unknown;
   alignItems?: unknown;
+  /** ADR-39, allineamento orizzontale dei figli — stesso schema `container`. */
+  justifyContent?: unknown;
   contentWidth?: unknown;
   maxWidth?: unknown;
   columnRatio?: unknown;
@@ -80,6 +86,7 @@ export default function Section({
   columns,
   gap,
   alignItems,
+  justifyContent,
   contentWidth,
   maxWidth,
   columnRatio,
@@ -169,6 +176,7 @@ export default function Section({
     resolveResponsiveClassNames(tokenStyles, 'columns', columns),
     resolveResponsiveClassNames(tokenStyles, 'gap', gap),
     resolveResponsiveClassNames(tokenStyles, 'alignItems', alignItems),
+    resolveResponsiveClassNames(tokenStyles, 'justifyContent', justifyContent),
     resolveScalarClassName(tokenStyles, 'contentWidth', contentWidth),
     // `columnRatio_*` è dichiarata dopo `columns_default_*` nel foglio dei token: stessa
     // specificità, vince per ordine di dichiarazione quando entrambe si applicano.

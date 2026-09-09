@@ -151,6 +151,8 @@ interface SectionContainerProps {
   columns?: unknown;
   gap?: unknown;
   alignItems?: unknown;
+  /** ADR-39, allineamento orizzontale dei figli — stesso schema `container`. */
+  justifyContent?: unknown;
   contentWidth?: unknown;
   maxWidth?: unknown;
   columnRatio?: unknown;
@@ -526,6 +528,7 @@ function resolveContainerComponentProps(
     columns: node.props.columns,
     gap: node.props.gap,
     alignItems: node.props.alignItems,
+    justifyContent: node.props.justifyContent,
     contentWidth: node.props.contentWidth,
     maxWidth: node.props.maxWidth,
     columnRatio: node.props.columnRatio,

@@ -38,7 +38,7 @@ export const GLOBAL_TOKENS_SETTING_KEY = 'global_tokens';
  * mantenuti allineati nelle review.
  */
 export const DEFAULT_THEME_CONFIG: ThemeConfigDto = {
-  version: 7,
+  version: 8,
   navbarWidth: 210,
   navbarWidthUnit: 'px',
   navbarDefaultCollapsed: false,
@@ -157,6 +157,14 @@ export const DEFAULT_THEME_CONFIG: ThemeConfigDto = {
     navbarActiveText: '#ffffff',
     navbarBorder: '#dee2e6',
   },
+  layout: {
+    pageBoxedWidth: 1200,
+    pageBoxedWidthUnit: 'px',
+    margin: { top: 0, right: 0, bottom: 0, left: 0 },
+    marginUnit: 'px',
+    padding: { top: 0, right: 0, bottom: 0, left: 0 },
+    paddingUnit: 'px',
+  },
 };
 
 /**
@@ -214,6 +222,14 @@ interface LegacyThemeConfigV1 {
   light: LegacySchemeTokens;
   dark: LegacySchemeTokens;
 }
+
+/**
+ * Forma della config v7 storica: identica alla v8 ma priva del blocco
+ * `layout` (larghezza boxed, margini, rientro), introdotto in v8.
+ */
+type LegacyThemeConfigV7 = Omit<ThemeConfigDto, 'version' | 'layout'> & {
+  version: 7;
+};
 
 /**
  * Forma della config v6 storica: identica alla v7 ma senza le unità dei campi
@@ -314,11 +330,11 @@ function upgradeV5ToV6(legacy: LegacyThemeConfigV5): LegacyThemeConfigV6 {
 
 /**
  * Converte una config v6 storica (già completa: default+override applicati)
- * in `ThemeConfigDto` v7, aggiungendo le unità dei campi dimensionali
- * (sempre `'px'`: l'app resta pixel-identical, stesso principio di ogni
- * bump precedente).
+ * in `LegacyThemeConfigV7` (v7, priva ancora del blocco `layout` introdotto
+ * in v8), aggiungendo le unità dei campi dimensionali (sempre `'px'`: l'app
+ * resta pixel-identical, stesso principio di ogni bump precedente).
  */
-function upgradeV6ToV7(legacy: LegacyThemeConfigV6): ThemeConfigDto {
+function upgradeV6ToV7(legacy: LegacyThemeConfigV6): LegacyThemeConfigV7 {
   const fontSizeUnit: ThemeUnit = 'px';
   const shadowUnit: ThemeLengthUnit = 'px';
   return {
@@ -333,6 +349,20 @@ function upgradeV6ToV7(legacy: LegacyThemeConfigV6): ThemeConfigDto {
     radiusScaleUnit: fontSizeUnit,
     shadowUnit,
     navbarWidthUnit: fontSizeUnit,
+  };
+}
+
+/**
+ * Converte una config v7 storica (già completa: default+override applicati)
+ * in `ThemeConfigDto` v8, aggiungendo il blocco `layout` con i default di
+ * fabbrica (larghezza boxed 1200px, margini e rientro a 0 — l'app resta
+ * pixel-identical, stesso principio di ogni bump precedente).
+ */
+function upgradeV7ToV8(legacy: LegacyThemeConfigV7): ThemeConfigDto {
+  return {
+    ...legacy,
+    version: 8,
+    layout: structuredClone(DEFAULT_THEME_CONFIG.layout),
   };
 }
 
@@ -381,84 +411,98 @@ export class SettingsService {
   ) {}
 
   /**
-   * Normalizza il jsonb salvato al contratto v7: le righe v7 passano
-   * invariate; le v6 storiche adottano `'px'` come unità di ogni campo
-   * dimensionale (`upgradeV6ToV7`); le v5 vengono prima convertite a v6
-   * derivando `colors.primary` da `primaryColor`/`customPrimary` (gli altri 8
-   * colori semantici adottano i default) e poi upgradate a v7 allo stesso
-   * modo; le v4 storiche vengono prima ricostruite nella forma v5 aggiungendo
-   * i default di navbarEdgeStyle/navbarEdgeShadowIntensity; le v3 storiche
-   * aggiungendo anche i default di navbarWidth/navbarDefaultCollapsed; le v2
-   * storiche preservando ogni campo già presente e adottando i default v5
-   * (colori titolo inclusi) solo per light/dark; le v1 storiche preservando
+   * Normalizza il jsonb salvato al contratto v8: le righe v8 passano
+   * invariate; le v7 storiche adottano il blocco `layout` di default
+   * (`upgradeV7ToV8`); le v6 storiche adottano prima `'px'` come unità di
+   * ogni campo dimensionale (`upgradeV6ToV7`) e poi il default `layout`; le v5
+   * vengono prima convertite a v6 derivando `colors.primary` da
+   * `primaryColor`/`customPrimary` (gli altri 8 colori semantici adottano i
+   * default) e poi upgradate a v7 e v8 allo stesso modo; le v4 storiche
+   * vengono prima ricostruite nella forma v5 aggiungendo i default di
+   * navbarEdgeStyle/navbarEdgeShadowIntensity; le v3 storiche aggiungendo
+   * anche i default di navbarWidth/navbarDefaultCollapsed; le v2 storiche
+   * preservando ogni campo già presente e adottando i default v5 (colori
+   * titolo inclusi) solo per light/dark; le v1 storiche preservando
    * primario/radius/token e adottando i default v5 per tutto il resto — poi
-   * tutte fatte passare per la stessa catena v5→v6→v7. Versioni non note
+   * tutte fatte passare per la stessa catena v5→v6→v7→v8. Versioni non note
    * (config corrotte o di un client futuro) tornano ai default di fabbrica.
    * @param value Contenuto jsonb della riga `theme` (scritto solo da updateTheme dopo validazione DTO).
    */
   private normalizeStoredTheme(value: unknown): ThemeConfigDto {
     const record = value as { version?: number } | null;
-    if (record?.version === 7) {
+    if (record?.version === 8) {
       return value as ThemeConfigDto;
     }
+    if (record?.version === 7) {
+      this.logger.log('Tema v7 trovato in app_settings: migrato al contratto v8 in lettura.');
+      return upgradeV7ToV8(value as LegacyThemeConfigV7);
+    }
     if (record?.version === 6) {
-      this.logger.log('Tema v6 trovato in app_settings: migrato al contratto v7 in lettura.');
-      return upgradeV6ToV7(value as LegacyThemeConfigV6);
+      this.logger.log('Tema v6 trovato in app_settings: migrato al contratto v8 in lettura.');
+      return upgradeV7ToV8(upgradeV6ToV7(value as LegacyThemeConfigV6));
     }
     if (record?.version === 5) {
-      this.logger.log('Tema v5 trovato in app_settings: migrato al contratto v7 in lettura.');
-      return upgradeV6ToV7(upgradeV5ToV6(value as LegacyThemeConfigV5));
+      this.logger.log('Tema v5 trovato in app_settings: migrato al contratto v8 in lettura.');
+      return upgradeV7ToV8(upgradeV6ToV7(upgradeV5ToV6(value as LegacyThemeConfigV5)));
     }
     if (record?.version === 4) {
-      this.logger.log('Tema v4 trovato in app_settings: migrato al contratto v7 in lettura.');
+      this.logger.log('Tema v4 trovato in app_settings: migrato al contratto v8 in lettura.');
       const legacy = value as LegacyThemeConfigV4;
       const defaults = structuredClone(LEGACY_DEFAULT_V5);
-      return upgradeV6ToV7(
-        upgradeV5ToV6({
-          ...defaults,
-          ...structuredClone(legacy),
-          version: 5,
-        }),
+      return upgradeV7ToV8(
+        upgradeV6ToV7(
+          upgradeV5ToV6({
+            ...defaults,
+            ...structuredClone(legacy),
+            version: 5,
+          }),
+        ),
       );
     }
     if (record?.version === 3) {
-      this.logger.log('Tema v3 trovato in app_settings: migrato al contratto v7 in lettura.');
+      this.logger.log('Tema v3 trovato in app_settings: migrato al contratto v8 in lettura.');
       const legacy = value as LegacyThemeConfigV3;
       const defaults = structuredClone(LEGACY_DEFAULT_V5);
-      return upgradeV6ToV7(
-        upgradeV5ToV6({
-          ...defaults,
-          ...structuredClone(legacy),
-          version: 5,
-        }),
+      return upgradeV7ToV8(
+        upgradeV6ToV7(
+          upgradeV5ToV6({
+            ...defaults,
+            ...structuredClone(legacy),
+            version: 5,
+          }),
+        ),
       );
     }
     if (record?.version === 2) {
-      this.logger.log('Tema v2 trovato in app_settings: migrato al contratto v7 in lettura.');
+      this.logger.log('Tema v2 trovato in app_settings: migrato al contratto v8 in lettura.');
       const legacy = value as LegacyThemeConfigV2;
       const defaults = structuredClone(LEGACY_DEFAULT_V5);
-      return upgradeV6ToV7(
-        upgradeV5ToV6({
-          ...defaults,
-          ...structuredClone(legacy),
-          version: 5,
-          light: { ...defaults.light, ...legacy.light },
-          dark: { ...defaults.dark, ...legacy.dark },
-        }),
+      return upgradeV7ToV8(
+        upgradeV6ToV7(
+          upgradeV5ToV6({
+            ...defaults,
+            ...structuredClone(legacy),
+            version: 5,
+            light: { ...defaults.light, ...legacy.light },
+            dark: { ...defaults.dark, ...legacy.dark },
+          }),
+        ),
       );
     }
     if (record?.version === 1) {
-      this.logger.log('Tema v1 trovato in app_settings: migrato al contratto v7 in lettura.');
+      this.logger.log('Tema v1 trovato in app_settings: migrato al contratto v8 in lettura.');
       const legacy = value as LegacyThemeConfigV1;
       const defaults = structuredClone(LEGACY_DEFAULT_V5);
-      return upgradeV6ToV7(
-        upgradeV5ToV6({
-          ...defaults,
-          primaryColor: legacy.primaryColor,
-          radius: legacy.radius,
-          light: { ...defaults.light, ...legacy.light },
-          dark: { ...defaults.dark, ...legacy.dark },
-        }),
+      return upgradeV7ToV8(
+        upgradeV6ToV7(
+          upgradeV5ToV6({
+            ...defaults,
+            primaryColor: legacy.primaryColor,
+            radius: legacy.radius,
+            light: { ...defaults.light, ...legacy.light },
+            dark: { ...defaults.dark, ...legacy.dark },
+          }),
+        ),
       );
     }
     this.logger.warn('Tema con versione non nota in app_settings: uso i default di fabbrica.');

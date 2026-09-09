@@ -264,6 +264,7 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
               'columns',
               'gap',
               'alignItems',
+              'justifyContent',
               'contentWidth',
               'maxWidth',
               'columnRatio',

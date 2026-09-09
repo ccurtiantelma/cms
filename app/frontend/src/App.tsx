@@ -182,9 +182,7 @@ export default function App(): JSX.Element {
             <Route
               path="theme-editor"
               element={
-                <RequireRole allowed={[AppUserRoles.SuperAdmin]}>
-                  <PageThemeEditor />
-                </RequireRole>
+                <PageThemeEditor />
               }
             />
           </Route>

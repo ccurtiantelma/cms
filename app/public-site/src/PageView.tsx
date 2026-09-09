@@ -125,18 +125,44 @@ export default function PageView({
 
   return (
     <>
-      <GlobalSectionSlot section={globalSections?.header} as="header" resolvePageUrl={resolvePageUrl} />
-      <main>
-        {blocks.map((block) => (
-          <BlockRenderer
-            key={block.id}
-            node={block}
-            formSubmission={resolveFormSubmission}
+      {/*
+        Wrapper di pagina (Editor tema § "Layout", v8): `.pageOuter` applica il "Margine"
+        come `padding-inline`/`padding-block` reale sull'intero documento (header+main+
+        footer inclusi, stesso principio "boxed" dei temi WordPress) — non un
+        `margin-inline` fisso, incompatibile con l'auto-centraggio di `.pageBoxed`
+        sottostante. `.pageBoxed` applica larghezza massima ("Pagina boxed") +
+        centraggio (`margin-inline: auto`, stesso principio di `.maxWidth_*` in
+        `style-tokens.module.css`) e il "Rientro" come `padding`. Le variabili
+        `--theme-layout-*` sono compilate da `generateThemeCss` (`ThemeStyleTag.tsx`); coi
+        default di fabbrica (0 margine/rientro, 1200px di boxed width) il documento resta
+        visivamente invariato solo se il contenuto stesso non richiede più di 1200px — la
+        larghezza boxed di pagina è comunque sempre applicata (a differenza dei token
+        colore/tipografia, qui non esiste un "default = nessuna variabile emessa").
+      */}
+      <div className="pageOuter">
+        <div className="pageBoxed">
+          <GlobalSectionSlot
+            section={globalSections?.header}
+            as="header"
             resolvePageUrl={resolvePageUrl}
           />
-        ))}
-      </main>
-      <GlobalSectionSlot section={globalSections?.footer} as="footer" resolvePageUrl={resolvePageUrl} />
+          <main>
+            {blocks.map((block) => (
+              <BlockRenderer
+                key={block.id}
+                node={block}
+                formSubmission={resolveFormSubmission}
+                resolvePageUrl={resolvePageUrl}
+              />
+            ))}
+          </main>
+          <GlobalSectionSlot
+            section={globalSections?.footer}
+            as="footer"
+            resolvePageUrl={resolvePageUrl}
+          />
+        </div>
+      </div>
       {needsFormScript ? <script src={formScriptHref} defer /> : null}
     </>
   );

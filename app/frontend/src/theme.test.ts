@@ -309,7 +309,7 @@ describe('isThemeConfig (contratto v7)', () => {
 });
 
 describe('migrateThemeConfig', () => {
-  it('restituisce invariata una config v7 valida', () => {
+  it('restituisce invariata una config v8 valida', () => {
     const config = cloneDefaults();
     config.colors.accent = '#446688';
     expect(migrateThemeConfig(config)).toEqual(config);
@@ -321,7 +321,7 @@ describe('migrateThemeConfig', () => {
 
     const migrated = migrateThemeConfig(legacy);
     expect(migrated).not.toBeNull();
-    expect(migrated?.version).toBe(7);
+    expect(migrated?.version).toBe(8);
     expect(migrated?.radius).toBe('lg');
     expect(migrated?.typography.fontSizeUnit).toBe('px');
     expect(migrated?.typography.headings.fontSizeUnit).toBe('px');
@@ -337,7 +337,7 @@ describe('migrateThemeConfig', () => {
 
     const migrated = migrateThemeConfig(legacy);
     expect(migrated).not.toBeNull();
-    expect(migrated?.version).toBe(7);
+    expect(migrated?.version).toBe(8);
     expect(migrated?.colors.primary).toBe(DEFAULT_THEME.colors.teal[6]);
     expect(migrated?.colors.secondary).toBe(DEFAULT_THEME_CONFIG.colors.secondary);
     expect(migrated?.spacingUnit).toBe('px');
@@ -367,7 +367,7 @@ describe('migrateThemeConfig', () => {
 
     const migrated = migrateThemeConfig(legacy);
     expect(migrated).not.toBeNull();
-    expect(migrated?.version).toBe(7);
+    expect(migrated?.version).toBe(8);
     expect(migrated?.colors.primary).toBe(DEFAULT_THEME.colors.pink[6]);
     expect(migrated?.navbarEdgeStyle).toBe(DEFAULT_THEME_CONFIG.navbarEdgeStyle);
     expect(migrated?.navbarEdgeShadowIntensity).toBe(
@@ -387,7 +387,7 @@ describe('migrateThemeConfig', () => {
 
     const migrated = migrateThemeConfig(legacy);
     expect(migrated).not.toBeNull();
-    expect(migrated?.version).toBe(7);
+    expect(migrated?.version).toBe(8);
     expect(migrated?.colors.primary).toBe(DEFAULT_THEME.colors.orange[6]);
     expect(migrated?.navbarWidth).toBe(DEFAULT_THEME_CONFIG.navbarWidth);
     expect(migrated?.navbarDefaultCollapsed).toBe(DEFAULT_THEME_CONFIG.navbarDefaultCollapsed);
@@ -403,7 +403,7 @@ describe('migrateThemeConfig', () => {
     const legacy = legacyV1Config();
     const migrated = migrateThemeConfig(legacy);
     expect(migrated).not.toBeNull();
-    expect(migrated?.version).toBe(7);
+    expect(migrated?.version).toBe(8);
     expect(migrated?.colors.primary).toBe(DEFAULT_THEME.colors.teal[6]);
     expect(migrated?.radius).toBe('xl');
     expect(migrated?.light.pageBg).toBe('#112233');
@@ -431,7 +431,7 @@ describe('migrateThemeConfig', () => {
     const legacy = legacyV2Config();
     const migrated = migrateThemeConfig(legacy);
     expect(migrated).not.toBeNull();
-    expect(migrated?.version).toBe(7);
+    expect(migrated?.version).toBe(8);
     expect(migrated?.colors.primary).toBe(DEFAULT_THEME.colors.grape[6]);
     expect(migrated?.light.textPrimary).toBe('#111111');
     expect(migrated?.dark.textPrimary).toBe('#eeeeee');

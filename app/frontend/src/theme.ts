@@ -376,6 +376,35 @@ export interface ThemeShadowSpec {
   opacity: number;
 }
 
+/** Quattro lati di un box (margine/rientro), stessa unità condivisa dal gruppo (v8). */
+export interface ThemeLayoutBoxSides {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+/**
+ * Blocco "Layout" del tema (v8, sezione Editor tema "Layout"): larghezza massima della
+ * pagina in modalità boxed, più margine esterno e rientro interno del wrapper di pagina
+ * del sito pubblico (`app/public-site`, `PageView.tsx`). Contratto concordato col backend,
+ * che estende `ThemeConfigDto` con la stessa forma.
+ */
+export interface ThemeLayoutConfig {
+  /** Larghezza massima della pagina boxed, nell'unità di `pageBoxedWidthUnit`. */
+  pageBoxedWidth: number;
+  /** Unità CSS di `pageBoxedWidth`. */
+  pageBoxedWidthUnit: ThemeUnit;
+  /** Margine esterno del wrapper di pagina, nell'unità di `marginUnit`. */
+  margin: ThemeLayoutBoxSides;
+  /** Unità CSS condivisa dai 4 lati di `margin`. */
+  marginUnit: ThemeUnit;
+  /** Rientro interno del wrapper "boxed", nell'unità di `paddingUnit`. */
+  padding: ThemeLayoutBoxSides;
+  /** Unità CSS condivisa dai 4 lati di `padding`. */
+  paddingUnit: ThemeUnit;
+}
+
 /** Default per-componente applicati via `theme.components` → `defaultProps`. */
 export interface ThemeComponentsConfig {
   /** Default dei `Button` (variant/size/radius). */
@@ -417,10 +446,12 @@ export interface ThemeComponentsConfig {
 
 /**
  * Configurazione completa del tema di installazione (riga `key='theme'` di
- * `app_settings`). Versione 7: aggiunge l'unità CSS (`px`/`em`/`rem`/`%`, `%`
- * escluso dove il CSS non lo ammette) ai campi dimensionali — dimensioni
- * testo e titoli, spaziatura, radius token, ombre, larghezza navbar — che in
- * v6 erano numeri impliciti in pixel. La v6 aveva sostituito la selezione
+ * `app_settings`). Versione 8: aggiunge `layout` (larghezza massima della
+ * pagina boxed, margine e rientro del wrapper di pagina pubblica), sezione
+ * "Layout" dell'Editor tema. La v7 aveva aggiunto l'unità CSS
+ * (`px`/`em`/`rem`/`%`, `%` escluso dove il CSS non lo ammette) ai campi
+ * dimensionali — dimensioni testo e titoli, spaziatura, radius token, ombre,
+ * larghezza navbar — che in v6 erano numeri impliciti in pixel. La v6 aveva sostituito la selezione
  * "una delle 14 palette native oppure custom" della v5 (`primaryColor`/
  * `customPrimary`) con `colors`, 9 voci semantiche (Primary/Secondary/Accent/
  * Success/Warning/Alert/Error/Danger/Info) ciascuna un hex base da cui si
@@ -430,7 +461,7 @@ export interface ThemeComponentsConfig {
  */
 export interface ThemeConfig {
   /** Versionamento esplicito del contratto: estensioni = bump + migrazione default. */
-  version: 7;
+  version: 8;
   /** Larghezza della sidebar espansa, nell'unità di `navbarWidthUnit`. */
   navbarWidth: number;
   /** Unità CSS di `navbarWidth` (v7). */
@@ -481,6 +512,8 @@ export interface ThemeConfig {
   light: ThemeSchemeTokens;
   /** Token per lo scheme scuro. */
   dark: ThemeSchemeTokens;
+  /** Larghezza boxed, margine e rientro del wrapper di pagina pubblica (v8). */
+  layout: ThemeLayoutConfig;
 }
 
 /**
@@ -503,6 +536,10 @@ export const THEME_NUMERIC_LIMITS = {
   luminanceThreshold: { min: 0, max: 1 },
   scale: { min: 0.75, max: 1.5 },
   navbarWidth: { min: 180, max: 320 },
+  /** Larghezza massima della pagina "boxed" (v8, sezione "Layout"), baseline `px`. */
+  pageBoxedWidth: { min: 320, max: 3840 },
+  /** Ogni lato di `layout.margin`/`layout.padding` (v8), baseline `px`. */
+  layoutBoxSide: { min: 0, max: 500 },
 } as const;
 
 /** Fattore di conversione px↔rem/em (base 16px) per i limiti per-unità e il cambio unità in UI. */
@@ -548,6 +585,18 @@ export const THEME_DIMENSION_UNIT_LIMITS = {
   shadowBlur: deriveLengthLimits(THEME_NUMERIC_LIMITS.shadowBlur),
   shadowSpread: deriveLengthLimits(THEME_NUMERIC_LIMITS.shadowSpread),
   navbarWidth: deriveLimitsWithPercent(THEME_NUMERIC_LIMITS.navbarWidth, { min: 10, max: 50 }),
+  // v8 — sezione "Layout": range dedicati, non derivati da `deriveLengthLimits` per
+  // `layoutBoxSide` (0-30 em/rem richiesti dalla spec, non i 31.25 che ÷16 produrrebbe).
+  pageBoxedWidth: deriveLimitsWithPercent(THEME_NUMERIC_LIMITS.pageBoxedWidth, {
+    min: 10,
+    max: 100,
+  }),
+  layoutBoxSide: {
+    px: THEME_NUMERIC_LIMITS.layoutBoxSide,
+    em: { min: 0, max: 30 },
+    rem: { min: 0, max: 30 },
+    '%': { min: 0, max: 100 },
+  },
 } as const;
 
 /**
@@ -631,7 +680,7 @@ const SHADOW_FACTORY_DEFAULTS: Record<ThemeSizeValue, ThemeShadowSpec> = {
 
 /** Default di fabbrica del tema: con questi valori l'app è identica a oggi. */
 export const DEFAULT_THEME_CONFIG: ThemeConfig = {
-  version: 7,
+  version: 8,
   navbarWidth: 210,
   navbarWidthUnit: 'px',
   navbarDefaultCollapsed: false,
@@ -742,6 +791,14 @@ export const DEFAULT_THEME_CONFIG: ThemeConfig = {
     headingH6: DEFAULT_THEME.colors.dark[0],
     ...NAVBAR_FACTORY_DEFAULTS,
     navbarActiveBg: DEFAULT_THEME.colors[DEFAULT_PRIMARY_COLOR][5],
+  },
+  layout: {
+    pageBoxedWidth: 1200,
+    pageBoxedWidthUnit: 'px',
+    margin: { top: 0, right: 0, bottom: 0, left: 0 },
+    marginUnit: 'px',
+    padding: { top: 0, right: 0, bottom: 0, left: 0 },
+    paddingUnit: 'px',
   },
 };
 
@@ -1026,14 +1083,109 @@ function isThemeComponentsConfig(value: unknown): value is ThemeComponentsConfig
   );
 }
 
+/** Verifica un blocco di 4 lati (`top`/`right`/`bottom`/`left`) dentro il range dato. */
+function isBoxSides(
+  value: unknown,
+  limits: { min: number; max: number },
+): value is ThemeLayoutBoxSides {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  return (
+    isNumberInRange(record.top, limits) &&
+    isNumberInRange(record.right, limits) &&
+    isNumberInRange(record.bottom, limits) &&
+    isNumberInRange(record.left, limits)
+  );
+}
+
+/** Verifica il blocco `layout` completo (v8): larghezza boxed + margine/rientro a 4 lati. */
+function isThemeLayout(value: unknown): value is ThemeLayoutConfig {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  const pageBoxedWidthUnit = record.pageBoxedWidthUnit;
+  const marginUnit = record.marginUnit;
+  const paddingUnit = record.paddingUnit;
+  return (
+    isOneOf(pageBoxedWidthUnit, THEME_UNITS) &&
+    isNumberInRange(
+      record.pageBoxedWidth,
+      THEME_DIMENSION_UNIT_LIMITS.pageBoxedWidth[pageBoxedWidthUnit],
+    ) &&
+    isOneOf(marginUnit, THEME_UNITS) &&
+    isBoxSides(record.margin, THEME_DIMENSION_UNIT_LIMITS.layoutBoxSide[marginUnit]) &&
+    isOneOf(paddingUnit, THEME_UNITS) &&
+    isBoxSides(record.padding, THEME_DIMENSION_UNIT_LIMITS.layoutBoxSide[paddingUnit])
+  );
+}
+
 /**
- * Type guard di un `ThemeConfig` versione 7. Usato per validare la cache
+ * Type guard di un `ThemeConfig` versione 8. Usato per validare la cache
  * anti-FOUC in localStorage e la risposta del server prima di applicarle:
  * valori corrotti, manomessi o di versione futura vengono scartati a favore
  * di cache/default (mai applicati come variabili CSS o theme object).
  * @param value Valore sconosciuto da validare (JSON.parse o risposta API).
  */
 export function isThemeConfig(value: unknown): value is ThemeConfig {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  const primaryShade = record.primaryShade as Record<string, unknown> | undefined;
+  const gradient = record.defaultGradient as Record<string, unknown> | undefined;
+  const shadows = record.shadows as Record<string, unknown> | undefined;
+  const navbarWidthUnit = record.navbarWidthUnit;
+  const spacingUnit = record.spacingUnit;
+  const radiusScaleUnit = record.radiusScaleUnit;
+  const shadowUnit = record.shadowUnit;
+  return (
+    record.version === 8 &&
+    isOneOf(navbarWidthUnit, THEME_UNITS) &&
+    isNumberInRange(record.navbarWidth, THEME_DIMENSION_UNIT_LIMITS.navbarWidth[navbarWidthUnit]) &&
+    typeof record.navbarDefaultCollapsed === 'boolean' &&
+    isOneOf(record.navbarEdgeStyle, THEME_NAVBAR_EDGE_STYLES) &&
+    isNumberInRange(record.navbarEdgeShadowIntensity, THEME_NUMERIC_LIMITS.opacity) &&
+    isThemeColors(record.colors) &&
+    typeof primaryShade === 'object' &&
+    primaryShade !== null &&
+    (THEME_SHADE_INDEXES as readonly number[]).includes(primaryShade.light as number) &&
+    (THEME_SHADE_INDEXES as readonly number[]).includes(primaryShade.dark as number) &&
+    isOneOf(record.radius, THEME_RADIUS_VALUES) &&
+    isOneOf(record.focusRing, THEME_FOCUS_RING_VALUES) &&
+    isOneOf(record.cursorType, THEME_CURSOR_VALUES) &&
+    typeof record.respectReducedMotion === 'boolean' &&
+    typeof record.autoContrast === 'boolean' &&
+    isNumberInRange(record.luminanceThreshold, THEME_NUMERIC_LIMITS.luminanceThreshold) &&
+    isNumberInRange(record.scale, THEME_NUMERIC_LIMITS.scale) &&
+    typeof gradient === 'object' &&
+    gradient !== null &&
+    isHexColor(gradient.from) &&
+    isHexColor(gradient.to) &&
+    isNumberInRange(gradient.deg, THEME_NUMERIC_LIMITS.gradientDeg) &&
+    isThemeTypography(record.typography) &&
+    isOneOf(spacingUnit, THEME_UNITS) &&
+    isSizeScale(record.spacing, THEME_DIMENSION_UNIT_LIMITS.spacing[spacingUnit]) &&
+    isOneOf(radiusScaleUnit, THEME_UNITS) &&
+    isSizeScale(record.radiusScale, THEME_DIMENSION_UNIT_LIMITS.radius[radiusScaleUnit]) &&
+    isOneOf(shadowUnit, THEME_LENGTH_UNITS) &&
+    typeof shadows === 'object' &&
+    shadows !== null &&
+    THEME_SIZE_VALUES.every((size) => isShadowSpec(shadows[size], shadowUnit)) &&
+    isThemeComponentsConfig(record.components) &&
+    isThemeSchemeTokens(record.light) &&
+    isThemeSchemeTokens(record.dark) &&
+    isThemeLayout(record.layout)
+  );
+}
+
+/** Forma della config v7 storica: identica alla v8 ma priva del blocco `layout`. */
+type LegacyThemeConfigV7 = Omit<ThemeConfig, 'version' | 'layout'> & { version: 7 };
+
+/** Type guard della config v7 storica, usato solo per la migrazione a v8. */
+function isLegacyThemeConfigV7(value: unknown): value is LegacyThemeConfigV7 {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -1082,6 +1234,15 @@ export function isThemeConfig(value: unknown): value is ThemeConfig {
     isThemeSchemeTokens(record.light) &&
     isThemeSchemeTokens(record.dark)
   );
+}
+
+/** Converte una config v7 storica in `ThemeConfig` v8, riempiendo `layout` coi default di fabbrica. */
+function upgradeV7ToV8(legacy: LegacyThemeConfigV7): ThemeConfig {
+  return {
+    ...legacy,
+    version: 8,
+    layout: structuredClone(DEFAULT_THEME_CONFIG.layout),
+  };
 }
 
 /**
@@ -1142,10 +1303,11 @@ function isLegacyThemeConfigV6(value: unknown): value is LegacyThemeConfigV6 {
 
 /**
  * Converte una config v6 storica (già completa: default+override applicati)
- * in `ThemeConfig` v7, aggiungendo le unità dei campi dimensionali (sempre
+ * in una config v7 storica (anch'essa priva di `layout`, upgradata a v8 da
+ * `upgradeV7ToV8`), aggiungendo le unità dei campi dimensionali (sempre
  * `'px'`: l'app resta pixel-identical, stesso principio di ogni bump precedente).
  */
-function upgradeV6ToV7(legacy: LegacyThemeConfigV6): ThemeConfig {
+function upgradeV6ToV7(legacy: LegacyThemeConfigV6): LegacyThemeConfigV7 {
   return {
     ...legacy,
     version: 7,
@@ -1478,54 +1640,65 @@ export function migrateThemeConfig(value: unknown): ThemeConfig | null {
   if (isThemeConfig(value)) {
     return value;
   }
+  if (isLegacyThemeConfigV7(value)) {
+    return upgradeV7ToV8(value);
+  }
   if (isLegacyThemeConfigV6(value)) {
-    return upgradeV6ToV7(value);
+    return upgradeV7ToV8(upgradeV6ToV7(value));
   }
   if (isLegacyThemeConfigV5(value)) {
-    return upgradeV6ToV7(upgradeV5ToV6(value));
+    return upgradeV7ToV8(upgradeV6ToV7(upgradeV5ToV6(value)));
   }
   if (isLegacyThemeConfigV4(value)) {
     const defaults = structuredClone(LEGACY_DEFAULT_V5);
-    return upgradeV6ToV7(
-      upgradeV5ToV6({
-        ...defaults,
-        ...structuredClone(value),
-        version: 5,
-      }),
+    return upgradeV7ToV8(
+      upgradeV6ToV7(
+        upgradeV5ToV6({
+          ...defaults,
+          ...structuredClone(value),
+          version: 5,
+        }),
+      ),
     );
   }
   if (isLegacyThemeConfigV3(value)) {
     const defaults = structuredClone(LEGACY_DEFAULT_V5);
-    return upgradeV6ToV7(
-      upgradeV5ToV6({
-        ...defaults,
-        ...structuredClone(value),
-        version: 5,
-      }),
+    return upgradeV7ToV8(
+      upgradeV6ToV7(
+        upgradeV5ToV6({
+          ...defaults,
+          ...structuredClone(value),
+          version: 5,
+        }),
+      ),
     );
   }
   if (isLegacyThemeConfigV2(value)) {
     const defaults = structuredClone(LEGACY_DEFAULT_V5);
-    return upgradeV6ToV7(
-      upgradeV5ToV6({
-        ...defaults,
-        ...structuredClone(value),
-        version: 5,
-        light: { ...defaults.light, ...value.light },
-        dark: { ...defaults.dark, ...value.dark },
-      }),
+    return upgradeV7ToV8(
+      upgradeV6ToV7(
+        upgradeV5ToV6({
+          ...defaults,
+          ...structuredClone(value),
+          version: 5,
+          light: { ...defaults.light, ...value.light },
+          dark: { ...defaults.dark, ...value.dark },
+        }),
+      ),
     );
   }
   if (isLegacyThemeConfigV1(value)) {
     const defaults = structuredClone(LEGACY_DEFAULT_V5);
-    return upgradeV6ToV7(
-      upgradeV5ToV6({
-        ...defaults,
-        primaryColor: value.primaryColor,
-        radius: value.radius,
-        light: { ...defaults.light, ...value.light },
-        dark: { ...defaults.dark, ...value.dark },
-      }),
+    return upgradeV7ToV8(
+      upgradeV6ToV7(
+        upgradeV5ToV6({
+          ...defaults,
+          primaryColor: value.primaryColor,
+          radius: value.radius,
+          light: { ...defaults.light, ...value.light },
+          dark: { ...defaults.dark, ...value.dark },
+        }),
+      ),
     );
   }
   return null;

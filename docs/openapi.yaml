@@ -559,11 +559,9 @@ paths:
                 $ref: '#/components/schemas/ThemeConfigDto'
         '400':
           description: Payload non valido (hex, palette o versione)
-        '403':
-          description: Ruolo non SuperAdmin
       security:
         - access-token: []
-      summary: Salva il tema globale (SuperAdmin only, registrato su audit log)
+      summary: Salva il tema globale (registrato su audit log)
       tags:
         - Settings
   /api/v1/app/settings/multilingual:
@@ -3257,15 +3255,112 @@ components:
         - navbarActiveBg
         - navbarActiveText
         - navbarBorder
+    ThemeLayoutMarginDto:
+      type: object
+      properties:
+        top:
+          type: number
+          description: Margine superiore
+          example: 0
+        right:
+          type: number
+          description: Margine destro
+          example: 0
+        bottom:
+          type: number
+          description: Margine inferiore
+          example: 0
+        left:
+          type: number
+          description: Margine sinistro
+          example: 0
+      required:
+        - top
+        - right
+        - bottom
+        - left
+    ThemeLayoutPaddingDto:
+      type: object
+      properties:
+        top:
+          type: number
+          description: Rientro superiore
+          example: 0
+        right:
+          type: number
+          description: Rientro destro
+          example: 0
+        bottom:
+          type: number
+          description: Rientro inferiore
+          example: 0
+        left:
+          type: number
+          description: Rientro sinistro
+          example: 0
+      required:
+        - top
+        - right
+        - bottom
+        - left
+    ThemeLayoutDto:
+      type: object
+      properties:
+        pageBoxedWidth:
+          type: number
+          description: Larghezza massima della pagina in modalità boxed
+          example: 1200
+        pageBoxedWidthUnit:
+          type: string
+          description: Unità CSS di pageBoxedWidth (v8)
+          enum:
+            - px
+            - em
+            - rem
+            - '%'
+          example: px
+        margin:
+          description: Margini esterni della pagina per lato
+          allOf:
+            - $ref: '#/components/schemas/ThemeLayoutMarginDto'
+        marginUnit:
+          type: string
+          description: Unità CSS di margin (v8)
+          enum:
+            - px
+            - em
+            - rem
+            - '%'
+          example: px
+        padding:
+          description: Rientro interno della pagina per lato
+          allOf:
+            - $ref: '#/components/schemas/ThemeLayoutPaddingDto'
+        paddingUnit:
+          type: string
+          description: Unità CSS di padding (v8)
+          enum:
+            - px
+            - em
+            - rem
+            - '%'
+          example: px
+      required:
+        - pageBoxedWidth
+        - pageBoxedWidthUnit
+        - margin
+        - marginUnit
+        - padding
+        - paddingUnit
     ThemeConfigDto:
       type: object
       properties:
         version:
           type: number
           description: Versione del contratto ThemeConfig
-          example: 7
+          example: 8
           enum:
-            - 7
+            - 8
         navbarWidth:
           type: number
           description: Larghezza sidebar espansa
@@ -3405,6 +3500,12 @@ components:
           description: Token per lo scheme scuro
           allOf:
             - $ref: '#/components/schemas/ThemeSchemeTokensDto'
+        layout:
+          description: >-
+            Layout di pagina: larghezza massima boxed, margini esterni e rientro
+            interno (v8)
+          allOf:
+            - $ref: '#/components/schemas/ThemeLayoutDto'
       required:
         - version
         - navbarWidth
@@ -3432,6 +3533,7 @@ components:
         - components
         - light
         - dark
+        - layout
     MultilingualConfigDto:
       type: object
       properties:

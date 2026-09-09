@@ -101,29 +101,43 @@ export default function EditorCanvas(): JSX.Element {
         // a "nessun blocco selezionato" una volta scelto un nodo.
         onClick={() => selectNode(null)}
       >
-        <Stack gap="sm">
-          {rootIds.length === 0 ? (
-            // Nessun contenuto visivo proprio (scelta di giudizio, vedi il commento di testa):
-            // la resa "Aggiungi sezione" è interamente di `CanvasAddSectionZone`, montata
-            // subito sotto — il div resta solo come bersaglio `useDroppable` per il primo
-            // blocco trascinato: a riposo è una striscia quasi invisibile
-            // (`EditorCanvas.module.css`), che si allarga ed evidenzia in magenta solo
-            // durante un trascinamento sopra di lei (`data-over`).
-            <>
-              <div ref={setEmptyDropRef} className={styles.emptyDropzone} data-over={isOverEmpty} />
-              <CanvasAddSectionZone parentId={null} index={0} />
-            </>
-          ) : (
-            <>
-              <CanvasSectionInserter index={0} />
-              {rootIds.flatMap((id, index) => [
-                <EditorBlockWrapper key={id} id={id} />,
-                <CanvasSectionInserter key={`inserter-${index + 1}`} index={index + 1} />,
-              ])}
-              <CanvasAddSectionZone parentId={null} index={rootIds.length} />
-            </>
-          )}
-        </Stack>
+        {/*
+          Wrapper "Layout" del tema (v8): stesso `.pageOuter`/`.pageBoxed` del sito pubblico
+          (`PageView.tsx`) — vedi il commento di testa di `EditorCanvas.module.css`. Applicato
+          sempre, coi default di fabbrica il Canvas resta visivamente invariato solo se il
+          contenuto non richiede più di 1200px, stesso principio del rendering pubblico.
+        */}
+        <div className={styles.pageOuter}>
+          <div className={styles.pageBoxed}>
+            <Stack gap="sm">
+              {rootIds.length === 0 ? (
+                // Nessun contenuto visivo proprio (scelta di giudizio, vedi il commento di testa):
+                // la resa "Aggiungi sezione" è interamente di `CanvasAddSectionZone`, montata
+                // subito sotto — il div resta solo come bersaglio `useDroppable` per il primo
+                // blocco trascinato: a riposo è una striscia quasi invisibile
+                // (`EditorCanvas.module.css`), che si allarga ed evidenzia in magenta solo
+                // durante un trascinamento sopra di lei (`data-over`).
+                <>
+                  <div
+                    ref={setEmptyDropRef}
+                    className={styles.emptyDropzone}
+                    data-over={isOverEmpty}
+                  />
+                  <CanvasAddSectionZone parentId={null} index={0} />
+                </>
+              ) : (
+                <>
+                  <CanvasSectionInserter index={0} />
+                  {rootIds.flatMap((id, index) => [
+                    <EditorBlockWrapper key={id} id={id} />,
+                    <CanvasSectionInserter key={`inserter-${index + 1}`} index={index + 1} />,
+                  ])}
+                  <CanvasAddSectionZone parentId={null} index={rootIds.length} />
+                </>
+              )}
+            </Stack>
+          </div>
+        </div>
       </div>
     </CanvasContextMenu>
   );

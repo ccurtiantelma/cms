@@ -424,7 +424,7 @@ export interface paths {
         };
         /** Tema globale dell'installazione (default di fabbrica se mai salvato) */
         get: operations["SettingsController_getTheme"];
-        /** Salva il tema globale (SuperAdmin only, registrato su audit log) */
+        /** Salva il tema globale (registrato su audit log) */
         put: operations["SettingsController_updateTheme"];
         post?: never;
         delete?: never;
@@ -1841,13 +1841,86 @@ export interface components {
              */
             navbarBorder: string;
         };
+        ThemeLayoutMarginDto: {
+            /**
+             * @description Margine superiore
+             * @example 0
+             */
+            top: number;
+            /**
+             * @description Margine destro
+             * @example 0
+             */
+            right: number;
+            /**
+             * @description Margine inferiore
+             * @example 0
+             */
+            bottom: number;
+            /**
+             * @description Margine sinistro
+             * @example 0
+             */
+            left: number;
+        };
+        ThemeLayoutPaddingDto: {
+            /**
+             * @description Rientro superiore
+             * @example 0
+             */
+            top: number;
+            /**
+             * @description Rientro destro
+             * @example 0
+             */
+            right: number;
+            /**
+             * @description Rientro inferiore
+             * @example 0
+             */
+            bottom: number;
+            /**
+             * @description Rientro sinistro
+             * @example 0
+             */
+            left: number;
+        };
+        ThemeLayoutDto: {
+            /**
+             * @description Larghezza massima della pagina in modalità boxed
+             * @example 1200
+             */
+            pageBoxedWidth: number;
+            /**
+             * @description Unità CSS di pageBoxedWidth (v8)
+             * @example px
+             * @enum {string}
+             */
+            pageBoxedWidthUnit: "px" | "em" | "rem" | "%";
+            /** @description Margini esterni della pagina per lato */
+            margin: components["schemas"]["ThemeLayoutMarginDto"];
+            /**
+             * @description Unità CSS di margin (v8)
+             * @example px
+             * @enum {string}
+             */
+            marginUnit: "px" | "em" | "rem" | "%";
+            /** @description Rientro interno della pagina per lato */
+            padding: components["schemas"]["ThemeLayoutPaddingDto"];
+            /**
+             * @description Unità CSS di padding (v8)
+             * @example px
+             * @enum {string}
+             */
+            paddingUnit: "px" | "em" | "rem" | "%";
+        };
         ThemeConfigDto: {
             /**
              * @description Versione del contratto ThemeConfig
-             * @example 7
+             * @example 8
              * @enum {number}
              */
-            version: 7;
+            version: 8;
             /**
              * @description Larghezza sidebar espansa
              * @example 210
@@ -1951,6 +2024,8 @@ export interface components {
             light: components["schemas"]["ThemeSchemeTokensDto"];
             /** @description Token per lo scheme scuro */
             dark: components["schemas"]["ThemeSchemeTokensDto"];
+            /** @description Layout di pagina: larghezza massima boxed, margini esterni e rientro interno (v8) */
+            layout: components["schemas"]["ThemeLayoutDto"];
         };
         MultilingualConfigDto: {
             /**
@@ -3785,13 +3860,6 @@ export interface operations {
             };
             /** @description Payload non valido (hex, palette o versione) */
             400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Ruolo non SuperAdmin */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -68,8 +68,8 @@ export const THEME_RADIUS_VALUES = THEME_SIZE_VALUES;
 
 export type ThemeRadiusValue = ThemeSizeValue;
 
-/** Versioni note del contratto ThemeConfig accettate in scrittura (v1–v6 → migrate in lettura). */
-export const THEME_CONFIG_VERSIONS = [7] as const;
+/** Versioni note del contratto ThemeConfig accettate in scrittura (v1–v7 → migrate in lettura). */
+export const THEME_CONFIG_VERSIONS = [8] as const;
 
 /**
  * Unità CSS selezionabili per i campi dimensionali (v7). `%` è escluso dove
@@ -618,6 +618,94 @@ export class ThemeShadowsDto {
   xl!: ThemeShadowSpecDto;
 }
 
+/**
+ * Margini esterni della pagina per lato, nell'unità di `ThemeLayoutDto.marginUnit`
+ * (v8). Range dipendente dall'unità: validato da `ThemeDimensionRangesConstraint`,
+ * non da `@Min`/`@Max` statici — stessa forma di `ThemeSpacingDto`.
+ */
+export class ThemeLayoutMarginDto {
+  @ApiProperty({ description: 'Margine superiore', example: 0 })
+  @IsNumber({}, { message: 'Ogni margine deve essere un numero.' })
+  top!: number;
+
+  @ApiProperty({ description: 'Margine destro', example: 0 })
+  @IsNumber({}, { message: 'Ogni margine deve essere un numero.' })
+  right!: number;
+
+  @ApiProperty({ description: 'Margine inferiore', example: 0 })
+  @IsNumber({}, { message: 'Ogni margine deve essere un numero.' })
+  bottom!: number;
+
+  @ApiProperty({ description: 'Margine sinistro', example: 0 })
+  @IsNumber({}, { message: 'Ogni margine deve essere un numero.' })
+  left!: number;
+}
+
+/**
+ * Rientro (padding) interno della pagina per lato, nell'unità di
+ * `ThemeLayoutDto.paddingUnit` (v8). Range dipendente dall'unità: validato da
+ * `ThemeDimensionRangesConstraint`, non da `@Min`/`@Max` statici — stessa
+ * forma di `ThemeSpacingDto`.
+ */
+export class ThemeLayoutPaddingDto {
+  @ApiProperty({ description: 'Rientro superiore', example: 0 })
+  @IsNumber({}, { message: 'Ogni rientro deve essere un numero.' })
+  top!: number;
+
+  @ApiProperty({ description: 'Rientro destro', example: 0 })
+  @IsNumber({}, { message: 'Ogni rientro deve essere un numero.' })
+  right!: number;
+
+  @ApiProperty({ description: 'Rientro inferiore', example: 0 })
+  @IsNumber({}, { message: 'Ogni rientro deve essere un numero.' })
+  bottom!: number;
+
+  @ApiProperty({ description: 'Rientro sinistro', example: 0 })
+  @IsNumber({}, { message: 'Ogni rientro deve essere un numero.' })
+  left!: number;
+}
+
+/**
+ * Blocco layout di pagina (v8): larghezza massima della pagina "boxed",
+ * margini esterni e rientro interno. Ogni campo dimensionale porta la
+ * propria unità CSS gemella, stesso principio degli altri gruppi
+ * dimensionali del contratto (`spacing`/`radiusScale`/`shadows`); il range
+ * dipendente dall'unità è validato da `ThemeDimensionRangesConstraint`.
+ */
+export class ThemeLayoutDto {
+  @ApiProperty({ description: 'Larghezza massima della pagina in modalità boxed', example: 1200 })
+  @IsNumber({}, { message: 'pageBoxedWidth deve essere un numero.' })
+  pageBoxedWidth!: number;
+
+  @ApiProperty({
+    description: 'Unità CSS di pageBoxedWidth (v8)',
+    enum: THEME_UNITS,
+    example: 'px',
+  })
+  @IsIn(THEME_UNITS, { message: 'Unità larghezza pagina non ammessa.' })
+  pageBoxedWidthUnit!: ThemeUnit;
+
+  @ApiProperty({ description: 'Margini esterni della pagina per lato', type: ThemeLayoutMarginDto })
+  @IsDefined({ message: 'Il blocco margin è obbligatorio.' })
+  @ValidateNested()
+  @Type(() => ThemeLayoutMarginDto)
+  margin!: ThemeLayoutMarginDto;
+
+  @ApiProperty({ description: 'Unità CSS di margin (v8)', enum: THEME_UNITS, example: 'px' })
+  @IsIn(THEME_UNITS, { message: 'Unità margine non ammessa.' })
+  marginUnit!: ThemeUnit;
+
+  @ApiProperty({ description: 'Rientro interno della pagina per lato', type: ThemeLayoutPaddingDto })
+  @IsDefined({ message: 'Il blocco padding è obbligatorio.' })
+  @ValidateNested()
+  @Type(() => ThemeLayoutPaddingDto)
+  padding!: ThemeLayoutPaddingDto;
+
+  @ApiProperty({ description: 'Unità CSS di padding (v8)', enum: THEME_UNITS, example: 'px' })
+  @IsIn(THEME_UNITS, { message: 'Unità rientro non ammessa.' })
+  paddingUnit!: ThemeUnit;
+}
+
 /** Default dei Button. */
 export class ThemeButtonDefaultsDto {
   @ApiProperty({ description: 'Variant di default', enum: THEME_BUTTON_VARIANTS, example: 'unset' })
@@ -863,6 +951,15 @@ const THEME_DIMENSION_LIMITS = {
   shadowBlur: deriveLengthLimits({ min: 0, max: 120 }),
   shadowSpread: deriveLengthLimits({ min: -32, max: 32 }),
   navbarWidth: deriveLimitsWithPercent({ min: 180, max: 320 }, { min: 10, max: 50 }),
+  pageBoxedWidth: deriveLimitsWithPercent({ min: 320, max: 3840 }, { min: 10, max: 100 }),
+  // v8 — blocco "Layout": range dedicato (non derivato ÷16 da `deriveLengthLimits`),
+  // speculare a `THEME_DIMENSION_UNIT_LIMITS.layoutBoxSide` in `app/frontend/src/theme.ts`.
+  layoutSpacing: {
+    px: { min: 0, max: 500 },
+    em: { min: 0, max: 30 },
+    rem: { min: 0, max: 30 },
+    '%': { min: 0, max: 100 },
+  },
 } as const;
 
 function isInRange(value: unknown, range: NumericRange): boolean {
@@ -942,6 +1039,37 @@ class ThemeDimensionRangesConstraint implements ValidatorConstraintInterface {
       checks.push(['navbarWidth', config.navbarWidth, config.navbarWidthUnit, 'navbarWidth']);
     }
 
+    if (typeof config.layout?.pageBoxedWidth === 'number' && config.layout?.pageBoxedWidthUnit) {
+      checks.push([
+        'layout.pageBoxedWidth',
+        config.layout.pageBoxedWidth,
+        config.layout.pageBoxedWidthUnit,
+        'pageBoxedWidth',
+      ]);
+    }
+
+    if (config.layout?.margin && config.layout?.marginUnit) {
+      for (const side of ['top', 'right', 'bottom', 'left'] as const) {
+        checks.push([
+          `layout.margin.${side}`,
+          config.layout.margin[side],
+          config.layout.marginUnit,
+          'layoutSpacing',
+        ]);
+      }
+    }
+
+    if (config.layout?.padding && config.layout?.paddingUnit) {
+      for (const side of ['top', 'right', 'bottom', 'left'] as const) {
+        checks.push([
+          `layout.padding.${side}`,
+          config.layout.padding[side],
+          config.layout.paddingUnit,
+          'layoutSpacing',
+        ]);
+      }
+    }
+
     for (const [field, value, unit, limitKey] of checks) {
       const limits = (THEME_DIMENSION_LIMITS[limitKey] as Record<string, NumericRange>)[unit];
       if (!limits || !isInRange(value, limits)) {
@@ -961,7 +1089,7 @@ class ThemeDimensionRangesConstraint implements ValidatorConstraintInterface {
 export class ThemeConfigDto {
   @ApiProperty({
     description: 'Versione del contratto ThemeConfig',
-    example: 7,
+    example: 8,
     enum: THEME_CONFIG_VERSIONS,
   })
   @IsInt({ message: 'version deve essere un intero.' })
@@ -1126,4 +1254,13 @@ export class ThemeConfigDto {
   @ValidateNested()
   @Type(() => ThemeSchemeTokensDto)
   dark!: ThemeSchemeTokensDto;
+
+  @ApiProperty({
+    description: 'Layout di pagina: larghezza massima boxed, margini esterni e rientro interno (v8)',
+    type: ThemeLayoutDto,
+  })
+  @IsDefined({ message: 'Il blocco layout è obbligatorio.' })
+  @ValidateNested()
+  @Type(() => ThemeLayoutDto)
+  layout!: ThemeLayoutDto;
 }

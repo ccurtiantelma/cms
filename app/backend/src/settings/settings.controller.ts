@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Put, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
-import { GuardAdmin, GuardSuperAdmin } from '../auth/guard';
+import { GuardAdmin } from '../auth/guard';
 import { SettingsService } from './settings.service';
 import { ThemeConfigDto } from './dto/theme-config.dto';
 import { MultilingualConfigDto } from './dto/multilingual-config.dto';
@@ -10,9 +10,9 @@ import { AuthInfo } from '../common/types';
 
 /**
  * Endpoint dei settaggi globali di installazione (ADR-4, RFC-F05 § 1). Tema e
- * registro Locale servono a chiunque usi l'app: la lettura è aperta a tutti i
- * ruoli autenticati (JWT middleware globale), la scrittura è ristretta
- * (SuperAdmin per il tema, Admin+ per il registro Locale).
+ * registro Locale servono a chiunque usi l'app: lettura e scrittura del tema
+ * sono aperte a tutti i ruoli autenticati; la scrittura del registro Locale è
+ * ristretta ad Admin+.
  */
 @ApiTags('Settings')
 @ApiBearerAuth('access-token')
@@ -31,13 +31,11 @@ export class SettingsController {
     return this.settingsService.getTheme();
   }
 
-  /** Salva il tema globale per tutti gli utenti (SuperAdmin only, audit logged). */
+  /** Salva il tema globale per tutti gli utenti autenticati (audit logged). */
   @Put('theme')
-  @UseGuards(GuardSuperAdmin)
-  @ApiOperation({ summary: 'Salva il tema globale (SuperAdmin only, registrato su audit log)' })
+  @ApiOperation({ summary: 'Salva il tema globale (registrato su audit log)' })
   @ApiResponse({ status: 200, description: 'Tema salvato', type: ThemeConfigDto })
   @ApiResponse({ status: 400, description: 'Payload non valido (hex, palette o versione)' })
-  @ApiResponse({ status: 403, description: 'Ruolo non SuperAdmin' })
   async updateTheme(@Body() dto: ThemeConfigDto, @Req() req: Request): Promise<ThemeConfigDto> {
     const authInfo = req['authInfo'] as AuthInfo;
     return this.settingsService.updateTheme(dto, authInfo, req.ip);

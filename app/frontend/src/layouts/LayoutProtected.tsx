@@ -206,7 +206,7 @@ export default function LayoutProtected(): JSX.Element {
                       (item) =>
                         !item.roles ||
                         (user?.role !== undefined &&
-                          item.roles.includes(user.role as AppUserRoles)),
+                          item.roles.includes(Number(user.role) as AppUserRoles)),
                     )
                     .map((item) => {
                       const Icon = item.icon;

@@ -43,7 +43,16 @@ function defaultPropValue(prop: BlockPropDescriptor): unknown {
     case 'boolean':
       return false;
     case 'number':
-      return 0;
+      // Bug corretto: `0` incondizionato qui era un valore fantasma anche per una prop
+      // **opzionale** senza default esplicito (oggi solo `styleOverlayOpacity`,
+      // `section.block.ts`) — un nodo appena creato riceveva `styleOverlayOpacity: 0`, che
+      // `Section.tsx` (`hasOverlayOpacity = typeof styleOverlayOpacity === 'number'`)
+      // legge come "opacità overlay impostata a zero dall'utente", non come "prop assente":
+      // ogni Sezione nuova montava un `<div class="overlay">` fantasma come primo figlio
+      // (`hasOverlay` diventava `true` per sole props di default, mai toccate dall'utente).
+      // Stesso principio del ramo `default` sotto: opzionale → nessun valore fantasma,
+      // obbligatoria → un segnaposto minimo (qui `0`, l'unico numero neutro disponibile).
+      return prop.required ? 0 : undefined;
     default:
       // Prop di tipo stringa/colore (richText, plainText, url, mediaRef, color,
       // unitValue, border, shadow, cssClassName, htmlId) senza default esplicito nel

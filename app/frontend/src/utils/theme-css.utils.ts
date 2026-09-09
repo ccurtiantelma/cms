@@ -45,6 +45,42 @@ import {
 
 export type ThemeConfigDto = components['schemas']['ThemeConfigDto'];
 
+/**
+ * Forma di `ThemeConfig.layout` (v8, `theme.ts`), duplicata qui perché
+ * `ThemeConfigDto` — generato da OpenAPI (`openapi:export`/`openapi:types`) —
+ * non porta ancora il campo lato backend (`theme-config.dto.ts`): stesso
+ * coordinamento di contratto dichiarato per il resto del blocco Layout,
+ * ancora da chiudere sul lato server. Finché l'export OpenAPI non lo include,
+ * il campo arriva solo se il server lo restituisce comunque (proprietà
+ * extra tollerata) — da cui il cast opzionale sotto e i fallback difensivi
+ * identici al resto di questo modulo (`safeNumber`/`safeUnit`).
+ */
+interface ThemeLayoutBoxSidesDto {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+interface ThemeLayoutDto {
+  pageBoxedWidth: number;
+  pageBoxedWidthUnit: string;
+  margin: ThemeLayoutBoxSidesDto;
+  marginUnit: string;
+  padding: ThemeLayoutBoxSidesDto;
+  paddingUnit: string;
+}
+
+/** Default di ripiego del blocco Layout, identici a `DEFAULT_THEME_CONFIG.layout` di `theme.ts`. */
+const LAYOUT_FALLBACK: ThemeLayoutDto = {
+  pageBoxedWidth: 1200,
+  pageBoxedWidthUnit: 'px',
+  margin: { top: 0, right: 0, bottom: 0, left: 0 },
+  marginUnit: 'px',
+  padding: { top: 0, right: 0, bottom: 0, left: 0 },
+  paddingUnit: 'px',
+};
+
 /** Blocco di token colore di uno dei due scheme (`light`/`dark`) del contratto. */
 type ThemeSchemeTokensDto = ThemeConfigDto['light'];
 
@@ -127,6 +163,42 @@ function safeNumber(value: unknown, fallback: number): number {
 /** Compone `numero + unità`, entrambi già ricontrollati — mai una stringa libera. */
 function dimension(value: unknown, unit: unknown): string {
   return `${safeNumber(value, FALLBACK.size)}${safeUnit(unit)}`;
+}
+
+/** Ricontrolla un blocco di 4 lati, ripiegando lato per lato sul default indicato. */
+function safeBoxSides(
+  value: Partial<ThemeLayoutBoxSidesDto> | undefined,
+  fallback: ThemeLayoutBoxSidesDto,
+): ThemeLayoutBoxSidesDto {
+  return {
+    top: safeNumber(value?.top, fallback.top),
+    right: safeNumber(value?.right, fallback.right),
+    bottom: safeNumber(value?.bottom, fallback.bottom),
+    left: safeNumber(value?.left, fallback.left),
+  };
+}
+
+/**
+ * Ricontrolla il blocco `layout` del config (v8): ripiega sui default di fabbrica campo
+ * per campo quando assente o malformato — mai un `TypeError` se il server non lo
+ * restituisce ancora (vedi commento su `ThemeLayoutDto`).
+ */
+function safeLayout(value: unknown): ThemeLayoutDto {
+  if (typeof value !== 'object' || value === null) {
+    return LAYOUT_FALLBACK;
+  }
+  const record = value as Partial<ThemeLayoutDto>;
+  const pageBoxedWidthUnit = safeUnit(record.pageBoxedWidthUnit);
+  const marginUnit = safeUnit(record.marginUnit);
+  const paddingUnit = safeUnit(record.paddingUnit);
+  return {
+    pageBoxedWidth: safeNumber(record.pageBoxedWidth, LAYOUT_FALLBACK.pageBoxedWidth),
+    pageBoxedWidthUnit,
+    margin: safeBoxSides(record.margin, LAYOUT_FALLBACK.margin),
+    marginUnit,
+    padding: safeBoxSides(record.padding, LAYOUT_FALLBACK.padding),
+    paddingUnit,
+  };
 }
 
 /** Peso dei titoli, ristretto alla whitelist del contratto. */
@@ -261,6 +333,21 @@ function schemeIndependentDeclarations(config: ThemeConfigDto): string[] {
   }
   for (const size of ['sm', 'md', 'lg'] as const satisfies readonly ThemeSizeValue[]) {
     out.push(decl(`--cms-padding-${size}`, dimension(spacing[size], config.spacingUnit)));
+  }
+
+  // 3. Blocco Layout (v8) — wrapper di pagina pubblica (`PageView.tsx`). Cast difensivo:
+  // vedi commento su `ThemeLayoutDto`.
+  const layout = safeLayout((config as ThemeConfigDto & { layout?: unknown }).layout);
+  out.push(
+    decl('--theme-layout-boxed-width', dimension(layout.pageBoxedWidth, layout.pageBoxedWidthUnit)),
+  );
+  for (const side of ['top', 'right', 'bottom', 'left'] as const) {
+    out.push(
+      decl(`--theme-layout-margin-${side}`, dimension(layout.margin[side], layout.marginUnit)),
+    );
+    out.push(
+      decl(`--theme-layout-padding-${side}`, dimension(layout.padding[side], layout.paddingUnit)),
+    );
   }
 
   return out;

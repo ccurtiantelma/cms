@@ -43,7 +43,6 @@ export const navigationItems: NavigationItem[] = [
     label: 'Editor tema',
     path: '/theme-editor',
     icon: IconPalette,
-    roles: [AppUserRoles.SuperAdmin],
   },
   {
     label: 'Sezioni Globali',

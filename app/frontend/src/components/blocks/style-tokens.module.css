@@ -178,16 +178,34 @@
 .alignItems_default_center { align-items: center; }
 .alignItems_default_flex-end { align-items: flex-end; }
 
-/* ─── flexDirection / justifyContent / wrap (ADR-39) — solo container ──── */
+/* ─── flexDirection / justifyContent / wrap (ADR-39) — flexDirection/wrap solo
+   container; justifyContent condivisa anche da `section` (Section.tsx) ──────
+   `justify-content` da solo basta su `container` (flex): un item flex non si
+   stretcha mai sull'asse principale (solo `align-items` stretcha sull'asse
+   incrociato), quindi lo spazio libero da ridistribuire esiste sempre. Su
+   `section` (CSS Grid, `.columns_default_N`, colonne `1fr`) non basta: le
+   tracce `fr` occupano sempre il 100% dello spazio disponibile (zero spazio
+   libero da ridistribuire per `justify-content`) *e* `justify-items` di
+   default è `stretch`, quindi ogni cella riempie comunque la propria traccia
+   a prescindere. Le tre varianti a posizione singola (`flex-start`/
+   `flex-end`/`center`) impostano perciò anche `justify-items` equivalente
+   (`start`/`end`/`center`): su un contenitore Grid questo fa sì che ogni
+   figlio si dimensioni sul proprio contenuto (non più stretch) e si allinei
+   dentro la propria traccia — su un contenitore flex `justify-items` non ha
+   alcun effetto (proprietà ignorata fuori da grid/block), nessuna
+   regressione per `container`. `space-between`/`space-around`/`space-evenly`
+   restano solo `justify-content`: non hanno un `justify-items` equivalente
+   (valori validi solo per `start`/`end`/`center`/`stretch`/`normal`), e la
+   distribuzione di spazio fra più celle ha senso solo con più colonne. */
 
 .flexDirection_default_row { flex-direction: row; }
 .flexDirection_default_row-reverse { flex-direction: row-reverse; }
 .flexDirection_default_column { flex-direction: column; }
 .flexDirection_default_column-reverse { flex-direction: column-reverse; }
 
-.justifyContent_default_flex-start { justify-content: flex-start; }
-.justifyContent_default_flex-end { justify-content: flex-end; }
-.justifyContent_default_center { justify-content: center; }
+.justifyContent_default_flex-start { justify-content: flex-start; justify-items: start; }
+.justifyContent_default_flex-end { justify-content: flex-end; justify-items: end; }
+.justifyContent_default_center { justify-content: center; justify-items: center; }
 .justifyContent_default_space-between { justify-content: space-between; }
 .justifyContent_default_space-around { justify-content: space-around; }
 .justifyContent_default_space-evenly { justify-content: space-evenly; }
@@ -211,9 +229,16 @@
 /* ─── columnRatio (ADR-33 § 2) — solo section, non responsive ────────────
    Dichiarate DOPO `columns_default_*`: stessa specificità, l'ordine nel
    foglio decide — `columnRatio_*` vince quando entrambe le classi sono
-   applicate allo stesso nodo (`columns === '2'`). */
+   applicate allo stesso nodo (`columns === '2'`).
+   Nessuna regola per `columnRatio_equal`: il default dello schema
+   (`section.block.ts`, `columnRatio.default = 'equal'`) è scalare, non
+   condizionato a `columns === '2'` — è presente su OGNI Section, incluse
+   quelle a 1/3/4 colonne. Una regola qui (bug corretto: prima forzava
+   `repeat(2, ...)`) sovrascriveva silenziosamente `.columns_default_3`/
+   `.columns_default_4`, mostrando solo 2 colonne per riga e mandando le
+   altre a capo. "Equal" senza rapporto esplicito non deve dichiarare
+   `grid-template-columns`: lascia decidere `columns_default_N`. */
 
-.columnRatio_equal { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .columnRatio_33-66 { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
 .columnRatio_66-33 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 .columnRatio_30-70 { grid-template-columns: minmax(0, 3fr) minmax(0, 7fr); }
@@ -381,9 +406,9 @@
   .flexDirection_tablet_column { flex-direction: column; }
   .flexDirection_tablet_column-reverse { flex-direction: column-reverse; }
 
-  .justifyContent_tablet_flex-start { justify-content: flex-start; }
-  .justifyContent_tablet_flex-end { justify-content: flex-end; }
-  .justifyContent_tablet_center { justify-content: center; }
+  .justifyContent_tablet_flex-start { justify-content: flex-start; justify-items: start; }
+  .justifyContent_tablet_flex-end { justify-content: flex-end; justify-items: end; }
+  .justifyContent_tablet_center { justify-content: center; justify-items: center; }
   .justifyContent_tablet_space-between { justify-content: space-between; }
   .justifyContent_tablet_space-around { justify-content: space-around; }
   .justifyContent_tablet_space-evenly { justify-content: space-evenly; }
@@ -551,9 +576,9 @@
   .flexDirection_mobile_column { flex-direction: column; }
   .flexDirection_mobile_column-reverse { flex-direction: column-reverse; }
 
-  .justifyContent_mobile_flex-start { justify-content: flex-start; }
-  .justifyContent_mobile_flex-end { justify-content: flex-end; }
-  .justifyContent_mobile_center { justify-content: center; }
+  .justifyContent_mobile_flex-start { justify-content: flex-start; justify-items: start; }
+  .justifyContent_mobile_flex-end { justify-content: flex-end; justify-items: end; }
+  .justifyContent_mobile_center { justify-content: center; justify-items: center; }
   .justifyContent_mobile_space-between { justify-content: space-between; }
   .justifyContent_mobile_space-around { justify-content: space-around; }
   .justifyContent_mobile_space-evenly { justify-content: space-evenly; }
@@ -780,9 +805,9 @@
   .flexDirection_tablet_column { flex-direction: column; }
   .flexDirection_tablet_column-reverse { flex-direction: column-reverse; }
 
-  .justifyContent_tablet_flex-start { justify-content: flex-start; }
-  .justifyContent_tablet_flex-end { justify-content: flex-end; }
-  .justifyContent_tablet_center { justify-content: center; }
+  .justifyContent_tablet_flex-start { justify-content: flex-start; justify-items: start; }
+  .justifyContent_tablet_flex-end { justify-content: flex-end; justify-items: end; }
+  .justifyContent_tablet_center { justify-content: center; justify-items: center; }
   .justifyContent_tablet_space-between { justify-content: space-between; }
   .justifyContent_tablet_space-around { justify-content: space-around; }
   .justifyContent_tablet_space-evenly { justify-content: space-evenly; }
@@ -948,9 +973,9 @@
   .flexDirection_mobile_column { flex-direction: column; }
   .flexDirection_mobile_column-reverse { flex-direction: column-reverse; }
 
-  .justifyContent_mobile_flex-start { justify-content: flex-start; }
-  .justifyContent_mobile_flex-end { justify-content: flex-end; }
-  .justifyContent_mobile_center { justify-content: center; }
+  .justifyContent_mobile_flex-start { justify-content: flex-start; justify-items: start; }
+  .justifyContent_mobile_flex-end { justify-content: flex-end; justify-items: end; }
+  .justifyContent_mobile_center { justify-content: center; justify-items: center; }
   .justifyContent_mobile_space-between { justify-content: space-between; }
   .justifyContent_mobile_space-around { justify-content: space-around; }
   .justifyContent_mobile_space-evenly { justify-content: space-evenly; }

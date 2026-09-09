@@ -53,6 +53,7 @@ import {
   type ThemeUnit,
 } from '../../theme';
 import { GradientAngleDial } from './GradientAngleDial';
+import { PanelLayout } from './ThemeEditorPanelLayout';
 import { ThemeEditorColorPicker } from './ThemeEditorColorPicker';
 import classes from './ThemeEditorPanels.module.css';
 
@@ -1222,6 +1223,8 @@ export function ThemeEditorSectionPanel({
   switch (sectionKey) {
     case 'primary':
       return <PanelGeneral {...props} />;
+    case 'layout':
+      return <PanelLayout {...props} />;
     case 'typography':
       return <PanelTypography {...props} />;
     case 'scales':
