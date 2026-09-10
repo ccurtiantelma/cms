@@ -132,20 +132,28 @@ export default function PageView({
         `margin-inline` fisso, incompatibile con l'auto-centraggio di `.pageBoxed`
         sottostante. `.pageBoxed` applica larghezza massima ("Pagina boxed") +
         centraggio (`margin-inline: auto`, stesso principio di `.maxWidth_*` in
-        `style-tokens.module.css`) e il "Rientro" come `padding`. Le variabili
+        `style-tokens.module.css`) e il "Rientro" come `padding` — **solo al `<main>`**:
+        header/footer sono Sezioni Globali (ADR-40) che decidono la propria larghezza da
+        sole, blocco per blocco, tramite `contentWidth`/`maxWidth` (ADR-33), esattamente
+        come ogni Sezione di Pagina dentro `<main>`. Annidarli anche loro dentro
+        `.pageBoxed` neutralizzerebbe silenziosamente quella scelta — una Sezione
+        `full-width` nell'header/footer non potrebbe mai superare la larghezza boxed
+        dell'antenato, qualunque `contentWidth` scelga l'autore (bug osservato: nel
+        Canvas dell'editor lo stesso `.pageBoxed` non si nota perché il pannello è già
+        più stretto di 1200px, sul sito pubblico invece sì). Le variabili
         `--theme-layout-*` sono compilate da `generateThemeCss` (`ThemeStyleTag.tsx`); coi
-        default di fabbrica (0 margine/rientro, 1200px di boxed width) il documento resta
+        default di fabbrica (0 margine/rientro, 1200px di boxed width) il `<main>` resta
         visivamente invariato solo se il contenuto stesso non richiede più di 1200px — la
         larghezza boxed di pagina è comunque sempre applicata (a differenza dei token
         colore/tipografia, qui non esiste un "default = nessuna variabile emessa").
       */}
       <div className="pageOuter">
+        <GlobalSectionSlot
+          section={globalSections?.header}
+          as="header"
+          resolvePageUrl={resolvePageUrl}
+        />
         <div className="pageBoxed">
-          <GlobalSectionSlot
-            section={globalSections?.header}
-            as="header"
-            resolvePageUrl={resolvePageUrl}
-          />
           <main>
             {blocks.map((block) => (
               <BlockRenderer
@@ -156,12 +164,12 @@ export default function PageView({
               />
             ))}
           </main>
-          <GlobalSectionSlot
-            section={globalSections?.footer}
-            as="footer"
-            resolvePageUrl={resolvePageUrl}
-          />
         </div>
+        <GlobalSectionSlot
+          section={globalSections?.footer}
+          as="footer"
+          resolvePageUrl={resolvePageUrl}
+        />
       </div>
       {needsFormScript ? <script src={formScriptHref} defer /> : null}
     </>

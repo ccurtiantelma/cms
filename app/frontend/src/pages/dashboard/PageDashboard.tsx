@@ -1,5 +1,5 @@
 /** Dashboard con il punto di ingresso al pannello Analytics del sito pubblico. */
-import { Alert, Group, SegmentedControl, Skeleton, Stack, Text, Title } from '@mantine/core';
+import { Alert, Group, SegmentedControl, Skeleton, Stack } from '@mantine/core';
 import {
   IconAlertCircle,
   IconChartLine,
@@ -161,31 +161,21 @@ export default function PageDashboard(): JSX.Element {
     devices: toDevices(devices?.devices ?? []),
   };
 
+  const periodFilter = (
+    <SegmentedControl
+      size="sm"
+      defaultValue="30"
+      onChange={handlePresetChange}
+      data={[
+        { label: '7 giorni', value: '7' },
+        { label: '30 giorni', value: '30' },
+        { label: '90 giorni', value: '90' },
+      ]}
+    />
+  );
+
   return (
     <Stack gap="lg" data-tour="dashboard-kpi">
-      <ContentCard>
-        <Group justify="space-between" align="flex-start" wrap="wrap" gap="md">
-          <div>
-            <Title order={2}>Benvenuto, {user?.name ?? ''}</Title>
-            <Text c="dimmed" size="sm" mt={4}>
-              Panoramica del traffico del sito pubblicato.
-            </Text>
-          </div>
-          {canViewAnalytics && (
-            <SegmentedControl
-              size="sm"
-              defaultValue="30"
-              onChange={handlePresetChange}
-              data={[
-                { label: '7 giorni', value: '7' },
-                { label: '30 giorni', value: '30' },
-                { label: '90 giorni', value: '90' },
-              ]}
-            />
-          )}
-        </Group>
-      </ContentCard>
-
       {canViewAnalytics && (
         <ContentCard>
           {isLoading ? (
@@ -199,7 +189,7 @@ export default function PageDashboard(): JSX.Element {
               {error}
             </Alert>
           ) : (
-            <AnalyticsOverviewPanel data={overviewData} />
+            <AnalyticsOverviewPanel data={overviewData} periodFilter={periodFilter} />
           )}
         </ContentCard>
       )}

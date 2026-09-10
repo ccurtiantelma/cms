@@ -85,4 +85,17 @@
   grid-column: 1 / -1;
   width: 100%;
   text-align: center;
+  /*
+   * `text-align` da solo non centra un `container` (`Container.module.css`, `display: flex`):
+   * `antelma-global-sections.seed.ts` incapsula la riga legale/cookie in un `container` con
+   * `justifyContent: 'flex-start'` (classe `.justifyContent_default_flex-start`,
+   * `style-tokens.module.css`, stessa specificità di ogni altra `.justifyContent_*` scalare) —
+   * l'allineamento di un figlio flex segue `justify-content`, non `text-align` dell'antenato.
+   * Specificità di questo selettore (due classi/pseudo-classi + due elementi) sopra la singola
+   * classe `.justifyContent_*` fa vincere questa regola, indipendentemente da quale valore
+   * l'autore ha scelto per quella prop: le ultime due righe del footer restano sempre bande
+   * centrate a piena larghezza (stesso principio di `text-align` qui sopra, non un secondo
+   * comportamento).
+   */
+  justify-content: center;
 }

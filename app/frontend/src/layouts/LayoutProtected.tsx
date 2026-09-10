@@ -1,7 +1,8 @@
 /**
  * Layout protetto con AppShell Mantine.
  *
- * Sidebar laterale collassabile (sfondo bianco) con due stati (compatta ~70px solo
+ * Sidebar laterale collassabile (sfondo bianco in light scheme, dark-7 in dark
+ * scheme) con due stati (compatta ~70px solo
  * icone / estesa a una larghezza statica
  * tema), branding testuale
  * "CMS" (nessun logo immagine — personalizzabile via
@@ -144,7 +145,7 @@ export default function LayoutProtected(): JSX.Element {
           onClick={toggleMobile}
           hiddenFrom="sm"
           size="sm"
-          color="#242424"
+          color="var(--mantine-color-text)"
           aria-label="Apri menu"
         />
 
@@ -280,9 +281,9 @@ export default function LayoutProtected(): JSX.Element {
                     visibleFrom="sm"
                   >
                     {collapsed ? (
-                      <IconLayoutSidebarLeftExpand size={18} color="#242424" />
+                      <IconLayoutSidebarLeftExpand size={18} color="var(--mantine-color-text)" />
                     ) : (
-                      <IconLayoutSidebarLeftCollapse size={18} color="#242424" />
+                      <IconLayoutSidebarLeftCollapse size={18} color="var(--mantine-color-text)" />
                     )}
                   </ActionIcon>
                 </Tooltip>
@@ -293,7 +294,7 @@ export default function LayoutProtected(): JSX.Element {
                     onClick={() => logout()}
                     aria-label="Logout"
                   >
-                    <IconLogout size={18} color="#242424" />
+                    <IconLogout size={18} color="var(--mantine-color-text)" />
                   </ActionIcon>
                 </Tooltip>
               </div>

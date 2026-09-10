@@ -1,6 +1,6 @@
 /*
- * Chrome di LayoutProtected: sidebar collassabile (chiara, sfondo bianco) +
- * area contenuto grigio chiaro con card bianca arrotondata. Vedi
+ * Chrome di LayoutProtected: sidebar collassabile (sfondo bianco in light, dark-7
+ * in dark scheme) + area contenuto grigio chiaro/scuro con card arrotondata. Vedi
  * LayoutProtected.tsx. Nessun hex/gradiente custom: solo CSS var Mantine
  * (`--mantine-color-*`, `--mantine-primary-color-*`), indipendenti dal tema
  * applicato al contenuto dell'editor e del sito pubblico.
@@ -32,20 +32,25 @@
   padding: 0;
 }
 
-/* Superficie della sidebar: sfondo bianco, indipendente dal colore primario
-   attivo e dallo scheme light/dark dell'app (evita problemi di contrasto se
-   l'admin sceglie un primario scuro dal customizer).
+/* Superficie della sidebar: sfondo bianco in light scheme, dark-7 in dark scheme
+   (stessa convenzione di `BuilderSidebar.module.css`), indipendente dal colore
+   primario attivo (evita problemi di contrasto se l'admin sceglie un primario
+   scuro dal customizer).
    Selettore `nav.navbarSurface` (non solo `.navbarSurface`): l'AppShell.Navbar
    di Mantine applica di suo `background-color: var(--mantine-color-body)`
    sulla stessa classe hash con specificità identica (0-1-0) — a parità di
    specificità vince l'ultima regola nel CSS finale, che è quella nativa
-   Mantine (in scheme "dark" `--mantine-color-body` è scuro, in conflitto con
-   la navbar chiara). L'elemento selettore aggiunge specificità (0-1-1) e
-   garantisce che il nostro sfondo vinca sempre. */
+   Mantine. L'elemento selettore aggiunge specificità (0-1-1) e garantisce che
+   il nostro sfondo vinca sempre. */
 .navbarSurface,
 nav.navbarSurface {
   background: var(--mantine-color-white);
   border-right: none;
+}
+
+[data-mantine-color-scheme='dark'] .navbarSurface,
+[data-mantine-color-scheme='dark'] nav.navbarSurface {
+  background: var(--mantine-color-dark-7);
 }
 
 /* Sezione branding in alto. */
@@ -141,6 +146,10 @@ nav.navbarSurface {
   background-color: var(--mantine-color-gray-1);
 }
 
+[data-mantine-color-scheme='dark'] .navItem:hover {
+  background-color: var(--mantine-color-dark-5);
+}
+
 .navItemCollapsed {
   justify-content: center;
   padding: 10px 0;
@@ -177,6 +186,10 @@ nav.navbarSurface {
   gap: 8px;
 }
 
+[data-mantine-color-scheme='dark'] .userSection {
+  border-top-color: var(--mantine-color-dark-4);
+}
+
 .userSectionCollapsed {
   flex-direction: column;
   gap: 10px;
@@ -195,6 +208,10 @@ nav.navbarSurface {
 
 .userLink:hover {
   background-color: var(--mantine-color-gray-1);
+}
+
+[data-mantine-color-scheme='dark'] .userLink:hover {
+  background-color: var(--mantine-color-dark-5);
 }
 
 .userInfo {
@@ -247,10 +264,19 @@ nav.navbarSurface {
 .bottomBtn {
   border: 1px solid var(--mantine-color-gray-4);
   border-radius: 8px;
+  color: var(--mantine-color-text);
 }
 
 .bottomBtn:hover {
   background-color: var(--mantine-color-gray-1);
+}
+
+[data-mantine-color-scheme='dark'] .bottomBtn {
+  border-color: var(--mantine-color-dark-4);
+}
+
+[data-mantine-color-scheme='dark'] .bottomBtn:hover {
+  background-color: var(--mantine-color-dark-5);
 }
 
 /* --- Area contenuto --- */
@@ -268,4 +294,9 @@ nav.navbarSurface {
   border: 1px solid var(--mantine-color-gray-3);
   border-radius: 8px;
   padding: 6px;
+}
+
+[data-mantine-color-scheme='dark'] .mobileBurger {
+  background-color: var(--mantine-color-dark-7);
+  border-color: var(--mantine-color-dark-4);
 }

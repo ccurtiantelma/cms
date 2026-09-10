@@ -7,7 +7,6 @@
 # (5432/6379/1025/8025) a un equivalente "5" + porta originale — il lato
 # container resta il default di immagine, invariato: solo il mapping
 # host:container cambia, mai cosa ascolta dentro il container.
-version: '3.8'
 
 services:
   postgres:

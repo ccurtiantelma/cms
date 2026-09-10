@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Card, Grid, Group, Stack, Text, Title } from '@mantine/core';
 import { IconChartHistogram } from '@tabler/icons-react';
 import AnalyticsDevicesDonut, { MOCK_DEVICES } from './AnalyticsDevicesDonut';
@@ -18,6 +19,8 @@ export interface AnalyticsOverviewData {
 
 export interface AnalyticsOverviewPanelProps {
   data?: Partial<AnalyticsOverviewData>;
+  /** Filtro periodo (es. SegmentedControl 7/30/90 giorni), allineato a destra nell'header. */
+  periodFilter?: ReactNode;
 }
 
 export const MOCK_ANALYTICS_OVERVIEW: AnalyticsOverviewData = {
@@ -27,18 +30,24 @@ export const MOCK_ANALYTICS_OVERVIEW: AnalyticsOverviewData = {
   devices: MOCK_DEVICES,
 };
 
-export function AnalyticsOverviewPanel({ data }: AnalyticsOverviewPanelProps): JSX.Element {
+export function AnalyticsOverviewPanel({
+  data,
+  periodFilter,
+}: AnalyticsOverviewPanelProps): JSX.Element {
   const overview = { ...MOCK_ANALYTICS_OVERVIEW, ...data };
   return (
     <Stack gap="lg">
-      <Group gap="sm">
-        <IconChartHistogram size={24} color="var(--mantine-color-blue-6)" aria-hidden />
-        <div>
-          <Title order={2}>Analytics</Title>
-          <Text c="dimmed" size="sm">
-            Panoramica delle prestazioni del sito
-          </Text>
-        </div>
+      <Group justify="space-between" align="flex-start" wrap="wrap" gap="md">
+        <Group gap="sm">
+          <IconChartHistogram size={24} color="var(--mantine-color-blue-6)" aria-hidden />
+          <div>
+            <Title order={2}>Analytics</Title>
+            <Text c="dimmed" size="sm">
+              Panoramica delle prestazioni del sito
+            </Text>
+          </div>
+        </Group>
+        {periodFilter}
       </Group>
       <AnalyticsStatsGrid stats={overview.stats} />
       <AnalyticsTrafficChart data={overview.traffic.length > 0 ? overview.traffic : undefined} />

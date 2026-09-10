@@ -33,7 +33,14 @@ export function AnalyticsDevicesDonut({
           </Text>
         </div>
         <Group justify="center" align="center" gap="xl" wrap="nowrap">
-          <DonutChart data={devices} thickness={22} size={190} withLabelsLine={false} />
+          <DonutChart
+            data={devices}
+            thickness={22}
+            size={190}
+            w={190}
+            h={190}
+            withLabelsLine={false}
+          />
           <Stack gap="md">
             {devices.map((device) => {
               const Icon = device.icon;

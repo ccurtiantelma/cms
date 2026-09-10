@@ -49,7 +49,7 @@ export default function NotificationBell(): JSX.Element {
             onClick={toggle}
             aria-label="Notifiche"
           >
-            <IconBell size={20} color="var(--app-navbar-text, var(--mantine-color-dark-7))" />
+            <IconBell size={20} color="var(--mantine-color-text)" />
           </ActionIcon>
         </Indicator>
       </Popover.Target>
