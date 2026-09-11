@@ -1,0 +1,40 @@
+info:
+  name: Update Revisions Retention
+  type: http
+  seq: 6
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/app/settings/revisions-retention"
+  body:
+    type: json
+    data: |-
+      {
+        "retentionCount": 20
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Admin+ (ADR-61 § 3), audit logged. Cambia **solo la policy**: non esiste una
+  rotta che pota su richiesta — la rimozione è un processo di sistema
+  (business-rules.md § Revisioni, regole 5-6). `0` disattiva la potatura.
+  Con un token sotto la soglia Admin la risposta attesa è `403`.
+
+tests: |-
+  test("status is 200 (Admin+) o 403 (sotto soglia)", function() {
+    expect(res.getStatus()).to.be.oneOf([200, 403]);
+  });
+
+  test("se 200, l'eco riflette il valore salvato", function() {
+    if (res.getStatus() === 200) {
+      expect(res.getBody().retentionCount).to.equal(20);
+    }
+  });

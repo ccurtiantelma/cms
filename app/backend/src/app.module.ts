@@ -17,6 +17,7 @@ import { SettingsModule } from './settings/settings.module';
 import { HealthModule } from './health/health.module';
 import { FilesModule } from './files/files.module';
 import { FilesCleanupQueueModule } from './queues/files-cleanup-queue/files-cleanup-queue.module';
+import { RevisionsRetentionQueueModule } from './queues/revisions-retention-queue/revisions-retention-queue.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -129,6 +130,7 @@ import { FormsCorsMiddleware } from './forms/forms-cors.middleware';
     HealthModule,
     FilesModule,
     FilesCleanupQueueModule,
+    RevisionsRetentionQueueModule,
     SchedulerModule,
     // RealtimeModule (Socket.io, ADR-12) montato per servire il push del bell/badge
     // di NotificationsModule — prima non importato di default, vedi ADR-12 §Contesto.

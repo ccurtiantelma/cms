@@ -3,8 +3,11 @@
 > Regole di dominio. Priorità: dopo Constitution. Le AI non le modificano di propria
 > iniziativa (vedi `docs/constitution.md` → "Documentation Policy").
 >
-> Ultima revisione: 2026-08-17 — conferma delle assunzioni A2, A3, A4, A5 su richiesta
-> esplicita dell'umano. Revisione precedente: 2026-08-13 — sezione di dominio del CMS a
+> Ultima revisione: 2026-09-11 — riscrittura del § "Revisioni e cronologia" su richiesta
+> esplicita dell'umano, per applicare **ADR-61** (retention delle Revisioni): la regola 2 e
+> la regola 5 si contraddicevano dal 2026-08-13 e il conflitto era stato rinviato una volta
+> da ADR-19. Revisione precedente: 2026-08-17 — conferma delle assunzioni A2, A3, A4, A5 su
+> richiesta esplicita dell'umano. Precedente: 2026-08-13 — sezione di dominio del CMS a
 > pagine redatta nell'ambito della ristrutturazione documentale.
 
 ---
@@ -188,15 +191,41 @@ di una Pagina viene registrato in `audit_log`.
 
 ## Revisioni e cronologia
 
+> Regolato da **ADR-61** (approvata il 2026-09-11), che scioglie il rinvio di ADR-19 § 5.
+> Fino a quella data le regole 2 e 5 si contraddicevano: la 2 vietava la cancellazione, la 5
+> prevedeva la potatura delle eccedenti. La contraddizione è risolta separando **modifica** da
+> **scadenza**: una Revisione non si modifica mai e nessun utente la cancella mai, ma una
+> politica di sistema può rimuovere righe che la retention configurata ha già dichiarato
+> scadute.
+
 1. Ogni pubblicazione genera una **Revisione immutabile**: snapshot completo di contenuto
    e metadati, con autore e timestamp.
-2. Le Revisioni non si modificano e non si cancellano.
+2. **Le Revisioni non si modificano.** Non esiste alcun percorso di scrittura, in nessuna
+   superficie, che alteri una Revisione dopo la sua creazione: `page_revisions` è
+   append-only e non ha né `updatedAt`/`updatedBy` né `version`.
 3. Il **ripristino** di una Revisione non riscrive la storia: crea una nuova bozza a
    partire dallo snapshot scelto, che va poi ripubblicata.
 4. È sempre possibile confrontare due Revisioni (diff strutturale dell'albero blocchi:
    blocchi aggiunti, rimossi, modificati, spostati).
-5. Il numero di Revisioni conservate per Pagina è configurabile; la potatura delle
-   eccedenti non tocca mai l'ultima Revisione pubblicata.
+5. **Nessun utente cancella una Revisione.** Non esiste endpoint, pulsante o parametro che
+   pota su richiesta, e una Revisione non viene mai soft-eliminata (`page_revisions` non ha
+   `isActive`: l'immutabilità è affermata dallo schema, non dai commenti).
+6. La **potatura** delle Revisioni eccedenti esiste come **processo di sistema**: un
+   repeatable job BullMQ, mai un `@Cron`, mai in linea con la pubblicazione. Rimuove
+   fisicamente le righe scadute secondo la retention configurata. Non è il `DELETE` fisico
+   vietato dalla Constitution — quel divieto riguarda la cancellazione come operazione di
+   dominio esposta a un utente, che fa sparire un dato ancora vivo per qualcuno; qui nessun
+   attore la invoca, non c'è superficie API, e agisce solo su righe già dichiarate scadute
+   dalla policy.
+7. La soglia di retention è **configurabile** (`app_settings`, chiave
+   `revisions.retentionCount`, gestione Admin+). Il valore `0` disattiva la potatura: la
+   conservazione illimitata resta una configurazione ammessa, non un caso eccezionale.
+8. Due Revisioni non sono **mai** potabili, in nessuna configurazione: quella pubblicata
+   (`pages.publishedRevisionId`) e la più recente della Pagina. Se la soglia configurata
+   fosse più bassa del numero di righe non potabili, vince la protezione, non la soglia.
+9. Ogni esecuzione della potatura è **audit-logged in forma aggregata** (pagina, righe
+   rimosse, soglia applicata, id del job): il singolo snapshot rimosso non è ricostruibile,
+   il fatto che sia stato rimosso sì.
 
 ---
 

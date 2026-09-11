@@ -1,0 +1,33 @@
+info:
+  name: Get Revisions Retention
+  type: http
+  seq: 5
+
+http:
+  method: GET
+  url: "{{baseUrl}}/app/settings/revisions-retention"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Politica di retention delle Revisioni (ADR-61). Su un'installazione mai
+  configurata risponde col default di fabbrica `retentionCount: 0`, cioè
+  potatura disattivata: il sistema non inizia a rimuovere storia da solo.
+
+tests: |-
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("retentionCount è un intero >= 0", function() {
+    const body = res.getBody();
+    expect(body.retentionCount).to.be.a("number");
+    expect(body.retentionCount).to.be.at.least(0);
+  });

@@ -188,6 +188,23 @@ export class AppConstants {
   static readonly filesCleanupBatchSize = num('FILES_CLEANUP_BATCH_SIZE', 500);
 
   /**
+   * Job repeatable BullMQ della potatura delle Revisioni (ADR-61). Disattivato
+   * di default come il cleanup dei blob: la rimozione di storia è opt-in
+   * esplicito a livello di deploy, **oltre** alla soglia che un Admin configura
+   * in `app_settings` (`revisions.retentionCount`, `0` = nessuna potatura). Le
+   * due leve sono volutamente indipendenti: spegnere il job ferma la potatura
+   * ovunque, senza toccare la policy salvata.
+   */
+  static readonly revisionsRetentionEnabled = bool('REVISIONS_RETENTION_ENABLED', false);
+  /** Espressione cron (formato BullMQ/`cron-parser`) della ricorrenza della potatura. */
+  static readonly revisionsRetentionCronPattern = str(
+    'REVISIONS_RETENTION_CRON_PATTERN',
+    '30 3 * * *',
+  );
+  /** Pagine esaminate per singola esecuzione (guardrail sul lotto, non business rule). */
+  static readonly revisionsRetentionPageBatchSize = num('REVISIONS_RETENTION_PAGE_BATCH_SIZE', 200);
+
+  /**
    * Job repeatable BullMQ (`analytics-rollup-queue`) che ricalcola oggi/ieri
    * (UTC) di `analytics_daily_rollups` da `analytics_events`. Sempre attivo
    * (nessun flag enabled/disabled, a differenza del cleanup file): a

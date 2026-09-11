@@ -5,6 +5,7 @@ import { GuardAdmin, GuardSuperAdmin } from '../auth/guard';
 import { SettingsService } from './settings.service';
 import { ThemeConfigDto } from './dto/theme-config.dto';
 import { MultilingualConfigDto } from './dto/multilingual-config.dto';
+import { RevisionsRetentionDto } from './dto/revisions-retention.dto';
 import { GlobalTokensDto } from './dto/global-tokens.dto';
 import { AuthInfo } from '../common/types';
 
@@ -84,6 +85,46 @@ export class SettingsController {
   ): Promise<MultilingualConfigDto> {
     const authInfo = req['authInfo'] as AuthInfo;
     return this.settingsService.updateMultilingualConfig(dto, authInfo, req.ip);
+  }
+
+  /** Politica di retention delle Revisioni corrente (ADR-61; default: potatura disattivata). */
+  @Get('revisions-retention')
+  @ApiOperation({
+    summary: 'Retention delle Revisioni (default di fabbrica: potatura disattivata)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Politica di retention corrente',
+    type: RevisionsRetentionDto,
+  })
+  async getRevisionsRetention(): Promise<RevisionsRetentionDto> {
+    return this.settingsService.getRevisionsRetention();
+  }
+
+  /**
+   * Salva la retention delle Revisioni (Admin+, audit logged, ADR-61 § 3).
+   * Cambia **solo la policy**: non esiste e non deve esistere una rotta che
+   * pota su richiesta — la rimozione è un processo di sistema
+   * (`business-rules.md` § Revisioni regole 5-6).
+   */
+  @Put('revisions-retention')
+  @UseGuards(GuardAdmin)
+  @ApiOperation({
+    summary: 'Salva la retention delle Revisioni (Admin+ only, registrato su audit log)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Politica di retention salvata',
+    type: RevisionsRetentionDto,
+  })
+  @ApiResponse({ status: 400, description: 'retentionCount fuori dal range 0-1000' })
+  @ApiResponse({ status: 403, description: 'Ruolo inferiore ad Admin' })
+  async updateRevisionsRetention(
+    @Body() dto: RevisionsRetentionDto,
+    @Req() req: Request,
+  ): Promise<RevisionsRetentionDto> {
+    const authInfo = req['authInfo'] as AuthInfo;
+    return this.settingsService.updateRevisionsRetention(dto, authInfo, req.ip);
   }
 
   /** Global Design Tokens correnti (default di fabbrica se mai personalizzati). Risorsa separata dal tema di ADR-4. */

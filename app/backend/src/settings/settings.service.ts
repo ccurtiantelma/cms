@@ -16,6 +16,7 @@ import {
   THEME_UNSET,
 } from './dto/theme-config.dto';
 import { MultilingualConfigDto } from './dto/multilingual-config.dto';
+import { RevisionsRetentionDto } from './dto/revisions-retention.dto';
 import { GlobalTokensDto } from './dto/global-tokens.dto';
 
 /** Chiave della riga di `app_settings` che contiene il tema globale (ADR-4). */
@@ -26,6 +27,18 @@ export const MULTILINGUAL_SETTING_KEY = 'multilingual.locales';
 
 /** Chiave della riga di `app_settings` che contiene i Global Design Tokens (risorsa separata da ADR-4). */
 export const GLOBAL_TOKENS_SETTING_KEY = 'global_tokens';
+
+/** Chiave della riga di `app_settings` che contiene la retention delle Revisioni (ADR-61). */
+export const REVISIONS_RETENTION_SETTING_KEY = 'revisions.retentionCount';
+
+/**
+ * Default di fabbrica della retention: **potatura disattivata**. ADR-61 rende
+ * la potatura possibile, non obbligatoria, e un'installazione che non l'ha mai
+ * configurata non deve iniziare a rimuovere storia da sola. Il comportamento
+ * di default resta quindi quello di ADR-19 (conservazione illimitata), con la
+ * differenza che ora è una scelta esplicita e reversibile.
+ */
+export const DEFAULT_REVISIONS_RETENTION: RevisionsRetentionDto = { retentionCount: 0 };
 
 /**
  * Default di fabbrica del tema (contratto v7) — SPECULARE a
@@ -632,6 +645,72 @@ export class SettingsService {
       'settings.multilingual.update',
       'app_settings',
       MULTILINGUAL_SETTING_KEY,
+      JSON.stringify(dto),
+      authInfo.impersonatedBy,
+      ip,
+    );
+    return dto;
+  }
+
+  /**
+   * Politica di retention delle Revisioni corrente (ADR-61): la riga
+   * `key='revisions.retentionCount'` se presente e attiva, altrimenti il
+   * default di fabbrica — potatura disattivata.
+   */
+  async getRevisionsRetention(): Promise<RevisionsRetentionDto> {
+    const row = await this.db.db.query.appSettingEntity.findFirst({
+      where: and(
+        eq(appSettingEntity.key, REVISIONS_RETENTION_SETTING_KEY),
+        eq(appSettingEntity.isActive, true),
+      ),
+    });
+    if (!row) {
+      return DEFAULT_REVISIONS_RETENTION;
+    }
+    return row.value as RevisionsRetentionDto;
+  }
+
+  /**
+   * Salva (upsert sulla chiave univoca) la retention delle Revisioni e registra
+   * l'operazione su audit log. Admin+ only (guard sul controller, ADR-61 § 3).
+   *
+   * Non esiste un endpoint che pota: questa rotta cambia **solo** la policy, e
+   * la rimozione resta un processo di sistema (`business-rules.md` § Revisioni
+   * regole 5-6). Abbassare la soglia non cancella nulla in modo sincrono — il
+   * job repeatable applicherà la nuova policy alla propria prossima esecuzione.
+   */
+  async updateRevisionsRetention(
+    dto: RevisionsRetentionDto,
+    authInfo: AuthInfo,
+    ip?: string,
+  ): Promise<RevisionsRetentionDto> {
+    await this.db.db
+      .insert(appSettingEntity)
+      .values({
+        guid: Utils.randomString(16),
+        key: REVISIONS_RETENTION_SETTING_KEY,
+        value: dto,
+        createdBy: authInfo.userId,
+        updatedBy: authInfo.userId,
+      })
+      .onConflictDoUpdate({
+        target: appSettingEntity.key,
+        set: {
+          value: dto,
+          isActive: true,
+          updatedAt: new Date(),
+          updatedBy: authInfo.userId,
+        },
+      });
+
+    this.logger.log(
+      `Retention Revisioni aggiornata (retentionCount=${dto.retentionCount}, userId=${authInfo.userId}).`,
+    );
+    await this.auditLogService.log(
+      authInfo.userId,
+      'settings.revisions-retention.update',
+      'app_settings',
+      REVISIONS_RETENTION_SETTING_KEY,
       JSON.stringify(dto),
       authInfo.impersonatedBy,
       ip,
