@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Put, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
-import { GuardAdmin } from '../auth/guard';
+import { GuardAdmin, GuardSuperAdmin } from '../auth/guard';
 import { SettingsService } from './settings.service';
 import { ThemeConfigDto } from './dto/theme-config.dto';
 import { MultilingualConfigDto } from './dto/multilingual-config.dto';
@@ -31,11 +31,25 @@ export class SettingsController {
     return this.settingsService.getTheme();
   }
 
-  /** Salva il tema globale per tutti gli utenti autenticati (audit logged). */
+  /**
+   * Salva il tema globale di installazione (SuperAdmin, audit logged).
+   *
+   * `GuardSuperAdmin` **ripristinato il 2026-09-11**: era stato rimosso dal
+   * commit `8b272f7` insieme all'espansione del contratto a `version: 8`,
+   * lasciando la rotta **senza alcun guard** — un qualunque utente autenticato,
+   * ruolo `User` compreso, poteva riscrivere il tema dell'intero sito. Non era
+   * una decisione: ADR-4 § 4 prescrive « solo `GuardSuperAdmin` », il JSDoc del
+   * componente frontend continuava a dire SuperAdmin e il test e2e continuava
+   * ad attendersi `403`. Nessuna ADR supera ADR-4 su questo punto: qui si
+   * ripristina la conformità, non si prende una decisione nuova. Spostare la
+   * soglia ad Admin resta possibile, ma con una ADR che superi ADR-4.
+   */
   @Put('theme')
-  @ApiOperation({ summary: 'Salva il tema globale (registrato su audit log)' })
+  @UseGuards(GuardSuperAdmin)
+  @ApiOperation({ summary: 'Salva il tema globale (SuperAdmin only, registrato su audit log)' })
   @ApiResponse({ status: 200, description: 'Tema salvato', type: ThemeConfigDto })
   @ApiResponse({ status: 400, description: 'Payload non valido (hex, palette o versione)' })
+  @ApiResponse({ status: 403, description: 'Ruolo inferiore a SuperAdmin' })
   async updateTheme(@Body() dto: ThemeConfigDto, @Req() req: Request): Promise<ThemeConfigDto> {
     const authInfo = req['authInfo'] as AuthInfo;
     return this.settingsService.updateTheme(dto, authInfo, req.ip);

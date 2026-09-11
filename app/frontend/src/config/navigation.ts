@@ -43,6 +43,10 @@ export const navigationItems: NavigationItem[] = [
     label: 'Editor tema',
     path: '/theme-editor',
     icon: IconPalette,
+    // ADR-4 § 4: il tema di installazione è SuperAdmin-only. La restrizione era
+    // sparita insieme al `GuardSuperAdmin` del `PUT` (commit `8b272f7`),
+    // ripristinata il 2026-09-11 insieme a quello.
+    roles: [AppUserRoles.SuperAdmin],
   },
   {
     label: 'Sezioni Globali',
