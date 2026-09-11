@@ -77,7 +77,7 @@ describe('tema dell\'installazione nel documento SSR', () => {
 
     const html = await renderPageDocument(page(), CSS_HREF);
 
-    expect(html).toContain('<style id="eaidos-theme-vars">');
+    expect(html).toContain('<style id="eaidos-theme-vars" nonce="">');
     expect(html).toContain('--theme-primary: #aa00bb;');
     expect(html).toContain('--theme-page-bg: #fafbfc;');
     // Il ponte verso i token dei blocchi: senza questo il tema resterebbe

@@ -69,6 +69,8 @@ interface AppProps {
   globalSections?: PublicActiveGlobalSectionsDto;
   /** Vedi `PageView.tsx` — pass-through opzionale calcolato da `entry-server.tsx` (ADR-52). */
   resolvePageUrl?: (pageGuid: string) => string | null | undefined;
+  /** Nonce della risposta HTTP corrente (`security-headers.ts`) — vedi `ThemeStyleTag.tsx`. */
+  nonce: string;
 }
 
 /**
@@ -91,6 +93,7 @@ export default function App({
   formScriptHref,
   globalSections,
   resolvePageUrl,
+  nonce,
 }: AppProps) {
   // `page.seo` è tipizzato come indice generico obbligatorio dall'OpenAPI, ma
   // qualunque fixture/consumer che ne fosse privo (o desse `null`) non deve
@@ -120,10 +123,10 @@ export default function App({
           />
         ) : null}
         {criticalCss ? (
-          <style data-critical-css dangerouslySetInnerHTML={{ __html: criticalCss }} />
+          <style data-critical-css nonce={nonce} dangerouslySetInnerHTML={{ __html: criticalCss }} />
         ) : null}
         <link rel="stylesheet" href={cssHref} />
-        <ThemeStyleTag themeConfig={themeConfig} />
+        <ThemeStyleTag themeConfig={themeConfig} nonce={nonce} />
       </head>
       <body>
         <PageView

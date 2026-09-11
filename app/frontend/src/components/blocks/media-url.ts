@@ -10,7 +10,13 @@
  * puntare a un host di rete interna irraggiungibile da un `<img>` nel
  * browser.
  */
-const PUBLIC_MEDIA_BASE_URL: string =
+/**
+ * Esportata (oltre che usata qui) perché `security-headers.ts` in
+ * `app/public-site` la legge per popolare `img-src` nella CSP: stessa origine
+ * usata da ogni `<img>` dei blocchi, letta da un solo punto invece di
+ * duplicare `import.meta.env.VITE_PUBLIC_MEDIA_BASE_URL` una seconda volta.
+ */
+export const PUBLIC_MEDIA_BASE_URL: string =
   (import.meta.env.VITE_PUBLIC_MEDIA_BASE_URL as string | undefined) || 'http://localhost:53000';
 
 /** Compone l'URL pubblico e leggibile dal browser del media identificato da `mediaRef`. */

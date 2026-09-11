@@ -12,6 +12,12 @@ interface ThemeStyleTagProps {
    * (vedi `fetchThemeConfig`).
    */
   themeConfig: ThemeConfigDto | null;
+  /**
+   * Nonce della risposta HTTP corrente (`security-headers.ts`), stesso valore
+   * dell'header `Content-Security-Policy: style-src 'nonce-...'` — senza
+   * questo attributo il browser scarterebbe questo `<style>` inline.
+   */
+  nonce: string;
 }
 
 /**
@@ -30,8 +36,8 @@ interface ThemeStyleTagProps {
  * `#rrggbb`, unità e pesi su whitelist, numeri su `Number.isFinite`) prima di
  * raggiungere il foglio di stile.
  */
-export default function ThemeStyleTag({ themeConfig }: ThemeStyleTagProps) {
+export default function ThemeStyleTag({ themeConfig, nonce }: ThemeStyleTagProps) {
   if (!themeConfig) return null;
   const css = generateThemeCss(themeConfig, { selector: ':root', scheme: 'auto' });
-  return <style id={THEME_STYLE_TAG_ID} dangerouslySetInnerHTML={{ __html: css }} />;
+  return <style id={THEME_STYLE_TAG_ID} nonce={nonce} dangerouslySetInnerHTML={{ __html: css }} />;
 }

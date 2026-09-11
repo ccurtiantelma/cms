@@ -10,12 +10,30 @@ import { PublicSiteConfig } from './config';
 import { ingestPageview, resolvePublicPage } from './public-api-client';
 import { resolvePreviewPage } from './preview-api-client';
 import { renderErrorDocument, renderPageDocument, renderPreviewDocument } from './entry-server';
+import { createNonce, securityHeaders } from './security-headers';
 
 /**
  * Header imposto su **ogni** risposta della rotta di anteprima, successo o
  * `404` che sia — senza eccezioni configurabili (ADR-25 § 4).
  */
 const PREVIEW_ROBOTS_HEADER = 'noindex, nofollow, noarchive';
+
+/**
+ * Scrive gli header di sicurezza (`securityHeaders`, mai omessi — successo,
+ * `404`, `405`, `308`, `500`, stesso principio di `PREVIEW_ROBOTS_HEADER` qui
+ * esteso a ogni risposta) più quelli specifici della singola rotta, in
+ * un'unica chiamata a `writeHead`. Unico punto che chiama `writeHead` in
+ * questo file: nessuna rotta può dimenticare gli header di sicurezza perché
+ * nessuna rotta chiama `writeHead` direttamente.
+ */
+function writeHead(
+  res: ServerResponse,
+  statusCode: number,
+  nonce: string,
+  headers: Record<string, string> = {},
+): void {
+  res.writeHead(statusCode, { ...securityHeaders(nonce), ...headers });
+}
 
 /**
  * Prefisso della rotta di anteprima (ADR-25 § 3): percorso dedicato e mai
@@ -65,9 +83,9 @@ function loadFormSubmitScript(): { href: string; content: string } {
 const css = loadCss();
 const formSubmitScript = loadFormSubmitScript();
 
-async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+async function handleRequest(req: IncomingMessage, res: ServerResponse, nonce: string): Promise<void> {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
-    res.writeHead(405, { 'Content-Type': 'text/plain; charset=utf-8', Allow: 'GET, HEAD' });
+    writeHead(res, 405, nonce, { 'Content-Type': 'text/plain; charset=utf-8', Allow: 'GET, HEAD' });
     res.end('Method Not Allowed');
     return;
   }
@@ -76,13 +94,13 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   const isHead = req.method === 'HEAD';
 
   if (url.pathname === '/healthz') {
-    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+    writeHead(res, 200, nonce, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end(isHead ? undefined : 'ok');
     return;
   }
 
   if (url.pathname === css.href) {
-    res.writeHead(200, {
+    writeHead(res, 200, nonce, {
       'Content-Type': 'text/css; charset=utf-8',
       'Cache-Control': 'public, max-age=31536000, immutable',
     });
@@ -91,7 +109,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   }
 
   if (url.pathname === formSubmitScript.href) {
-    res.writeHead(200, {
+    writeHead(res, 200, nonce, {
       'Content-Type': 'text/javascript; charset=utf-8',
       'Cache-Control': 'public, max-age=3600',
     });
@@ -100,7 +118,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   }
 
   if (url.pathname.startsWith(PREVIEW_PATH_PREFIX)) {
-    await handlePreviewRequest(url.pathname, isHead, res);
+    await handlePreviewRequest(url.pathname, isHead, res, nonce);
     return;
   }
 
@@ -113,25 +131,25 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       // ricalcolo qui, si passa lo stesso percorso già usato per la richiesta.
       const html = isHead
         ? undefined
-        : await renderPageDocument(resolution.page, css.href, formSubmitScript.href, url.pathname);
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        : await renderPageDocument(resolution.page, css.href, formSubmitScript.href, url.pathname, nonce);
+      writeHead(res, 200, nonce, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(html);
       if (!isHead) ingestPageview(url.pathname);
       return;
     }
     case 'redirect': {
-      res.writeHead(308, { Location: resolution.location });
+      writeHead(res, 308, nonce, { Location: resolution.location });
       res.end();
       return;
     }
     case 'not-found': {
-      res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(isHead ? undefined : await renderErrorDocument(404, 'Pagina non trovata', css.href));
+      writeHead(res, 404, nonce, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(isHead ? undefined : await renderErrorDocument(404, 'Pagina non trovata', css.href, nonce));
       return;
     }
     case 'error': {
-      res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(isHead ? undefined : await renderErrorDocument(500, 'Errore interno', css.href));
+      writeHead(res, 500, nonce, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(isHead ? undefined : await renderErrorDocument(500, 'Errore interno', css.href, nonce));
       return;
     }
   }
@@ -146,16 +164,21 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
  * eccezioni: l'anteprima non è indicizzabile per costruzione, non per
  * convenzione.
  */
-async function handlePreviewRequest(pathname: string, isHead: boolean, res: ServerResponse): Promise<void> {
+async function handlePreviewRequest(
+  pathname: string,
+  isHead: boolean,
+  res: ServerResponse,
+  nonce: string,
+): Promise<void> {
   try {
     const token = pathname.slice(PREVIEW_PATH_PREFIX.length);
 
     if (!token) {
-      res.writeHead(404, {
+      writeHead(res, 404, nonce, {
         'Content-Type': 'text/html; charset=utf-8',
         'X-Robots-Tag': PREVIEW_ROBOTS_HEADER,
       });
-      res.end(isHead ? undefined : await renderErrorDocument(404, 'Pagina non trovata', css.href));
+      res.end(isHead ? undefined : await renderErrorDocument(404, 'Pagina non trovata', css.href, nonce));
       return;
     }
 
@@ -163,8 +186,10 @@ async function handlePreviewRequest(pathname: string, isHead: boolean, res: Serv
 
     switch (resolution.kind) {
       case 'ok': {
-        const html = isHead ? undefined : await renderPreviewDocument(resolution.page, css.href, formSubmitScript.href);
-        res.writeHead(200, {
+        const html = isHead
+          ? undefined
+          : await renderPreviewDocument(resolution.page, css.href, formSubmitScript.href, nonce);
+        writeHead(res, 200, nonce, {
           'Content-Type': 'text/html; charset=utf-8',
           'X-Robots-Tag': PREVIEW_ROBOTS_HEADER,
         });
@@ -172,19 +197,19 @@ async function handlePreviewRequest(pathname: string, isHead: boolean, res: Serv
         return;
       }
       case 'not-found': {
-        res.writeHead(404, {
+        writeHead(res, 404, nonce, {
           'Content-Type': 'text/html; charset=utf-8',
           'X-Robots-Tag': PREVIEW_ROBOTS_HEADER,
         });
-        res.end(isHead ? undefined : await renderErrorDocument(404, 'Pagina non trovata', css.href));
+        res.end(isHead ? undefined : await renderErrorDocument(404, 'Pagina non trovata', css.href, nonce));
         return;
       }
       case 'error': {
-        res.writeHead(500, {
+        writeHead(res, 500, nonce, {
           'Content-Type': 'text/html; charset=utf-8',
           'X-Robots-Tag': PREVIEW_ROBOTS_HEADER,
         });
-        res.end(isHead ? undefined : await renderErrorDocument(500, 'Errore interno', css.href));
+        res.end(isHead ? undefined : await renderErrorDocument(500, 'Errore interno', css.href, nonce));
         return;
       }
     }
@@ -193,11 +218,11 @@ async function handlePreviewRequest(pathname: string, isHead: boolean, res: Serv
     // X-Robots-Tag (ADR-25 § 4: nessuna eccezione, mai).
     console.error('public-site: errore non gestito nell\'anteprima', error);
     if (!res.headersSent) {
-      res.writeHead(500, {
+      writeHead(res, 500, nonce, {
         'Content-Type': 'text/html; charset=utf-8',
         'X-Robots-Tag': PREVIEW_ROBOTS_HEADER,
       });
-      res.end(await renderErrorDocument(500, 'Errore interno', css.href));
+      res.end(await renderErrorDocument(500, 'Errore interno', css.href, nonce));
     } else {
       res.end();
     }
@@ -205,17 +230,23 @@ async function handlePreviewRequest(pathname: string, isHead: boolean, res: Serv
 }
 
 const server = createServer((req, res) => {
+  // Un solo nonce per richiesta, generato qui — prima di ogni ramo, compreso
+  // l'ultima istanza sotto — così anche una risposta 500 di errore non
+  // gestito porta gli stessi header di sicurezza (CSP `style-src` incluso)
+  // di ogni altra risposta, mai un caso speciale scoperto.
+  const nonce = createNonce();
+
   // `async` + `await`: `renderErrorDocument` è asincrona (legge i Global Design
   // Tokens). Senza `await` questo `res.end()` riceveva una `Promise` e Node
   // sollevava `ERR_INVALID_ARG_TYPE` **fuori** da ogni catch, abbattendo il
   // processo — cioè l'esatto contrario di ciò che questo handler di ultima
   // istanza esiste per garantire (ADR-22 § 2: un blocco che solleva dà `500`,
   // mai una pagina mutilata e mai un server morto).
-  void handleRequest(req, res).catch(async (error: unknown) => {
+  void handleRequest(req, res, nonce).catch(async (error: unknown) => {
     console.error('public-site: errore non gestito', error);
     if (!res.headersSent) {
-      res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(await renderErrorDocument(500, 'Errore interno', css.href));
+      writeHead(res, 500, nonce, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(await renderErrorDocument(500, 'Errore interno', css.href, nonce));
     } else {
       res.end();
     }

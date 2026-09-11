@@ -97,6 +97,14 @@ export async function renderPageDocument(
    * uno già in uso.
    */
   canonicalPath = '',
+  /**
+   * Nonce della risposta HTTP corrente (`security-headers.ts`), passato in
+   * coda per lo stesso motivo di `canonicalPath`: default `''` per non
+   * rompere i chiamanti esistenti nei test che non verificano la CSP — un
+   * `<style nonce="">` senza header corrispondente il browser lo scarta
+   * comunque, non è un vettore di injection, solo CSS non applicato.
+   */
+  nonce = '',
 ): Promise<string> {
   const pageBlocks = blocksOf(page.content);
   const { themeConfig, globalSections, resolvePageUrl } = await buildLayoutContext(pageBlocks);
@@ -113,18 +121,24 @@ export async function renderPageDocument(
         themeConfig={themeConfig}
         globalSections={globalSections}
         resolvePageUrl={resolvePageUrl}
+        nonce={nonce}
       />,
     )
   );
 }
 
 /** Stesso documento minimale per le pagine `404`/`500`. */
-export async function renderErrorDocument(status: number, message: string, cssHref: string): Promise<string> {
+export async function renderErrorDocument(
+  status: number,
+  message: string,
+  cssHref: string,
+  nonce = '',
+): Promise<string> {
   const themeConfig = await fetchThemeConfig();
   return (
     DOCTYPE +
     renderToStaticMarkup(
-      <ErrorDocument status={status} message={message} cssHref={cssHref} themeConfig={themeConfig} />,
+      <ErrorDocument status={status} message={message} cssHref={cssHref} themeConfig={themeConfig} nonce={nonce} />,
     )
   );
 }
@@ -139,6 +153,8 @@ export async function renderPreviewDocument(
   page: PagePreviewContentDto,
   cssHref: string,
   formScriptHref = '',
+  /** Vedi `renderPageDocument` — stesso motivo del default `''`. */
+  nonce = '',
 ): Promise<string> {
   const pageBlocks = blocksOf(page.content);
   const { themeConfig, globalSections, resolvePageUrl } = await buildLayoutContext(pageBlocks);
@@ -154,6 +170,7 @@ export async function renderPreviewDocument(
         themeConfig={themeConfig}
         globalSections={globalSections}
         resolvePageUrl={resolvePageUrl}
+        nonce={nonce}
       />,
     )
   );

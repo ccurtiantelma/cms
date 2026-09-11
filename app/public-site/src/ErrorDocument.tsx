@@ -7,10 +7,12 @@ interface ErrorDocumentProps {
   cssHref: string;
   /** Tema dell'installazione, `null` se il backend non ha risposto (vedi `ThemeStyleTag`). */
   themeConfig: ThemeConfigDto | null;
+  /** Nonce della risposta HTTP corrente (`security-headers.ts`) — vedi `ThemeStyleTag.tsx`. */
+  nonce: string;
 }
 
 /** Documento minimale per `404`/`500` (ADR-24 § 3: `404` uniforme, nessuna informazione sul motivo). */
-export default function ErrorDocument({ status, message, cssHref, themeConfig }: ErrorDocumentProps) {
+export default function ErrorDocument({ status, message, cssHref, themeConfig, nonce }: ErrorDocumentProps) {
   return (
     <html lang="it">
       <head>
@@ -18,7 +20,7 @@ export default function ErrorDocument({ status, message, cssHref, themeConfig }:
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{`${status} — ${message}`}</title>
         <link rel="stylesheet" href={cssHref} />
-        <ThemeStyleTag themeConfig={themeConfig} />
+        <ThemeStyleTag themeConfig={themeConfig} nonce={nonce} />
       </head>
       <body>
         <main>

@@ -23,6 +23,8 @@ interface PreviewDocumentProps {
   globalSections?: PublicActiveGlobalSectionsDto;
   /** Vedi `PageView.tsx` — pass-through opzionale calcolato da `entry-server.tsx` (ADR-52). */
   resolvePageUrl?: (pageGuid: string) => string | null | undefined;
+  /** Nonce della risposta HTTP corrente (`security-headers.ts`) — vedi `ThemeStyleTag.tsx`. */
+  nonce: string;
 }
 
 /**
@@ -44,6 +46,7 @@ export default function PreviewDocument({
   formScriptHref,
   globalSections,
   resolvePageUrl,
+  nonce,
 }: PreviewDocumentProps) {
   return (
     <html lang={page.locale}>
@@ -53,10 +56,10 @@ export default function PreviewDocument({
         <meta name="robots" content="noindex,nofollow" />
         <title>{page.title}</title>
         {criticalCss ? (
-          <style data-critical-css dangerouslySetInnerHTML={{ __html: criticalCss }} />
+          <style data-critical-css nonce={nonce} dangerouslySetInnerHTML={{ __html: criticalCss }} />
         ) : null}
         <link rel="stylesheet" href={cssHref} />
-        <ThemeStyleTag themeConfig={themeConfig} />
+        <ThemeStyleTag themeConfig={themeConfig} nonce={nonce} />
       </head>
       <body>
         <PageView
