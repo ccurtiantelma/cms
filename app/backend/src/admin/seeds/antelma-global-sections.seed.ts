@@ -20,7 +20,10 @@ import { MigratableBlockNode } from '../../blocks/migration/block-migration.type
 import { BlockTreeValidatorService } from '../../blocks/validator/block-tree-validator.service';
 import { ValidatableBlockNode } from '../../blocks/validator/validatable-node.types';
 import { BlockPropSanitizerService } from '../../common/sanitizer/block-prop-sanitizer.service';
-import { detectRasterMimeType } from '../../files/public-media/raster-mime-sniffer';
+import {
+  detectRasterMimeType,
+  readRasterDimensions,
+} from '../../files/public-media/raster-mime-sniffer';
 import { LocalDiskDriver } from '../../files/storage/local-disk.driver';
 import { S3CompatibleDriver } from '../../files/storage/s3-compatible.driver';
 import { StorageDriver } from '../../files/storage/storage-driver.interface';
@@ -83,6 +86,8 @@ async function ensureAntelmaLogoFile(dbService: DbService, authorId: number): Pr
 
   const buffer = await readFile(LOGO_ASSET_PATH);
   const mimeType = detectRasterMimeType(buffer);
+  /** Dimensioni intrinseche del seed, stesse regole dell'upload (RFC-F09 N2). */
+  const dimensions = readRasterDimensions(buffer);
   if (!mimeType) {
     throw new Error(
       `Seed sezioni globali: "${LOGO_ASSET_PATH}" non riconosciuto come immagine raster.`,
@@ -101,6 +106,8 @@ async function ensureAntelmaLogoFile(dbService: DbService, authorId: number): Pr
     storageKey,
     checksumSha256: createHash('sha256').update(buffer).digest('hex'),
     entity: 'page-media',
+    width: dimensions?.width ?? null,
+    height: dimensions?.height ?? null,
     createdBy: authorId,
     updatedBy: authorId,
   });
