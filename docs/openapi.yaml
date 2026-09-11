@@ -605,6 +605,49 @@ paths:
       summary: Salva il registro Locale attivi (Admin+ only, registrato su audit log)
       tags:
         - Settings
+  /api/v1/app/settings/revisions-retention:
+    get:
+      operationId: SettingsController_getRevisionsRetention
+      parameters: []
+      responses:
+        '200':
+          description: Politica di retention corrente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevisionsRetentionDto'
+      security:
+        - access-token: []
+      summary: 'Retention delle Revisioni (default di fabbrica: potatura disattivata)'
+      tags:
+        - Settings
+    put:
+      operationId: SettingsController_updateRevisionsRetention
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevisionsRetentionDto'
+      responses:
+        '200':
+          description: Politica di retention salvata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevisionsRetentionDto'
+        '400':
+          description: retentionCount fuori dal range 0-1000
+        '403':
+          description: Ruolo inferiore ad Admin
+      security:
+        - access-token: []
+      summary: >-
+        Salva la retention delle Revisioni (Admin+ only, registrato su audit
+        log)
+      tags:
+        - Settings
   /api/v1/app/settings/global-tokens:
     get:
       operationId: SettingsController_getGlobalTokens
@@ -3552,6 +3595,20 @@ components:
       required:
         - active
         - default
+    RevisionsRetentionDto:
+      type: object
+      properties:
+        retentionCount:
+          type: number
+          description: >-
+            Numero di Revisioni conservate per Pagina oltre quelle non potabili.
+            `0` disattiva la potatura: la conservazione illimitata è una
+            configurazione ammessa, non un caso eccezionale (ADR-61 § 3).
+          example: 20
+          minimum: 0
+          maximum: 1000
+      required:
+        - retentionCount
     GlobalTokensPaletteDto:
       type: object
       properties:
@@ -3694,20 +3751,20 @@ components:
           example: a1b2c3d4e5f6a7b8
           nullable: true
         width:
-          type: object
+          type: number
           description: >-
-            Larghezza in pixel, letta dagli header raster all'upload. `null` per
-            i non-raster e per le righe caricate prima che questo campo
-            esistesse (RFC-F09 § 3, colonna non ancora in schema — sempre `null`
-            finché N2 non è firmata).
-          example: null
+            Larghezza in pixel, letta dai soli header raster all'upload (RFC-F09
+            N2). `null` per i non-raster e per le righe caricate prima della
+            migrazione `0014_add_files_dimensions`: `null` significa "non
+            misurato", mai "zero".
+          example: 1920
           nullable: true
         height:
-          type: object
+          type: number
           description: >-
             Altezza in pixel, stessa provenienza e stesse condizioni di `width`
-            (RFC-F09 § 3).
-          example: null
+            (RFC-F09 N2).
+          example: 1080
           nullable: true
         url:
           type: object
@@ -4304,6 +4361,22 @@ components:
         - content
         - seo
         - contentIssues
+    PublicPageTranslationDto:
+      type: object
+      properties:
+        locale:
+          type: string
+          description: Locale della traduzione pubblicata
+          example: en-GB
+        path:
+          type: string
+          description: >-
+            Percorso pubblico canonico della traduzione, prefisso di lingua
+            incluso quando non è la lingua di default (ADR-24 § 5)
+          example: /en-GB/about-us
+      required:
+        - locale
+        - path
     PublicPageDto:
       type: object
       properties:
@@ -4331,12 +4404,26 @@ components:
           type: object
           description: Metadati SEO/GEO della Revisione pubblicata
           additionalProperties: true
+        translations:
+          description: >-
+            Le **altre** traduzioni pubblicate dello stesso gruppo (PLAN-F05
+            T5): materia prima per gli `hreflang`, che questo endpoint non
+            genera — il markup è di F07. La Pagina corrente non compare
+            nell'elenco: il consumatore ha già il proprio `locale` e il percorso
+            che ha richiesto, e includerla renderebbe l'array non vuoto per
+            definizione, contraddicendo il criterio « vuoto se la Pagina non ha
+            traduzioni pubblicate ». Vuoto quando il gruppo non ha altre Pagine
+            `published`.
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicPageTranslationDto'
       required:
         - title
         - slug
         - locale
         - content
         - seo
+        - translations
     PublicPageGuidResolutionDto:
       type: object
       properties:

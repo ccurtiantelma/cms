@@ -451,6 +451,24 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/app/settings/revisions-retention': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Retention delle Revisioni (default di fabbrica: potatura disattivata) */
+    get: operations['SettingsController_getRevisionsRetention'];
+    /** Salva la retention delle Revisioni (Admin+ only, registrato su audit log) */
+    put: operations['SettingsController_updateRevisionsRetention'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/app/settings/global-tokens': {
     parameters: {
       query?: never;
@@ -2042,6 +2060,13 @@ export interface components {
        */
       default: string;
     };
+    RevisionsRetentionDto: {
+      /**
+       * @description Numero di Revisioni conservate per Pagina oltre quelle non potabili. `0` disattiva la potatura: la conservazione illimitata è una configurazione ammessa, non un caso eccezionale (ADR-61 § 3).
+       * @example 20
+       */
+      retentionCount: number;
+    };
     GlobalTokensPaletteDto: {
       /**
        * @description Colore primario di brand
@@ -2149,15 +2174,15 @@ export interface components {
        */
       entityId?: Record<string, never> | null;
       /**
-       * @description Larghezza in pixel, letta dagli header raster all'upload. `null` per i non-raster e per le righe caricate prima che questo campo esistesse (RFC-F09 § 3, colonna non ancora in schema — sempre `null` finché N2 non è firmata).
-       * @example null
+       * @description Larghezza in pixel, letta dai soli header raster all'upload (RFC-F09 N2). `null` per i non-raster e per le righe caricate prima della migrazione `0014_add_files_dimensions`: `null` significa "non misurato", mai "zero".
+       * @example 1920
        */
-      width?: Record<string, never> | null;
+      width?: number | null;
       /**
-       * @description Altezza in pixel, stessa provenienza e stesse condizioni di `width` (RFC-F09 § 3).
-       * @example null
+       * @description Altezza in pixel, stessa provenienza e stesse condizioni di `width` (RFC-F09 N2).
+       * @example 1080
        */
-      height?: Record<string, never> | null;
+      height?: number | null;
       /**
        * @description URL pubblico derivato server-side (`api/v1/public/media/:guid`), valorizzato solo se `entity` è `page-media` (ADR-27 § 2/§ 6). `null` altrimenti — non implica che il blob sia effettivamente servibile: la verifica del formato raster reale avviene in lettura su quella rotta (ADR-27 § 3, § 4).
        * @example api/v1/public/media/a1b2c3d4e5f6a7b8
@@ -2574,6 +2599,18 @@ export interface components {
         };
       }[];
     };
+    PublicPageTranslationDto: {
+      /**
+       * @description Locale della traduzione pubblicata
+       * @example en-GB
+       */
+      locale: string;
+      /**
+       * @description Percorso pubblico canonico della traduzione, prefisso di lingua incluso quando non è la lingua di default (ADR-24 § 5)
+       * @example /en-GB/about-us
+       */
+      path: string;
+    };
     PublicPageDto: {
       /**
        * @description Titolo della Pagina, snapshot della Revisione pubblicata
@@ -2598,6 +2635,8 @@ export interface components {
       seo: {
         [key: string]: unknown;
       };
+      /** @description Le **altre** traduzioni pubblicate dello stesso gruppo (PLAN-F05 T5): materia prima per gli `hreflang`, che questo endpoint non genera — il markup è di F07. La Pagina corrente non compare nell'elenco: il consumatore ha già il proprio `locale` e il percorso che ha richiesto, e includerla renderebbe l'array non vuoto per definizione, contraddicendo il criterio « vuoto se la Pagina non ha traduzioni pubblicate ». Vuoto quando il gruppo non ha altre Pagine `published`. */
+      translations: components['schemas']['PublicPageTranslationDto'][];
     };
     PublicPageGuidResolutionDto: {
       /**
@@ -3915,6 +3954,64 @@ export interface operations {
         };
       };
       /** @description Il Locale di default non compare fra i Locale attivi */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Ruolo inferiore ad Admin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SettingsController_getRevisionsRetention: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Politica di retention corrente */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RevisionsRetentionDto'];
+        };
+      };
+    };
+  };
+  SettingsController_updateRevisionsRetention: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RevisionsRetentionDto'];
+      };
+    };
+    responses: {
+      /** @description Politica di retention salvata */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RevisionsRetentionDto'];
+        };
+      };
+      /** @description retentionCount fuori dal range 0-1000 */
       400: {
         headers: {
           [name: string]: unknown;
