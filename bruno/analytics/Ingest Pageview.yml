@@ -13,7 +13,7 @@ post:
       }
   headers:
     - name: X-Analytics-Secret
-      value: '{{analyticsIngestSecret}}'
+      value: "{{analyticsIngestSecret}}"
     - name: Content-Type
       value: application/json
   auth: inherit

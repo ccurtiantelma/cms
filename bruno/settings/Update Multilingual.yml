@@ -1,0 +1,42 @@
+info:
+  name: Update Multilingual
+  type: http
+  seq: 8
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/app/settings/multilingual"
+  body:
+    type: json
+    data: |-
+      {
+        "active": ["it-IT", "en-GB"],
+        "default": "it-IT"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Admin+ (RFC-F05 M6), audit logged. `default` deve comparire in `active`:
+  vincolo cross-field verificato nel service, `400` altrimenti.
+  Con un token sotto la soglia Admin la risposta attesa è `403`.
+
+tests: |-
+  test("status is 200 (Admin+) o 403 (sotto soglia)", function() {
+    expect(res.getStatus()).to.be.oneOf([200, 403]);
+  });
+
+  test("se 200, l'eco riflette i Locale salvati", function() {
+    if (res.getStatus() === 200) {
+      const body = res.getBody();
+      expect(body.active).to.include("it-IT");
+      expect(body.default).to.equal("it-IT");
+    }
+  });
