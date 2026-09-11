@@ -155,6 +155,22 @@ export const fileEntity = pgTable(
     /** Id/guid dell'entità di dominio associata, facoltativo. */
     entityId: varchar('entity_id', { length: 100 }),
     /**
+     * Dimensioni intrinseche in pixel, lette dai soli header raster all'upload
+     * (RFC-F09 **N2**, firmata il 2026-09-11). Nullable e mai retroattive: le
+     * righe caricate prima della migrazione, e ogni riga non raster, restano a
+     * `null`. `null` significa "non misurato", mai "zero" — chi rende l'immagine
+     * deve reggere entrambi i casi (PLAN-F09 T4).
+     *
+     * Servono alla **libreria media dell'amministrazione**, non all'HTML
+     * esportato: `ExportProcessor.readIntrinsicDimensions()` legge le dimensioni
+     * con `sharp` dal buffer che sta già copiando e le inietta nel tag
+     * (`width`/`height`/`aspect-ratio`), quindi il CLS del sito pubblicato non
+     * dipende da queste colonne. Qui evitano che l'elenco `GET app/files` debba
+     * aprire ogni blob per sapere quanto è grande un'immagine.
+     */
+    width: integer('width'),
+    height: integer('height'),
+    /**
      * Focal point editoriale (percentuale 0-100, centro immagine di default) —
      * usato da `MediaProcessor` per centrare il ritaglio quando genera una
      * variante senza crop esplicito (ADR-49 § Decisione). `NOT NULL DEFAULT 50`
@@ -192,6 +208,8 @@ export const fileEntity = pgTable(
     uniqueIndex('files_storage_key_idx').on(t.storageKey),
     index('files_entity_idx').on(t.entity, t.entityId),
     index('files_parent_file_idx').on(t.parentFileId),
+    /** Elenco della libreria media: filtro per `entity` + ordinamento `createdAt DESC` (RFC-F09 N2). */
+    index('files_entity_created_idx').on(t.entity, t.createdAt),
   ],
 );
 

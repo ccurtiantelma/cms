@@ -1,0 +1,48 @@
+info:
+  name: Upload Media - Non Raster
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/files"
+  body:
+    type: multipartForm
+    data:
+      - name: file
+        type: file
+        value:
+          - /path/to/local/logo.svg
+      - name: entity
+        type: text
+        value: page-media
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Verifica della firma raster **in scrittura** (RFC-F09 N4, firmata il 2026-09-11):
+  un file che non supera la tabella chiusa di firme raster è respinto con `400`
+  quando `entity = 'page-media'`. Vale anche rinominando l'SVG in `.png`: l'autorità
+  sono i byte, non l'estensione né il `Content-Type` dichiarato dal client.
+  Un SVG è contenuto attivo e non entra mai nella libreria media (ADR-27 § 4).
+
+tests: |-
+  test("status is 400", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+
+  test("errore normalizzato da AllExceptionsFilter, nessun dettaglio interno", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("statusCode", 400);
+    expect(body).to.have.property("message");
+    expect(body).to.have.property("timestamp");
+    expect(body).to.have.property("path");
+    expect(JSON.stringify(body)).to.not.include("storageKey");
+  });

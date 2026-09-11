@@ -88,6 +88,10 @@ describe('FilesService (unit)', () => {
     checksumSha256: createHash('sha256').update(Buffer.from('test')).digest('hex'),
     entity: 'invoice',
     entityId: 'inv-1',
+    // Riga non raster e anteriore alla migrazione `0014_add_files_dimensions`:
+    // `width`/`height` restano `null`, che è "non misurato" e non "zero" (RFC-F09 N2).
+    width: null,
+    height: null,
     isActive: true,
     createdAt: new Date('2026-07-23T10:00:00.000Z'),
     createdBy: 7,
@@ -192,15 +196,102 @@ describe('FilesService (unit)', () => {
         entity: insertedRow.entity,
         entityId: insertedRow.entityId,
         createdAt: insertedRow.createdAt,
-        // Metadata media (RFC-F09 § 2): `width`/`height` restano `null` — le colonne
-        // non esistono ancora —, `url` è derivato dal solo `entity` ed è `null` per
-        // tutto ciò che non è `page-media`.
+        // Metadata media (RFC-F09 § 2): `width`/`height` restano `null` su una riga
+        // non raster; `url` è derivato dal solo `entity` ed è `null` per tutto ciò
+        // che non è `page-media`.
         width: null,
         height: null,
         url: null,
       });
       expect(result).not.toHaveProperty('storageKey');
       expect(result).not.toHaveProperty('checksumSha256');
+    });
+  });
+
+  describe('upload — verifica raster in scrittura e dimensioni (RFC-F09 N2/N4)', () => {
+    /** PNG minimo: firma + chunk IHDR con le dimensioni dichiarate. */
+    function buildPng(width: number, height: number): Buffer {
+      const buffer = Buffer.alloc(24);
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(buffer, 0);
+      buffer.writeUInt32BE(13, 8);
+      buffer.write('IHDR', 12, 'ascii');
+      buffer.writeUInt32BE(width, 16);
+      buffer.writeUInt32BE(height, 20);
+      return buffer;
+    }
+
+    function buildFile(buffer: Buffer, originalname: string, mimetype: string) {
+      return { originalname, mimetype, size: buffer.length, buffer } as Express.Multer.File;
+    }
+
+    it('persiste width/height letti dagli header per un media editoriale raster (N2)', async () => {
+      const file = buildFile(buildPng(1920, 1080), 'hero.png', 'image/png');
+
+      await filesService.upload(
+        file,
+        { entity: 'page-media' },
+        buildAuthInfo(7, AppUserRoles.User),
+      );
+
+      expect(insertValuesMock).toHaveBeenCalledWith(
+        expect.objectContaining({ entity: 'page-media', width: 1920, height: 1080 }),
+      );
+    });
+
+    it('rifiuta con 400 un media editoriale non raster, senza scrivere su storage né DB (N4)', async () => {
+      const file = buildFile(Buffer.from('<svg onload="alert(1)"/>'), 'logo.png', 'image/png');
+
+      await expect(
+        filesService.upload(file, { entity: 'page-media' }, buildAuthInfo(7, AppUserRoles.User)),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(storageDriver.upload).not.toHaveBeenCalled();
+      expect(insertValuesMock).not.toHaveBeenCalled();
+      expect(auditLogMock).not.toHaveBeenCalled();
+    });
+
+    it('accetta un file non raster fuori da page-media: lo storage documenti di ADR-8 non regredisce', async () => {
+      const file = buildFile(Buffer.from('%PDF-1.7'), 'contratto.pdf', 'application/pdf');
+
+      await expect(
+        filesService.upload(file, { entity: 'invoice' }, buildAuthInfo(7, AppUserRoles.User)),
+      ).resolves.toBeDefined();
+
+      expect(storageDriver.upload).toHaveBeenCalled();
+      expect(insertValuesMock).toHaveBeenCalledWith(
+        expect.objectContaining({ entity: 'invoice', width: null, height: null }),
+      );
+    });
+
+    it('accetta un raster editoriale con header troncati e persiste null: "non misurato" non è un errore', async () => {
+      const file = buildFile(buildPng(100, 100).subarray(0, 18), 'tronca.png', 'image/png');
+
+      await expect(
+        filesService.upload(file, { entity: 'page-media' }, buildAuthInfo(7, AppUserRoles.User)),
+      ).resolves.toBeDefined();
+
+      expect(insertValuesMock).toHaveBeenCalledWith(
+        expect.objectContaining({ entity: 'page-media', width: null, height: null }),
+      );
+    });
+
+    it('espone width/height dalla riga DB, non da un valore fisso nel service', async () => {
+      insertValuesMock.mockReturnValue({
+        returning: jest
+          .fn()
+          .mockResolvedValue([{ ...insertedRow, entity: 'page-media', width: 640, height: 360 }]),
+      });
+      const file = buildFile(buildPng(640, 360), 'card.png', 'image/png');
+
+      const result = await filesService.upload(
+        file,
+        { entity: 'page-media' },
+        buildAuthInfo(7, AppUserRoles.User),
+      );
+
+      expect(result.width).toBe(640);
+      expect(result.height).toBe(360);
+      expect(result.url).toBe(`api/v1/public/media/${insertedRow.guid}`);
     });
   });
 

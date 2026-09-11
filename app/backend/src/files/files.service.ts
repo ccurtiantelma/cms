@@ -19,6 +19,7 @@ import { Pagination } from '../common/pagination';
 import { Utils } from '../common/utils';
 import { findBlockDefinition } from '../blocks/block-registry';
 import { STORAGE_DRIVER, StorageDriver } from './storage/storage-driver.interface';
+import { detectRasterMimeType, readRasterDimensions } from './public-media/raster-mime-sniffer';
 import { FileMetadataDto } from './dto/file-metadata.dto';
 import { UploadFileDto } from './dto/upload-file.dto';
 import { MediaTransformDto } from './dto/media-transform.dto';
@@ -63,6 +64,7 @@ export class FilesService {
   ): Promise<FileMetadataDto> {
     const storageKey = Utils.randomString(40);
     const checksumSha256 = createHash('sha256').update(file.buffer).digest('hex');
+    const dimensions = this.inspectEditorialRaster(file, dto);
 
     await this.storageDriver.upload(storageKey, file.buffer, file.mimetype);
 
@@ -78,6 +80,8 @@ export class FilesService {
         checksumSha256,
         entity: dto.entity,
         entityId: dto.entityId,
+        width: dimensions?.width ?? null,
+        height: dimensions?.height ?? null,
         createdBy: authInfo.userId,
         updatedBy: authInfo.userId,
       })
@@ -337,6 +341,43 @@ export class FilesService {
     return blocks.some(walk);
   }
 
+  /**
+   * Verifica in **scrittura** che un media editoriale sia davvero raster e ne
+   * legge le dimensioni intrinseche (RFC-F09 **N4** e **N2**, firmate il
+   * 2026-09-11). È la stessa regola che ADR-27 § 3/§ 4 applica già in lettura su
+   * `GET public/media/:guid`, portata a monte: rifiutare all'upload evita che una
+   * riga inservibile entri nella libreria e poi fallisca solo quando un visitatore
+   * la richiede.
+   *
+   * L'autorità è la **firma sui byte**, mai l'estensione né il `Content-Type`
+   * dichiarato dal client: un `.png` che contiene un SVG non supera
+   * `detectRasterMimeType` e viene respinto con `400` (un SVG è contenuto attivo,
+   * `CLAUDE.md` § Security).
+   *
+   * Il controllo si applica **solo** a `entity = 'page-media'`: `files` resta lo
+   * storage documenti generico di ADR-8 e un PDF o un allegato di un altro dominio
+   * verticale continua a essere accettato esattamente come prima.
+   *
+   * @returns Le dimensioni lette, oppure `null` se la riga non è un media
+   * editoriale o se gli header sono troncati — `null` è "non misurato", mai "zero".
+   * @throws BadRequestException Se un media editoriale non supera la firma raster.
+   */
+  private inspectEditorialRaster(
+    file: Express.Multer.File,
+    dto: UploadFileDto,
+  ): { width: number; height: number } | null {
+    if (dto.entity !== 'page-media') {
+      return null;
+    }
+    if (detectRasterMimeType(file.buffer) === null) {
+      throw new BadRequestException(
+        "Il file non è un'immagine raster riconosciuta (JPEG, PNG, GIF, WebP, AVIF). " +
+          "Il formato è verificato sui byte reali, non sull'estensione.",
+      );
+    }
+    return readRasterDimensions(file.buffer);
+  }
+
   /** Cerca un file attivo per guid, lanciando 404 se assente o soft-deleted. */
   private async findActiveByGuid(guid: string): Promise<typeof fileEntity.$inferSelect> {
     const row = await this.db.db.query.fileEntity.findFirst({
@@ -350,13 +391,13 @@ export class FilesService {
 
   /**
    * Converte una riga DB nel DTO pubblico (mai storageKey/checksum, dettagli
-   * interni del driver). `width`/`height` sono sempre `null`: le colonne non
-   * esistono ancora in schema (RFC-F09 N2, non firmata) — il campo resta nel
-   * contratto perché il frontend già lo consuma (`MediaFileRecord`), pronto a
-   * valorizzarsi senza un secondo giro di `openapi:types` quando N2 sarà
-   * firmata. `url` è derivato dal solo `entity` (RFC-F09 § 2): non implica
-   * che il blob sia raster-riconosciuto, verificato invece in lettura da
-   * `PublicMediaService` (ADR-27 § 3/§ 4).
+   * interni del driver). `width`/`height` arrivano dalle colonne omonime
+   * (RFC-F09 N2, firmata il 2026-09-11) e restano `null` sui non-raster e su
+   * ogni riga caricata prima della migrazione `0014_add_files_dimensions`:
+   * nessun backfill retroattivo, `null` è "non misurato". `url` è derivato dal
+   * solo `entity` (RFC-F09 § 2): per le righe caricate dopo N4 il blob è anche
+   * raster-verificato in scrittura, per quelle precedenti la verifica resta
+   * quella in lettura di `PublicMediaService` (ADR-27 § 3/§ 4).
    */
   private toMetadataDto(row: typeof fileEntity.$inferSelect): FileMetadataDto {
     return {
@@ -366,8 +407,8 @@ export class FilesService {
       sizeBytes: row.sizeBytes,
       entity: row.entity,
       entityId: row.entityId,
-      width: null,
-      height: null,
+      width: row.width,
+      height: row.height,
       url: row.entity === 'page-media' ? `api/v1/public/media/${row.guid}` : null,
       focalX: row.focalX,
       focalY: row.focalY,

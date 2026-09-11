@@ -38,17 +38,19 @@ export class FileMetadataDto {
   entityId?: string | null;
 
   @ApiPropertyOptional({
+    type: Number,
     description:
-      "Larghezza in pixel, letta dagli header raster all'upload. `null` per i non-raster e per le righe caricate prima che questo campo esistesse (RFC-F09 § 3, colonna non ancora in schema — sempre `null` finché N2 non è firmata).",
-    example: null,
+      'Larghezza in pixel, letta dai soli header raster all\'upload (RFC-F09 N2). `null` per i non-raster e per le righe caricate prima della migrazione `0014_add_files_dimensions`: `null` significa "non misurato", mai "zero".',
+    example: 1920,
     nullable: true,
   })
   width!: number | null;
 
   @ApiPropertyOptional({
+    type: Number,
     description:
-      'Altezza in pixel, stessa provenienza e stesse condizioni di `width` (RFC-F09 § 3).',
-    example: null,
+      'Altezza in pixel, stessa provenienza e stesse condizioni di `width` (RFC-F09 N2).',
+    example: 1080,
     nullable: true,
   })
   height!: number | null;

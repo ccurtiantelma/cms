@@ -17,6 +17,7 @@ import { RedisService } from '../../src/redis/redis.service';
 import { AllExceptionsFilter } from '../../src/common/filters/all-exceptions.filter';
 import { AppConstants } from '../../src/common/app-constants';
 import { AppUserRoles } from '../../src/common/enums';
+import { MediaQueueService } from '../../src/queues/media-queue/media-queue.service';
 
 /**
  * Test di integrazione per `FilesController` (upload/download/delete, ADR-8).
@@ -73,6 +74,9 @@ describe('FilesController (integration)', () => {
     checksumSha256: 'x'.repeat(64),
     entity: null,
     entityId: null,
+    /** Riga non raster: nessuna dimensione intrinseca da leggere (RFC-F09 N2). */
+    width: null,
+    height: null,
     isActive: true,
     createdAt: new Date('2026-07-26T10:00:00.000Z'),
     updatedAt: new Date('2026-07-26T10:00:00.000Z'),
@@ -133,6 +137,13 @@ describe('FilesController (integration)', () => {
         { provide: DbService, useValue: dbServiceMock },
         { provide: STORAGE_DRIVER, useValue: storageDriverMock },
         { provide: AuditLogService, useValue: { log: jest.fn().mockResolvedValue(undefined) } },
+        // `FilesService` dipende da `MediaQueueService` dall'introduzione della
+        // pipeline di ADR-49 (`POST :guid/transform`). Mock obbligatorio: questa
+        // suite non deve toccare BullMQ/Redis reali.
+        {
+          provide: MediaQueueService,
+          useValue: { enqueueTransform: jest.fn().mockResolvedValue('job-1') },
+        },
       ],
     }).compile();
 
@@ -179,6 +190,69 @@ describe('FilesController (integration)', () => {
         .expect(401);
 
       expect(storageUploadMock).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Verifica raster in scrittura (RFC-F09 **N4**) e dimensioni intrinseche
+     * (**N2**), firmate il 2026-09-11. Attraversa il controller reale e
+     * `AllExceptionsFilter`: interessa che il rifiuto arrivi al client come `400`
+     * normalizzato, non solo che il service lanci.
+     */
+    it('media editoriale raster: persiste le dimensioni lette dagli header (N2)', async () => {
+      const auth = makeAuthFor(7);
+      const png = Buffer.alloc(24);
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(png, 0);
+      png.writeUInt32BE(13, 8);
+      png.write('IHDR', 12, 'ascii');
+      png.writeUInt32BE(1200, 16);
+      png.writeUInt32BE(628, 20);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/app/files')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .field('entity', 'page-media')
+        .attach('file', png, 'hero.png')
+        .expect(201);
+
+      expect(insertValuesMock).toHaveBeenCalledWith(
+        expect.objectContaining({ entity: 'page-media', width: 1200, height: 628 }),
+      );
+    });
+
+    it('media editoriale non raster (SVG travestito da PNG) → 400 normalizzato, nessuna scrittura (N4)', async () => {
+      const auth = makeAuthFor(7);
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/app/files')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .field('entity', 'page-media')
+        .attach('file', Buffer.from('<svg onload="alert(1)"/>'), 'logo.png')
+        .expect(400);
+
+      expect(res.body.statusCode).toBe(400);
+      expect(res.body).toHaveProperty('timestamp');
+      expect(res.body).toHaveProperty('path');
+      expect(JSON.stringify(res.body)).not.toContain('storageKey');
+      expect(storageUploadMock).not.toHaveBeenCalled();
+      expect(insertValuesMock).not.toHaveBeenCalled();
+    });
+
+    it('lo storage documenti di ADR-8 non regredisce: un PDF senza entity editoriale resta accettato', async () => {
+      const auth = makeAuthFor(7);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/app/files')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .field('entity', 'invoice')
+        .attach('file', Buffer.from('%PDF-1.7 contenuto'), 'contratto.pdf')
+        .expect(201);
+
+      expect(insertValuesMock).toHaveBeenCalledWith(
+        expect.objectContaining({ entity: 'invoice', width: null, height: null }),
+      );
     });
   });
 

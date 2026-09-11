@@ -1,0 +1,51 @@
+info:
+  name: Upload Media
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/files"
+  body:
+    type: multipartForm
+    data:
+      - name: file
+        type: file
+        value:
+          - /path/to/local/immagine.png
+      - name: entity
+        type: text
+        value: page-media
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Upload di un media editoriale raster (RFC-F09 N2/N4, firmate il 2026-09-11).
+  Il file puntato da `value` deve essere una vera immagine JPEG/PNG/GIF/WebP/AVIF:
+  la verifica è sui byte reali, non sull'estensione.
+
+tests: |-
+  test("status is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("le dimensioni intrinseche sono lette dagli header e persistite (N2)", function() {
+    const body = res.getBody();
+    expect(body.width).to.be.a("number");
+    expect(body.height).to.be.a("number");
+    expect(body.width).to.be.above(0);
+    expect(body.height).to.be.above(0);
+  });
+
+  test("un media editoriale espone l'URL pubblico derivato server-side (ADR-27 § 6)", function() {
+    const body = res.getBody();
+    expect(body.entity).to.equal("page-media");
+    expect(body.url).to.equal("api/v1/public/media/" + body.guid);
+  });

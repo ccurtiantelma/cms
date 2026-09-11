@@ -34,7 +34,19 @@ tests: |-
     expect(res.getStatus()).to.equal(201);
   });
 
-  test("risposta contiene guid/originalName/mimeType/sizeBytes", function() {
+  test("risposta contiene i metadata pubblici, mai storageKey/checksum", function() {
     const body = res.getBody();
-    expect(body).to.have.all.keys("guid", "originalName", "mimeType", "sizeBytes", "entity", "entityId", "createdAt");
+    expect(body).to.have.all.keys(
+      "guid", "originalName", "mimeType", "sizeBytes", "entity", "entityId",
+      "width", "height", "url", "focalX", "focalY", "createdAt"
+    );
+    expect(body).to.not.have.property("storageKey");
+    expect(body).to.not.have.property("checksumSha256");
+  });
+
+  test("un allegato non editoriale non è raster: width/height restano null (RFC-F09 N2)", function() {
+    const body = res.getBody();
+    expect(body.width).to.equal(null);
+    expect(body.height).to.equal(null);
+    expect(body.url).to.equal(null);
   });

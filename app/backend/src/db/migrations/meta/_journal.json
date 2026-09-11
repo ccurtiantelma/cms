@@ -99,6 +99,13 @@
       "when": 1788384370282,
       "tag": "0013_add_files_focal_point_parent",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1789158920099,
+      "tag": "0014_add_files_dimensions",
+      "breakpoints": true
     }
   ]
 }
