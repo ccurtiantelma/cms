@@ -39,7 +39,9 @@ describe('Image', () => {
     });
 
     it('senza styleWidth/styleHeight (solo styleSizePreset="custom") non emette width/height/aspect-ratio', () => {
-      const html = renderToStaticMarkup(<Image mediaRef="0123456789abcdef" alt="alt" styleSizePreset="custom" />);
+      const html = renderToStaticMarkup(
+        <Image mediaRef="0123456789abcdef" alt="alt" styleSizePreset="custom" />,
+      );
 
       expect(html).not.toContain('width:');
       expect(html).not.toContain('height:');

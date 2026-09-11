@@ -81,2832 +81,2329 @@ export const ENVELOPE_VERSION = 1 as const;
 
 /** Tipi ammessi come nodo di radice dell'albero (ADR-21 § 2). */
 export const ROOT_ALLOWED = [
-  "section",
-  "heading",
-  "richText",
-  "image",
-  "button",
-  "container",
-  "navMenu",
-  "globalRef",
-  "accordion",
-  "tabs",
-  "carousel",
-  "modalTrigger"
+  'section',
+  'heading',
+  'richText',
+  'image',
+  'button',
+  'container',
+  'navMenu',
+  'globalRef',
+  'accordion',
+  'tabs',
+  'carousel',
+  'modalTrigger',
 ] as const;
 
 /** Limiti dell'envelope (SPEC-F02-blocchi.md § 1): per avvisare prima del 400, non per applicarli. */
 export const CONTENT_TREE_LIMITS = {
-  "maxDepth": 5,
-  "maxNodes": 500,
-  "maxPayloadBytes": 524288
+  maxDepth: 5,
+  maxNodes: 500,
+  maxPayloadBytes: 524288,
 } as const;
 
 /** I tipi di blocco registrati, nell'ordine dichiarato dal backend. */
 export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
   {
-    "type": "section",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [
-      "heading",
-      "richText",
-      "image",
-      "button",
-      "container",
-      "form",
-      "globalRef",
-      "accordion",
-      "tabs",
-      "carousel",
-      "modalTrigger"
+    type: 'section',
+    v: 1,
+    enabled: true,
+    childrenAllow: [
+      'heading',
+      'richText',
+      'image',
+      'button',
+      'container',
+      'form',
+      'globalRef',
+      'accordion',
+      'tabs',
+      'carousel',
+      'modalTrigger',
     ],
-    "props": [
+    props: [
       {
-        "name": "styleSpaceBefore",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "none"
+        name: 'styleSpaceBefore',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'none',
         },
-        "values": [
-          "none",
-          "xs",
-          "sm",
-          "md",
-          "lg",
-          "xl"
-        ],
-        "responsive": true
+        values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
+        responsive: true,
       },
       {
-        "name": "styleSpaceAfter",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "none"
+        name: 'styleSpaceAfter',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'none',
         },
-        "values": [
-          "none",
-          "xs",
-          "sm",
-          "md",
-          "lg",
-          "xl"
-        ],
-        "responsive": true
+        values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
+        responsive: true,
       },
       {
-        "name": "stylePadding",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "none"
+        name: 'stylePadding',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'none',
         },
-        "values": [
-          "none",
-          "sm",
-          "md",
-          "lg"
-        ],
-        "responsive": true
+        values: ['none', 'sm', 'md', 'lg'],
+        responsive: true,
       },
       {
-        "name": "styleBackground",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "none"
+        name: 'styleBackground',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'none',
         },
-        "values": [
-          "none",
-          "subtle",
-          "accent",
-          "inverse"
-        ],
-        "responsive": true
+        values: ['none', 'subtle', 'accent', 'inverse'],
+        responsive: true,
       },
       {
-        "name": "columns",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "1"
+        name: 'columns',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '1',
         },
-        "values": [
-          "1",
-          "2",
-          "3",
-          "4"
-        ],
-        "responsive": true
+        values: ['1', '2', '3', '4'],
+        responsive: true,
       },
       {
-        "name": "gap",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "none"
+        name: 'gap',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'none',
         },
-        "values": [
-          "none",
-          "sm",
-          "md",
-          "lg"
-        ],
-        "responsive": true
+        values: ['none', 'sm', 'md', 'lg'],
+        responsive: true,
       },
       {
-        "name": "alignItems",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "stretch"
+        name: 'alignItems',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'stretch',
         },
-        "values": [
-          "stretch",
-          "flex-start",
-          "center",
-          "flex-end"
-        ],
-        "responsive": true
+        values: ['stretch', 'flex-start', 'center', 'flex-end'],
+        responsive: true,
       },
       {
-        "name": "justifyContent",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "flex-start"
+        name: 'justifyContent',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'flex-start',
         },
-        "values": [
-          "flex-start",
-          "flex-end",
-          "center",
-          "space-between",
-          "space-around",
-          "space-evenly"
+        values: [
+          'flex-start',
+          'flex-end',
+          'center',
+          'space-between',
+          'space-around',
+          'space-evenly',
         ],
-        "responsive": true
+        responsive: true,
       },
       {
-        "name": "contentWidth",
-        "kind": "enum",
-        "required": false,
-        "default": "boxed",
-        "values": [
-          "boxed",
-          "full-width"
-        ]
+        name: 'contentWidth',
+        kind: 'enum',
+        required: false,
+        default: 'boxed',
+        values: ['boxed', 'full-width'],
       },
       {
-        "name": "maxWidth",
-        "kind": "enum",
-        "required": false,
-        "default": "md",
-        "values": [
-          "sm",
-          "md",
-          "lg",
-          "xl"
-        ]
+        name: 'maxWidth',
+        kind: 'enum',
+        required: false,
+        default: 'md',
+        values: ['sm', 'md', 'lg', 'xl'],
       },
       {
-        "name": "columnRatio",
-        "kind": "enum",
-        "required": false,
-        "default": "equal",
-        "values": [
-          "equal",
-          "33-66",
-          "66-33",
-          "30-70",
-          "70-30"
-        ]
+        name: 'columnRatio',
+        kind: 'enum',
+        required: false,
+        default: 'equal',
+        values: ['equal', '33-66', '66-33', '30-70', '70-30'],
       },
       {
-        "name": "styleBackgroundColor",
-        "kind": "color",
-        "required": false
+        name: 'styleBackgroundColor',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "styleColor",
-        "kind": "color",
-        "required": false
+        name: 'styleColor',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "backgroundColor",
-        "kind": "color",
-        "required": false
+        name: 'backgroundColor',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "color",
-        "kind": "color",
-        "required": false
+        name: 'color',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "stylePaddingTop",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "0"
+        name: 'stylePaddingTop',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '0',
         },
-        "values": [
-          "0",
-          "4",
-          "8",
-          "12",
-          "16",
-          "24",
-          "32",
-          "48",
-          "64",
-          "96"
-        ],
-        "responsive": true
+        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+        responsive: true,
       },
       {
-        "name": "stylePaddingRight",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "0"
+        name: 'stylePaddingRight',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '0',
         },
-        "values": [
-          "0",
-          "4",
-          "8",
-          "12",
-          "16",
-          "24",
-          "32",
-          "48",
-          "64",
-          "96"
-        ],
-        "responsive": true
+        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+        responsive: true,
       },
       {
-        "name": "stylePaddingBottom",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "0"
+        name: 'stylePaddingBottom',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '0',
         },
-        "values": [
-          "0",
-          "4",
-          "8",
-          "12",
-          "16",
-          "24",
-          "32",
-          "48",
-          "64",
-          "96"
-        ],
-        "responsive": true
+        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+        responsive: true,
       },
       {
-        "name": "stylePaddingLeft",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "0"
+        name: 'stylePaddingLeft',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '0',
         },
-        "values": [
-          "0",
-          "4",
-          "8",
-          "12",
-          "16",
-          "24",
-          "32",
-          "48",
-          "64",
-          "96"
-        ],
-        "responsive": true
+        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+        responsive: true,
       },
       {
-        "name": "styleMarginTop",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "0"
+        name: 'styleMarginTop',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '0',
         },
-        "values": [
-          "0",
-          "4",
-          "8",
-          "12",
-          "16",
-          "24",
-          "32",
-          "48",
-          "64",
-          "96"
-        ],
-        "responsive": true
+        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+        responsive: true,
       },
       {
-        "name": "styleMarginRight",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "0"
+        name: 'styleMarginRight',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '0',
         },
-        "values": [
-          "0",
-          "4",
-          "8",
-          "12",
-          "16",
-          "24",
-          "32",
-          "48",
-          "64",
-          "96"
-        ],
-        "responsive": true
+        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+        responsive: true,
       },
       {
-        "name": "styleMarginBottom",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "0"
+        name: 'styleMarginBottom',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '0',
         },
-        "values": [
-          "0",
-          "4",
-          "8",
-          "12",
-          "16",
-          "24",
-          "32",
-          "48",
-          "64",
-          "96"
-        ],
-        "responsive": true
+        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+        responsive: true,
       },
       {
-        "name": "styleMarginLeft",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "0"
+        name: 'styleMarginLeft',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '0',
         },
-        "values": [
-          "0",
-          "4",
-          "8",
-          "12",
-          "16",
-          "24",
-          "32",
-          "48",
-          "64",
-          "96"
+        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+        responsive: true,
+      },
+      {
+        name: 'styleLayer',
+        kind: 'enum',
+        required: false,
+        default: 'base',
+        values: ['base', 'raised', 'overlay', 'top'],
+      },
+      {
+        name: 'styleHideDesktop',
+        kind: 'boolean',
+        required: false,
+        default: false,
+      },
+      {
+        name: 'styleHideTablet',
+        kind: 'boolean',
+        required: false,
+        default: false,
+      },
+      {
+        name: 'styleHideMobile',
+        kind: 'boolean',
+        required: false,
+        default: false,
+      },
+      {
+        name: 'styleBorder',
+        kind: 'border',
+        required: false,
+      },
+      {
+        name: 'styleShadow',
+        kind: 'shadow',
+        required: false,
+      },
+      {
+        name: 'customCssClass',
+        kind: 'cssClassName',
+        required: false,
+      },
+      {
+        name: 'customElementId',
+        kind: 'htmlId',
+        required: false,
+      },
+      {
+        name: 'styleBackgroundImageRef',
+        kind: 'mediaRef',
+        required: false,
+      },
+      {
+        name: 'styleOverlayColor',
+        kind: 'color',
+        required: false,
+      },
+      {
+        name: 'styleOverlayOpacity',
+        kind: 'number',
+        required: false,
+        min: 0,
+        max: 1,
+      },
+      {
+        name: 'styleBackgroundType',
+        kind: 'enum',
+        required: false,
+        default: 'color',
+        values: ['color', 'image', 'gradient'],
+      },
+      {
+        name: 'styleBackgroundPosition',
+        kind: 'enum',
+        required: false,
+        default: 'center center',
+        values: [
+          'top left',
+          'top center',
+          'top right',
+          'center left',
+          'center center',
+          'center right',
+          'bottom left',
+          'bottom center',
+          'bottom right',
         ],
-        "responsive": true
       },
       {
-        "name": "styleLayer",
-        "kind": "enum",
-        "required": false,
-        "default": "base",
-        "values": [
-          "base",
-          "raised",
-          "overlay",
-          "top"
-        ]
+        name: 'styleBackgroundSize',
+        kind: 'enum',
+        required: false,
+        default: 'cover',
+        values: ['cover', 'contain', 'auto'],
       },
       {
-        "name": "styleHideDesktop",
-        "kind": "boolean",
-        "required": false,
-        "default": false
+        name: 'styleGradientStart',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "styleHideTablet",
-        "kind": "boolean",
-        "required": false,
-        "default": false
+        name: 'styleGradientEnd',
+        kind: 'color',
+        required: false,
       },
-      {
-        "name": "styleHideMobile",
-        "kind": "boolean",
-        "required": false,
-        "default": false
-      },
-      {
-        "name": "styleBorder",
-        "kind": "border",
-        "required": false
-      },
-      {
-        "name": "styleShadow",
-        "kind": "shadow",
-        "required": false
-      },
-      {
-        "name": "customCssClass",
-        "kind": "cssClassName",
-        "required": false
-      },
-      {
-        "name": "customElementId",
-        "kind": "htmlId",
-        "required": false
-      },
-      {
-        "name": "styleBackgroundImageRef",
-        "kind": "mediaRef",
-        "required": false
-      },
-      {
-        "name": "styleOverlayColor",
-        "kind": "color",
-        "required": false
-      },
-      {
-        "name": "styleOverlayOpacity",
-        "kind": "number",
-        "required": false,
-        "min": 0,
-        "max": 1
-      },
-      {
-        "name": "styleBackgroundType",
-        "kind": "enum",
-        "required": false,
-        "default": "color",
-        "values": [
-          "color",
-          "image",
-          "gradient"
-        ]
-      },
-      {
-        "name": "styleBackgroundPosition",
-        "kind": "enum",
-        "required": false,
-        "default": "center center",
-        "values": [
-          "top left",
-          "top center",
-          "top right",
-          "center left",
-          "center center",
-          "center right",
-          "bottom left",
-          "bottom center",
-          "bottom right"
-        ]
-      },
-      {
-        "name": "styleBackgroundSize",
-        "kind": "enum",
-        "required": false,
-        "default": "cover",
-        "values": [
-          "cover",
-          "contain",
-          "auto"
-        ]
-      },
-      {
-        "name": "styleGradientStart",
-        "kind": "color",
-        "required": false
-      },
-      {
-        "name": "styleGradientEnd",
-        "kind": "color",
-        "required": false
-      }
     ],
-    "meta": {
-      "label": "Sezione",
-      "category": "layout",
-      "icon": "layout-board",
-      "props": {
-        "styleSpaceBefore": {
-          "label": "Spazio prima",
-          "tab": "style",
-          "order": 1
+    meta: {
+      label: 'Sezione',
+      category: 'layout',
+      icon: 'layout-board',
+      props: {
+        styleSpaceBefore: {
+          label: 'Spazio prima',
+          tab: 'style',
+          order: 1,
         },
-        "styleSpaceAfter": {
-          "label": "Spazio dopo",
-          "tab": "style",
-          "order": 2
+        styleSpaceAfter: {
+          label: 'Spazio dopo',
+          tab: 'style',
+          order: 2,
         },
-        "stylePadding": {
-          "label": "Spaziatura interna",
-          "tab": "style",
-          "order": 3
+        stylePadding: {
+          label: 'Spaziatura interna',
+          tab: 'style',
+          order: 3,
         },
-        "styleBackground": {
-          "label": "Sfondo",
-          "tab": "style",
-          "order": 4
+        styleBackground: {
+          label: 'Sfondo',
+          tab: 'style',
+          order: 4,
         },
-        "columns": {
-          "label": "Colonne",
-          "tab": "style",
-          "order": 5,
-          "help": "Numero di colonne del contenitore"
+        columns: {
+          label: 'Colonne',
+          tab: 'style',
+          order: 5,
+          help: 'Numero di colonne del contenitore',
         },
-        "gap": {
-          "label": "Spaziatura tra colonne",
-          "tab": "style",
-          "order": 6
+        gap: {
+          label: 'Spaziatura tra colonne',
+          tab: 'style',
+          order: 6,
         },
-        "alignItems": {
-          "label": "Allineamento verticale",
-          "tab": "style",
-          "order": 7
+        alignItems: {
+          label: 'Allineamento verticale',
+          tab: 'style',
+          order: 7,
         },
-        "justifyContent": {
-          "label": "Allineamento orizzontale",
-          "tab": "style",
-          "order": 8
+        justifyContent: {
+          label: 'Allineamento orizzontale',
+          tab: 'style',
+          order: 8,
         },
-        "contentWidth": {
-          "label": "Larghezza contenuto",
-          "tab": "style",
-          "order": 9
+        contentWidth: {
+          label: 'Larghezza contenuto',
+          tab: 'style',
+          order: 9,
         },
-        "maxWidth": {
-          "label": "Larghezza massima",
-          "tab": "style",
-          "order": 10
+        maxWidth: {
+          label: 'Larghezza massima',
+          tab: 'style',
+          order: 10,
         },
-        "columnRatio": {
-          "label": "Proporzione colonne",
-          "tab": "style",
-          "order": 11,
-          "help": "Significativa solo con 2 colonne"
+        columnRatio: {
+          label: 'Proporzione colonne',
+          tab: 'style',
+          order: 11,
+          help: 'Significativa solo con 2 colonne',
         },
-        "styleBackgroundColor": {
-          "label": "Colore di sfondo",
-          "tab": "style",
-          "order": 12
+        styleBackgroundColor: {
+          label: 'Colore di sfondo',
+          tab: 'style',
+          order: 12,
         },
-        "styleColor": {
-          "label": "Colore testo",
-          "tab": "style",
-          "order": 13
+        styleColor: {
+          label: 'Colore testo',
+          tab: 'style',
+          order: 13,
         },
-        "backgroundColor": {
-          "label": "Colore di sfondo (fallback)",
-          "tab": "style",
-          "order": 14
+        backgroundColor: {
+          label: 'Colore di sfondo (fallback)',
+          tab: 'style',
+          order: 14,
         },
-        "color": {
-          "label": "Colore testo (fallback)",
-          "tab": "style",
-          "order": 15
+        color: {
+          label: 'Colore testo (fallback)',
+          tab: 'style',
+          order: 15,
         },
-        "stylePaddingTop": {
-          "label": "Padding superiore",
-          "tab": "style",
-          "order": 16
+        stylePaddingTop: {
+          label: 'Padding superiore',
+          tab: 'style',
+          order: 16,
         },
-        "stylePaddingRight": {
-          "label": "Padding destro",
-          "tab": "style",
-          "order": 17
+        stylePaddingRight: {
+          label: 'Padding destro',
+          tab: 'style',
+          order: 17,
         },
-        "stylePaddingBottom": {
-          "label": "Padding inferiore",
-          "tab": "style",
-          "order": 18
+        stylePaddingBottom: {
+          label: 'Padding inferiore',
+          tab: 'style',
+          order: 18,
         },
-        "stylePaddingLeft": {
-          "label": "Padding sinistro",
-          "tab": "style",
-          "order": 19
+        stylePaddingLeft: {
+          label: 'Padding sinistro',
+          tab: 'style',
+          order: 19,
         },
-        "styleMarginTop": {
-          "label": "Margine superiore",
-          "tab": "style",
-          "order": 20
+        styleMarginTop: {
+          label: 'Margine superiore',
+          tab: 'style',
+          order: 20,
         },
-        "styleMarginRight": {
-          "label": "Margine destro",
-          "tab": "style",
-          "order": 21
+        styleMarginRight: {
+          label: 'Margine destro',
+          tab: 'style',
+          order: 21,
         },
-        "styleMarginBottom": {
-          "label": "Margine inferiore",
-          "tab": "style",
-          "order": 22
+        styleMarginBottom: {
+          label: 'Margine inferiore',
+          tab: 'style',
+          order: 22,
         },
-        "styleMarginLeft": {
-          "label": "Margine sinistro",
-          "tab": "style",
-          "order": 23
+        styleMarginLeft: {
+          label: 'Margine sinistro',
+          tab: 'style',
+          order: 23,
         },
-        "styleLayer": {
-          "label": "Livello di sovrapposizione",
-          "tab": "advanced",
-          "order": 24
+        styleLayer: {
+          label: 'Livello di sovrapposizione',
+          tab: 'advanced',
+          order: 24,
         },
-        "styleHideDesktop": {
-          "label": "Nascondi su Desktop",
-          "tab": "advanced",
-          "order": 25
+        styleHideDesktop: {
+          label: 'Nascondi su Desktop',
+          tab: 'advanced',
+          order: 25,
         },
-        "styleHideTablet": {
-          "label": "Nascondi su Tablet",
-          "tab": "advanced",
-          "order": 26
+        styleHideTablet: {
+          label: 'Nascondi su Tablet',
+          tab: 'advanced',
+          order: 26,
         },
-        "styleHideMobile": {
-          "label": "Nascondi su Mobile",
-          "tab": "advanced",
-          "order": 27
+        styleHideMobile: {
+          label: 'Nascondi su Mobile',
+          tab: 'advanced',
+          order: 27,
         },
-        "styleBorder": {
-          "label": "Bordo",
-          "tab": "style",
-          "order": 28
+        styleBorder: {
+          label: 'Bordo',
+          tab: 'style',
+          order: 28,
         },
-        "styleShadow": {
-          "label": "Ombra",
-          "tab": "style",
-          "order": 29
+        styleShadow: {
+          label: 'Ombra',
+          tab: 'style',
+          order: 29,
         },
-        "customCssClass": {
-          "label": "Classe CSS personalizzata",
-          "tab": "advanced",
-          "order": 30,
-          "help": "Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore."
+        customCssClass: {
+          label: 'Classe CSS personalizzata',
+          tab: 'advanced',
+          order: 30,
+          help: 'Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore.',
         },
-        "customElementId": {
-          "label": "ID elemento personalizzato",
-          "tab": "advanced",
-          "order": 31,
-          "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
+        customElementId: {
+          label: 'ID elemento personalizzato',
+          tab: 'advanced',
+          order: 31,
+          help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
         },
-        "styleBackgroundImageRef": {
-          "label": "Immagine di sfondo",
-          "tab": "style",
-          "order": 32,
-          "help": "Riferimento a un file della media library."
+        styleBackgroundImageRef: {
+          label: 'Immagine di sfondo',
+          tab: 'style',
+          order: 32,
+          help: 'Riferimento a un file della media library.',
         },
-        "styleOverlayColor": {
-          "label": "Colore overlay",
-          "tab": "style",
-          "order": 33,
-          "help": "Colore esadecimale sovrapposto all'immagine di sfondo."
+        styleOverlayColor: {
+          label: 'Colore overlay',
+          tab: 'style',
+          order: 33,
+          help: "Colore esadecimale sovrapposto all'immagine di sfondo.",
         },
-        "styleOverlayOpacity": {
-          "label": "Opacità overlay",
-          "tab": "style",
-          "order": 34,
-          "help": "Valore da 0 (trasparente) a 1 (opaco)."
+        styleOverlayOpacity: {
+          label: 'Opacità overlay',
+          tab: 'style',
+          order: 34,
+          help: 'Valore da 0 (trasparente) a 1 (opaco).',
         },
-        "styleBackgroundType": {
-          "label": "Tipo sfondo",
-          "tab": "style",
-          "order": 35,
-          "help": "Colore, immagine o gradiente."
+        styleBackgroundType: {
+          label: 'Tipo sfondo',
+          tab: 'style',
+          order: 35,
+          help: 'Colore, immagine o gradiente.',
         },
-        "styleBackgroundPosition": {
-          "label": "Posizione sfondo",
-          "tab": "style",
-          "order": 36,
-          "help": "Applicata solo quando il tipo sfondo è Immagine."
+        styleBackgroundPosition: {
+          label: 'Posizione sfondo',
+          tab: 'style',
+          order: 36,
+          help: 'Applicata solo quando il tipo sfondo è Immagine.',
         },
-        "styleBackgroundSize": {
-          "label": "Dimensione sfondo",
-          "tab": "style",
-          "order": 37,
-          "help": "Applicata solo quando il tipo sfondo è Immagine."
+        styleBackgroundSize: {
+          label: 'Dimensione sfondo',
+          tab: 'style',
+          order: 37,
+          help: 'Applicata solo quando il tipo sfondo è Immagine.',
         },
-        "styleGradientStart": {
-          "label": "Colore iniziale gradiente",
-          "tab": "style",
-          "order": 38,
-          "help": "Applicato solo quando il tipo sfondo è Gradiente."
+        styleGradientStart: {
+          label: 'Colore iniziale gradiente',
+          tab: 'style',
+          order: 38,
+          help: 'Applicato solo quando il tipo sfondo è Gradiente.',
         },
-        "styleGradientEnd": {
-          "label": "Colore finale gradiente",
-          "tab": "style",
-          "order": 39,
-          "help": "Applicato solo quando il tipo sfondo è Gradiente."
-        }
-      }
-    }
+        styleGradientEnd: {
+          label: 'Colore finale gradiente',
+          tab: 'style',
+          order: 39,
+          help: 'Applicato solo quando il tipo sfondo è Gradiente.',
+        },
+      },
+    },
   },
   {
-    "type": "heading",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [],
-    "props": [
+    type: 'heading',
+    v: 1,
+    enabled: true,
+    childrenAllow: [],
+    props: [
       {
-        "name": "level",
-        "kind": "enum",
-        "required": true,
-        "values": [
-          "h2",
-          "h3",
-          "h4",
-          "h5",
-          "h6"
-        ]
+        name: 'level',
+        kind: 'enum',
+        required: true,
+        values: ['h2', 'h3', 'h4', 'h5', 'h6'],
       },
       {
-        "name": "text",
-        "kind": "plainText",
-        "required": true,
-        "maxLength": 200
+        name: 'text',
+        kind: 'plainText',
+        required: true,
+        maxLength: 200,
       },
       {
-        "name": "styleSpaceBefore",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "none"
+        name: 'styleSpaceBefore',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'none',
         },
-        "values": [
-          "none",
-          "xs",
-          "sm",
-          "md",
-          "lg",
-          "xl"
-        ],
-        "responsive": true
+        values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
+        responsive: true,
       },
       {
-        "name": "styleSpaceAfter",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "none"
+        name: 'styleSpaceAfter',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'none',
         },
-        "values": [
-          "none",
-          "xs",
-          "sm",
-          "md",
-          "lg",
-          "xl"
-        ],
-        "responsive": true
+        values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
+        responsive: true,
       },
       {
-        "name": "styleTextColor",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "default"
+        name: 'styleTextColor',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'default',
         },
-        "values": [
-          "default",
-          "muted",
-          "accent",
-          "inverse"
-        ],
-        "responsive": true
+        values: ['default', 'muted', 'accent', 'inverse'],
+        responsive: true,
       },
       {
-        "name": "styleFontSize",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "md"
+        name: 'styleFontSize',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'md',
         },
-        "values": [
-          "sm",
-          "md",
-          "lg",
-          "xl"
-        ],
-        "responsive": true
+        values: ['sm', 'md', 'lg', 'xl'],
+        responsive: true,
       },
       {
-        "name": "styleFontWeight",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "regular"
+        name: 'styleFontWeight',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'regular',
         },
-        "values": [
-          "regular",
-          "medium",
-          "bold"
-        ],
-        "responsive": true
+        values: ['regular', 'medium', 'bold'],
+        responsive: true,
       },
       {
-        "name": "styleFontFamily",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "default"
+        name: 'styleFontFamily',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'default',
         },
-        "values": [
-          "default",
-          "inter",
-          "roboto",
-          "playfair",
-          "montserrat",
-          "monospace"
-        ],
-        "responsive": true
+        values: ['default', 'inter', 'roboto', 'playfair', 'montserrat', 'monospace'],
+        responsive: true,
       },
       {
-        "name": "styleLayer",
-        "kind": "enum",
-        "required": false,
-        "default": "base",
-        "values": [
-          "base",
-          "raised",
-          "overlay",
-          "top"
-        ]
+        name: 'styleLayer',
+        kind: 'enum',
+        required: false,
+        default: 'base',
+        values: ['base', 'raised', 'overlay', 'top'],
       },
       {
-        "name": "styleHideDesktop",
-        "kind": "boolean",
-        "required": false,
-        "default": false
+        name: 'styleHideDesktop',
+        kind: 'boolean',
+        required: false,
+        default: false,
       },
       {
-        "name": "styleHideTablet",
-        "kind": "boolean",
-        "required": false,
-        "default": false
+        name: 'styleHideTablet',
+        kind: 'boolean',
+        required: false,
+        default: false,
       },
       {
-        "name": "styleHideMobile",
-        "kind": "boolean",
-        "required": false,
-        "default": false
+        name: 'styleHideMobile',
+        kind: 'boolean',
+        required: false,
+        default: false,
       },
       {
-        "name": "styleTextColorCustom",
-        "kind": "color",
-        "required": false
+        name: 'styleTextColorCustom',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "styleFontSizeCustom",
-        "kind": "unitValue",
-        "required": false,
-        "units": [
-          "px",
-          "%",
-          "em",
-          "rem"
-        ],
-        "min": 1,
-        "max": 200
+        name: 'styleFontSizeCustom',
+        kind: 'unitValue',
+        required: false,
+        units: ['px', '%', 'em', 'rem'],
+        min: 1,
+        max: 200,
       },
       {
-        "name": "styleBorder",
-        "kind": "border",
-        "required": false
+        name: 'styleBorder',
+        kind: 'border',
+        required: false,
       },
       {
-        "name": "styleShadow",
-        "kind": "shadow",
-        "required": false
+        name: 'styleShadow',
+        kind: 'shadow',
+        required: false,
       },
       {
-        "name": "customCssClass",
-        "kind": "cssClassName",
-        "required": false
+        name: 'customCssClass',
+        kind: 'cssClassName',
+        required: false,
       },
       {
-        "name": "customElementId",
-        "kind": "htmlId",
-        "required": false
+        name: 'customElementId',
+        kind: 'htmlId',
+        required: false,
       },
       {
-        "name": "styleTextAlign",
-        "kind": "enum",
-        "required": false,
-        "values": [
-          "left",
-          "center",
-          "right",
-          "justify"
-        ]
-      }
+        name: 'styleTextAlign',
+        kind: 'enum',
+        required: false,
+        values: ['left', 'center', 'right', 'justify'],
+      },
     ],
-    "meta": {
-      "label": "Titolo",
-      "category": "testo",
-      "icon": "heading",
-      "props": {
-        "level": {
-          "label": "Livello",
-          "order": 1
+    meta: {
+      label: 'Titolo',
+      category: 'testo',
+      icon: 'heading',
+      props: {
+        level: {
+          label: 'Livello',
+          order: 1,
         },
-        "text": {
-          "label": "Testo",
-          "order": 2
+        text: {
+          label: 'Testo',
+          order: 2,
         },
-        "styleSpaceBefore": {
-          "label": "Spazio prima",
-          "tab": "style",
-          "order": 3
+        styleSpaceBefore: {
+          label: 'Spazio prima',
+          tab: 'style',
+          order: 3,
         },
-        "styleSpaceAfter": {
-          "label": "Spazio dopo",
-          "tab": "style",
-          "order": 4
+        styleSpaceAfter: {
+          label: 'Spazio dopo',
+          tab: 'style',
+          order: 4,
         },
-        "styleTextColor": {
-          "label": "Colore testo",
-          "tab": "style",
-          "order": 5
+        styleTextColor: {
+          label: 'Colore testo',
+          tab: 'style',
+          order: 5,
         },
-        "styleFontSize": {
-          "label": "Dimensione testo",
-          "tab": "style",
-          "order": 6
+        styleFontSize: {
+          label: 'Dimensione testo',
+          tab: 'style',
+          order: 6,
         },
-        "styleFontWeight": {
-          "label": "Spessore testo",
-          "tab": "style",
-          "order": 7
+        styleFontWeight: {
+          label: 'Spessore testo',
+          tab: 'style',
+          order: 7,
         },
-        "styleFontFamily": {
-          "label": "Famiglia Font",
-          "tab": "style",
-          "order": 8
+        styleFontFamily: {
+          label: 'Famiglia Font',
+          tab: 'style',
+          order: 8,
         },
-        "styleLayer": {
-          "label": "Livello di sovrapposizione",
-          "tab": "advanced",
-          "order": 9
+        styleLayer: {
+          label: 'Livello di sovrapposizione',
+          tab: 'advanced',
+          order: 9,
         },
-        "styleHideDesktop": {
-          "label": "Nascondi su Desktop",
-          "tab": "advanced",
-          "order": 10
+        styleHideDesktop: {
+          label: 'Nascondi su Desktop',
+          tab: 'advanced',
+          order: 10,
         },
-        "styleHideTablet": {
-          "label": "Nascondi su Tablet",
-          "tab": "advanced",
-          "order": 11
+        styleHideTablet: {
+          label: 'Nascondi su Tablet',
+          tab: 'advanced',
+          order: 11,
         },
-        "styleHideMobile": {
-          "label": "Nascondi su Mobile",
-          "tab": "advanced",
-          "order": 12
+        styleHideMobile: {
+          label: 'Nascondi su Mobile',
+          tab: 'advanced',
+          order: 12,
         },
-        "styleTextColorCustom": {
-          "label": "Colore testo personalizzato",
-          "tab": "style",
-          "order": 13,
-          "help": "Colore libero (esadecimale). Ha priorità su \"Colore testo\" se impostato."
+        styleTextColorCustom: {
+          label: 'Colore testo personalizzato',
+          tab: 'style',
+          order: 13,
+          help: 'Colore libero (esadecimale). Ha priorità su "Colore testo" se impostato.',
         },
-        "styleFontSizeCustom": {
-          "label": "Dimensione testo personalizzata",
-          "tab": "style",
-          "order": 14,
-          "help": "Valore libero con unità. Ha priorità su \"Dimensione testo\" se impostato."
+        styleFontSizeCustom: {
+          label: 'Dimensione testo personalizzata',
+          tab: 'style',
+          order: 14,
+          help: 'Valore libero con unità. Ha priorità su "Dimensione testo" se impostato.',
         },
-        "styleBorder": {
-          "label": "Bordo",
-          "tab": "style",
-          "order": 15
+        styleBorder: {
+          label: 'Bordo',
+          tab: 'style',
+          order: 15,
         },
-        "styleShadow": {
-          "label": "Ombra",
-          "tab": "style",
-          "order": 16
+        styleShadow: {
+          label: 'Ombra',
+          tab: 'style',
+          order: 16,
         },
-        "customCssClass": {
-          "label": "Classe CSS personalizzata",
-          "tab": "advanced",
-          "order": 17,
-          "help": "Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore."
+        customCssClass: {
+          label: 'Classe CSS personalizzata',
+          tab: 'advanced',
+          order: 17,
+          help: 'Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore.',
         },
-        "customElementId": {
-          "label": "ID elemento personalizzato",
-          "tab": "advanced",
-          "order": 18,
-          "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
+        customElementId: {
+          label: 'ID elemento personalizzato',
+          tab: 'advanced',
+          order: 18,
+          help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
         },
-        "styleTextAlign": {
-          "label": "Allineamento testo",
-          "tab": "style",
-          "order": 19
-        }
-      }
-    }
+        styleTextAlign: {
+          label: 'Allineamento testo',
+          tab: 'style',
+          order: 19,
+        },
+      },
+    },
   },
   {
-    "type": "richText",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [],
-    "props": [
+    type: 'richText',
+    v: 1,
+    enabled: true,
+    childrenAllow: [],
+    props: [
       {
-        "name": "html",
-        "kind": "richText",
-        "required": true,
-        "maxLength": 20000,
-        "profile": "basic"
+        name: 'html',
+        kind: 'richText',
+        required: true,
+        maxLength: 20000,
+        profile: 'basic',
       },
       {
-        "name": "styleSpaceBefore",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "none"
+        name: 'styleSpaceBefore',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'none',
         },
-        "values": [
-          "none",
-          "xs",
-          "sm",
-          "md",
-          "lg",
-          "xl"
-        ],
-        "responsive": true
+        values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
+        responsive: true,
       },
       {
-        "name": "styleSpaceAfter",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "none"
+        name: 'styleSpaceAfter',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'none',
         },
-        "values": [
-          "none",
-          "xs",
-          "sm",
-          "md",
-          "lg",
-          "xl"
-        ],
-        "responsive": true
+        values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
+        responsive: true,
       },
       {
-        "name": "styleTextColor",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "default"
+        name: 'styleTextColor',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'default',
         },
-        "values": [
-          "default",
-          "muted",
-          "accent",
-          "inverse"
-        ],
-        "responsive": true
+        values: ['default', 'muted', 'accent', 'inverse'],
+        responsive: true,
       },
       {
-        "name": "styleFontSize",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "md"
+        name: 'styleFontSize',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'md',
         },
-        "values": [
-          "sm",
-          "md",
-          "lg",
-          "xl"
-        ],
-        "responsive": true
+        values: ['sm', 'md', 'lg', 'xl'],
+        responsive: true,
       },
       {
-        "name": "styleFontWeight",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "regular"
+        name: 'styleFontWeight',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'regular',
         },
-        "values": [
-          "regular",
-          "medium",
-          "bold"
-        ],
-        "responsive": true
+        values: ['regular', 'medium', 'bold'],
+        responsive: true,
       },
       {
-        "name": "styleFontFamily",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "default"
+        name: 'styleFontFamily',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'default',
         },
-        "values": [
-          "default",
-          "inter",
-          "roboto",
-          "playfair",
-          "montserrat",
-          "monospace"
-        ],
-        "responsive": true
+        values: ['default', 'inter', 'roboto', 'playfair', 'montserrat', 'monospace'],
+        responsive: true,
       },
       {
-        "name": "styleLayer",
-        "kind": "enum",
-        "required": false,
-        "default": "base",
-        "values": [
-          "base",
-          "raised",
-          "overlay",
-          "top"
-        ]
+        name: 'styleLayer',
+        kind: 'enum',
+        required: false,
+        default: 'base',
+        values: ['base', 'raised', 'overlay', 'top'],
       },
       {
-        "name": "styleHideDesktop",
-        "kind": "boolean",
-        "required": false,
-        "default": false
+        name: 'styleHideDesktop',
+        kind: 'boolean',
+        required: false,
+        default: false,
       },
       {
-        "name": "styleHideTablet",
-        "kind": "boolean",
-        "required": false,
-        "default": false
+        name: 'styleHideTablet',
+        kind: 'boolean',
+        required: false,
+        default: false,
       },
       {
-        "name": "styleHideMobile",
-        "kind": "boolean",
-        "required": false,
-        "default": false
+        name: 'styleHideMobile',
+        kind: 'boolean',
+        required: false,
+        default: false,
       },
       {
-        "name": "styleTextColorCustom",
-        "kind": "color",
-        "required": false
+        name: 'styleTextColorCustom',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "styleBackgroundColor",
-        "kind": "color",
-        "required": false
+        name: 'styleBackgroundColor',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "styleColor",
-        "kind": "color",
-        "required": false
+        name: 'styleColor',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "backgroundColor",
-        "kind": "color",
-        "required": false
+        name: 'backgroundColor',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "color",
-        "kind": "color",
-        "required": false
+        name: 'color',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "styleFontSizeCustom",
-        "kind": "unitValue",
-        "required": false,
-        "units": [
-          "px",
-          "%",
-          "em",
-          "rem"
-        ],
-        "min": 1,
-        "max": 200
+        name: 'styleFontSizeCustom',
+        kind: 'unitValue',
+        required: false,
+        units: ['px', '%', 'em', 'rem'],
+        min: 1,
+        max: 200,
       },
       {
-        "name": "styleBorder",
-        "kind": "border",
-        "required": false
+        name: 'styleBorder',
+        kind: 'border',
+        required: false,
       },
       {
-        "name": "styleShadow",
-        "kind": "shadow",
-        "required": false
+        name: 'styleShadow',
+        kind: 'shadow',
+        required: false,
       },
       {
-        "name": "customCssClass",
-        "kind": "cssClassName",
-        "required": false
+        name: 'customCssClass',
+        kind: 'cssClassName',
+        required: false,
       },
       {
-        "name": "customElementId",
-        "kind": "htmlId",
-        "required": false
-      }
+        name: 'customElementId',
+        kind: 'htmlId',
+        required: false,
+      },
     ],
-    "meta": {
-      "label": "Testo",
-      "category": "testo",
-      "icon": "align-left",
-      "props": {
-        "html": {
-          "label": "Contenuto",
-          "order": 1
+    meta: {
+      label: 'Testo',
+      category: 'testo',
+      icon: 'align-left',
+      props: {
+        html: {
+          label: 'Contenuto',
+          order: 1,
         },
-        "styleSpaceBefore": {
-          "label": "Spazio prima",
-          "tab": "style",
-          "order": 2
+        styleSpaceBefore: {
+          label: 'Spazio prima',
+          tab: 'style',
+          order: 2,
         },
-        "styleSpaceAfter": {
-          "label": "Spazio dopo",
-          "tab": "style",
-          "order": 3
+        styleSpaceAfter: {
+          label: 'Spazio dopo',
+          tab: 'style',
+          order: 3,
         },
-        "styleTextColor": {
-          "label": "Colore testo",
-          "tab": "style",
-          "order": 4
+        styleTextColor: {
+          label: 'Colore testo',
+          tab: 'style',
+          order: 4,
         },
-        "styleFontSize": {
-          "label": "Dimensione testo",
-          "tab": "style",
-          "order": 5
+        styleFontSize: {
+          label: 'Dimensione testo',
+          tab: 'style',
+          order: 5,
         },
-        "styleFontWeight": {
-          "label": "Spessore testo",
-          "tab": "style",
-          "order": 6
+        styleFontWeight: {
+          label: 'Spessore testo',
+          tab: 'style',
+          order: 6,
         },
-        "styleFontFamily": {
-          "label": "Famiglia Font",
-          "tab": "style",
-          "order": 8
+        styleFontFamily: {
+          label: 'Famiglia Font',
+          tab: 'style',
+          order: 8,
         },
-        "styleLayer": {
-          "label": "Livello di sovrapposizione",
-          "tab": "advanced",
-          "order": 9
+        styleLayer: {
+          label: 'Livello di sovrapposizione',
+          tab: 'advanced',
+          order: 9,
         },
-        "styleHideDesktop": {
-          "label": "Nascondi su Desktop",
-          "tab": "advanced",
-          "order": 10
+        styleHideDesktop: {
+          label: 'Nascondi su Desktop',
+          tab: 'advanced',
+          order: 10,
         },
-        "styleHideTablet": {
-          "label": "Nascondi su Tablet",
-          "tab": "advanced",
-          "order": 11
+        styleHideTablet: {
+          label: 'Nascondi su Tablet',
+          tab: 'advanced',
+          order: 11,
         },
-        "styleHideMobile": {
-          "label": "Nascondi su Mobile",
-          "tab": "advanced",
-          "order": 12
+        styleHideMobile: {
+          label: 'Nascondi su Mobile',
+          tab: 'advanced',
+          order: 12,
         },
-        "styleTextColorCustom": {
-          "label": "Colore testo personalizzato",
-          "tab": "style",
-          "order": 13,
-          "help": "Colore libero (esadecimale). Ha priorità su \"Colore testo\" se impostato."
+        styleTextColorCustom: {
+          label: 'Colore testo personalizzato',
+          tab: 'style',
+          order: 13,
+          help: 'Colore libero (esadecimale). Ha priorità su "Colore testo" se impostato.',
         },
-        "styleBackgroundColor": {
-          "label": "Colore di sfondo",
-          "tab": "style",
-          "order": 19
+        styleBackgroundColor: {
+          label: 'Colore di sfondo',
+          tab: 'style',
+          order: 19,
         },
-        "styleColor": {
-          "label": "Colore testo",
-          "tab": "style",
-          "order": 20
+        styleColor: {
+          label: 'Colore testo',
+          tab: 'style',
+          order: 20,
         },
-        "backgroundColor": {
-          "label": "Colore di sfondo (fallback)",
-          "tab": "style",
-          "order": 21
+        backgroundColor: {
+          label: 'Colore di sfondo (fallback)',
+          tab: 'style',
+          order: 21,
         },
-        "color": {
-          "label": "Colore testo (fallback)",
-          "tab": "style",
-          "order": 22
+        color: {
+          label: 'Colore testo (fallback)',
+          tab: 'style',
+          order: 22,
         },
-        "styleFontSizeCustom": {
-          "label": "Dimensione testo personalizzata",
-          "tab": "style",
-          "order": 14,
-          "help": "Valore libero con unità. Ha priorità su \"Dimensione testo\" se impostato."
+        styleFontSizeCustom: {
+          label: 'Dimensione testo personalizzata',
+          tab: 'style',
+          order: 14,
+          help: 'Valore libero con unità. Ha priorità su "Dimensione testo" se impostato.',
         },
-        "styleBorder": {
-          "label": "Bordo",
-          "tab": "style",
-          "order": 15
+        styleBorder: {
+          label: 'Bordo',
+          tab: 'style',
+          order: 15,
         },
-        "styleShadow": {
-          "label": "Ombra",
-          "tab": "style",
-          "order": 16
+        styleShadow: {
+          label: 'Ombra',
+          tab: 'style',
+          order: 16,
         },
-        "customCssClass": {
-          "label": "Classe CSS personalizzata",
-          "tab": "advanced",
-          "order": 17,
-          "help": "Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore."
+        customCssClass: {
+          label: 'Classe CSS personalizzata',
+          tab: 'advanced',
+          order: 17,
+          help: 'Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore.',
         },
-        "customElementId": {
-          "label": "ID elemento personalizzato",
-          "tab": "advanced",
-          "order": 18,
-          "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
-        }
-      }
-    }
+        customElementId: {
+          label: 'ID elemento personalizzato',
+          tab: 'advanced',
+          order: 18,
+          help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
+        },
+      },
+    },
   },
   {
-    "type": "image",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [],
-    "props": [
+    type: 'image',
+    v: 1,
+    enabled: true,
+    childrenAllow: [],
+    props: [
       {
-        "name": "mediaRef",
-        "kind": "mediaRef",
-        "required": true
+        name: 'mediaRef',
+        kind: 'mediaRef',
+        required: true,
       },
       {
-        "name": "alt",
-        "kind": "plainText",
-        "required": true,
-        "maxLength": 300,
-        "nonEmpty": true
+        name: 'alt',
+        kind: 'plainText',
+        required: true,
+        maxLength: 300,
+        nonEmpty: true,
       },
       {
-        "name": "styleSpaceBefore",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "none"
+        name: 'styleSpaceBefore',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'none',
         },
-        "values": [
-          "none",
-          "xs",
-          "sm",
-          "md",
-          "lg",
-          "xl"
-        ],
-        "responsive": true
+        values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
+        responsive: true,
       },
       {
-        "name": "styleSpaceAfter",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "none"
+        name: 'styleSpaceAfter',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'none',
         },
-        "values": [
-          "none",
-          "xs",
-          "sm",
-          "md",
-          "lg",
-          "xl"
-        ],
-        "responsive": true
+        values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
+        responsive: true,
       },
       {
-        "name": "styleLayer",
-        "kind": "enum",
-        "required": false,
-        "default": "base",
-        "values": [
-          "base",
-          "raised",
-          "overlay",
-          "top"
-        ]
+        name: 'styleLayer',
+        kind: 'enum',
+        required: false,
+        default: 'base',
+        values: ['base', 'raised', 'overlay', 'top'],
       },
       {
-        "name": "styleHideDesktop",
-        "kind": "boolean",
-        "required": false,
-        "default": false
+        name: 'styleHideDesktop',
+        kind: 'boolean',
+        required: false,
+        default: false,
       },
       {
-        "name": "styleHideTablet",
-        "kind": "boolean",
-        "required": false,
-        "default": false
+        name: 'styleHideTablet',
+        kind: 'boolean',
+        required: false,
+        default: false,
       },
       {
-        "name": "styleHideMobile",
-        "kind": "boolean",
-        "required": false,
-        "default": false
+        name: 'styleHideMobile',
+        kind: 'boolean',
+        required: false,
+        default: false,
       },
       {
-        "name": "styleBorder",
-        "kind": "border",
-        "required": false
+        name: 'styleBorder',
+        kind: 'border',
+        required: false,
       },
       {
-        "name": "styleShadow",
-        "kind": "shadow",
-        "required": false
+        name: 'styleShadow',
+        kind: 'shadow',
+        required: false,
       },
       {
-        "name": "styleSizePreset",
-        "kind": "enum",
-        "required": false,
-        "default": "full",
-        "values": [
-          "thumbnail",
-          "card",
-          "hero",
-          "og",
-          "full",
-          "custom"
-        ]
+        name: 'styleSizePreset',
+        kind: 'enum',
+        required: false,
+        default: 'full',
+        values: ['thumbnail', 'card', 'hero', 'og', 'full', 'custom'],
       },
       {
-        "name": "styleWidth",
-        "kind": "unitValue",
-        "required": false,
-        "units": [
-          "px",
-          "%",
-          "vw"
-        ],
-        "min": 0,
-        "max": 3840
+        name: 'styleWidth',
+        kind: 'unitValue',
+        required: false,
+        units: ['px', '%', 'vw'],
+        min: 0,
+        max: 3840,
       },
       {
-        "name": "styleHeight",
-        "kind": "unitValue",
-        "required": false,
-        "units": [
-          "px",
-          "%",
-          "vh"
-        ],
-        "min": 0,
-        "max": 2160
+        name: 'styleHeight',
+        kind: 'unitValue',
+        required: false,
+        units: ['px', '%', 'vh'],
+        min: 0,
+        max: 2160,
       },
       {
-        "name": "styleObjectFit",
-        "kind": "enum",
-        "required": false,
-        "default": "cover",
-        "values": [
-          "cover",
-          "contain",
-          "fill",
-          "none"
-        ]
+        name: 'styleObjectFit',
+        kind: 'enum',
+        required: false,
+        default: 'cover',
+        values: ['cover', 'contain', 'fill', 'none'],
       },
       {
-        "name": "styleAlign",
-        "kind": "enum",
-        "required": false,
-        "default": "left",
-        "values": [
-          "left",
-          "center",
-          "right"
-        ]
+        name: 'styleAlign',
+        kind: 'enum',
+        required: false,
+        default: 'left',
+        values: ['left', 'center', 'right'],
       },
       {
-        "name": "customCssClass",
-        "kind": "cssClassName",
-        "required": false
+        name: 'customCssClass',
+        kind: 'cssClassName',
+        required: false,
       },
       {
-        "name": "customElementId",
-        "kind": "htmlId",
-        "required": false
-      }
+        name: 'customElementId',
+        kind: 'htmlId',
+        required: false,
+      },
     ],
-    "meta": {
-      "label": "Immagine",
-      "category": "media",
-      "icon": "photo",
-      "props": {
-        "mediaRef": {
-          "label": "File",
-          "order": 1
+    meta: {
+      label: 'Immagine',
+      category: 'media',
+      icon: 'photo',
+      props: {
+        mediaRef: {
+          label: 'File',
+          order: 1,
         },
-        "alt": {
-          "label": "Testo alternativo",
-          "order": 2
+        alt: {
+          label: 'Testo alternativo',
+          order: 2,
         },
-        "styleSpaceBefore": {
-          "label": "Spazio prima",
-          "tab": "style",
-          "order": 3
+        styleSpaceBefore: {
+          label: 'Spazio prima',
+          tab: 'style',
+          order: 3,
         },
-        "styleSpaceAfter": {
-          "label": "Spazio dopo",
-          "tab": "style",
-          "order": 4
+        styleSpaceAfter: {
+          label: 'Spazio dopo',
+          tab: 'style',
+          order: 4,
         },
-        "styleLayer": {
-          "label": "Livello di sovrapposizione",
-          "tab": "advanced",
-          "order": 5
+        styleLayer: {
+          label: 'Livello di sovrapposizione',
+          tab: 'advanced',
+          order: 5,
         },
-        "styleHideDesktop": {
-          "label": "Nascondi su Desktop",
-          "tab": "advanced",
-          "order": 6
+        styleHideDesktop: {
+          label: 'Nascondi su Desktop',
+          tab: 'advanced',
+          order: 6,
         },
-        "styleHideTablet": {
-          "label": "Nascondi su Tablet",
-          "tab": "advanced",
-          "order": 7
+        styleHideTablet: {
+          label: 'Nascondi su Tablet',
+          tab: 'advanced',
+          order: 7,
         },
-        "styleHideMobile": {
-          "label": "Nascondi su Mobile",
-          "tab": "advanced",
-          "order": 8
+        styleHideMobile: {
+          label: 'Nascondi su Mobile',
+          tab: 'advanced',
+          order: 8,
         },
-        "styleBorder": {
-          "label": "Bordo",
-          "tab": "style",
-          "order": 9
+        styleBorder: {
+          label: 'Bordo',
+          tab: 'style',
+          order: 9,
         },
-        "styleShadow": {
-          "label": "Ombra",
-          "tab": "style",
-          "order": 10
+        styleShadow: {
+          label: 'Ombra',
+          tab: 'style',
+          order: 10,
         },
-        "styleSizePreset": {
-          "label": "Formato predefinito",
-          "tab": "style",
-          "order": 11
+        styleSizePreset: {
+          label: 'Formato predefinito',
+          tab: 'style',
+          order: 11,
         },
-        "styleWidth": {
-          "label": "Larghezza personalizzata",
-          "tab": "style",
-          "order": 12
+        styleWidth: {
+          label: 'Larghezza personalizzata',
+          tab: 'style',
+          order: 12,
         },
-        "styleHeight": {
-          "label": "Altezza personalizzata",
-          "tab": "style",
-          "order": 13
+        styleHeight: {
+          label: 'Altezza personalizzata',
+          tab: 'style',
+          order: 13,
         },
-        "styleObjectFit": {
-          "label": "Adattamento immagine",
-          "tab": "style",
-          "order": 14
+        styleObjectFit: {
+          label: 'Adattamento immagine',
+          tab: 'style',
+          order: 14,
         },
-        "styleAlign": {
-          "label": "Allineamento",
-          "tab": "style",
-          "order": 15
+        styleAlign: {
+          label: 'Allineamento',
+          tab: 'style',
+          order: 15,
         },
-        "customCssClass": {
-          "label": "Classe CSS personalizzata",
-          "tab": "advanced",
-          "order": 16,
-          "help": "Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore."
+        customCssClass: {
+          label: 'Classe CSS personalizzata',
+          tab: 'advanced',
+          order: 16,
+          help: 'Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore.',
         },
-        "customElementId": {
-          "label": "ID elemento personalizzato",
-          "tab": "advanced",
-          "order": 17,
-          "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
-        }
-      }
-    }
+        customElementId: {
+          label: 'ID elemento personalizzato',
+          tab: 'advanced',
+          order: 17,
+          help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
+        },
+      },
+    },
   },
   {
-    "type": "button",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [],
-    "props": [
+    type: 'button',
+    v: 1,
+    enabled: true,
+    childrenAllow: [],
+    props: [
       {
-        "name": "label",
-        "kind": "plainText",
-        "required": true,
-        "maxLength": 80
+        name: 'label',
+        kind: 'plainText',
+        required: true,
+        maxLength: 80,
       },
       {
-        "name": "href",
-        "kind": "url",
-        "required": true,
-        "maxLength": 2048
+        name: 'href',
+        kind: 'url',
+        required: true,
+        maxLength: 2048,
       },
       {
-        "name": "styleSpaceBefore",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "none"
+        name: 'styleSpaceBefore',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'none',
         },
-        "values": [
-          "none",
-          "xs",
-          "sm",
-          "md",
-          "lg",
-          "xl"
-        ],
-        "responsive": true
+        values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
+        responsive: true,
       },
       {
-        "name": "styleSpaceAfter",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "none"
+        name: 'styleSpaceAfter',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'none',
         },
-        "values": [
-          "none",
-          "xs",
-          "sm",
-          "md",
-          "lg",
-          "xl"
-        ],
-        "responsive": true
+        values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
+        responsive: true,
       },
       {
-        "name": "styleTextColor",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "default"
+        name: 'styleTextColor',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'default',
         },
-        "values": [
-          "default",
-          "muted",
-          "accent",
-          "inverse"
-        ],
-        "responsive": true
+        values: ['default', 'muted', 'accent', 'inverse'],
+        responsive: true,
       },
       {
-        "name": "styleBackgroundColor",
-        "kind": "color",
-        "required": false
+        name: 'styleBackgroundColor',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "styleColor",
-        "kind": "color",
-        "required": false
+        name: 'styleColor',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "backgroundColor",
-        "kind": "color",
-        "required": false
+        name: 'backgroundColor',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "color",
-        "kind": "color",
-        "required": false
+        name: 'color',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "styleFontSize",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "md"
+        name: 'styleFontSize',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'md',
         },
-        "values": [
-          "sm",
-          "md",
-          "lg",
-          "xl"
-        ],
-        "responsive": true
+        values: ['sm', 'md', 'lg', 'xl'],
+        responsive: true,
       },
       {
-        "name": "styleFontWeight",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "regular"
+        name: 'styleFontWeight',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'regular',
         },
-        "values": [
-          "regular",
-          "medium",
-          "bold"
-        ],
-        "responsive": true
+        values: ['regular', 'medium', 'bold'],
+        responsive: true,
       },
       {
-        "name": "styleFontFamily",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "default"
+        name: 'styleFontFamily',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'default',
         },
-        "values": [
-          "default",
-          "inter",
-          "roboto",
-          "playfair",
-          "montserrat",
-          "monospace"
-        ],
-        "responsive": true
+        values: ['default', 'inter', 'roboto', 'playfair', 'montserrat', 'monospace'],
+        responsive: true,
       },
       {
-        "name": "styleLayer",
-        "kind": "enum",
-        "required": false,
-        "default": "base",
-        "values": [
-          "base",
-          "raised",
-          "overlay",
-          "top"
-        ]
+        name: 'styleLayer',
+        kind: 'enum',
+        required: false,
+        default: 'base',
+        values: ['base', 'raised', 'overlay', 'top'],
       },
       {
-        "name": "styleHideDesktop",
-        "kind": "boolean",
-        "required": false,
-        "default": false
+        name: 'styleHideDesktop',
+        kind: 'boolean',
+        required: false,
+        default: false,
       },
       {
-        "name": "styleHideTablet",
-        "kind": "boolean",
-        "required": false,
-        "default": false
+        name: 'styleHideTablet',
+        kind: 'boolean',
+        required: false,
+        default: false,
       },
       {
-        "name": "styleHideMobile",
-        "kind": "boolean",
-        "required": false,
-        "default": false
+        name: 'styleHideMobile',
+        kind: 'boolean',
+        required: false,
+        default: false,
       },
       {
-        "name": "customCssClass",
-        "kind": "cssClassName",
-        "required": false
+        name: 'customCssClass',
+        kind: 'cssClassName',
+        required: false,
       },
       {
-        "name": "customElementId",
-        "kind": "htmlId",
-        "required": false
-      }
+        name: 'customElementId',
+        kind: 'htmlId',
+        required: false,
+      },
     ],
-    "meta": {
-      "label": "Pulsante",
-      "category": "azione",
-      "icon": "hand-click",
-      "props": {
-        "label": {
-          "label": "Etichetta",
-          "order": 1
+    meta: {
+      label: 'Pulsante',
+      category: 'azione',
+      icon: 'hand-click',
+      props: {
+        label: {
+          label: 'Etichetta',
+          order: 1,
         },
-        "href": {
-          "label": "Link",
-          "order": 2
+        href: {
+          label: 'Link',
+          order: 2,
         },
-        "styleSpaceBefore": {
-          "label": "Spazio prima",
-          "tab": "style",
-          "order": 3
+        styleSpaceBefore: {
+          label: 'Spazio prima',
+          tab: 'style',
+          order: 3,
         },
-        "styleSpaceAfter": {
-          "label": "Spazio dopo",
-          "tab": "style",
-          "order": 4
+        styleSpaceAfter: {
+          label: 'Spazio dopo',
+          tab: 'style',
+          order: 4,
         },
-        "styleTextColor": {
-          "label": "Colore testo",
-          "tab": "style",
-          "order": 5
+        styleTextColor: {
+          label: 'Colore testo',
+          tab: 'style',
+          order: 5,
         },
-        "styleBackgroundColor": {
-          "label": "Colore di sfondo",
-          "tab": "style",
-          "order": 15
+        styleBackgroundColor: {
+          label: 'Colore di sfondo',
+          tab: 'style',
+          order: 15,
         },
-        "styleColor": {
-          "label": "Colore testo personalizzato",
-          "tab": "style",
-          "order": 16
+        styleColor: {
+          label: 'Colore testo personalizzato',
+          tab: 'style',
+          order: 16,
         },
-        "backgroundColor": {
-          "label": "Colore di sfondo (fallback)",
-          "tab": "style",
-          "order": 17
+        backgroundColor: {
+          label: 'Colore di sfondo (fallback)',
+          tab: 'style',
+          order: 17,
         },
-        "color": {
-          "label": "Colore testo (fallback)",
-          "tab": "style",
-          "order": 18
+        color: {
+          label: 'Colore testo (fallback)',
+          tab: 'style',
+          order: 18,
         },
-        "styleFontSize": {
-          "label": "Dimensione testo",
-          "tab": "style",
-          "order": 6
+        styleFontSize: {
+          label: 'Dimensione testo',
+          tab: 'style',
+          order: 6,
         },
-        "styleFontWeight": {
-          "label": "Spessore testo",
-          "tab": "style",
-          "order": 7
+        styleFontWeight: {
+          label: 'Spessore testo',
+          tab: 'style',
+          order: 7,
         },
-        "styleFontFamily": {
-          "label": "Famiglia Font",
-          "tab": "style",
-          "order": 8
+        styleFontFamily: {
+          label: 'Famiglia Font',
+          tab: 'style',
+          order: 8,
         },
-        "styleLayer": {
-          "label": "Livello di sovrapposizione",
-          "tab": "advanced",
-          "order": 9
+        styleLayer: {
+          label: 'Livello di sovrapposizione',
+          tab: 'advanced',
+          order: 9,
         },
-        "styleHideDesktop": {
-          "label": "Nascondi su Desktop",
-          "tab": "advanced",
-          "order": 10
+        styleHideDesktop: {
+          label: 'Nascondi su Desktop',
+          tab: 'advanced',
+          order: 10,
         },
-        "styleHideTablet": {
-          "label": "Nascondi su Tablet",
-          "tab": "advanced",
-          "order": 11
+        styleHideTablet: {
+          label: 'Nascondi su Tablet',
+          tab: 'advanced',
+          order: 11,
         },
-        "styleHideMobile": {
-          "label": "Nascondi su Mobile",
-          "tab": "advanced",
-          "order": 12
+        styleHideMobile: {
+          label: 'Nascondi su Mobile',
+          tab: 'advanced',
+          order: 12,
         },
-        "customCssClass": {
-          "label": "Classe CSS personalizzata",
-          "tab": "advanced",
-          "order": 13,
-          "help": "Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore."
+        customCssClass: {
+          label: 'Classe CSS personalizzata',
+          tab: 'advanced',
+          order: 13,
+          help: 'Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore.',
         },
-        "customElementId": {
-          "label": "ID elemento personalizzato",
-          "tab": "advanced",
-          "order": 14,
-          "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
-        }
-      }
-    }
+        customElementId: {
+          label: 'ID elemento personalizzato',
+          tab: 'advanced',
+          order: 14,
+          help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
+        },
+      },
+    },
   },
   {
-    "type": "container",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": "*",
-    "props": [
+    type: 'container',
+    v: 1,
+    enabled: true,
+    childrenAllow: '*',
+    props: [
       {
-        "name": "display",
-        "kind": "enum",
-        "required": false,
-        "default": "flex",
-        "values": [
-          "flex"
-        ]
+        name: 'display',
+        kind: 'enum',
+        required: false,
+        default: 'flex',
+        values: ['flex'],
       },
       {
-        "name": "flexDirection",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "row"
+        name: 'flexDirection',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'row',
         },
-        "values": [
-          "row",
-          "row-reverse",
-          "column",
-          "column-reverse"
-        ],
-        "responsive": true
+        values: ['row', 'row-reverse', 'column', 'column-reverse'],
+        responsive: true,
       },
       {
-        "name": "justifyContent",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "flex-start"
+        name: 'justifyContent',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'flex-start',
         },
-        "values": [
-          "flex-start",
-          "flex-end",
-          "center",
-          "space-between",
-          "space-around",
-          "space-evenly"
+        values: [
+          'flex-start',
+          'flex-end',
+          'center',
+          'space-between',
+          'space-around',
+          'space-evenly',
         ],
-        "responsive": true
+        responsive: true,
       },
       {
-        "name": "alignItems",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "stretch"
+        name: 'alignItems',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'stretch',
         },
-        "values": [
-          "stretch",
-          "flex-start",
-          "center",
-          "flex-end"
-        ],
-        "responsive": true
+        values: ['stretch', 'flex-start', 'center', 'flex-end'],
+        responsive: true,
       },
       {
-        "name": "wrap",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "nowrap"
+        name: 'wrap',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'nowrap',
         },
-        "values": [
-          "nowrap",
-          "wrap"
-        ],
-        "responsive": true
+        values: ['nowrap', 'wrap'],
+        responsive: true,
       },
       {
-        "name": "gap",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "none"
+        name: 'gap',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: 'none',
         },
-        "values": [
-          "none",
-          "sm",
-          "md",
-          "lg"
-        ],
-        "responsive": true
+        values: ['none', 'sm', 'md', 'lg'],
+        responsive: true,
       },
       {
-        "name": "styleFlexBasis",
-        "kind": "unitValue",
-        "required": false,
-        "units": [
-          "%"
-        ],
-        "min": 0,
-        "max": 100
+        name: 'styleFlexBasis',
+        kind: 'unitValue',
+        required: false,
+        units: ['%'],
+        min: 0,
+        max: 100,
       },
       {
-        "name": "styleBackgroundColor",
-        "kind": "color",
-        "required": false
+        name: 'styleBackgroundColor',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "styleColor",
-        "kind": "color",
-        "required": false
+        name: 'styleColor',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "backgroundColor",
-        "kind": "color",
-        "required": false
+        name: 'backgroundColor',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "color",
-        "kind": "color",
-        "required": false
+        name: 'color',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "stylePaddingTop",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "0"
+        name: 'stylePaddingTop',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '0',
         },
-        "values": [
-          "0",
-          "4",
-          "8",
-          "12",
-          "16",
-          "24",
-          "32",
-          "48",
-          "64",
-          "96"
-        ],
-        "responsive": true
+        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+        responsive: true,
       },
       {
-        "name": "stylePaddingRight",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "0"
+        name: 'stylePaddingRight',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '0',
         },
-        "values": [
-          "0",
-          "4",
-          "8",
-          "12",
-          "16",
-          "24",
-          "32",
-          "48",
-          "64",
-          "96"
-        ],
-        "responsive": true
+        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+        responsive: true,
       },
       {
-        "name": "stylePaddingBottom",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "0"
+        name: 'stylePaddingBottom',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '0',
         },
-        "values": [
-          "0",
-          "4",
-          "8",
-          "12",
-          "16",
-          "24",
-          "32",
-          "48",
-          "64",
-          "96"
-        ],
-        "responsive": true
+        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+        responsive: true,
       },
       {
-        "name": "stylePaddingLeft",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "0"
+        name: 'stylePaddingLeft',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '0',
         },
-        "values": [
-          "0",
-          "4",
-          "8",
-          "12",
-          "16",
-          "24",
-          "32",
-          "48",
-          "64",
-          "96"
-        ],
-        "responsive": true
+        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+        responsive: true,
       },
       {
-        "name": "styleMarginTop",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "0"
+        name: 'styleMarginTop',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '0',
         },
-        "values": [
-          "0",
-          "4",
-          "8",
-          "12",
-          "16",
-          "24",
-          "32",
-          "48",
-          "64",
-          "96"
-        ],
-        "responsive": true
+        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+        responsive: true,
       },
       {
-        "name": "styleMarginRight",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "0"
+        name: 'styleMarginRight',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '0',
         },
-        "values": [
-          "0",
-          "4",
-          "8",
-          "12",
-          "16",
-          "24",
-          "32",
-          "48",
-          "64",
-          "96"
-        ],
-        "responsive": true
+        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+        responsive: true,
       },
       {
-        "name": "styleMarginBottom",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "0"
+        name: 'styleMarginBottom',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '0',
         },
-        "values": [
-          "0",
-          "4",
-          "8",
-          "12",
-          "16",
-          "24",
-          "32",
-          "48",
-          "64",
-          "96"
-        ],
-        "responsive": true
+        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+        responsive: true,
       },
       {
-        "name": "styleMarginLeft",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "0"
+        name: 'styleMarginLeft',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '0',
         },
-        "values": [
-          "0",
-          "4",
-          "8",
-          "12",
-          "16",
-          "24",
-          "32",
-          "48",
-          "64",
-          "96"
-        ],
-        "responsive": true
+        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+        responsive: true,
       },
       {
-        "name": "customCssClass",
-        "kind": "cssClassName",
-        "required": false
+        name: 'customCssClass',
+        kind: 'cssClassName',
+        required: false,
       },
       {
-        "name": "customElementId",
-        "kind": "htmlId",
-        "required": false
-      }
+        name: 'customElementId',
+        kind: 'htmlId',
+        required: false,
+      },
     ],
-    "meta": {
-      "label": "Contenitore",
-      "category": "layout",
-      "icon": "box-align-top",
-      "props": {
-        "display": {
-          "label": "Layout",
-          "tab": "style",
-          "order": 1
+    meta: {
+      label: 'Contenitore',
+      category: 'layout',
+      icon: 'box-align-top',
+      props: {
+        display: {
+          label: 'Layout',
+          tab: 'style',
+          order: 1,
         },
-        "flexDirection": {
-          "label": "Direzione",
-          "tab": "style",
-          "order": 2
+        flexDirection: {
+          label: 'Direzione',
+          tab: 'style',
+          order: 2,
         },
-        "justifyContent": {
-          "label": "Allineamento orizzontale",
-          "tab": "style",
-          "order": 3
+        justifyContent: {
+          label: 'Allineamento orizzontale',
+          tab: 'style',
+          order: 3,
         },
-        "alignItems": {
-          "label": "Allineamento verticale",
-          "tab": "style",
-          "order": 4
+        alignItems: {
+          label: 'Allineamento verticale',
+          tab: 'style',
+          order: 4,
         },
-        "wrap": {
-          "label": "A capo",
-          "tab": "style",
-          "order": 5
+        wrap: {
+          label: 'A capo',
+          tab: 'style',
+          order: 5,
         },
-        "gap": {
-          "label": "Spaziatura",
-          "tab": "style",
-          "order": 6
+        gap: {
+          label: 'Spaziatura',
+          tab: 'style',
+          order: 6,
         },
-        "styleFlexBasis": {
-          "label": "Larghezza",
-          "tab": "style",
-          "order": 7
+        styleFlexBasis: {
+          label: 'Larghezza',
+          tab: 'style',
+          order: 7,
         },
-        "styleBackgroundColor": {
-          "label": "Colore di sfondo",
-          "tab": "style",
-          "order": 12
+        styleBackgroundColor: {
+          label: 'Colore di sfondo',
+          tab: 'style',
+          order: 12,
         },
-        "styleColor": {
-          "label": "Colore testo",
-          "tab": "style",
-          "order": 13
+        styleColor: {
+          label: 'Colore testo',
+          tab: 'style',
+          order: 13,
         },
-        "backgroundColor": {
-          "label": "Colore di sfondo (fallback)",
-          "tab": "style",
-          "order": 14
+        backgroundColor: {
+          label: 'Colore di sfondo (fallback)',
+          tab: 'style',
+          order: 14,
         },
-        "color": {
-          "label": "Colore testo (fallback)",
-          "tab": "style",
-          "order": 15
+        color: {
+          label: 'Colore testo (fallback)',
+          tab: 'style',
+          order: 15,
         },
-        "stylePaddingTop": {
-          "label": "Padding superiore",
-          "tab": "style",
-          "order": 8
+        stylePaddingTop: {
+          label: 'Padding superiore',
+          tab: 'style',
+          order: 8,
         },
-        "stylePaddingRight": {
-          "label": "Padding destro",
-          "tab": "style",
-          "order": 9
+        stylePaddingRight: {
+          label: 'Padding destro',
+          tab: 'style',
+          order: 9,
         },
-        "stylePaddingBottom": {
-          "label": "Padding inferiore",
-          "tab": "style",
-          "order": 10
+        stylePaddingBottom: {
+          label: 'Padding inferiore',
+          tab: 'style',
+          order: 10,
         },
-        "stylePaddingLeft": {
-          "label": "Padding sinistro",
-          "tab": "style",
-          "order": 11
+        stylePaddingLeft: {
+          label: 'Padding sinistro',
+          tab: 'style',
+          order: 11,
         },
-        "styleMarginTop": {
-          "label": "Margine superiore",
-          "tab": "style",
-          "order": 12
+        styleMarginTop: {
+          label: 'Margine superiore',
+          tab: 'style',
+          order: 12,
         },
-        "styleMarginRight": {
-          "label": "Margine destro",
-          "tab": "style",
-          "order": 13
+        styleMarginRight: {
+          label: 'Margine destro',
+          tab: 'style',
+          order: 13,
         },
-        "styleMarginBottom": {
-          "label": "Margine inferiore",
-          "tab": "style",
-          "order": 14
+        styleMarginBottom: {
+          label: 'Margine inferiore',
+          tab: 'style',
+          order: 14,
         },
-        "styleMarginLeft": {
-          "label": "Margine sinistro",
-          "tab": "style",
-          "order": 15
+        styleMarginLeft: {
+          label: 'Margine sinistro',
+          tab: 'style',
+          order: 15,
         },
-        "customCssClass": {
-          "label": "Classe CSS personalizzata",
-          "tab": "advanced",
-          "order": 16,
-          "help": "Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore."
+        customCssClass: {
+          label: 'Classe CSS personalizzata',
+          tab: 'advanced',
+          order: 16,
+          help: 'Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore.',
         },
-        "customElementId": {
-          "label": "ID elemento personalizzato",
-          "tab": "advanced",
-          "order": 17,
-          "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
-        }
-      }
-    }
+        customElementId: {
+          label: 'ID elemento personalizzato',
+          tab: 'advanced',
+          order: 17,
+          help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
+        },
+      },
+    },
   },
   {
-    "type": "form",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [
-      "form-field",
-      "form-submit"
-    ],
-    "props": [
+    type: 'form',
+    v: 1,
+    enabled: true,
+    childrenAllow: ['form-field', 'form-submit'],
+    props: [
       {
-        "name": "formKey",
-        "kind": "plainText",
-        "required": true,
-        "maxLength": 100,
-        "nonEmpty": true
+        name: 'formKey',
+        kind: 'plainText',
+        required: true,
+        maxLength: 100,
+        nonEmpty: true,
       },
       {
-        "name": "successMessage",
-        "kind": "plainText",
-        "required": false,
-        "default": "Grazie, il messaggio è stato inviato con successo.",
-        "maxLength": 300
+        name: 'successMessage',
+        kind: 'plainText',
+        required: false,
+        default: 'Grazie, il messaggio è stato inviato con successo.',
+        maxLength: 300,
       },
       {
-        "name": "errorMessage",
-        "kind": "plainText",
-        "required": false,
-        "default": "Non è stato possibile inviare il modulo. Controlla i campi compilati e riprova.",
-        "maxLength": 300
-      }
+        name: 'errorMessage',
+        kind: 'plainText',
+        required: false,
+        default: 'Non è stato possibile inviare il modulo. Controlla i campi compilati e riprova.',
+        maxLength: 300,
+      },
     ],
-    "meta": {
-      "label": "Modulo di contatto",
-      "category": "form",
-      "icon": "forms",
-      "props": {
-        "formKey": {
-          "label": "Chiave del modulo",
-          "order": 1,
-          "help": "Identificatore stabile del modulo: collega questo blocco alla configurazione dei destinatari (app_settings) e agli Invii storici. Non cambia duplicando il blocco."
+    meta: {
+      label: 'Modulo di contatto',
+      category: 'form',
+      icon: 'forms',
+      props: {
+        formKey: {
+          label: 'Chiave del modulo',
+          order: 1,
+          help: 'Identificatore stabile del modulo: collega questo blocco alla configurazione dei destinatari (app_settings) e agli Invii storici. Non cambia duplicando il blocco.',
         },
-        "successMessage": {
-          "label": "Messaggio di successo",
-          "order": 2,
-          "help": "Mostrato dopo l'invio riuscito del modulo."
+        successMessage: {
+          label: 'Messaggio di successo',
+          order: 2,
+          help: "Mostrato dopo l'invio riuscito del modulo.",
         },
-        "errorMessage": {
-          "label": "Messaggio di errore",
-          "order": 3,
-          "help": "Mostrato se l'invio del modulo fallisce (errore del server o di rete)."
-        }
-      }
-    }
+        errorMessage: {
+          label: 'Messaggio di errore',
+          order: 3,
+          help: "Mostrato se l'invio del modulo fallisce (errore del server o di rete).",
+        },
+      },
+    },
   },
   {
-    "type": "form-field",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [],
-    "props": [
+    type: 'form-field',
+    v: 1,
+    enabled: true,
+    childrenAllow: [],
+    props: [
       {
-        "name": "fieldType",
-        "kind": "enum",
-        "required": true,
-        "values": [
-          "text",
-          "email",
-          "textarea",
-          "select",
-          "checkbox"
-        ]
+        name: 'fieldType',
+        kind: 'enum',
+        required: true,
+        values: ['text', 'email', 'textarea', 'select', 'checkbox'],
       },
       {
-        "name": "name",
-        "kind": "plainText",
-        "required": true,
-        "maxLength": 100,
-        "nonEmpty": true
+        name: 'name',
+        kind: 'plainText',
+        required: true,
+        maxLength: 100,
+        nonEmpty: true,
       },
       {
-        "name": "label",
-        "kind": "plainText",
-        "required": true,
-        "maxLength": 200
+        name: 'label',
+        kind: 'plainText',
+        required: true,
+        maxLength: 200,
       },
       {
-        "name": "required",
-        "kind": "boolean",
-        "required": false,
-        "default": false
+        name: 'required',
+        kind: 'boolean',
+        required: false,
+        default: false,
       },
       {
-        "name": "placeholder",
-        "kind": "plainText",
-        "required": false,
-        "maxLength": 200
+        name: 'placeholder',
+        kind: 'plainText',
+        required: false,
+        maxLength: 200,
       },
       {
-        "name": "options",
-        "kind": "plainText",
-        "required": false,
-        "maxLength": 1000
+        name: 'options',
+        kind: 'plainText',
+        required: false,
+        maxLength: 1000,
       },
       {
-        "name": "colSpan",
-        "kind": "enum",
-        "required": false,
-        "default": {
-          "default": "12"
+        name: 'colSpan',
+        kind: 'enum',
+        required: false,
+        default: {
+          default: '12',
         },
-        "values": [
-          "6",
-          "12"
-        ],
-        "responsive": true
+        values: ['6', '12'],
+        responsive: true,
       },
       {
-        "name": "defaultValue",
-        "kind": "plainText",
-        "required": false,
-        "maxLength": 500
+        name: 'defaultValue',
+        kind: 'plainText',
+        required: false,
+        maxLength: 500,
       },
       {
-        "name": "defaultChecked",
-        "kind": "boolean",
-        "required": false,
-        "default": false
+        name: 'defaultChecked',
+        kind: 'boolean',
+        required: false,
+        default: false,
       },
       {
-        "name": "validationMessage",
-        "kind": "plainText",
-        "required": false,
-        "maxLength": 200
-      }
+        name: 'validationMessage',
+        kind: 'plainText',
+        required: false,
+        maxLength: 200,
+      },
     ],
-    "meta": {
-      "label": "Campo modulo",
-      "category": "form",
-      "icon": "input-search",
-      "props": {
-        "fieldType": {
-          "label": "Tipo campo",
-          "order": 1
+    meta: {
+      label: 'Campo modulo',
+      category: 'form',
+      icon: 'input-search',
+      props: {
+        fieldType: {
+          label: 'Tipo campo',
+          order: 1,
         },
-        "name": {
-          "label": "Nome campo",
-          "order": 2,
-          "help": "Identificatore stabile nel payload di sottomissione: non cambia duplicando il blocco."
+        name: {
+          label: 'Nome campo',
+          order: 2,
+          help: 'Identificatore stabile nel payload di sottomissione: non cambia duplicando il blocco.',
         },
-        "label": {
-          "label": "Etichetta",
-          "order": 3
+        label: {
+          label: 'Etichetta',
+          order: 3,
         },
-        "required": {
-          "label": "Obbligatorio",
-          "order": 4
+        required: {
+          label: 'Obbligatorio',
+          order: 4,
         },
-        "placeholder": {
-          "label": "Placeholder",
-          "order": 5
+        placeholder: {
+          label: 'Placeholder',
+          order: 5,
         },
-        "options": {
-          "label": "Opzioni (solo per \"Select\")",
-          "order": 6,
-          "help": "Elenco separato da virgola, es. \"Nord,Centro,Sud\"."
+        options: {
+          label: 'Opzioni (solo per "Select")',
+          order: 6,
+          help: 'Elenco separato da virgola, es. "Nord,Centro,Sud".',
         },
-        "colSpan": {
-          "label": "Larghezza campo",
-          "order": 7,
-          "help": "50% per affiancare due campi sulla stessa riga, 100% per occupare l'intera larghezza."
+        colSpan: {
+          label: 'Larghezza campo',
+          order: 7,
+          help: "50% per affiancare due campi sulla stessa riga, 100% per occupare l'intera larghezza.",
         },
-        "defaultValue": {
-          "label": "Valore predefinito",
-          "order": 8,
-          "help": "Valore iniziale del campo. Ignorato per \"Checkbox\" (vedi \"Selezionato di default\")."
+        defaultValue: {
+          label: 'Valore predefinito',
+          order: 8,
+          help: 'Valore iniziale del campo. Ignorato per "Checkbox" (vedi "Selezionato di default").',
         },
-        "defaultChecked": {
-          "label": "Selezionato di default",
-          "order": 9,
-          "help": "Solo per \"Checkbox\": se attivo, il campo parte selezionato."
+        defaultChecked: {
+          label: 'Selezionato di default',
+          order: 9,
+          help: 'Solo per "Checkbox": se attivo, il campo parte selezionato.',
         },
-        "validationMessage": {
-          "label": "Messaggio di validazione",
-          "order": 10,
-          "help": "Messaggio mostrato quando il campo obbligatorio non viene compilato correttamente."
-        }
-      }
-    }
+        validationMessage: {
+          label: 'Messaggio di validazione',
+          order: 10,
+          help: 'Messaggio mostrato quando il campo obbligatorio non viene compilato correttamente.',
+        },
+      },
+    },
   },
   {
-    "type": "form-submit",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [],
-    "props": [
+    type: 'form-submit',
+    v: 1,
+    enabled: true,
+    childrenAllow: [],
+    props: [
       {
-        "name": "label",
-        "kind": "plainText",
-        "required": false,
-        "default": "Invia",
-        "maxLength": 80
+        name: 'label',
+        kind: 'plainText',
+        required: false,
+        default: 'Invia',
+        maxLength: 80,
       },
       {
-        "name": "styleBackgroundColor",
-        "kind": "color",
-        "required": false
+        name: 'styleBackgroundColor',
+        kind: 'color',
+        required: false,
       },
       {
-        "name": "styleTextColor",
-        "kind": "color",
-        "required": false
-      }
+        name: 'styleTextColor',
+        kind: 'color',
+        required: false,
+      },
     ],
-    "meta": {
-      "label": "Pulsante invio modulo",
-      "category": "form",
-      "icon": "send",
-      "props": {
-        "label": {
-          "label": "Etichetta",
-          "order": 1
+    meta: {
+      label: 'Pulsante invio modulo',
+      category: 'form',
+      icon: 'send',
+      props: {
+        label: {
+          label: 'Etichetta',
+          order: 1,
         },
-        "styleBackgroundColor": {
-          "label": "Colore di sfondo",
-          "tab": "style",
-          "order": 2
+        styleBackgroundColor: {
+          label: 'Colore di sfondo',
+          tab: 'style',
+          order: 2,
         },
-        "styleTextColor": {
-          "label": "Colore testo",
-          "tab": "style",
-          "order": 3
-        }
-      }
-    }
+        styleTextColor: {
+          label: 'Colore testo',
+          tab: 'style',
+          order: 3,
+        },
+      },
+    },
   },
   {
-    "type": "navMenu",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [
-      "navMenuItem"
-    ],
-    "props": [],
-    "meta": {
-      "label": "Menu di navigazione",
-      "category": "navigazione",
-      "icon": "menu-2"
-    }
+    type: 'navMenu',
+    v: 1,
+    enabled: true,
+    childrenAllow: ['navMenuItem'],
+    props: [],
+    meta: {
+      label: 'Menu di navigazione',
+      category: 'navigazione',
+      icon: 'menu-2',
+    },
   },
   {
-    "type": "navMenuItem",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [],
-    "props": [
+    type: 'navMenuItem',
+    v: 1,
+    enabled: true,
+    childrenAllow: [],
+    props: [
       {
-        "name": "label",
-        "kind": "plainText",
-        "required": true,
-        "maxLength": 80
+        name: 'label',
+        kind: 'plainText',
+        required: true,
+        maxLength: 80,
       },
       {
-        "name": "pageGuid",
-        "kind": "pageRef",
-        "required": false
+        name: 'pageGuid',
+        kind: 'pageRef',
+        required: false,
       },
       {
-        "name": "url",
-        "kind": "url",
-        "required": false,
-        "maxLength": 2048
+        name: 'url',
+        kind: 'url',
+        required: false,
+        maxLength: 2048,
       },
       {
-        "name": "target",
-        "kind": "enum",
-        "required": false,
-        "default": "_self",
-        "values": [
-          "_self",
-          "_blank"
-        ]
-      }
+        name: 'target',
+        kind: 'enum',
+        required: false,
+        default: '_self',
+        values: ['_self', '_blank'],
+      },
     ],
-    "meta": {
-      "label": "Voce di menu",
-      "category": "navigazione",
-      "icon": "link",
-      "props": {
-        "label": {
-          "label": "Etichetta",
-          "order": 1
+    meta: {
+      label: 'Voce di menu',
+      category: 'navigazione',
+      icon: 'link',
+      props: {
+        label: {
+          label: 'Etichetta',
+          order: 1,
         },
-        "pageGuid": {
-          "label": "Pagina collegata",
-          "order": 2,
-          "help": "Pagina interna a cui la voce rimanda. Se è impostato anche un URL, l'URL vince."
+        pageGuid: {
+          label: 'Pagina collegata',
+          order: 2,
+          help: "Pagina interna a cui la voce rimanda. Se è impostato anche un URL, l'URL vince.",
         },
-        "url": {
-          "label": "URL",
-          "order": 3,
-          "help": "Link esterno o assoluto. Se presente, vince sulla Pagina collegata."
+        url: {
+          label: 'URL',
+          order: 3,
+          help: 'Link esterno o assoluto. Se presente, vince sulla Pagina collegata.',
         },
-        "target": {
-          "label": "Apertura link",
-          "order": 4
-        }
-      }
-    }
+        target: {
+          label: 'Apertura link',
+          order: 4,
+        },
+      },
+    },
   },
   {
-    "type": "globalRef",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [],
-    "props": [
+    type: 'globalRef',
+    v: 1,
+    enabled: true,
+    childrenAllow: [],
+    props: [
       {
-        "name": "globalSectionGuid",
-        "kind": "globalSectionRef",
-        "required": true
-      }
+        name: 'globalSectionGuid',
+        kind: 'globalSectionRef',
+        required: true,
+      },
     ],
-    "meta": {
-      "label": "Sezione Globale",
-      "category": "navigazione",
-      "icon": "puzzle",
-      "props": {
-        "globalSectionGuid": {
-          "label": "Sezione Globale",
-          "order": 1,
-          "help": "Sezione Globale referenziata: la modifica del suo contenuto si riflette qui e in ogni altro punto che la referenzia."
-        }
-      }
-    }
+    meta: {
+      label: 'Sezione Globale',
+      category: 'navigazione',
+      icon: 'puzzle',
+      props: {
+        globalSectionGuid: {
+          label: 'Sezione Globale',
+          order: 1,
+          help: 'Sezione Globale referenziata: la modifica del suo contenuto si riflette qui e in ogni altro punto che la referenzia.',
+        },
+      },
+    },
   },
   {
-    "type": "accordion",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [
-      "accordionItem"
-    ],
-    "props": [
+    type: 'accordion',
+    v: 1,
+    enabled: true,
+    childrenAllow: ['accordionItem'],
+    props: [
       {
-        "name": "exclusive",
-        "kind": "boolean",
-        "required": false,
-        "default": false
-      }
+        name: 'exclusive',
+        kind: 'boolean',
+        required: false,
+        default: false,
+      },
     ],
-    "meta": {
-      "label": "Accordion",
-      "category": "interattivo",
-      "icon": "list-details",
-      "props": {
-        "exclusive": {
-          "label": "Apertura esclusiva",
-          "order": 1,
-          "help": "Se attivo, aprire una voce chiude automaticamente le altre (comportamento CSS-only, degrada su browser molto datati)."
-        }
-      }
-    }
+    meta: {
+      label: 'Accordion',
+      category: 'interattivo',
+      icon: 'list-details',
+      props: {
+        exclusive: {
+          label: 'Apertura esclusiva',
+          order: 1,
+          help: 'Se attivo, aprire una voce chiude automaticamente le altre (comportamento CSS-only, degrada su browser molto datati).',
+        },
+      },
+    },
   },
   {
-    "type": "accordionItem",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [
-      "heading",
-      "richText",
-      "image",
-      "button",
-      "container"
-    ],
-    "props": [
+    type: 'accordionItem',
+    v: 1,
+    enabled: true,
+    childrenAllow: ['heading', 'richText', 'image', 'button', 'container'],
+    props: [
       {
-        "name": "title",
-        "kind": "plainText",
-        "required": true,
-        "maxLength": 120
-      }
+        name: 'title',
+        kind: 'plainText',
+        required: true,
+        maxLength: 120,
+      },
     ],
-    "meta": {
-      "label": "Voce accordion",
-      "category": "interattivo",
-      "icon": "chevron-down",
-      "props": {
-        "title": {
-          "label": "Titolo",
-          "order": 1
-        }
-      }
-    }
+    meta: {
+      label: 'Voce accordion',
+      category: 'interattivo',
+      icon: 'chevron-down',
+      props: {
+        title: {
+          label: 'Titolo',
+          order: 1,
+        },
+      },
+    },
   },
   {
-    "type": "tabs",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [
-      "tabPanel"
-    ],
-    "props": [],
-    "meta": {
-      "label": "Tabs",
-      "category": "interattivo",
-      "icon": "layout-navbar"
-    }
+    type: 'tabs',
+    v: 1,
+    enabled: true,
+    childrenAllow: ['tabPanel'],
+    props: [],
+    meta: {
+      label: 'Tabs',
+      category: 'interattivo',
+      icon: 'layout-navbar',
+    },
   },
   {
-    "type": "tabPanel",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [
-      "heading",
-      "richText",
-      "image",
-      "button",
-      "container"
-    ],
-    "props": [
+    type: 'tabPanel',
+    v: 1,
+    enabled: true,
+    childrenAllow: ['heading', 'richText', 'image', 'button', 'container'],
+    props: [
       {
-        "name": "label",
-        "kind": "plainText",
-        "required": true,
-        "maxLength": 60
-      }
+        name: 'label',
+        kind: 'plainText',
+        required: true,
+        maxLength: 60,
+      },
     ],
-    "meta": {
-      "label": "Pannello tab",
-      "category": "interattivo",
-      "icon": "square",
-      "props": {
-        "label": {
-          "label": "Etichetta",
-          "order": 1
-        }
-      }
-    }
+    meta: {
+      label: 'Pannello tab',
+      category: 'interattivo',
+      icon: 'square',
+      props: {
+        label: {
+          label: 'Etichetta',
+          order: 1,
+        },
+      },
+    },
   },
   {
-    "type": "carousel",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [
-      "carouselSlide"
-    ],
-    "props": [
+    type: 'carousel',
+    v: 1,
+    enabled: true,
+    childrenAllow: ['carouselSlide'],
+    props: [
       {
-        "name": "autoplay",
-        "kind": "boolean",
-        "required": false,
-        "default": false
+        name: 'autoplay',
+        kind: 'boolean',
+        required: false,
+        default: false,
       },
       {
-        "name": "transition",
-        "kind": "enum",
-        "required": false,
-        "default": "manual-scroll",
-        "values": [
-          "manual-scroll",
-          "fade-loop",
-          "slide-loop"
-        ]
-      }
+        name: 'transition',
+        kind: 'enum',
+        required: false,
+        default: 'manual-scroll',
+        values: ['manual-scroll', 'fade-loop', 'slide-loop'],
+      },
     ],
-    "meta": {
-      "label": "Carousel",
-      "category": "interattivo",
-      "icon": "carousel-horizontal",
-      "props": {
-        "autoplay": {
-          "label": "Avvio automatico",
-          "order": 1,
-          "help": "Nessun effetto se la transizione è impostata su 'Scorrimento manuale' (no-op silenzioso, ADR-57 § 4)."
+    meta: {
+      label: 'Carousel',
+      category: 'interattivo',
+      icon: 'carousel-horizontal',
+      props: {
+        autoplay: {
+          label: 'Avvio automatico',
+          order: 1,
+          help: "Nessun effetto se la transizione è impostata su 'Scorrimento manuale' (no-op silenzioso, ADR-57 § 4).",
         },
-        "transition": {
-          "label": "Transizione",
-          "order": 2
-        }
-      }
-    }
+        transition: {
+          label: 'Transizione',
+          order: 2,
+        },
+      },
+    },
   },
   {
-    "type": "carouselSlide",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [
-      "heading",
-      "richText",
-      "image",
-      "button",
-      "container"
-    ],
-    "props": [],
-    "meta": {
-      "label": "Slide carousel",
-      "category": "interattivo",
-      "icon": "photo"
-    }
+    type: 'carouselSlide',
+    v: 1,
+    enabled: true,
+    childrenAllow: ['heading', 'richText', 'image', 'button', 'container'],
+    props: [],
+    meta: {
+      label: 'Slide carousel',
+      category: 'interattivo',
+      icon: 'photo',
+    },
   },
   {
-    "type": "modalTrigger",
-    "v": 1,
-    "enabled": true,
-    "childrenAllow": [
-      "heading",
-      "richText",
-      "image",
-      "button",
-      "container"
-    ],
-    "props": [
+    type: 'modalTrigger',
+    v: 1,
+    enabled: true,
+    childrenAllow: ['heading', 'richText', 'image', 'button', 'container'],
+    props: [
       {
-        "name": "triggerLabel",
-        "kind": "plainText",
-        "required": true,
-        "maxLength": 80
+        name: 'triggerLabel',
+        kind: 'plainText',
+        required: true,
+        maxLength: 80,
       },
       {
-        "name": "animation",
-        "kind": "enum",
-        "required": false,
-        "default": "fade",
-        "values": [
-          "none",
-          "fade",
-          "slide-down"
-        ]
-      }
+        name: 'animation',
+        kind: 'enum',
+        required: false,
+        default: 'fade',
+        values: ['none', 'fade', 'slide-down'],
+      },
     ],
-    "meta": {
-      "label": "Modale",
-      "category": "interattivo",
-      "icon": "square-arrow-up",
-      "props": {
-        "triggerLabel": {
-          "label": "Etichetta del link",
-          "order": 1
+    meta: {
+      label: 'Modale',
+      category: 'interattivo',
+      icon: 'square-arrow-up',
+      props: {
+        triggerLabel: {
+          label: 'Etichetta del link',
+          order: 1,
         },
-        "animation": {
-          "label": "Animazione",
-          "order": 2,
-          "help": "Solo presentazione: nessun JavaScript, tecnica CSS :target."
-        }
-      }
-    }
-  }
+        animation: {
+          label: 'Animazione',
+          order: 2,
+          help: 'Solo presentazione: nessun JavaScript, tecnica CSS :target.',
+        },
+      },
+    },
+  },
 ] as const;

@@ -10,7 +10,9 @@
    * transparent, sposterebbe il contenuto di 1px rompendo la pixel-identity
    * con i default. Con il token assente l'anello è transparent = invisibile.
    */
-  box-shadow: 0 0 0 1px var(--app-card-border, transparent), var(--mantine-shadow-sm);
+  box-shadow:
+    0 0 0 1px var(--app-card-border, transparent),
+    var(--mantine-shadow-sm);
   padding: 24px;
   /*
    * Niente min-height: 100vh qui — il calcolo non conosce l'altezza del

@@ -5,11 +5,13 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 12px 10px 14px;
+  padding: 12px 8px 14px;
   overflow-y: scroll;
   overflow-x: hidden;
   background: #ffffff;
-  scrollbar-width: auto;
+  /* Scrollbar sottile stile Elementor Pro (richiesta esplicita del task): `thin`, mai la
+     scrollbar di sistema spessa — solo dentro questo contenitore, non globale. */
+  scrollbar-width: thin;
   scrollbar-color: rgba(110, 118, 129, 0.8) transparent;
   scrollbar-gutter: stable;
 }
@@ -20,8 +22,8 @@
 
 /* Scrollbar sottile stile Elementor Pro — vedi `EditorSidebar.module.css`. */
 .root::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   display: block;
 }
 
@@ -56,25 +58,29 @@
   border: 0;
 }
 
+/*
+ * Wrapper di sezione — restyle Elementor Pro (richiesta esplicita del task): niente
+ * sfondo/riquadro intorno all'intero gruppo, solo l'header cliccabile sotto
+ * (`.groupControl`) per collassare/espandere. I bordi restano solo sulle singole
+ * tessere widget (`.tile`), mai sul contenitore della sezione.
+ */
 .groupItem {
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 10px;
-  background: #ffffff;
-  overflow: hidden;
-  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+  border: 0;
+  background: transparent;
 }
 
 .groupItem + .groupItem {
-  margin-top: 8px;
+  margin-top: 2px;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
 }
 
 .groupControl {
-  padding: 10px 12px;
-  background: #fafafa;
+  padding: 10px 4px;
+  background: transparent;
   color: #111827;
   font-size: var(--mantine-font-size-sm);
   font-weight: 700;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  border-bottom: 0;
 }
 
 .groupControl:hover {
@@ -82,13 +88,13 @@
 }
 
 .groupPanel {
-  padding: 10px 10px 12px;
-  background: #ffffff;
+  padding: 4px 0 10px;
+  background: transparent;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -147,18 +153,6 @@
   cursor: grabbing;
 }
 
-[data-mantine-color-scheme='light'] .groupItem {
-  background: #ffffff;
-}
-
-[data-mantine-color-scheme='light'] .groupControl {
-  background: #f3f4f6;
-}
-
-[data-mantine-color-scheme='light'] .groupPanel {
-  background: #ffffff;
-}
-
 [data-mantine-color-scheme='light'] .tile {
   border-color: #e0e0e0;
   background: #ffffff;
@@ -168,18 +162,12 @@
   color: #555d66;
 }
 
-[data-mantine-color-scheme='dark'] .groupItem {
-  border-color: rgba(148, 163, 184, 0.2);
-  background: rgba(17, 24, 39, 0.7);
+[data-mantine-color-scheme='dark'] .groupItem + .groupItem {
+  border-top-color: rgba(148, 163, 184, 0.2);
 }
 
 [data-mantine-color-scheme='dark'] .groupControl {
-  background: rgba(31, 41, 55, 0.9);
   color: #e5e7eb;
-}
-
-[data-mantine-color-scheme='dark'] .groupPanel {
-  background: rgba(17, 24, 39, 0.7);
 }
 
 [data-mantine-color-scheme='dark'] .tile {

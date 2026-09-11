@@ -173,7 +173,9 @@ describe('GlobalSectionsService (unit) — ADR-55', () => {
   describe('update()', () => {
     it('un aggiornamento di content con layoutSlot "none" (non solo header/footer) accoda comunque il full-site export (fix ADR-55)', async () => {
       updateWhereMock.mockReturnValue({
-        returning: jest.fn().mockResolvedValue([{ ...BASE_ROW, version: 4, content: emptyContent() }]),
+        returning: jest
+          .fn()
+          .mockResolvedValue([{ ...BASE_ROW, version: 4, content: emptyContent() }]),
       });
       const dto: UpdateGlobalSectionDto = { version: 3, content: emptyContent() };
 
@@ -184,7 +186,9 @@ describe('GlobalSectionsService (unit) — ADR-55', () => {
 
     it('un aggiornamento che tocca solo il titolo (né content né layoutSlot) NON accoda un export: solo i due campi rilevanti lo innescano', async () => {
       updateWhereMock.mockReturnValue({
-        returning: jest.fn().mockResolvedValue([{ ...BASE_ROW, version: 4, title: 'Nuovo titolo' }]),
+        returning: jest
+          .fn()
+          .mockResolvedValue([{ ...BASE_ROW, version: 4, title: 'Nuovo titolo' }]),
       });
       const dto: UpdateGlobalSectionDto = { version: 3, title: 'Nuovo titolo' };
 

@@ -77,12 +77,10 @@ describe('useBlockEditorStore — convertToGlobalSectionAction (ADR-55)', () => 
     expect(tree[0].id).not.toBe('sec-1');
 
     expect(notifications.show).toHaveBeenCalledTimes(1);
-    expect(notifications.show).toHaveBeenCalledWith(
-      expect.objectContaining({ color: 'green' }),
-    );
+    expect(notifications.show).toHaveBeenCalledWith(expect.objectContaining({ color: 'green' }));
   });
 
-  it('errore di rete: createGlobalSection fallisce → l\'albero locale resta invariato, notifications.show mostra l\'errore, ritorna false', async () => {
+  it("errore di rete: createGlobalSection fallisce → l'albero locale resta invariato, notifications.show mostra l'errore, ritorna false", async () => {
     const child = node('h-child', 'heading', { level: 'h2', text: 'Titolo' });
     const section = node('sec-1', 'section', { columns: { default: '1' } }, [child]);
     useBlockEditorStore.getState().initTree([section]);
@@ -104,9 +102,7 @@ describe('useBlockEditorStore — convertToGlobalSectionAction (ADR-55)', () => 
     expect(tree[0].children[0].id).toBe('h-child');
 
     expect(notifications.show).toHaveBeenCalledTimes(1);
-    expect(notifications.show).toHaveBeenCalledWith(
-      expect.objectContaining({ color: 'red' }),
-    );
+    expect(notifications.show).toHaveBeenCalledWith(expect.objectContaining({ color: 'red' }));
   });
 
   it('un id inesistente (nodo sparito prima della chiamata) ritorna false senza invocare createGlobalSection', async () => {

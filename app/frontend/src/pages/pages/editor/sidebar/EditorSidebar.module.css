@@ -5,7 +5,7 @@
  */
 
 .root {
-  width: 300px;
+  width: 340px;
   height: 100%;
   min-height: 0;
   display: flex;
@@ -48,17 +48,15 @@
 
 .tabs :global(.mantine-Tabs-tab) {
   flex: 1;
-  min-height: 38px;
+  min-height: 40px;
   border-radius: 8px 8px 0 0;
   border: 0;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
   color: #4b5563;
   background: transparent;
-  text-align: center;
-  padding: 6px 8px;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
 }
 
 .tabs :global(.mantine-Tabs-tab[data-active='true']) {

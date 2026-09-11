@@ -189,7 +189,10 @@ export default function RichTextFieldEditor({
           </RichTextEditor.Toolbar>
           <RichTextEditor.Content
             className={fullscreen ? undefined : styles.editorContent}
-            style={{ minHeight: fullscreen ? '65vh' : 120, maxHeight: fullscreen ? '65vh' : undefined }}
+            style={{
+              minHeight: fullscreen ? '65vh' : 120,
+              maxHeight: fullscreen ? '65vh' : undefined,
+            }}
           />
         </RichTextEditor>
       ) : (

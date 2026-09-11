@@ -113,7 +113,10 @@ export default function BlockTreeNavigator(): JSX.Element {
     event.preventDefault();
     event.stopPropagation();
     event.dataTransfer.dropEffect = 'move';
-    setDropTarget({ id: node.id, position: allowedChildTypes(node.type).length > 0 ? 'inside' : 'after' });
+    setDropTarget({
+      id: node.id,
+      position: allowedChildTypes(node.type).length > 0 ? 'inside' : 'after',
+    });
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>, node: BlockNode): void {

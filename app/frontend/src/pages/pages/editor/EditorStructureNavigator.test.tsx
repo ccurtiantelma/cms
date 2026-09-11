@@ -20,7 +20,7 @@ beforeEach(() => {
   useBlockEditorStore.setState({ selectedId: null, activeSidebarTab: 'widgets', hoveredId: null });
 });
 
-describe('EditorStructureNavigator — rendering dell\'albero', () => {
+describe("EditorStructureNavigator — rendering dell'albero", () => {
   it('mostra un messaggio quando la bozza non ha blocchi', () => {
     renderWithProviders(<EditorStructureNavigator />);
 
@@ -33,7 +33,14 @@ describe('EditorStructureNavigator — rendering dell\'albero', () => {
         id: 'section-1',
         type: 'section',
         props: {},
-        children: [{ id: 'heading-1', type: 'heading', props: { level: 'h2', text: 'Benvenuti' }, children: [] }],
+        children: [
+          {
+            id: 'heading-1',
+            type: 'heading',
+            props: { level: 'h2', text: 'Benvenuti' },
+            children: [],
+          },
+        ],
       },
     ]);
 
@@ -49,7 +56,9 @@ describe('EditorStructureNavigator — rendering dell\'albero', () => {
 
 describe('EditorStructureNavigator — selezione', () => {
   it('il click su un nodo seleziona il blocco, apre la scheda "Proprietà" e scrolla al blocco nel canvas', () => {
-    initTree([{ id: 'heading-1', type: 'heading', props: { level: 'h2', text: 'Titolo' }, children: [] }]);
+    initTree([
+      { id: 'heading-1', type: 'heading', props: { level: 'h2', text: 'Titolo' }, children: [] },
+    ]);
     const canvasNode = document.createElement('div');
     canvasNode.setAttribute('data-block-id', 'heading-1');
     document.body.appendChild(canvasNode);
@@ -102,6 +111,8 @@ describe('EditorStructureNavigator — riordino su/giù', () => {
     expect(screen.getByRole('button', { name: 'Sposta su il blocco "Primo"' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Sposta giù il blocco "Secondo"' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Sposta giù il blocco "Primo"' })).not.toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Sposta su il blocco "Secondo"' })).not.toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Sposta su il blocco "Secondo"' }),
+    ).not.toBeDisabled();
   });
 });

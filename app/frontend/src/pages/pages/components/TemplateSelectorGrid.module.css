@@ -8,7 +8,9 @@
 
 .card {
   position: relative;
-  transition: border-color 120ms ease, background-color 120ms ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
 }
 
 .cardSelected {

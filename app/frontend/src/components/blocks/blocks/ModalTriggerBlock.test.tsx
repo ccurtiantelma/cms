@@ -71,12 +71,18 @@ describe('BlockRenderer — dispatch del case "modalTrigger" (ADR-57 § 2)', () 
       id: 'modal-node-1',
       type: 'modalTrigger',
       props,
-      children: [{ id: 'h-1', type: 'heading', props: { level: 'h2', text: 'Titolo modale' }, children: [] }],
+      children: [
+        { id: 'h-1', type: 'heading', props: { level: 'h2', text: 'Titolo modale' }, children: [] },
+      ],
     };
   }
 
-  it('id di ancora derivato dall\'id del nodo, non da una prop', () => {
-    render(<BlockRenderer node={modalTriggerNode({ triggerLabel: 'Scopri di più', animation: 'fade' })} />);
+  it("id di ancora derivato dall'id del nodo, non da una prop", () => {
+    render(
+      <BlockRenderer
+        node={modalTriggerNode({ triggerLabel: 'Scopri di più', animation: 'fade' })}
+      />,
+    );
 
     expect(screen.getByRole('link', { name: 'Scopri di più' })).toHaveAttribute(
       'href',

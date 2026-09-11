@@ -413,8 +413,7 @@
 .dropZone[data-over='true']::before {
   background-image:
     radial-gradient(circle, #a333c8 0 3px, transparent 3px 100%),
-    radial-gradient(circle, #a333c8 0 3px, transparent 3px 100%),
-    linear-gradient(#a333c8, #a333c8);
+    radial-gradient(circle, #a333c8 0 3px, transparent 3px 100%), linear-gradient(#a333c8, #a333c8);
   box-shadow: 0 0 6px 1px rgba(163, 51, 200, 0.6);
 }
 
@@ -492,4 +491,3 @@
 .wrapper[data-modal-open='true'] [role='dialog'][aria-modal='true'] {
   display: flex;
 }
-

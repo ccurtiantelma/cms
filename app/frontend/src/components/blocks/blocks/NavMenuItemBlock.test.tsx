@@ -48,7 +48,7 @@ describe('NavMenuItemBlock — risoluzione URL (Canvas editor, client-side)', ()
     expect(fetchPage).not.toHaveBeenCalled();
   });
 
-  it('con `pageGuid` risolve dinamicamente l\'URL pubblico corrente tramite usePublicPageUrl', async () => {
+  it("con `pageGuid` risolve dinamicamente l'URL pubblico corrente tramite usePublicPageUrl", async () => {
     fetchPage.mockResolvedValue(page({ guid: 'a1b2c3d4e5f6a7b8', slug: 'chi-siamo' }));
 
     render(<NavMenuItemBlock label="Chi siamo" pageGuid="a1b2c3d4e5f6a7b8" />);
@@ -63,7 +63,9 @@ describe('NavMenuItemBlock — risoluzione URL (Canvas editor, client-side)', ()
   });
 
   it('`url` vince su `pageGuid` quando entrambi sono presenti, senza tentare alcuna risoluzione', () => {
-    render(<NavMenuItemBlock label="Esterno" url="https://example.com" pageGuid="a1b2c3d4e5f6a7b8" />);
+    render(
+      <NavMenuItemBlock label="Esterno" url="https://example.com" pageGuid="a1b2c3d4e5f6a7b8" />,
+    );
 
     expect(screen.getByRole('link', { name: 'Esterno' })).toHaveAttribute(
       'href',
@@ -72,7 +74,7 @@ describe('NavMenuItemBlock — risoluzione URL (Canvas editor, client-side)', ()
     expect(fetchPage).not.toHaveBeenCalled();
   });
 
-  it('pagina non pubblicata: nessun href, l\'etichetta resta visibile senza link navigabile', async () => {
+  it("pagina non pubblicata: nessun href, l'etichetta resta visibile senza link navigabile", async () => {
     fetchPage.mockResolvedValue(page({ status: 'draft' }));
 
     render(<NavMenuItemBlock label="Bozza" pageGuid="a1b2c3d4e5f6a7b8" />);
@@ -142,7 +144,7 @@ describe('NavMenuItemBlock — sicurezza SSR (sito pubblico condiviso, ADR-22)',
     expect(html).toContain('href="/"');
   });
 
-  it('escapa `label` (plainText) nell\'HTML prodotto, mai iniettato come markup', () => {
+  it("escapa `label` (plainText) nell'HTML prodotto, mai iniettato come markup", () => {
     const html = renderToStaticMarkup(
       <NavMenuItemBlock label="<script>alert(1)</script>" url="/" />,
     );

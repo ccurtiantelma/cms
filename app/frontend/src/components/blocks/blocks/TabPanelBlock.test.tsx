@@ -9,7 +9,7 @@ import { render, screen } from '@testing-library/react';
 import TabPanelBlock from './TabPanelBlock';
 
 describe('TabPanelBlock', () => {
-  it('mostra l\'etichetta cliccabile e il contenuto del pannello', () => {
+  it("mostra l'etichetta cliccabile e il contenuto del pannello", () => {
     render(
       <TabPanelBlock label="Scheda" groupName="grp-1">
         Corpo del pannello

@@ -744,7 +744,9 @@ describe('EditorBlockWrapper — interattività in-canvas widget a children (RE-
 
     const { container } = renderWithProviders(<EditorBlockWrapper id="acc-1" />);
 
-    const headingEl = container.querySelector('[data-block-id="h-nested"] [contenteditable="true"]');
+    const headingEl = container.querySelector(
+      '[data-block-id="h-nested"] [contenteditable="true"]',
+    );
     if (!headingEl) throw new Error('heading annidato in editing non trovato');
 
     headingEl.textContent = 'Titolo modificato';
@@ -763,7 +765,9 @@ describe('EditorBlockWrapper — interattività in-canvas widget a children (RE-
 
     const { container } = renderWithProviders(<EditorBlockWrapper id="tabs-1" />);
 
-    const richTextEl = container.querySelector('[data-block-id="rt-nested"] [contenteditable="true"]');
+    const richTextEl = container.querySelector(
+      '[data-block-id="rt-nested"] [contenteditable="true"]',
+    );
     if (!richTextEl) throw new Error('richText annidato in editing non trovato');
 
     richTextEl.innerHTML = '<p>Modificato</p>';
@@ -784,7 +788,9 @@ describe('EditorBlockWrapper — interattività in-canvas widget a children (RE-
 
     const { container } = renderWithProviders(<EditorBlockWrapper id="car-1" />);
 
-    const buttonEl = container.querySelector('[data-block-id="btn-nested"] [contenteditable="true"]');
+    const buttonEl = container.querySelector(
+      '[data-block-id="btn-nested"] [contenteditable="true"]',
+    );
     if (!buttonEl) throw new Error('button annidato in editing non trovato');
 
     buttonEl.textContent = 'Scopri di più';

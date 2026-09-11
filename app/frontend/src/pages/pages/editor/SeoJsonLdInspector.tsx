@@ -103,8 +103,8 @@ export default function SeoJsonLdInspector({
       </Group>
       <Code block>{JSON.stringify(merged, null, 2)}</Code>
       <Text size="xs" c="dimmed">
-        Anteprima calcolata in editor. Il valore effettivamente pubblicato è generato dal
-        backend a publish-time (ADR-48) e può differire se il JSON-LD manuale cambia dopo.
+        Anteprima calcolata in editor. Il valore effettivamente pubblicato è generato dal backend a
+        publish-time (ADR-48) e può differire se il JSON-LD manuale cambia dopo.
       </Text>
     </Stack>
   );

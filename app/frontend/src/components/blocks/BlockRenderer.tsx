@@ -350,11 +350,7 @@ function renderNode(
       return (
         <NavMenuBlock>
           {node.children.map((child) => (
-            <BlockRenderer
-              key={child.id}
-              node={child}
-              resolvePageUrl={resolvePageUrl}
-            />
+            <BlockRenderer key={child.id} node={child} resolvePageUrl={resolvePageUrl} />
           ))}
         </NavMenuBlock>
       );

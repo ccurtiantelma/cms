@@ -1,9 +1,9 @@
 /**
- * Test d'integrazione dei tre controlli E01 aggiunti alla chrome dell'editor visivo, per
- * come sono davvero cablati insieme dentro `BlockEditorPanel.tsx`
+ * Test d'integrazione dei controlli E01 aggiunti alla chrome dell'editor visivo, per come
+ * sono davvero cablati insieme dentro `BlockEditorPanel.tsx`
  * (`FullScreenEditorLayout` → `Toolbar`/`EditorSidebar`):
- * - il toggle "Anteprima Pura" nasconde la sidebar sinistra e disattiva i contorni del
- *   canvas (`data-preview-mode`, `EditorBlockWrapper.module.css`);
+ * - l'icona "Anteprima" della topbar apre l'anteprima della Pagina (`onPreview`), non un
+ *   toggle che nasconde la sidebar (richiesta esplicita del task);
  * - la scheda "Pagina" compare nella sidebar sinistra, accanto a "Widgets"/"Proprietà", e
  *   mostra Titolo/Slug della Pagina in editing;
  * - "Salva Bozza" e "Cambia Stato" sono due controlli distinti nella topbar.
@@ -31,10 +31,6 @@ vi.mock('./HistoryDrawer', () => ({ default: () => null }));
 vi.mock('../../../services/pages.service', () => ({ updatePage: vi.fn() }));
 
 const { default: BlockEditorPanel } = await import('./BlockEditorPanel');
-const fullScreenStyles = (await import('./FullScreenEditorLayout.module.css')).default as Record<
-  string,
-  string
->;
 
 /** Fixture minima: solo i campi letti da `BlockEditorPanel`/`EditorSidebar`/`Toolbar`, non l'intero contratto `PageDto`. */
 const basePage = {
@@ -54,7 +50,11 @@ const basePage = {
 } as unknown as PageRecord;
 
 function renderPanel(
-  props: { pageStatus?: PageStatus; visibleTransitions?: readonly PageStatus[] } = {},
+  props: {
+    pageStatus?: PageStatus;
+    visibleTransitions?: readonly PageStatus[];
+    onPreview?: () => void;
+  } = {},
 ) {
   return renderWithProviders(
     <MemoryRouter>
@@ -65,6 +65,7 @@ function renderPanel(
         pageStatus={props.pageStatus ?? 'draft'}
         visibleTransitions={props.visibleTransitions ?? ['review', 'scheduled', 'published']}
         onRequestStatusChange={vi.fn()}
+        onPreview={props.onPreview}
       />
     </MemoryRouter>,
   );
@@ -72,7 +73,6 @@ function renderPanel(
 
 beforeEach(() => {
   useBlockEditorStore.setState({
-    isPreviewMode: false,
     isSidebarOpen: true,
     activeSidebarTab: 'widgets',
   });
@@ -129,24 +129,14 @@ describe('BlockEditorPanel — E01', () => {
     expect(onRequestStatusChange).toHaveBeenCalledWith('review');
   });
 
-  it('"Anteprima Pura" nasconde la sidebar sinistra e disattiva i contorni del canvas', async () => {
+  it('"Anteprima" nella topbar invoca onPreview, non un toggle di sidebar', async () => {
     const user = userEvent.setup();
-    const { container } = renderPanel();
+    const onPreview = vi.fn();
+    renderPanel({ onPreview });
 
-    expect(
-      container.querySelector(`.${fullScreenStyles.sidebar}.${fullScreenStyles.sidebarCollapsed}`),
-    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Anteprima' }));
 
-    await user.click(screen.getByRole('button', { name: 'Anteprima Pura' }));
-
-    expect(useBlockEditorStore.getState().isPreviewMode).toBe(true);
-    expect(
-      container.querySelector(`.${fullScreenStyles.sidebar}.${fullScreenStyles.sidebarCollapsed}`),
-    ).toBeInTheDocument();
-    // La disattivazione vera e propria dei contorni è una regola CSS scoped da questo
-    // attributo (`[data-preview-mode='true']` in `EditorBlockWrapper.module.css`), non
-    // calcolabile in jsdom (nessun CSS Module applicato) — qui si verifica solo l'attributo
-    // che quella regola osserva.
-    expect(container.querySelector('[data-preview-mode="true"]')).toBeInTheDocument();
+    expect(onPreview).toHaveBeenCalledTimes(1);
+    expect(useBlockEditorStore.getState().isSidebarOpen).toBe(true);
   });
 });

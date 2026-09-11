@@ -116,12 +116,20 @@ function buildAntelmaHomeBlocks(): BlockNode[] {
         v: 1,
         props: { flexDirection: { default: 'column' }, gap: { default: 'sm' } },
         children: [
-          { id: 'home-strength-1-heading', type: 'heading', v: 1, props: { level: 'h3', text: 'Affidabilità' }, children: [] },
+          {
+            id: 'home-strength-1-heading',
+            type: 'heading',
+            v: 1,
+            props: { level: 'h3', text: 'Affidabilità' },
+            children: [],
+          },
           {
             id: 'home-strength-1-text',
             type: 'richText',
             v: 1,
-            props: { html: '<p>SLA enterprise e assistenza certificata su ogni servizio erogato.</p>' },
+            props: {
+              html: '<p>SLA enterprise e assistenza certificata su ogni servizio erogato.</p>',
+            },
             children: [],
           },
         ],
@@ -132,12 +140,20 @@ function buildAntelmaHomeBlocks(): BlockNode[] {
         v: 1,
         props: { flexDirection: { default: 'column' }, gap: { default: 'sm' } },
         children: [
-          { id: 'home-strength-2-heading', type: 'heading', v: 1, props: { level: 'h3', text: 'Competenza' }, children: [] },
+          {
+            id: 'home-strength-2-heading',
+            type: 'heading',
+            v: 1,
+            props: { level: 'h3', text: 'Competenza' },
+            children: [],
+          },
           {
             id: 'home-strength-2-text',
             type: 'richText',
             v: 1,
-            props: { html: '<p>Oltre trent’anni di esperienza in reti, cloud e sicurezza informatica.</p>' },
+            props: {
+              html: '<p>Oltre trent’anni di esperienza in reti, cloud e sicurezza informatica.</p>',
+            },
             children: [],
           },
         ],
@@ -148,12 +164,20 @@ function buildAntelmaHomeBlocks(): BlockNode[] {
         v: 1,
         props: { flexDirection: { default: 'column' }, gap: { default: 'sm' } },
         children: [
-          { id: 'home-strength-3-heading', type: 'heading', v: 1, props: { level: 'h3', text: 'Vicinanza' }, children: [] },
+          {
+            id: 'home-strength-3-heading',
+            type: 'heading',
+            v: 1,
+            props: { level: 'h3', text: 'Vicinanza' },
+            children: [],
+          },
           {
             id: 'home-strength-3-text',
             type: 'richText',
             v: 1,
-            props: { html: '<p>Un unico interlocutore, dal sopralluogo alla manutenzione continuativa.</p>' },
+            props: {
+              html: '<p>Un unico interlocutore, dal sopralluogo alla manutenzione continuativa.</p>',
+            },
             children: [],
           },
         ],
@@ -244,7 +268,9 @@ export interface AntelmaHomePageSeedResult {
  * di scrittura di `antelmaContactSeed`: SELECT preventiva deliberata (script
  * mono-processo, nessuna race condition da un endpoint pubblico concorrente).
  */
-export async function antelmaHomePageSeed(dbService: DbService): Promise<AntelmaHomePageSeedResult> {
+export async function antelmaHomePageSeed(
+  dbService: DbService,
+): Promise<AntelmaHomePageSeedResult> {
   const db = dbService.db;
   const locale = AppConstants.defaultLocale;
 
@@ -252,7 +278,9 @@ export async function antelmaHomePageSeed(dbService: DbService): Promise<Antelma
     where: eq(userEntity.role, AppUserRoles.SuperAdmin),
   });
   if (!author) {
-    throw new Error(`Seed "${PAGE_SLUG}": nessun utente SuperAdmin trovato — eseguire prima il seed utenti.`);
+    throw new Error(
+      `Seed "${PAGE_SLUG}": nessun utente SuperAdmin trovato — eseguire prima il seed utenti.`,
+    );
   }
 
   const content = buildPersistableContentTree();

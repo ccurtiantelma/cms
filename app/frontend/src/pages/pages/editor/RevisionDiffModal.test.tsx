@@ -132,7 +132,7 @@ describe('RevisionDiffModal — risultato popolato', () => {
 });
 
 describe('RevisionDiffModal — ripristino diretto', () => {
-  it('disabilita i pulsanti di ripristino finché non c\'è selezione', () => {
+  it("disabilita i pulsanti di ripristino finché non c'è selezione", () => {
     renderModal();
 
     expect(screen.getByRole('button', { name: 'Ripristina Revisione A' })).toBeDisabled();

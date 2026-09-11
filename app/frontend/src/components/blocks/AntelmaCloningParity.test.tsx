@@ -46,7 +46,7 @@ function sectionHtmlByIndex(html: string, index: number): string {
 }
 
 describe('AntelmaCloningParity — pagina "Antelma Contatti" (F13-03)', () => {
-  it('renderizza l\'intero albero senza errori/warning React (nessun id o prop mancante)', () => {
+  it("renderizza l'intero albero senza errori/warning React (nessun id o prop mancante)", () => {
     const { html, consoleError } = renderTree();
 
     expect(html.length).toBeGreaterThan(0);
@@ -120,7 +120,7 @@ describe('AntelmaCloningParity — pagina "Antelma Contatti" (F13-03)', () => {
       expect(html).toContain('Invia richiesta');
     });
 
-    it("il CTA telefonico è un link `button` valido, senza una prop `variant` inesistente sul tipo", () => {
+    it('il CTA telefonico è un link `button` valido, senza una prop `variant` inesistente sul tipo', () => {
       const { html } = renderTree();
 
       // `button.block.ts` non dichiara `variant` (commento di testa: "nessuna prop di
@@ -157,7 +157,7 @@ describe('AntelmaCloningParity — pagina "Antelma Contatti" (F13-03)', () => {
     });
   });
 
-  it('ogni nodo dell\'albero ha un id univoco (nessuna collisione di `key` React)', () => {
+  it("ogni nodo dell'albero ha un id univoco (nessuna collisione di `key` React)", () => {
     const ids: string[] = [];
     const collect = (nodes: typeof antelmaContattiTree) => {
       for (const node of nodes) {

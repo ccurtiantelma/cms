@@ -82,11 +82,15 @@ function exportBlocksArtifact(): void {
         kind: spec.kind,
         required: spec.required,
         ...(spec.default !== undefined ? { default: spec.default } : {}),
-        ...('maxLength' in spec && spec.maxLength !== undefined ? { maxLength: spec.maxLength } : {}),
+        ...('maxLength' in spec && spec.maxLength !== undefined
+          ? { maxLength: spec.maxLength }
+          : {}),
         ...('values' in spec ? { values: spec.values } : {}),
         ...('profile' in spec ? { profile: spec.profile } : {}),
         ...('nonEmpty' in spec && spec.nonEmpty !== undefined ? { nonEmpty: spec.nonEmpty } : {}),
-        ...('responsive' in spec && spec.responsive !== undefined ? { responsive: spec.responsive } : {}),
+        ...('responsive' in spec && spec.responsive !== undefined
+          ? { responsive: spec.responsive }
+          : {}),
         ...('units' in spec ? { units: spec.units } : {}),
         ...('min' in spec ? { min: spec.min } : {}),
         ...('max' in spec ? { max: spec.max } : {}),

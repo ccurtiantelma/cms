@@ -277,7 +277,9 @@ export default function PropertyInspector(): JSX.Element {
                   </ActionIcon>
                 </Tooltip>
               )}
-              <Text fw={700} c="dark.8">Proprietà</Text>
+              <Text fw={700} c="dark.8">
+                Proprietà
+              </Text>
             </Group>
             {descriptor && (
               <Badge variant="light" color="gray">
@@ -295,8 +297,8 @@ export default function PropertyInspector(): JSX.Element {
             // contenuto salvato prima che il tipo venisse rimosso: si dice cosa succede invece
             // di mostrare un pannello vuoto.
             <Alert color="orange" icon={<IconInfoCircle size={16} />}>
-              Il tipo di blocco &laquo;{node.type}&raquo; non è nel registro: non è modificabile e il
-              salvataggio verrà rifiutato finché il blocco resta nell&apos;albero.
+              Il tipo di blocco &laquo;{node.type}&raquo; non è nel registro: non è modificabile e
+              il salvataggio verrà rifiutato finché il blocco resta nell&apos;albero.
             </Alert>
           ) : (
             <PropertyForm key={`${node.id}:${generation}`} node={node} descriptor={descriptor} />

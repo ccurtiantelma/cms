@@ -81,8 +81,7 @@ interface InlineFormattingToolbarHeadingProps {
 }
 
 export type InlineFormattingToolbarProps =
-  | InlineFormattingToolbarTextProps
-  | InlineFormattingToolbarHeadingProps;
+  InlineFormattingToolbarTextProps | InlineFormattingToolbarHeadingProps;
 
 interface ToolbarButtonProps {
   label: string;
@@ -138,9 +137,7 @@ function CloseButton({ onClose }: { onClose: () => void }): JSX.Element {
   );
 }
 
-export default function InlineFormattingToolbar(
-  props: InlineFormattingToolbarProps,
-): JSX.Element {
+export default function InlineFormattingToolbar(props: InlineFormattingToolbarProps): JSX.Element {
   if (props.mode === 'heading') {
     const { headingLevel, onLevelChange, onClose, blockName = 'Titolo' } = props;
     return (

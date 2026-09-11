@@ -29,10 +29,7 @@ describe('AccordionItemBlock', () => {
       </AccordionItemBlock>,
     );
 
-    expect(screen.getByText('Domanda').closest('details')).toHaveAttribute(
-      'name',
-      'accordion-xyz',
-    );
+    expect(screen.getByText('Domanda').closest('details')).toHaveAttribute('name', 'accordion-xyz');
   });
 
   it('nessun attributo `open`: ogni voce parte chiusa per default (comportamento nativo di `<details>`)', () => {

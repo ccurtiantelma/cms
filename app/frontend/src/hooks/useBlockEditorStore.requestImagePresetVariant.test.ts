@@ -169,7 +169,9 @@ describe('useBlockEditorStore — requestImagePresetVariantIfNeeded (ADR-58)', (
       .initTree([node('img-1', 'image', { mediaRef: guid, alt: 'alt' })]);
     vi.mocked(fetchMediaMetadata).mockRejectedValue(new Error('404 Not Found'));
 
-    useBlockEditorStore.getState().updateBlockPropsAction('img-1', { styleSizePreset: 'thumbnail' });
+    useBlockEditorStore
+      .getState()
+      .updateBlockPropsAction('img-1', { styleSizePreset: 'thumbnail' });
     await flushMicrotasks();
 
     expect(requestImageTransform).not.toHaveBeenCalled();

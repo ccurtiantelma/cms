@@ -16,10 +16,7 @@ import GlobalRefBlock from './GlobalRefBlock';
 import BlockRenderer from '../BlockRenderer';
 import type { RenderableBlockNode } from '../types';
 
-const SOURCE_PATH = path.resolve(
-  process.cwd(),
-  'src/components/blocks/blocks/GlobalRefBlock.tsx',
-);
+const SOURCE_PATH = path.resolve(process.cwd(), 'src/components/blocks/blocks/GlobalRefBlock.tsx');
 
 describe('GlobalRefBlock — nessuna dipendenza Mantine (CLAUDE.md, confine Mantine/blocchi)', () => {
   it('il sorgente non importa alcun pacchetto @mantine/*', () => {
@@ -28,11 +25,11 @@ describe('GlobalRefBlock — nessuna dipendenza Mantine (CLAUDE.md, confine Mant
   });
 
   it('renderizza senza MantineProvider a monte (render diretto, nessun wrapper) e non lancia', () => {
-    expect(() =>
-      render(<GlobalRefBlock globalSectionGuid="0123456789abcdef" />),
-    ).not.toThrow();
+    expect(() => render(<GlobalRefBlock globalSectionGuid="0123456789abcdef" />)).not.toThrow();
     expect(
-      screen.getByText('Sezione Globale collegata — il contenuto reale viene risolto in pubblicazione.'),
+      screen.getByText(
+        'Sezione Globale collegata — il contenuto reale viene risolto in pubblicazione.',
+      ),
     ).toBeInTheDocument();
   });
 
@@ -61,11 +58,13 @@ describe('BlockRenderer — dispatch del case "globalRef" (ADR-55)', () => {
     };
   }
 
-  it('un nodo globalRef nell\'albero renderizza GlobalRefBlock (nessun figlio da ricorrere, foglia)', () => {
+  it("un nodo globalRef nell'albero renderizza GlobalRefBlock (nessun figlio da ricorrere, foglia)", () => {
     render(<BlockRenderer node={globalRefNode('0123456789abcdef')} />);
 
     expect(
-      screen.getByText('Sezione Globale collegata — il contenuto reale viene risolto in pubblicazione.'),
+      screen.getByText(
+        'Sezione Globale collegata — il contenuto reale viene risolto in pubblicazione.',
+      ),
     ).toBeInTheDocument();
   });
 

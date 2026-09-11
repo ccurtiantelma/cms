@@ -1,34 +1,38 @@
 /*
  * Selettore responsive Desktop/Tablet/Mobile — restyle Elementor Pro (richiesta esplicita
- * del task): pillola scura dentro la topbar `#1e1e1e` (Toolbar.module.css), non più il
- * riquadro chiaro di Mantine. `data-variant`: attributo che Mantine imposta sul nodo DOM
- * di `ActionIcon` a partire dalla prop `variant` (verificato sul sorgente installato,
- * `Box.mjs`), unico aggancio CSS per colorare solo l'icona attiva senza toccare il JSX.
+ * del task): pillola dentro la topbar azzurrina (`Toolbar.module.css`), non più il riquadro
+ * chiaro di Mantine né la vecchia pillola scura `#2c2c2c` (rimasta dark quando la topbar è
+ * passata a `--mantine-primary-color-light`, scarso contrasto — correzione di questo task).
+ * `--mantine-color-body` per lo sfondo della pillola: si adatta da solo a light/dark mode
+ * (bianco/superficie scura), sempre in contrasto leggibile contro l'azzurrino della barra.
+ * `data-variant`: attributo che Mantine imposta sul nodo DOM di `ActionIcon` a partire dalla
+ * prop `variant` (verificato sul sorgente installato, `Box.mjs`), unico aggancio CSS per
+ * colorare solo l'icona attiva senza toccare il JSX.
  */
 .root {
   display: flex;
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-  background: #2c2c2c;
+  background: var(--mantine-color-body);
   border-radius: 20px;
   padding: 2px 8px;
 }
 
 .root :global(.mantine-ActionIcon-root) {
-  --ai-color: #9a9a9a;
-  --ai-hover-color: #ffffff;
+  --ai-color: var(--mantine-primary-color-filled);
+  --ai-hover-color: var(--mantine-primary-color-filled);
 }
 
 .root :global(.mantine-ActionIcon-root:hover) {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--mantine-primary-color-light-hover);
 }
 
-/* Icona attiva: unico accento a colore pieno della pillola, stesso azzurro Elementor
-   `#2271b1` usato per hover/selezione sul canvas (`EditorBlockWrapper.module.css`). */
+/* Icona attiva: unico accento a colore pieno della pillola, stesso blu primario del tema
+   usato per il pulsante "Cambia Stato" (`Toolbar.module.css`) — non un hex Elementor fisso. */
 .root :global(.mantine-ActionIcon-root[data-variant='filled']) {
-  --ai-bg: #2271b1;
-  --ai-hover: #2271b1;
-  --ai-color: #ffffff;
-  --ai-hover-color: #ffffff;
+  --ai-bg: var(--mantine-primary-color-filled);
+  --ai-hover: var(--mantine-primary-color-filled-hover);
+  --ai-color: var(--mantine-color-white);
+  --ai-hover-color: var(--mantine-color-white);
 }

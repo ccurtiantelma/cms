@@ -90,8 +90,14 @@ function mountSection(options: { selected: boolean; columnRatio?: string }): voi
   const section = node(
     'sec-1',
     'section',
-    { columns: { default: '2' }, ...(options.columnRatio ? { columnRatio: options.columnRatio } : {}) },
-    [node('h-1', 'heading', { level: 'h2', text: 'Colonna 1' }), node('h-2', 'heading', { level: 'h2', text: 'Colonna 2' })],
+    {
+      columns: { default: '2' },
+      ...(options.columnRatio ? { columnRatio: options.columnRatio } : {}),
+    },
+    [
+      node('h-1', 'heading', { level: 'h2', text: 'Colonna 1' }),
+      node('h-2', 'heading', { level: 'h2', text: 'Colonna 2' }),
+    ],
   );
   useBlockEditorStore.getState().initTree([section]);
   if (options.selected) useBlockEditorStore.getState().selectNode('sec-1');
@@ -124,7 +130,9 @@ describe('ColumnResizer — visibilità', () => {
   });
 
   it('container selezionato: nessuna maniglia inter-colonna (ha il proprio resizer di larghezza)', () => {
-    const container = node('cnt-1', 'container', {}, [node('h-1', 'heading', { level: 'h2', text: 'Titolo' })]);
+    const container = node('cnt-1', 'container', {}, [
+      node('h-1', 'heading', { level: 'h2', text: 'Titolo' }),
+    ]);
     useBlockEditorStore.getState().initTree([container]);
     useBlockEditorStore.getState().selectNode('cnt-1');
     renderWithProviders(<EditorBlockWrapper id="cnt-1" />);

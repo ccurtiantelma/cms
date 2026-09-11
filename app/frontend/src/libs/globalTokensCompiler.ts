@@ -132,7 +132,11 @@ export function compileTokensToCss(tokens: GlobalTokens, selector: string): stri
 }
 
 /** Ridondante con `GlobalTokensDimension['unit']`, riesportato per i consumer che validano input utente. */
-export const GLOBAL_TOKENS_DIMENSION_UNITS = ['px', 'em', 'rem'] as const satisfies readonly ThemeUnit[];
+export const GLOBAL_TOKENS_DIMENSION_UNITS = [
+  'px',
+  'em',
+  'rem',
+] as const satisfies readonly ThemeUnit[];
 
 /** Default di fabbrica dei Global Design Tokens — usati finché l'admin non li personalizza (nessuna UI in questo step). */
 export const DEFAULT_GLOBAL_TOKENS: GlobalTokens = {

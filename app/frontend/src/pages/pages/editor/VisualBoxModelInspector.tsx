@@ -31,7 +31,15 @@
  * prop via `setAndCommit`, quindi nessun formato composito nuovo nel `jsonb`.
  */
 import { useState } from 'react';
-import { ActionIcon, Popover, SegmentedControl, Stack, Text, Tooltip, UnstyledButton } from '@mantine/core';
+import {
+  ActionIcon,
+  Popover,
+  SegmentedControl,
+  Stack,
+  Text,
+  Tooltip,
+  UnstyledButton,
+} from '@mantine/core';
 import { IconLock, IconLockOpen } from '@tabler/icons-react';
 import type { BlockPropDescriptor } from '../../../types/blocks.types';
 import type { EditorViewport } from '../../../hooks/useBlockEditorStore';
@@ -254,7 +262,10 @@ export default function VisualBoxModelInspector({
   ): JSX.Element {
     const action = locked ? 'Sblocca' : 'Blocca';
     return (
-      <Tooltip label={`${action} ${groupLabel.toLowerCase()}: modifica i quattro lati insieme`} withArrow>
+      <Tooltip
+        label={`${action} ${groupLabel.toLowerCase()}: modifica i quattro lati insieme`}
+        withArrow
+      >
         <ActionIcon
           variant={locked ? 'light' : 'subtle'}
           color={locked ? 'blue' : 'gray'}

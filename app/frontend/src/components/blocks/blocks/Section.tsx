@@ -229,7 +229,9 @@ export default function Section({
 
   return (
     <section className={className} style={hasInlineStyle ? inlineStyle : undefined}>
-      {hasOverlay ? <div className={styles.overlay} style={overlayStyle} aria-hidden="true" /> : null}
+      {hasOverlay ? (
+        <div className={styles.overlay} style={overlayStyle} aria-hidden="true" />
+      ) : null}
       {children}
     </section>
   );

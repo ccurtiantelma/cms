@@ -399,7 +399,11 @@ describe('block-tree.utils — moveNodeTo', () => {
 
     expect(childIds(next, null)).toEqual(['sec-1', 'sec-2']);
     expect(childIds(next, 'sec-1')).toEqual(['head-1', 'head-root', 'rich-1', 'btn-1']);
-    expect(findLocation(next, 'head-root')).toEqual({ parentId: 'sec-1', index: 1, siblingsCount: 4 });
+    expect(findLocation(next, 'head-root')).toEqual({
+      parentId: 'sec-1',
+      index: 1,
+      siblingsCount: 4,
+    });
   });
 
   it('sposta un nodo da un contenitore alla radice', () => {

@@ -24,7 +24,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ColorSchemeScript defaultColorScheme="auto" />
     <ThemeColorProvider>
       <>
-      {/*
+        {/*
         `zIndex={1100}`: stesso valore/stesso motivo di ogni altro `zIndex` esplicito
         introdotto per la chrome full-screen dell'editor (`FullScreenEditorLayout.tsx`,
         `position: fixed; z-index: 1000`, ADR-32) — `PagePageDetail.tsx` (tendina di
@@ -35,10 +35,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         (es. "Ricarica la Pagina" del conflitto di editing) non sarebbero mai
         cliccabili — verificato in E2E (`page-editor-conflitto.spec.ts`).
       */}
-      <Notifications position="top-right" zIndex={1100} />
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+        <Notifications position="top-right" zIndex={1100} />
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
       </>
     </ThemeColorProvider>
   </React.StrictMode>,

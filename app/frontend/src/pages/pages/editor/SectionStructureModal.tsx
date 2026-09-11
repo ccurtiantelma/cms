@@ -56,7 +56,13 @@
  */
 import { useEffect, useState, type ComponentType } from 'react';
 import { ActionIcon, Group, Modal, SimpleGrid, Text } from '@mantine/core';
-import { IconArrowDown, IconArrowLeft, IconArrowRight, IconGridDots, IconLayoutColumns } from '@tabler/icons-react';
+import {
+  IconArrowDown,
+  IconArrowLeft,
+  IconArrowRight,
+  IconGridDots,
+  IconLayoutColumns,
+} from '@tabler/icons-react';
 import { BLOCK_TYPES } from '../../../types/blocks.types';
 import { useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
 // Da `block-registry.utils.ts`, non da `./BlockPalette`: `BlockPalette` monta questo
@@ -179,7 +185,9 @@ const FLEXBOX_PRESETS: readonly FlexboxPreset[] = [
     label: '3 colonne',
     columns: { default: '3' },
     columnRatio: 'equal',
-    rows: [{ weight: 1, direction: 'row', children: [{ weight: 33 }, { weight: 34 }, { weight: 33 }] }],
+    rows: [
+      { weight: 1, direction: 'row', children: [{ weight: 33 }, { weight: 34 }, { weight: 33 }] },
+    ],
   },
 ];
 
@@ -327,7 +335,8 @@ function nextPlaceholderId(): string {
  * dal `weight` dello stesso spec dell'anteprima — un'unica fonte per le due proporzioni.
  */
 function buildCellNode(node: StructureNode, applyFlexBasis: boolean): BlockNode {
-  if (!CONTAINER_DESCRIPTOR) throw new Error('Descrittore "container" assente dal registro blocchi.');
+  if (!CONTAINER_DESCRIPTOR)
+    throw new Error('Descrittore "container" assente dal registro blocchi.');
   const props: Record<string, unknown> = { ...defaultPropsFor(CONTAINER_DESCRIPTOR) };
   if (applyFlexBasis) props.styleFlexBasis = { value: node.weight, unit: '%' };
 

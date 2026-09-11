@@ -45,14 +45,7 @@
           "default": {
             "default": "none"
           },
-          "values": [
-            "none",
-            "xs",
-            "sm",
-            "md",
-            "lg",
-            "xl"
-          ],
+          "values": ["none", "xs", "sm", "md", "lg", "xl"],
           "responsive": true
         },
         {
@@ -62,14 +55,7 @@
           "default": {
             "default": "none"
           },
-          "values": [
-            "none",
-            "xs",
-            "sm",
-            "md",
-            "lg",
-            "xl"
-          ],
+          "values": ["none", "xs", "sm", "md", "lg", "xl"],
           "responsive": true
         },
         {
@@ -79,12 +65,7 @@
           "default": {
             "default": "none"
           },
-          "values": [
-            "none",
-            "sm",
-            "md",
-            "lg"
-          ],
+          "values": ["none", "sm", "md", "lg"],
           "responsive": true
         },
         {
@@ -94,12 +75,7 @@
           "default": {
             "default": "none"
           },
-          "values": [
-            "none",
-            "subtle",
-            "accent",
-            "inverse"
-          ],
+          "values": ["none", "subtle", "accent", "inverse"],
           "responsive": true
         },
         {
@@ -109,12 +85,7 @@
           "default": {
             "default": "1"
           },
-          "values": [
-            "1",
-            "2",
-            "3",
-            "4"
-          ],
+          "values": ["1", "2", "3", "4"],
           "responsive": true
         },
         {
@@ -124,12 +95,7 @@
           "default": {
             "default": "none"
           },
-          "values": [
-            "none",
-            "sm",
-            "md",
-            "lg"
-          ],
+          "values": ["none", "sm", "md", "lg"],
           "responsive": true
         },
         {
@@ -139,12 +105,7 @@
           "default": {
             "default": "stretch"
           },
-          "values": [
-            "stretch",
-            "flex-start",
-            "center",
-            "flex-end"
-          ],
+          "values": ["stretch", "flex-start", "center", "flex-end"],
           "responsive": true
         },
         {
@@ -169,35 +130,21 @@
           "kind": "enum",
           "required": false,
           "default": "boxed",
-          "values": [
-            "boxed",
-            "full-width"
-          ]
+          "values": ["boxed", "full-width"]
         },
         {
           "name": "maxWidth",
           "kind": "enum",
           "required": false,
           "default": "md",
-          "values": [
-            "sm",
-            "md",
-            "lg",
-            "xl"
-          ]
+          "values": ["sm", "md", "lg", "xl"]
         },
         {
           "name": "columnRatio",
           "kind": "enum",
           "required": false,
           "default": "equal",
-          "values": [
-            "equal",
-            "33-66",
-            "66-33",
-            "30-70",
-            "70-30"
-          ]
+          "values": ["equal", "33-66", "66-33", "30-70", "70-30"]
         },
         {
           "name": "styleBackgroundColor",
@@ -226,18 +173,7 @@
           "default": {
             "default": "0"
           },
-          "values": [
-            "0",
-            "4",
-            "8",
-            "12",
-            "16",
-            "24",
-            "32",
-            "48",
-            "64",
-            "96"
-          ],
+          "values": ["0", "4", "8", "12", "16", "24", "32", "48", "64", "96"],
           "responsive": true
         },
         {
@@ -247,18 +183,7 @@
           "default": {
             "default": "0"
           },
-          "values": [
-            "0",
-            "4",
-            "8",
-            "12",
-            "16",
-            "24",
-            "32",
-            "48",
-            "64",
-            "96"
-          ],
+          "values": ["0", "4", "8", "12", "16", "24", "32", "48", "64", "96"],
           "responsive": true
         },
         {
@@ -268,18 +193,7 @@
           "default": {
             "default": "0"
           },
-          "values": [
-            "0",
-            "4",
-            "8",
-            "12",
-            "16",
-            "24",
-            "32",
-            "48",
-            "64",
-            "96"
-          ],
+          "values": ["0", "4", "8", "12", "16", "24", "32", "48", "64", "96"],
           "responsive": true
         },
         {
@@ -289,18 +203,7 @@
           "default": {
             "default": "0"
           },
-          "values": [
-            "0",
-            "4",
-            "8",
-            "12",
-            "16",
-            "24",
-            "32",
-            "48",
-            "64",
-            "96"
-          ],
+          "values": ["0", "4", "8", "12", "16", "24", "32", "48", "64", "96"],
           "responsive": true
         },
         {
@@ -310,18 +213,7 @@
           "default": {
             "default": "0"
           },
-          "values": [
-            "0",
-            "4",
-            "8",
-            "12",
-            "16",
-            "24",
-            "32",
-            "48",
-            "64",
-            "96"
-          ],
+          "values": ["0", "4", "8", "12", "16", "24", "32", "48", "64", "96"],
           "responsive": true
         },
         {
@@ -331,18 +223,7 @@
           "default": {
             "default": "0"
           },
-          "values": [
-            "0",
-            "4",
-            "8",
-            "12",
-            "16",
-            "24",
-            "32",
-            "48",
-            "64",
-            "96"
-          ],
+          "values": ["0", "4", "8", "12", "16", "24", "32", "48", "64", "96"],
           "responsive": true
         },
         {
@@ -352,18 +233,7 @@
           "default": {
             "default": "0"
           },
-          "values": [
-            "0",
-            "4",
-            "8",
-            "12",
-            "16",
-            "24",
-            "32",
-            "48",
-            "64",
-            "96"
-          ],
+          "values": ["0", "4", "8", "12", "16", "24", "32", "48", "64", "96"],
           "responsive": true
         },
         {
@@ -373,18 +243,7 @@
           "default": {
             "default": "0"
           },
-          "values": [
-            "0",
-            "4",
-            "8",
-            "12",
-            "16",
-            "24",
-            "32",
-            "48",
-            "64",
-            "96"
-          ],
+          "values": ["0", "4", "8", "12", "16", "24", "32", "48", "64", "96"],
           "responsive": true
         },
         {
@@ -392,12 +251,7 @@
           "kind": "enum",
           "required": false,
           "default": "base",
-          "values": [
-            "base",
-            "raised",
-            "overlay",
-            "top"
-          ]
+          "values": ["base", "raised", "overlay", "top"]
         },
         {
           "name": "styleHideDesktop",
@@ -459,11 +313,7 @@
           "kind": "enum",
           "required": false,
           "default": "color",
-          "values": [
-            "color",
-            "image",
-            "gradient"
-          ]
+          "values": ["color", "image", "gradient"]
         },
         {
           "name": "styleBackgroundPosition",
@@ -487,11 +337,7 @@
           "kind": "enum",
           "required": false,
           "default": "cover",
-          "values": [
-            "cover",
-            "contain",
-            "auto"
-          ]
+          "values": ["cover", "contain", "auto"]
         },
         {
           "name": "styleGradientStart",
@@ -729,13 +575,7 @@
           "name": "level",
           "kind": "enum",
           "required": true,
-          "values": [
-            "h2",
-            "h3",
-            "h4",
-            "h5",
-            "h6"
-          ]
+          "values": ["h2", "h3", "h4", "h5", "h6"]
         },
         {
           "name": "text",
@@ -750,14 +590,7 @@
           "default": {
             "default": "none"
           },
-          "values": [
-            "none",
-            "xs",
-            "sm",
-            "md",
-            "lg",
-            "xl"
-          ],
+          "values": ["none", "xs", "sm", "md", "lg", "xl"],
           "responsive": true
         },
         {
@@ -767,14 +600,7 @@
           "default": {
             "default": "none"
           },
-          "values": [
-            "none",
-            "xs",
-            "sm",
-            "md",
-            "lg",
-            "xl"
-          ],
+          "values": ["none", "xs", "sm", "md", "lg", "xl"],
           "responsive": true
         },
         {
@@ -784,12 +610,7 @@
           "default": {
             "default": "default"
           },
-          "values": [
-            "default",
-            "muted",
-            "accent",
-            "inverse"
-          ],
+          "values": ["default", "muted", "accent", "inverse"],
           "responsive": true
         },
         {
@@ -799,12 +620,7 @@
           "default": {
             "default": "md"
           },
-          "values": [
-            "sm",
-            "md",
-            "lg",
-            "xl"
-          ],
+          "values": ["sm", "md", "lg", "xl"],
           "responsive": true
         },
         {
@@ -814,11 +630,7 @@
           "default": {
             "default": "regular"
           },
-          "values": [
-            "regular",
-            "medium",
-            "bold"
-          ],
+          "values": ["regular", "medium", "bold"],
           "responsive": true
         },
         {
@@ -828,14 +640,7 @@
           "default": {
             "default": "default"
           },
-          "values": [
-            "default",
-            "inter",
-            "roboto",
-            "playfair",
-            "montserrat",
-            "monospace"
-          ],
+          "values": ["default", "inter", "roboto", "playfair", "montserrat", "monospace"],
           "responsive": true
         },
         {
@@ -843,12 +648,7 @@
           "kind": "enum",
           "required": false,
           "default": "base",
-          "values": [
-            "base",
-            "raised",
-            "overlay",
-            "top"
-          ]
+          "values": ["base", "raised", "overlay", "top"]
         },
         {
           "name": "styleHideDesktop",
@@ -877,12 +677,7 @@
           "name": "styleFontSizeCustom",
           "kind": "unitValue",
           "required": false,
-          "units": [
-            "px",
-            "%",
-            "em",
-            "rem"
-          ],
+          "units": ["px", "%", "em", "rem"],
           "min": 1,
           "max": 200
         },
@@ -910,12 +705,7 @@
           "name": "styleTextAlign",
           "kind": "enum",
           "required": false,
-          "values": [
-            "left",
-            "center",
-            "right",
-            "justify"
-          ]
+          "values": ["left", "center", "right", "justify"]
         }
       ],
       "meta": {
@@ -1043,14 +833,7 @@
           "default": {
             "default": "none"
           },
-          "values": [
-            "none",
-            "xs",
-            "sm",
-            "md",
-            "lg",
-            "xl"
-          ],
+          "values": ["none", "xs", "sm", "md", "lg", "xl"],
           "responsive": true
         },
         {
@@ -1060,14 +843,7 @@
           "default": {
             "default": "none"
           },
-          "values": [
-            "none",
-            "xs",
-            "sm",
-            "md",
-            "lg",
-            "xl"
-          ],
+          "values": ["none", "xs", "sm", "md", "lg", "xl"],
           "responsive": true
         },
         {
@@ -1077,12 +853,7 @@
           "default": {
             "default": "default"
           },
-          "values": [
-            "default",
-            "muted",
-            "accent",
-            "inverse"
-          ],
+          "values": ["default", "muted", "accent", "inverse"],
           "responsive": true
         },
         {
@@ -1092,12 +863,7 @@
           "default": {
             "default": "md"
           },
-          "values": [
-            "sm",
-            "md",
-            "lg",
-            "xl"
-          ],
+          "values": ["sm", "md", "lg", "xl"],
           "responsive": true
         },
         {
@@ -1107,11 +873,7 @@
           "default": {
             "default": "regular"
           },
-          "values": [
-            "regular",
-            "medium",
-            "bold"
-          ],
+          "values": ["regular", "medium", "bold"],
           "responsive": true
         },
         {
@@ -1121,14 +883,7 @@
           "default": {
             "default": "default"
           },
-          "values": [
-            "default",
-            "inter",
-            "roboto",
-            "playfair",
-            "montserrat",
-            "monospace"
-          ],
+          "values": ["default", "inter", "roboto", "playfair", "montserrat", "monospace"],
           "responsive": true
         },
         {
@@ -1136,12 +891,7 @@
           "kind": "enum",
           "required": false,
           "default": "base",
-          "values": [
-            "base",
-            "raised",
-            "overlay",
-            "top"
-          ]
+          "values": ["base", "raised", "overlay", "top"]
         },
         {
           "name": "styleHideDesktop",
@@ -1190,12 +940,7 @@
           "name": "styleFontSizeCustom",
           "kind": "unitValue",
           "required": false,
-          "units": [
-            "px",
-            "%",
-            "em",
-            "rem"
-          ],
+          "units": ["px", "%", "em", "rem"],
           "min": 1,
           "max": 200
         },
@@ -1361,14 +1106,7 @@
           "default": {
             "default": "none"
           },
-          "values": [
-            "none",
-            "xs",
-            "sm",
-            "md",
-            "lg",
-            "xl"
-          ],
+          "values": ["none", "xs", "sm", "md", "lg", "xl"],
           "responsive": true
         },
         {
@@ -1378,14 +1116,7 @@
           "default": {
             "default": "none"
           },
-          "values": [
-            "none",
-            "xs",
-            "sm",
-            "md",
-            "lg",
-            "xl"
-          ],
+          "values": ["none", "xs", "sm", "md", "lg", "xl"],
           "responsive": true
         },
         {
@@ -1393,12 +1124,7 @@
           "kind": "enum",
           "required": false,
           "default": "base",
-          "values": [
-            "base",
-            "raised",
-            "overlay",
-            "top"
-          ]
+          "values": ["base", "raised", "overlay", "top"]
         },
         {
           "name": "styleHideDesktop",
@@ -1433,24 +1159,13 @@
           "kind": "enum",
           "required": false,
           "default": "full",
-          "values": [
-            "thumbnail",
-            "card",
-            "hero",
-            "og",
-            "full",
-            "custom"
-          ]
+          "values": ["thumbnail", "card", "hero", "og", "full", "custom"]
         },
         {
           "name": "styleWidth",
           "kind": "unitValue",
           "required": false,
-          "units": [
-            "px",
-            "%",
-            "vw"
-          ],
+          "units": ["px", "%", "vw"],
           "min": 0,
           "max": 3840
         },
@@ -1458,11 +1173,7 @@
           "name": "styleHeight",
           "kind": "unitValue",
           "required": false,
-          "units": [
-            "px",
-            "%",
-            "vh"
-          ],
+          "units": ["px", "%", "vh"],
           "min": 0,
           "max": 2160
         },
@@ -1471,23 +1182,14 @@
           "kind": "enum",
           "required": false,
           "default": "cover",
-          "values": [
-            "cover",
-            "contain",
-            "fill",
-            "none"
-          ]
+          "values": ["cover", "contain", "fill", "none"]
         },
         {
           "name": "styleAlign",
           "kind": "enum",
           "required": false,
           "default": "left",
-          "values": [
-            "left",
-            "center",
-            "right"
-          ]
+          "values": ["left", "center", "right"]
         },
         {
           "name": "customCssClass",
@@ -1618,14 +1320,7 @@
           "default": {
             "default": "none"
           },
-          "values": [
-            "none",
-            "xs",
-            "sm",
-            "md",
-            "lg",
-            "xl"
-          ],
+          "values": ["none", "xs", "sm", "md", "lg", "xl"],
           "responsive": true
         },
         {
@@ -1635,14 +1330,7 @@
           "default": {
             "default": "none"
           },
-          "values": [
-            "none",
-            "xs",
-            "sm",
-            "md",
-            "lg",
-            "xl"
-          ],
+          "values": ["none", "xs", "sm", "md", "lg", "xl"],
           "responsive": true
         },
         {
@@ -1652,12 +1340,7 @@
           "default": {
             "default": "default"
           },
-          "values": [
-            "default",
-            "muted",
-            "accent",
-            "inverse"
-          ],
+          "values": ["default", "muted", "accent", "inverse"],
           "responsive": true
         },
         {
@@ -1687,12 +1370,7 @@
           "default": {
             "default": "md"
           },
-          "values": [
-            "sm",
-            "md",
-            "lg",
-            "xl"
-          ],
+          "values": ["sm", "md", "lg", "xl"],
           "responsive": true
         },
         {
@@ -1702,11 +1380,7 @@
           "default": {
             "default": "regular"
           },
-          "values": [
-            "regular",
-            "medium",
-            "bold"
-          ],
+          "values": ["regular", "medium", "bold"],
           "responsive": true
         },
         {
@@ -1716,14 +1390,7 @@
           "default": {
             "default": "default"
           },
-          "values": [
-            "default",
-            "inter",
-            "roboto",
-            "playfair",
-            "montserrat",
-            "monospace"
-          ],
+          "values": ["default", "inter", "roboto", "playfair", "montserrat", "monospace"],
           "responsive": true
         },
         {
@@ -1731,12 +1398,7 @@
           "kind": "enum",
           "required": false,
           "default": "base",
-          "values": [
-            "base",
-            "raised",
-            "overlay",
-            "top"
-          ]
+          "values": ["base", "raised", "overlay", "top"]
         },
         {
           "name": "styleHideDesktop",
@@ -1876,9 +1538,7 @@
           "kind": "enum",
           "required": false,
           "default": "flex",
-          "values": [
-            "flex"
-          ]
+          "values": ["flex"]
         },
         {
           "name": "flexDirection",
@@ -1887,12 +1547,7 @@
           "default": {
             "default": "row"
           },
-          "values": [
-            "row",
-            "row-reverse",
-            "column",
-            "column-reverse"
-          ],
+          "values": ["row", "row-reverse", "column", "column-reverse"],
           "responsive": true
         },
         {
@@ -1919,12 +1574,7 @@
           "default": {
             "default": "stretch"
           },
-          "values": [
-            "stretch",
-            "flex-start",
-            "center",
-            "flex-end"
-          ],
+          "values": ["stretch", "flex-start", "center", "flex-end"],
           "responsive": true
         },
         {
@@ -1934,10 +1584,7 @@
           "default": {
             "default": "nowrap"
           },
-          "values": [
-            "nowrap",
-            "wrap"
-          ],
+          "values": ["nowrap", "wrap"],
           "responsive": true
         },
         {
@@ -1947,21 +1594,14 @@
           "default": {
             "default": "none"
           },
-          "values": [
-            "none",
-            "sm",
-            "md",
-            "lg"
-          ],
+          "values": ["none", "sm", "md", "lg"],
           "responsive": true
         },
         {
           "name": "styleFlexBasis",
           "kind": "unitValue",
           "required": false,
-          "units": [
-            "%"
-          ],
+          "units": ["%"],
           "min": 0,
           "max": 100
         },
@@ -1992,18 +1632,7 @@
           "default": {
             "default": "0"
           },
-          "values": [
-            "0",
-            "4",
-            "8",
-            "12",
-            "16",
-            "24",
-            "32",
-            "48",
-            "64",
-            "96"
-          ],
+          "values": ["0", "4", "8", "12", "16", "24", "32", "48", "64", "96"],
           "responsive": true
         },
         {
@@ -2013,18 +1642,7 @@
           "default": {
             "default": "0"
           },
-          "values": [
-            "0",
-            "4",
-            "8",
-            "12",
-            "16",
-            "24",
-            "32",
-            "48",
-            "64",
-            "96"
-          ],
+          "values": ["0", "4", "8", "12", "16", "24", "32", "48", "64", "96"],
           "responsive": true
         },
         {
@@ -2034,18 +1652,7 @@
           "default": {
             "default": "0"
           },
-          "values": [
-            "0",
-            "4",
-            "8",
-            "12",
-            "16",
-            "24",
-            "32",
-            "48",
-            "64",
-            "96"
-          ],
+          "values": ["0", "4", "8", "12", "16", "24", "32", "48", "64", "96"],
           "responsive": true
         },
         {
@@ -2055,18 +1662,7 @@
           "default": {
             "default": "0"
           },
-          "values": [
-            "0",
-            "4",
-            "8",
-            "12",
-            "16",
-            "24",
-            "32",
-            "48",
-            "64",
-            "96"
-          ],
+          "values": ["0", "4", "8", "12", "16", "24", "32", "48", "64", "96"],
           "responsive": true
         },
         {
@@ -2076,18 +1672,7 @@
           "default": {
             "default": "0"
           },
-          "values": [
-            "0",
-            "4",
-            "8",
-            "12",
-            "16",
-            "24",
-            "32",
-            "48",
-            "64",
-            "96"
-          ],
+          "values": ["0", "4", "8", "12", "16", "24", "32", "48", "64", "96"],
           "responsive": true
         },
         {
@@ -2097,18 +1682,7 @@
           "default": {
             "default": "0"
           },
-          "values": [
-            "0",
-            "4",
-            "8",
-            "12",
-            "16",
-            "24",
-            "32",
-            "48",
-            "64",
-            "96"
-          ],
+          "values": ["0", "4", "8", "12", "16", "24", "32", "48", "64", "96"],
           "responsive": true
         },
         {
@@ -2118,18 +1692,7 @@
           "default": {
             "default": "0"
           },
-          "values": [
-            "0",
-            "4",
-            "8",
-            "12",
-            "16",
-            "24",
-            "32",
-            "48",
-            "64",
-            "96"
-          ],
+          "values": ["0", "4", "8", "12", "16", "24", "32", "48", "64", "96"],
           "responsive": true
         },
         {
@@ -2139,18 +1702,7 @@
           "default": {
             "default": "0"
           },
-          "values": [
-            "0",
-            "4",
-            "8",
-            "12",
-            "16",
-            "24",
-            "32",
-            "48",
-            "64",
-            "96"
-          ],
+          "values": ["0", "4", "8", "12", "16", "24", "32", "48", "64", "96"],
           "responsive": true
         },
         {
@@ -2283,10 +1835,7 @@
       "type": "form",
       "v": 1,
       "enabled": true,
-      "childrenAllow": [
-        "form-field",
-        "form-submit"
-      ],
+      "childrenAllow": ["form-field", "form-submit"],
       "props": [
         {
           "name": "formKey",
@@ -2343,13 +1892,7 @@
           "name": "fieldType",
           "kind": "enum",
           "required": true,
-          "values": [
-            "text",
-            "email",
-            "textarea",
-            "select",
-            "checkbox"
-          ]
+          "values": ["text", "email", "textarea", "select", "checkbox"]
         },
         {
           "name": "name",
@@ -2389,10 +1932,7 @@
           "default": {
             "default": "12"
           },
-          "values": [
-            "6",
-            "12"
-          ],
+          "values": ["6", "12"],
           "responsive": true
         },
         {
@@ -2518,9 +2058,7 @@
       "type": "navMenu",
       "v": 1,
       "enabled": true,
-      "childrenAllow": [
-        "navMenuItem"
-      ],
+      "childrenAllow": ["navMenuItem"],
       "props": [],
       "meta": {
         "label": "Menu di navigazione",
@@ -2556,10 +2094,7 @@
           "kind": "enum",
           "required": false,
           "default": "_self",
-          "values": [
-            "_self",
-            "_blank"
-          ]
+          "values": ["_self", "_blank"]
         }
       ],
       "meta": {
@@ -2617,9 +2152,7 @@
       "type": "accordion",
       "v": 1,
       "enabled": true,
-      "childrenAllow": [
-        "accordionItem"
-      ],
+      "childrenAllow": ["accordionItem"],
       "props": [
         {
           "name": "exclusive",
@@ -2645,13 +2178,7 @@
       "type": "accordionItem",
       "v": 1,
       "enabled": true,
-      "childrenAllow": [
-        "heading",
-        "richText",
-        "image",
-        "button",
-        "container"
-      ],
+      "childrenAllow": ["heading", "richText", "image", "button", "container"],
       "props": [
         {
           "name": "title",
@@ -2676,9 +2203,7 @@
       "type": "tabs",
       "v": 1,
       "enabled": true,
-      "childrenAllow": [
-        "tabPanel"
-      ],
+      "childrenAllow": ["tabPanel"],
       "props": [],
       "meta": {
         "label": "Tabs",
@@ -2690,13 +2215,7 @@
       "type": "tabPanel",
       "v": 1,
       "enabled": true,
-      "childrenAllow": [
-        "heading",
-        "richText",
-        "image",
-        "button",
-        "container"
-      ],
+      "childrenAllow": ["heading", "richText", "image", "button", "container"],
       "props": [
         {
           "name": "label",
@@ -2721,9 +2240,7 @@
       "type": "carousel",
       "v": 1,
       "enabled": true,
-      "childrenAllow": [
-        "carouselSlide"
-      ],
+      "childrenAllow": ["carouselSlide"],
       "props": [
         {
           "name": "autoplay",
@@ -2736,11 +2253,7 @@
           "kind": "enum",
           "required": false,
           "default": "manual-scroll",
-          "values": [
-            "manual-scroll",
-            "fade-loop",
-            "slide-loop"
-          ]
+          "values": ["manual-scroll", "fade-loop", "slide-loop"]
         }
       ],
       "meta": {
@@ -2764,13 +2277,7 @@
       "type": "carouselSlide",
       "v": 1,
       "enabled": true,
-      "childrenAllow": [
-        "heading",
-        "richText",
-        "image",
-        "button",
-        "container"
-      ],
+      "childrenAllow": ["heading", "richText", "image", "button", "container"],
       "props": [],
       "meta": {
         "label": "Slide carousel",
@@ -2782,13 +2289,7 @@
       "type": "modalTrigger",
       "v": 1,
       "enabled": true,
-      "childrenAllow": [
-        "heading",
-        "richText",
-        "image",
-        "button",
-        "container"
-      ],
+      "childrenAllow": ["heading", "richText", "image", "button", "container"],
       "props": [
         {
           "name": "triggerLabel",
@@ -2801,11 +2302,7 @@
           "kind": "enum",
           "required": false,
           "default": "fade",
-          "values": [
-            "none",
-            "fade",
-            "slide-down"
-          ]
+          "values": ["none", "fade", "slide-down"]
         }
       ],
       "meta": {

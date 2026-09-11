@@ -21,7 +21,11 @@ interface AccordionItemBlockProps {
   children?: ReactNode;
 }
 
-export default function AccordionItemBlock({ title, groupName, children }: AccordionItemBlockProps) {
+export default function AccordionItemBlock({
+  title,
+  groupName,
+  children,
+}: AccordionItemBlockProps) {
   return (
     <details className={styles.item} name={groupName}>
       <summary className={styles.summary}>{title}</summary>

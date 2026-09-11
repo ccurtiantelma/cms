@@ -130,7 +130,11 @@ describe('Section', () => {
 
     it('type "gradient": linear-gradient applicato solo con entrambi gli stop presenti', () => {
       const html = renderToStaticMarkup(
-        <Section styleBackgroundType="gradient" styleGradientStart="#111111" styleGradientEnd="#eeeeee">
+        <Section
+          styleBackgroundType="gradient"
+          styleGradientStart="#111111"
+          styleGradientEnd="#eeeeee"
+        >
           Contenuto
         </Section>,
       );
@@ -228,10 +232,18 @@ describe('Section', () => {
     });
 
     it('ogni columnRatio_* asimmetrico usa minmax(0, Nfr) su entrambe le tracce', () => {
-      expect(tokenCss).toContain('.columnRatio_33-66 { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }');
-      expect(tokenCss).toContain('.columnRatio_66-33 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }');
-      expect(tokenCss).toContain('.columnRatio_30-70 { grid-template-columns: minmax(0, 3fr) minmax(0, 7fr); }');
-      expect(tokenCss).toContain('.columnRatio_70-30 { grid-template-columns: minmax(0, 7fr) minmax(0, 3fr); }');
+      expect(tokenCss).toContain(
+        '.columnRatio_33-66 { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }',
+      );
+      expect(tokenCss).toContain(
+        '.columnRatio_66-33 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }',
+      );
+      expect(tokenCss).toContain(
+        '.columnRatio_30-70 { grid-template-columns: minmax(0, 3fr) minmax(0, 7fr); }',
+      );
+      expect(tokenCss).toContain(
+        '.columnRatio_70-30 { grid-template-columns: minmax(0, 7fr) minmax(0, 3fr); }',
+      );
     });
 
     it('.section azzera il proprio min-width e spezza il testo troppo lungo per la propria colonna', () => {

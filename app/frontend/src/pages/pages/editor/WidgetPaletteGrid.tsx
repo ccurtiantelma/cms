@@ -57,40 +57,41 @@ export default function WidgetPaletteGrid({
 
   return (
     <div className={styles.root}>
-      {!presetsOnly && CATEGORIES.map((category) => (
-        <section
-          key={category.label}
-          className={styles.category}
-          aria-labelledby={`palette-${category.label}`}
-        >
-          <h2 id={`palette-${category.label}`} className={styles.categoryTitle}>
-            {category.label}
-          </h2>
-          <div className={styles.grid}>
-            {category.types.map((type) => {
-              const descriptor = descriptorFor(type);
-              if (!descriptor || !descriptor.enabled || descriptor.deprecated) return null;
-              const Icon = ICONS[type] ?? IconBox;
-              const label = descriptor.meta?.label ?? type;
+      {!presetsOnly &&
+        CATEGORIES.map((category) => (
+          <section
+            key={category.label}
+            className={styles.category}
+            aria-labelledby={`palette-${category.label}`}
+          >
+            <h2 id={`palette-${category.label}`} className={styles.categoryTitle}>
+              {category.label}
+            </h2>
+            <div className={styles.grid}>
+              {category.types.map((type) => {
+                const descriptor = descriptorFor(type);
+                if (!descriptor || !descriptor.enabled || descriptor.deprecated) return null;
+                const Icon = ICONS[type] ?? IconBox;
+                const label = descriptor.meta?.label ?? type;
 
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  className={styles.card}
-                  aria-label={`Aggiungi ${label}`}
-                  onClick={() => onWidgetSelect?.(type)}
-                >
-                  <span className={styles.icon} aria-hidden="true">
-                    {createElement(Icon, { size: 22, stroke: 1.7 })}
-                  </span>
-                  <span className={styles.label}>{label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    className={styles.card}
+                    aria-label={`Aggiungi ${label}`}
+                    onClick={() => onWidgetSelect?.(type)}
+                  >
+                    <span className={styles.icon} aria-hidden="true">
+                      {createElement(Icon, { size: 22, stroke: 1.7 })}
+                    </span>
+                    <span className={styles.label}>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ))}
       <section className={styles.category} aria-labelledby="palette-i-miei-preset">
         <h2 id="palette-i-miei-preset" className={styles.categoryTitle}>
           I Miei Preset

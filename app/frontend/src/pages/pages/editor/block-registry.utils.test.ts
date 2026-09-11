@@ -59,14 +59,17 @@ describe('canDropInto — drag & drop reale (T7): solo i casi nuovi sul predicat
 describe('canDropInto — anti-corruzione: nessun annidamento di section dentro section', () => {
   /** Due section indipendenti, nessuna già annidata nell'altra. */
   function makeTwoSections(): BlockNode[] {
-    return [node('sec-outer', 'section', [node('head-1', 'heading')]), node('sec-inner', 'section')];
+    return [
+      node('sec-outer', 'section', [node('head-1', 'heading')]),
+      node('sec-inner', 'section'),
+    ];
   }
 
-  it('una section esistente non può entrare in un\'altra section (spostamento di un nodo reale)', () => {
+  it("una section esistente non può entrare in un'altra section (spostamento di un nodo reale)", () => {
     expect(canDropInto(makeTwoSections(), 'sec-inner', 'sec-outer')).toBe(false);
   });
 
-  it('una section nuova trascinata dalla palette (dragType, nodo non ancora nell\'albero) non può entrare in una section', () => {
+  it("una section nuova trascinata dalla palette (dragType, nodo non ancora nell'albero) non può entrare in una section", () => {
     expect(canDropInto(makeTwoSections(), 'new-block:section', 'sec-outer', 'section')).toBe(false);
   });
 

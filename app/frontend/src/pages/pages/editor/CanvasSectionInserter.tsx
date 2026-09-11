@@ -18,9 +18,7 @@ interface CanvasSectionInserterProps {
  * "Inserisci sopra/sotto" (`BlockPalette`, montata dalla toolbar integrata di
  * `EditorBlockWrapper.tsx`) o dal box `CanvasAddSectionZone` in fondo al canvas.
  */
-export default function CanvasSectionInserter({
-  index,
-}: CanvasSectionInserterProps): JSX.Element {
+export default function CanvasSectionInserter({ index }: CanvasSectionInserterProps): JSX.Element {
   const { setNodeRef, isOver } = useDroppable({
     id: `root-section-inserter:${index}`,
     data: { parentId: null, index },

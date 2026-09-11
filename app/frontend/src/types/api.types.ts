@@ -4,5698 +4,5703 @@
  */
 
 export interface paths {
-    "/api/v1/auth/login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Login utente e generazione token JWT */
-        post: operations["AuthController_login"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/mfa-verify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Verifica codice MFA per completare il login */
-        post: operations["AuthController_mfaVerify"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/refresh": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Rinnova l'access token usando il refresh token opaco (cookie rtk) */
-        post: operations["AuthController_refresh"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/logout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Logout utente e invalidazione sessione */
-        post: operations["AuthController_logout"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/activate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Attiva un account utente tramite token e imposta la password */
-        post: operations["AuthController_activate"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/forgot-password": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Richiede il recupero password inviando una email con token */
-        post: operations["AuthController_forgotPassword"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/reset-password": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Reimposta la password tramite token di recupero */
-        post: operations["AuthController_resetPassword"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/request-activation": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Richiede o re-invia l'email di attivazione per un utente (Admin+) */
-        post: operations["AuthController_requestActivation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Recupera i dati dell'utente autenticato */
-        get: operations["AuthController_getMe"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Aggiorna nome e cognome dell'utente autenticato (pagina profilo) */
-        patch: operations["AuthController_updateProfile"];
-        trace?: never;
-    };
-    "/api/v1/auth/change-password": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Cambia la password dell'utente autenticato (pagina profilo) */
-        patch: operations["AuthController_changePassword"];
-        trace?: never;
-    };
-    "/api/v1/auth/mfa-setup": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Genera secret e QR code per la configurazione MFA (non persiste ancora) */
-        post: operations["AuthController_mfaSetup"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/mfa-enable": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Abilita la MFA per l'utente autenticato */
-        post: operations["AuthController_mfaEnable"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/mfa-disable": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Disabilita la MFA per l'utente autenticato */
-        post: operations["AuthController_mfaDisable"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Elenca le sessioni/dispositivi attivi dell'utente autenticato */
-        get: operations["AuthController_getSessions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/sessions/{sessionId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Revoca una sessione/dispositivo dell'utente autenticato */
-        delete: operations["AuthController_revokeSession"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/impersonate/{guid}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Avvia l'impersonificazione di un utente (SuperAdmin only) */
-        post: operations["AuthController_impersonate"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/end-impersonation": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Termina l'impersonificazione corrente e ripristina la sessione del SuperAdmin originale */
-        post: operations["AuthController_endImpersonation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/admin/system/seed-demo": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Carica i dati demo (SuperAdmin only) */
-        post: operations["AdminController_seedDemo"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/admin/system/reset-demo": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Cancella tutti i dati tranne il SuperAdmin (SuperAdmin only, irreversibile) */
-        post: operations["AdminController_resetDemo"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/admin/users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Lista utenti paginata (un Admin non vede gli utenti SuperAdmin) */
-        get: operations["AdminController_findAllUsers"];
-        put?: never;
-        /** Crea un nuovo utente (un Admin non può creare utenti SuperAdmin) */
-        post: operations["AdminController_createUser"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/admin/users/{guid}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Dettaglio utente (un Admin non vede gli utenti SuperAdmin) */
-        get: operations["AdminController_findOneUser"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Aggiorna i dati di un utente */
-        patch: operations["AdminController_updateUser"];
-        trace?: never;
-    };
-    "/api/v1/app/admin/users/{guid}/toggle-active": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Abilita/disabilita un utente senza eliminarlo */
-        patch: operations["AdminController_toggleActiveUser"];
-        trace?: never;
-    };
-    "/api/v1/app/admin/users/{guid}/reset-mfa": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Resetta l'MFA di un utente (potrà ri-configurarla al prossimo login) */
-        post: operations["AdminController_resetMfaUser"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/admin/audit-log": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Lista paginata degli eventi di audit log (Admin+) */
-        get: operations["AdminController_findAuditLog"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/settings/theme": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Tema globale dell'installazione (default di fabbrica se mai salvato) */
-        get: operations["SettingsController_getTheme"];
-        /** Salva il tema globale (registrato su audit log) */
-        put: operations["SettingsController_updateTheme"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/settings/multilingual": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Registro Locale attivi (default di fabbrica se mai salvato) */
-        get: operations["SettingsController_getMultilingual"];
-        /** Salva il registro Locale attivi (Admin+ only, registrato su audit log) */
-        put: operations["SettingsController_updateMultilingual"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/settings/global-tokens": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Global Design Tokens del sito (default di fabbrica se mai salvati) */
-        get: operations["SettingsController_getGlobalTokens"];
-        /** Salva i Global Design Tokens del sito (Admin+ only, registrato su audit log) */
-        put: operations["SettingsController_updateGlobalTokens"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/files": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Lista paginata dei file attivi */
-        get: operations["FilesController_findAll"];
-        put?: never;
-        /** Carica un documento (multipart/form-data, campo "file") */
-        post: operations["FilesController_upload"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/files/{guid}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Scarica il contenuto di un file (streaming) */
-        get: operations["FilesController_download"];
-        put?: never;
-        post?: never;
-        /** Elimina un file (soft-delete, blob fisico non rimosso subito — vedi ADR-8) */
-        delete: operations["FilesController_delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/files/{guid}/metadata": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Metadati di un file, senza scaricarne il contenuto */
-        get: operations["FilesController_getMetadata"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/files/{guid}/focal-point": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Aggiorna il focal point editoriale (percentuale 0-100) di un asset */
-        patch: operations["FilesController_updateFocalPoint"];
-        trace?: never;
-    };
-    "/api/v1/app/files/{guid}/transform": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Accoda la generazione asincrona di una variante trasformata (ADR-49) */
-        post: operations["FilesController_requestImageTransform"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/public/media/{guid}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Serve il blob di un media editoriale pubblicato (immagine) */
-        get: operations["PublicMediaController_getMedia"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Health check applicativo (verifica connettività DB, Redis e coda BullMQ) */
-        get: operations["HealthController_check"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/notifications": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Lista paginata delle notifiche del chiamante, più recenti prima */
-        get: operations["NotificationsController_findAll"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/notifications/unread-count": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Numero di notifiche non lette del chiamante */
-        get: operations["NotificationsController_unreadCount"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/notifications/{guid}/read": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Segna una notifica come letta (solo se del chiamante) */
-        patch: operations["NotificationsController_markRead"];
-        trace?: never;
-    };
-    "/api/v1/app/notifications/read-all": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Segna tutte le notifiche del chiamante come lette */
-        patch: operations["NotificationsController_markAllRead"];
-        trace?: never;
-    };
-    "/api/v1/app/pages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Lista paginata delle Pagine (User: solo le proprie) */
-        get: operations["PagesController_findAll"];
-        put?: never;
-        /** Crea una Pagina in stato draft */
-        post: operations["PagesController_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/pages/{guid}/translations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Elenco delle traduzioni del gruppo (bozze incluse), sorgente inclusa */
-        get: operations["PagesController_listTranslations"];
-        put?: never;
-        /** Crea una traduzione da una Pagina sorgente */
-        post: operations["PagesController_createTranslation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/pages/{guid}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Dettaglio di una Pagina */
-        get: operations["PagesController_findOne"];
-        put?: never;
-        post?: never;
-        /** Elimina (soft-delete) una Pagina (Admin+) */
-        delete: operations["PagesController_remove"];
-        options?: never;
-        head?: never;
-        /** Aggiorna la bozza di una Pagina (richiede version per il lock ottimistico) */
-        patch: operations["PagesController_update"];
-        trace?: never;
-    };
-    "/api/v1/app/pages/{guid}/preview-token": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Emette un token di anteprima della bozza corrente (15 minuti, non rinnovabile) */
-        post: operations["PagesController_issuePreviewToken"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/pages/{guid}/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Transizione di stato di una Pagina */
-        post: operations["PagesController_changeStatus"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/pages/{guid}/revisions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Elenco paginato delle Revisioni di una Pagina */
-        get: operations["PagesController_listRevisions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/pages/{guid}/revisions/diff": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Confronto strutturale fra due Revisioni */
-        get: operations["PagesController_diffRevisions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/pages/{guid}/revisions/{revisionGuid}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Dettaglio di una Revisione */
-        get: operations["PagesController_getRevision"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/pages/{guid}/revisions/{revisionGuid}/restore": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Ripristina una Revisione passata in una nuova bozza (Manager+) */
-        post: operations["PagesController_restoreRevision"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/public/pages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Risolve un percorso pubblico alla Pagina pubblicata corrispondente */
-        get: operations["PublicPagesController_getPage"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/public/pages/by-guid/{guid}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Risolve il guid di una Pagina pubblicata al proprio percorso pubblico canonico */
-        get: operations["PublicPagesController_getPathByGuid"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/public/settings/global-tokens": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Restituisce i Global Tokens per il rendering pubblico (SSR) */
-        get: operations["PublicPagesController_getGlobalTokens"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/public/settings/theme": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Restituisce la configurazione del tema per il sito pubblico */
-        get: operations["PublicPagesController_getThemeConfig"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/preview/pages/{token}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Legge la bozza corrente di una Pagina tramite token di anteprima */
-        get: operations["PreviewPagesController_getByToken"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/global-sections": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Lista paginata delle Sezioni Globali */
-        get: operations["GlobalSectionsController_findAll"];
-        put?: never;
-        /** Crea una Sezione Globale */
-        post: operations["GlobalSectionsController_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/global-sections/{guid}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Dettaglio di una Sezione Globale */
-        get: operations["GlobalSectionsController_findOne"];
-        put?: never;
-        post?: never;
-        /** Elimina (soft-delete) una Sezione Globale */
-        delete: operations["GlobalSectionsController_remove"];
-        options?: never;
-        head?: never;
-        /** Aggiorna una Sezione Globale (richiede version per il lock ottimistico) */
-        patch: operations["GlobalSectionsController_update"];
-        trace?: never;
-    };
-    "/api/v1/public/global-sections/active": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Restituisce le Sezioni Globali attive per header e footer */
-        get: operations["PublicGlobalSectionsController_getActive"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/site-templates": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Lista paginata dei Template di tema */
-        get: operations["SiteTemplatesController_findAll"];
-        put?: never;
-        /** Crea un Template di tema */
-        post: operations["SiteTemplatesController_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/site-templates/{guid}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Dettaglio di un Template di tema */
-        get: operations["SiteTemplatesController_findOne"];
-        put?: never;
-        post?: never;
-        /** Elimina (soft-delete) un Template di tema */
-        delete: operations["SiteTemplatesController_remove"];
-        options?: never;
-        head?: never;
-        /** Aggiorna un Template di tema (richiede version per il lock ottimistico) */
-        patch: operations["SiteTemplatesController_update"];
-        trace?: never;
-    };
-    "/api/v1/public/site-templates/resolve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Risolve il Template di tema applicabile a una rotta pubblica */
-        post: operations["PublicSiteTemplatesController_resolve"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/analytics/overview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** KPI aggregati (view, visitatori unici, pagine con traffico, trend) */
-        get: operations["AnalyticsController_getOverview"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/analytics/timeseries": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Serie temporale view/visitatori unici (bucket giorno o ora) */
-        get: operations["AnalyticsController_getTimeseries"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/analytics/top-pages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Classifica delle pagine più visitate nell'intervallo */
-        get: operations["AnalyticsController_getTopPages"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/analytics/referrers": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Classifica dei referrer nell'intervallo ("direct" se assente) */
-        get: operations["AnalyticsController_getReferrers"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/analytics/devices": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Distribuzione percentuale per device e per browser */
-        get: operations["AnalyticsController_getDeviceStats"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/app/forms/submissions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Lista paginata degli Invii (Manager+) */
-        get: operations["FormsController_listSubmissions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/public/forms/{formId}/submit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Elabora la sottomissione di un Form pubblicato */
-        post: operations["PublicFormsController_submit"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
+  '/api/v1/auth/login': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Login utente e generazione token JWT */
+    post: operations['AuthController_login'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/mfa-verify': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Verifica codice MFA per completare il login */
+    post: operations['AuthController_mfaVerify'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/refresh': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Rinnova l'access token usando il refresh token opaco (cookie rtk) */
+    post: operations['AuthController_refresh'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/logout': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Logout utente e invalidazione sessione */
+    post: operations['AuthController_logout'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/activate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Attiva un account utente tramite token e imposta la password */
+    post: operations['AuthController_activate'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/forgot-password': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Richiede il recupero password inviando una email con token */
+    post: operations['AuthController_forgotPassword'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/reset-password': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Reimposta la password tramite token di recupero */
+    post: operations['AuthController_resetPassword'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/request-activation': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Richiede o re-invia l'email di attivazione per un utente (Admin+) */
+    post: operations['AuthController_requestActivation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/me': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Recupera i dati dell'utente autenticato */
+    get: operations['AuthController_getMe'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Aggiorna nome e cognome dell'utente autenticato (pagina profilo) */
+    patch: operations['AuthController_updateProfile'];
+    trace?: never;
+  };
+  '/api/v1/auth/change-password': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Cambia la password dell'utente autenticato (pagina profilo) */
+    patch: operations['AuthController_changePassword'];
+    trace?: never;
+  };
+  '/api/v1/auth/mfa-setup': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Genera secret e QR code per la configurazione MFA (non persiste ancora) */
+    post: operations['AuthController_mfaSetup'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/mfa-enable': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Abilita la MFA per l'utente autenticato */
+    post: operations['AuthController_mfaEnable'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/mfa-disable': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Disabilita la MFA per l'utente autenticato */
+    post: operations['AuthController_mfaDisable'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/sessions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Elenca le sessioni/dispositivi attivi dell'utente autenticato */
+    get: operations['AuthController_getSessions'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/sessions/{sessionId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Revoca una sessione/dispositivo dell'utente autenticato */
+    delete: operations['AuthController_revokeSession'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/impersonate/{guid}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Avvia l'impersonificazione di un utente (SuperAdmin only) */
+    post: operations['AuthController_impersonate'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/end-impersonation': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Termina l'impersonificazione corrente e ripristina la sessione del SuperAdmin originale */
+    post: operations['AuthController_endImpersonation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/admin/system/seed-demo': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Carica i dati demo (SuperAdmin only) */
+    post: operations['AdminController_seedDemo'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/admin/system/reset-demo': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Cancella tutti i dati tranne il SuperAdmin (SuperAdmin only, irreversibile) */
+    post: operations['AdminController_resetDemo'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/admin/users': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista utenti paginata (un Admin non vede gli utenti SuperAdmin) */
+    get: operations['AdminController_findAllUsers'];
+    put?: never;
+    /** Crea un nuovo utente (un Admin non può creare utenti SuperAdmin) */
+    post: operations['AdminController_createUser'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/admin/users/{guid}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Dettaglio utente (un Admin non vede gli utenti SuperAdmin) */
+    get: operations['AdminController_findOneUser'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Aggiorna i dati di un utente */
+    patch: operations['AdminController_updateUser'];
+    trace?: never;
+  };
+  '/api/v1/app/admin/users/{guid}/toggle-active': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Abilita/disabilita un utente senza eliminarlo */
+    patch: operations['AdminController_toggleActiveUser'];
+    trace?: never;
+  };
+  '/api/v1/app/admin/users/{guid}/reset-mfa': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Resetta l'MFA di un utente (potrà ri-configurarla al prossimo login) */
+    post: operations['AdminController_resetMfaUser'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/admin/audit-log': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista paginata degli eventi di audit log (Admin+) */
+    get: operations['AdminController_findAuditLog'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/settings/theme': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Tema globale dell'installazione (default di fabbrica se mai salvato) */
+    get: operations['SettingsController_getTheme'];
+    /** Salva il tema globale (registrato su audit log) */
+    put: operations['SettingsController_updateTheme'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/settings/multilingual': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Registro Locale attivi (default di fabbrica se mai salvato) */
+    get: operations['SettingsController_getMultilingual'];
+    /** Salva il registro Locale attivi (Admin+ only, registrato su audit log) */
+    put: operations['SettingsController_updateMultilingual'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/settings/global-tokens': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Global Design Tokens del sito (default di fabbrica se mai salvati) */
+    get: operations['SettingsController_getGlobalTokens'];
+    /** Salva i Global Design Tokens del sito (Admin+ only, registrato su audit log) */
+    put: operations['SettingsController_updateGlobalTokens'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/files': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista paginata dei file attivi */
+    get: operations['FilesController_findAll'];
+    put?: never;
+    /** Carica un documento (multipart/form-data, campo "file") */
+    post: operations['FilesController_upload'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/files/{guid}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Scarica il contenuto di un file (streaming) */
+    get: operations['FilesController_download'];
+    put?: never;
+    post?: never;
+    /** Elimina un file (soft-delete, blob fisico non rimosso subito — vedi ADR-8) */
+    delete: operations['FilesController_delete'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/files/{guid}/metadata': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Metadati di un file, senza scaricarne il contenuto */
+    get: operations['FilesController_getMetadata'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/files/{guid}/focal-point': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Aggiorna il focal point editoriale (percentuale 0-100) di un asset */
+    patch: operations['FilesController_updateFocalPoint'];
+    trace?: never;
+  };
+  '/api/v1/app/files/{guid}/transform': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Accoda la generazione asincrona di una variante trasformata (ADR-49) */
+    post: operations['FilesController_requestImageTransform'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/public/media/{guid}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Serve il blob di un media editoriale pubblicato (immagine) */
+    get: operations['PublicMediaController_getMedia'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/health': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Health check applicativo (verifica connettività DB, Redis e coda BullMQ) */
+    get: operations['HealthController_check'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/notifications': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista paginata delle notifiche del chiamante, più recenti prima */
+    get: operations['NotificationsController_findAll'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/notifications/unread-count': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Numero di notifiche non lette del chiamante */
+    get: operations['NotificationsController_unreadCount'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/notifications/{guid}/read': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Segna una notifica come letta (solo se del chiamante) */
+    patch: operations['NotificationsController_markRead'];
+    trace?: never;
+  };
+  '/api/v1/app/notifications/read-all': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Segna tutte le notifiche del chiamante come lette */
+    patch: operations['NotificationsController_markAllRead'];
+    trace?: never;
+  };
+  '/api/v1/app/pages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista paginata delle Pagine (User: solo le proprie) */
+    get: operations['PagesController_findAll'];
+    put?: never;
+    /** Crea una Pagina in stato draft */
+    post: operations['PagesController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/pages/{guid}/translations': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Elenco delle traduzioni del gruppo (bozze incluse), sorgente inclusa */
+    get: operations['PagesController_listTranslations'];
+    put?: never;
+    /** Crea una traduzione da una Pagina sorgente */
+    post: operations['PagesController_createTranslation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/pages/{guid}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Dettaglio di una Pagina */
+    get: operations['PagesController_findOne'];
+    put?: never;
+    post?: never;
+    /** Elimina (soft-delete) una Pagina (Admin+) */
+    delete: operations['PagesController_remove'];
+    options?: never;
+    head?: never;
+    /** Aggiorna la bozza di una Pagina (richiede version per il lock ottimistico) */
+    patch: operations['PagesController_update'];
+    trace?: never;
+  };
+  '/api/v1/app/pages/{guid}/preview-token': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Emette un token di anteprima della bozza corrente (15 minuti, non rinnovabile) */
+    post: operations['PagesController_issuePreviewToken'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/pages/{guid}/status': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Transizione di stato di una Pagina */
+    post: operations['PagesController_changeStatus'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/pages/{guid}/revisions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Elenco paginato delle Revisioni di una Pagina */
+    get: operations['PagesController_listRevisions'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/pages/{guid}/revisions/diff': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Confronto strutturale fra due Revisioni */
+    get: operations['PagesController_diffRevisions'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/pages/{guid}/revisions/{revisionGuid}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Dettaglio di una Revisione */
+    get: operations['PagesController_getRevision'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/pages/{guid}/revisions/{revisionGuid}/restore': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Ripristina una Revisione passata in una nuova bozza (Manager+) */
+    post: operations['PagesController_restoreRevision'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/public/pages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Risolve un percorso pubblico alla Pagina pubblicata corrispondente */
+    get: operations['PublicPagesController_getPage'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/public/pages/by-guid/{guid}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Risolve il guid di una Pagina pubblicata al proprio percorso pubblico canonico */
+    get: operations['PublicPagesController_getPathByGuid'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/public/settings/global-tokens': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Restituisce i Global Tokens per il rendering pubblico (SSR) */
+    get: operations['PublicPagesController_getGlobalTokens'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/public/settings/theme': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Restituisce la configurazione del tema per il sito pubblico */
+    get: operations['PublicPagesController_getThemeConfig'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/preview/pages/{token}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Legge la bozza corrente di una Pagina tramite token di anteprima */
+    get: operations['PreviewPagesController_getByToken'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/global-sections': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista paginata delle Sezioni Globali */
+    get: operations['GlobalSectionsController_findAll'];
+    put?: never;
+    /** Crea una Sezione Globale */
+    post: operations['GlobalSectionsController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/global-sections/{guid}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Dettaglio di una Sezione Globale */
+    get: operations['GlobalSectionsController_findOne'];
+    put?: never;
+    post?: never;
+    /** Elimina (soft-delete) una Sezione Globale */
+    delete: operations['GlobalSectionsController_remove'];
+    options?: never;
+    head?: never;
+    /** Aggiorna una Sezione Globale (richiede version per il lock ottimistico) */
+    patch: operations['GlobalSectionsController_update'];
+    trace?: never;
+  };
+  '/api/v1/public/global-sections/active': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Restituisce le Sezioni Globali attive per header e footer */
+    get: operations['PublicGlobalSectionsController_getActive'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/site-templates': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista paginata dei Template di tema */
+    get: operations['SiteTemplatesController_findAll'];
+    put?: never;
+    /** Crea un Template di tema */
+    post: operations['SiteTemplatesController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/site-templates/{guid}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Dettaglio di un Template di tema */
+    get: operations['SiteTemplatesController_findOne'];
+    put?: never;
+    post?: never;
+    /** Elimina (soft-delete) un Template di tema */
+    delete: operations['SiteTemplatesController_remove'];
+    options?: never;
+    head?: never;
+    /** Aggiorna un Template di tema (richiede version per il lock ottimistico) */
+    patch: operations['SiteTemplatesController_update'];
+    trace?: never;
+  };
+  '/api/v1/public/site-templates/resolve': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Risolve il Template di tema applicabile a una rotta pubblica */
+    post: operations['PublicSiteTemplatesController_resolve'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/analytics/overview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** KPI aggregati (view, visitatori unici, pagine con traffico, trend) */
+    get: operations['AnalyticsController_getOverview'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/analytics/timeseries': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Serie temporale view/visitatori unici (bucket giorno o ora) */
+    get: operations['AnalyticsController_getTimeseries'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/analytics/top-pages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Classifica delle pagine più visitate nell'intervallo */
+    get: operations['AnalyticsController_getTopPages'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/analytics/referrers': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Classifica dei referrer nell'intervallo ("direct" se assente) */
+    get: operations['AnalyticsController_getReferrers'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/analytics/devices': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Distribuzione percentuale per device e per browser */
+    get: operations['AnalyticsController_getDeviceStats'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/forms/submissions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista paginata degli Invii (Manager+) */
+    get: operations['FormsController_listSubmissions'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/public/forms/{formId}/submit': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Elabora la sottomissione di un Form pubblicato */
+    post: operations['PublicFormsController_submit'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: {
-        LoginDto: {
-            /**
-             * @description Indirizzo email dell'utente
-             * @example admin@example.com
-             */
-            email: string;
-            /**
-             * @description Password dell'utente
-             * @example Password123!
-             */
-            password: string;
-        };
-        MfaVerifyDto: {
-            /**
-             * @description Token temporaneo restituito da /auth/login quando è richiesta la MFA
-             * @example a1b2c3...
-             */
-            tmpToken: string;
-            /**
-             * @description Codice TOTP a 6 cifre generato dall'app authenticator
-             * @example 123456
-             */
-            code: string;
-        };
-        ActivateAccountDto: {
-            /**
-             * @description Il token di attivazione ricevuto via email (64 caratteri)
-             * @example a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3d4e5f6
-             */
-            token: string;
-            /**
-             * @description La nuova password da impostare per l'account (minimo 12 caratteri)
-             * @example SicuraPassword123!
-             */
-            password: string;
-        };
-        ForgotPasswordDto: {
-            /**
-             * @description L'indirizzo email associato all'account da recuperare
-             * @example utente@example.com
-             */
-            email: string;
-        };
-        ResetPasswordDto: {
-            /**
-             * @description Il token di reimpostazione ricevuto via email (64 caratteri)
-             * @example a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3d4e5f6
-             */
-            token: string;
-            /**
-             * @description La nuova password conforme alla policy di sicurezza (minimo 12 caratteri)
-             * @example NuovaSuperPassword2026!
-             */
-            password: string;
-        };
-        UpdateProfileDto: {
-            /**
-             * @description Nome dell'utente
-             * @example Mario
-             */
-            name: string;
-            /**
-             * @description Cognome dell'utente
-             * @example Rossi
-             */
-            surname?: string;
-        };
-        ChangePasswordDto: {
-            /**
-             * @description La password attuale dell'utente, usata per confermare l'identità
-             * @example VecchiaPassword2025!
-             */
-            currentPassword: string;
-            /**
-             * @description La nuova password conforme alla policy di sicurezza (minimo 12 caratteri)
-             * @example NuovaSuperPassword2026!
-             */
-            newPassword: string;
-        };
-        MfaEnableDto: {
-            /**
-             * @description Codice TOTP a 6 cifre generato dall'app authenticator con il secret ricevuto da mfa-setup
-             * @example 123456
-             */
-            code: string;
-        };
-        MfaDisableDto: {
-            /**
-             * @description Codice TOTP a 6 cifre generato dall'app authenticator
-             * @example 123456
-             */
-            code: string;
-        };
-        CreateUserDto: {
-            /**
-             * @description Nome dell'utente
-             * @example Mario
-             */
-            name: string;
-            /**
-             * @description Cognome dell'utente
-             * @example Rossi
-             */
-            surname?: string;
-            /**
-             * @description Email dell'utente
-             * @example mario.rossi@example.com
-             */
-            email: string;
-            /**
-             * @description Ruolo assegnato
-             * @example 30
-             * @enum {number}
-             */
-            role: 5 | 10 | 20 | 30;
-            /** @description Identificatore di scope multi-tenant/multi-sede, a disposizione dei moduli del CMS */
-            scopeId?: string;
-        };
-        UpdateUserDto: {
-            /** @description Nome dell'utente */
-            name?: string;
-            /** @description Cognome dell'utente */
-            surname?: string;
-            /** @description Email dell'utente */
-            email?: string;
-            /**
-             * @description Ruolo assegnato
-             * @enum {number}
-             */
-            role?: 5 | 10 | 20 | 30;
-            /** @description Identificatore di scope multi-tenant/multi-sede */
-            scopeId?: string;
-        };
-        ThemeColorsDto: {
-            /**
-             * @description Colore primario
-             * @example #228be6
-             */
-            primary: string;
-            /**
-             * @description Colore secondario
-             * @example #868e96
-             */
-            secondary: string;
-            /**
-             * @description Colore accento
-             * @example #be4bdb
-             */
-            accent: string;
-            /**
-             * @description Colore successo
-             * @example #40c057
-             */
-            success: string;
-            /**
-             * @description Colore avviso
-             * @example #fab005
-             */
-            warning: string;
-            /**
-             * @description Colore allerta
-             * @example #f76707
-             */
-            alert: string;
-            /**
-             * @description Colore errore
-             * @example #fa5252
-             */
-            error: string;
-            /**
-             * @description Colore pericolo
-             * @example #c92a2a
-             */
-            danger: string;
-            /**
-             * @description Colore informativo
-             * @example #15aabf
-             */
-            info: string;
-        };
-        ThemePrimaryShadeDto: {
-            /**
-             * @description Shade filled nello scheme chiaro (0–9)
-             * @example 8
-             */
-            light: number;
-            /**
-             * @description Shade filled nello scheme scuro (0–9)
-             * @example 5
-             */
-            dark: number;
-        };
-        ThemeGradientDto: {
-            /**
-             * @description Colore di partenza
-             * @example #228be6
-             */
-            from: string;
-            /**
-             * @description Colore di arrivo
-             * @example #15aabf
-             */
-            to: string;
-            /**
-             * @description Angolo in gradi (0–360)
-             * @example 45
-             */
-            deg: number;
-        };
-        ThemeFontSizesDto: {
-            /**
-             * @description Dimensione testo xs
-             * @example 12
-             */
-            xs: number;
-            /**
-             * @description Dimensione testo sm
-             * @example 14
-             */
-            sm: number;
-            /**
-             * @description Dimensione testo md
-             * @example 16
-             */
-            md: number;
-            /**
-             * @description Dimensione testo lg
-             * @example 18
-             */
-            lg: number;
-            /**
-             * @description Dimensione testo xl
-             * @example 20
-             */
-            xl: number;
-        };
-        ThemeLineHeightsDto: {
-            /**
-             * @description Interlinea xs
-             * @example 1.4
-             */
-            xs: number;
-            /**
-             * @description Interlinea sm
-             * @example 1.45
-             */
-            sm: number;
-            /**
-             * @description Interlinea md
-             * @example 1.55
-             */
-            md: number;
-            /**
-             * @description Interlinea lg
-             * @example 1.6
-             */
-            lg: number;
-            /**
-             * @description Interlinea xl
-             * @example 1.65
-             */
-            xl: number;
-        };
-        ThemeHeadingSizeDto: {
-            /**
-             * @description Dimensione font
-             * @example 34
-             */
-            fontSize: number;
-            /**
-             * @description Interlinea (0.8–3)
-             * @example 1.3
-             */
-            lineHeight: number;
-        };
-        ThemeHeadingSizesDto: {
-            /** @description Titolo h1 */
-            h1: components["schemas"]["ThemeHeadingSizeDto"];
-            /** @description Titolo h2 */
-            h2: components["schemas"]["ThemeHeadingSizeDto"];
-            /** @description Titolo h3 */
-            h3: components["schemas"]["ThemeHeadingSizeDto"];
-            /** @description Titolo h4 */
-            h4: components["schemas"]["ThemeHeadingSizeDto"];
-            /** @description Titolo h5 */
-            h5: components["schemas"]["ThemeHeadingSizeDto"];
-            /** @description Titolo h6 */
-            h6: components["schemas"]["ThemeHeadingSizeDto"];
-        };
-        ThemeHeadingsDto: {
-            /**
-             * @description Font dei titoli (ID whitelisted)
-             * @example inter
-             * @enum {string}
-             */
-            fontFamily: "inter" | "system" | "humanist" | "geometric" | "rounded" | "serif" | "slab";
-            /**
-             * @description Peso dei titoli
-             * @example 700
-             * @enum {string}
-             */
-            fontWeight: "300" | "400" | "500" | "600" | "700" | "800" | "900";
-            /**
-             * @description Unità CSS condivisa dalla dimensione di ogni livello h1–h6 (v7)
-             * @example px
-             * @enum {string}
-             */
-            fontSizeUnit: "px" | "em" | "rem" | "%";
-            /** @description Dimensioni h1–h6 */
-            sizes: components["schemas"]["ThemeHeadingSizesDto"];
-        };
-        ThemeTypographyDto: {
-            /**
-             * @description Font del testo (ID whitelisted)
-             * @example inter
-             * @enum {string}
-             */
-            fontFamily: "inter" | "system" | "humanist" | "geometric" | "rounded" | "serif" | "slab";
-            /**
-             * @description Font monospace (ID whitelisted)
-             * @example system-mono
-             * @enum {string}
-             */
-            fontFamilyMonospace: "system-mono" | "courier";
-            /** @description Dimensioni testo xs–xl */
-            fontSizes: components["schemas"]["ThemeFontSizesDto"];
-            /**
-             * @description Unità CSS di fontSizes (v7)
-             * @example px
-             * @enum {string}
-             */
-            fontSizeUnit: "px" | "em" | "rem" | "%";
-            /** @description Interlinee xs–xl */
-            lineHeights: components["schemas"]["ThemeLineHeightsDto"];
-            /** @description Configurazione titoli */
-            headings: components["schemas"]["ThemeHeadingsDto"];
-        };
-        ThemeSpacingDto: {
-            /**
-             * @description Spaziatura xs
-             * @example 10
-             */
-            xs: number;
-            /**
-             * @description Spaziatura sm
-             * @example 12
-             */
-            sm: number;
-            /**
-             * @description Spaziatura md
-             * @example 16
-             */
-            md: number;
-            /**
-             * @description Spaziatura lg
-             * @example 20
-             */
-            lg: number;
-            /**
-             * @description Spaziatura xl
-             * @example 32
-             */
-            xl: number;
-        };
-        ThemeRadiusScaleDto: {
-            /**
-             * @description Radius xs
-             * @example 2
-             */
-            xs: number;
-            /**
-             * @description Radius sm
-             * @example 4
-             */
-            sm: number;
-            /**
-             * @description Radius md
-             * @example 8
-             */
-            md: number;
-            /**
-             * @description Radius lg
-             * @example 16
-             */
-            lg: number;
-            /**
-             * @description Radius xl
-             * @example 32
-             */
-            xl: number;
-        };
-        ThemeShadowSpecDto: {
-            /**
-             * @description Offset verticale
-             * @example 1
-             */
-            y: number;
-            /**
-             * @description Sfocatura
-             * @example 3
-             */
-            blur: number;
-            /**
-             * @description Espansione
-             * @example 0
-             */
-            spread: number;
-            /**
-             * @description Opacità del nero (0–1)
-             * @example 0.05
-             */
-            opacity: number;
-        };
-        ThemeShadowsDto: {
-            /** @description Ombra xs */
-            xs: components["schemas"]["ThemeShadowSpecDto"];
-            /** @description Ombra sm */
-            sm: components["schemas"]["ThemeShadowSpecDto"];
-            /** @description Ombra md */
-            md: components["schemas"]["ThemeShadowSpecDto"];
-            /** @description Ombra lg */
-            lg: components["schemas"]["ThemeShadowSpecDto"];
-            /** @description Ombra xl */
-            xl: components["schemas"]["ThemeShadowSpecDto"];
-        };
-        ThemeButtonDefaultsDto: {
-            /**
-             * @description Variant di default
-             * @example unset
-             * @enum {string}
-             */
-            variant: "unset" | "filled" | "light" | "outline" | "subtle" | "default" | "gradient";
-            /**
-             * @description Size di default
-             * @example unset
-             * @enum {string}
-             */
-            size: "unset" | "xs" | "sm" | "md" | "lg" | "xl";
-            /**
-             * @description Radius di default
-             * @example unset
-             * @enum {string}
-             */
-            radius: "unset" | "xs" | "sm" | "md" | "lg" | "xl";
-        };
-        ThemeActionIconDefaultsDto: {
-            /**
-             * @description Variant di default
-             * @example unset
-             * @enum {string}
-             */
-            variant: "unset" | "filled" | "light" | "outline" | "subtle" | "default" | "transparent";
-            /**
-             * @description Radius di default
-             * @example unset
-             * @enum {string}
-             */
-            radius: "unset" | "xs" | "sm" | "md" | "lg" | "xl";
-        };
-        ThemeBadgeDefaultsDto: {
-            /**
-             * @description Variant di default
-             * @example unset
-             * @enum {string}
-             */
-            variant: "unset" | "filled" | "light" | "outline" | "dot" | "default";
-            /**
-             * @description Size di default
-             * @example unset
-             * @enum {string}
-             */
-            size: "unset" | "xs" | "sm" | "md" | "lg" | "xl";
-            /**
-             * @description Radius di default
-             * @example unset
-             * @enum {string}
-             */
-            radius: "unset" | "xs" | "sm" | "md" | "lg" | "xl";
-        };
-        ThemeInputDefaultsDto: {
-            /**
-             * @description Variant di default
-             * @example unset
-             * @enum {string}
-             */
-            variant: "unset" | "default" | "filled" | "unstyled";
-            /**
-             * @description Size di default
-             * @example unset
-             * @enum {string}
-             */
-            size: "unset" | "xs" | "sm" | "md" | "lg" | "xl";
-            /**
-             * @description Radius di default
-             * @example unset
-             * @enum {string}
-             */
-            radius: "unset" | "xs" | "sm" | "md" | "lg" | "xl";
-        };
-        ThemeCardDefaultsDto: {
-            /**
-             * @description Ombra di default
-             * @example unset
-             * @enum {string}
-             */
-            shadow: "unset" | "none" | "xs" | "sm" | "md" | "lg" | "xl";
-            /**
-             * @description Radius di default
-             * @example unset
-             * @enum {string}
-             */
-            radius: "unset" | "xs" | "sm" | "md" | "lg" | "xl";
-            /**
-             * @description Padding di default
-             * @example unset
-             * @enum {string}
-             */
-            padding: "unset" | "xs" | "sm" | "md" | "lg" | "xl";
-            /**
-             * @description Bordo visibile (withBorder)
-             * @example false
-             */
-            withBorder: boolean;
-        };
-        ThemeModalDefaultsDto: {
-            /**
-             * @description Radius di default
-             * @example unset
-             * @enum {string}
-             */
-            radius: "unset" | "xs" | "sm" | "md" | "lg" | "xl";
-            /**
-             * @description Ombra di default
-             * @example unset
-             * @enum {string}
-             */
-            shadow: "unset" | "none" | "xs" | "sm" | "md" | "lg" | "xl";
-            /**
-             * @description Padding di default
-             * @example unset
-             * @enum {string}
-             */
-            padding: "unset" | "xs" | "sm" | "md" | "lg" | "xl";
-            /**
-             * @description Blur overlay (0–12)
-             * @example 0
-             */
-            overlayBlur: number;
-            /**
-             * @description Modale centrata verticalmente
-             * @example false
-             */
-            centered: boolean;
-        };
-        ThemeTableDefaultsDto: {
-            /**
-             * @description Righe alternate
-             * @example false
-             */
-            striped: boolean;
-            /**
-             * @description Evidenzia riga al passaggio
-             * @example false
-             */
-            highlightOnHover: boolean;
-            /**
-             * @description Bordo esterno tabella
-             * @example false
-             */
-            withTableBorder: boolean;
-            /**
-             * @description Bordi tra le colonne
-             * @example false
-             */
-            withColumnBorders: boolean;
-            /**
-             * @description Spaziatura verticale delle celle
-             * @example unset
-             * @enum {string}
-             */
-            verticalSpacing: "unset" | "xs" | "sm" | "md" | "lg" | "xl";
-        };
-        ThemeTooltipDefaultsDto: {
-            /**
-             * @description Freccia sul tooltip
-             * @example false
-             */
-            withArrow: boolean;
-            /**
-             * @description Radius di default
-             * @example unset
-             * @enum {string}
-             */
-            radius: "unset" | "xs" | "sm" | "md" | "lg" | "xl";
-        };
-        ThemeLoaderDefaultsDto: {
-            /**
-             * @description Tipo di animazione
-             * @example unset
-             * @enum {string}
-             */
-            type: "unset" | "oval" | "bars" | "dots";
-        };
-        ThemeComponentsDto: {
-            /** @description Default Button */
-            button: components["schemas"]["ThemeButtonDefaultsDto"];
-            /** @description Default ActionIcon */
-            actionIcon: components["schemas"]["ThemeActionIconDefaultsDto"];
-            /** @description Default Badge */
-            badge: components["schemas"]["ThemeBadgeDefaultsDto"];
-            /** @description Default campi input */
-            input: components["schemas"]["ThemeInputDefaultsDto"];
-            /** @description Default Paper/Card */
-            card: components["schemas"]["ThemeCardDefaultsDto"];
-            /** @description Default Modal/Drawer */
-            modal: components["schemas"]["ThemeModalDefaultsDto"];
-            /** @description Default Table */
-            table: components["schemas"]["ThemeTableDefaultsDto"];
-            /** @description Default Tooltip */
-            tooltip: components["schemas"]["ThemeTooltipDefaultsDto"];
-            /** @description Default Loader */
-            loader: components["schemas"]["ThemeLoaderDefaultsDto"];
-        };
-        ThemeSchemeTokensDto: {
-            /**
-             * @description Sfondo applicativo
-             * @example #f8f9fa
-             */
-            pageBg: string;
-            /**
-             * @description Sfondo card / superfici contenuto
-             * @example #ffffff
-             */
-            cardBg: string;
-            /**
-             * @description Bordo card
-             * @example #ffffff
-             */
-            cardBorder: string;
-            /**
-             * @description Testo principale
-             * @example #000000
-             */
-            textPrimary: string;
-            /**
-             * @description Testo secondario/dimmed
-             * @example #868e96
-             */
-            textSecondary: string;
-            /**
-             * @description Colore del titolo H1
-             * @example #000000
-             */
-            headingH1: string;
-            /**
-             * @description Colore del titolo H2
-             * @example #000000
-             */
-            headingH2: string;
-            /**
-             * @description Colore del titolo H3
-             * @example #000000
-             */
-            headingH3: string;
-            /**
-             * @description Colore del titolo H4
-             * @example #000000
-             */
-            headingH4: string;
-            /**
-             * @description Colore del titolo H5
-             * @example #000000
-             */
-            headingH5: string;
-            /**
-             * @description Colore del titolo H6
-             * @example #000000
-             */
-            headingH6: string;
-            /**
-             * @description Sfondo sidebar
-             * @example #242424
-             */
-            navbarBg: string;
-            /**
-             * @description Testo voci navbar
-             * @example #b8b8b8
-             */
-            navbarText: string;
-            /**
-             * @description Sfondo hover voce navbar
-             * @example #2e2e2e
-             */
-            navbarHoverBg: string;
-            /**
-             * @description Sfondo voce navbar attiva
-             * @example #1971c2
-             */
-            navbarActiveBg: string;
-            /**
-             * @description Testo voce navbar attiva
-             * @example #ffffff
-             */
-            navbarActiveText: string;
-            /**
-             * @description Bordi interni sidebar
-             * @example #3b3b3b
-             */
-            navbarBorder: string;
-        };
-        ThemeLayoutMarginDto: {
-            /**
-             * @description Margine superiore
-             * @example 0
-             */
-            top: number;
-            /**
-             * @description Margine destro
-             * @example 0
-             */
-            right: number;
-            /**
-             * @description Margine inferiore
-             * @example 0
-             */
-            bottom: number;
-            /**
-             * @description Margine sinistro
-             * @example 0
-             */
-            left: number;
-        };
-        ThemeLayoutPaddingDto: {
-            /**
-             * @description Rientro superiore
-             * @example 0
-             */
-            top: number;
-            /**
-             * @description Rientro destro
-             * @example 0
-             */
-            right: number;
-            /**
-             * @description Rientro inferiore
-             * @example 0
-             */
-            bottom: number;
-            /**
-             * @description Rientro sinistro
-             * @example 0
-             */
-            left: number;
-        };
-        ThemeLayoutDto: {
-            /**
-             * @description Larghezza massima della pagina in modalità boxed
-             * @example 1200
-             */
-            pageBoxedWidth: number;
-            /**
-             * @description Unità CSS di pageBoxedWidth (v8)
-             * @example px
-             * @enum {string}
-             */
-            pageBoxedWidthUnit: "px" | "em" | "rem" | "%";
-            /** @description Margini esterni della pagina per lato */
-            margin: components["schemas"]["ThemeLayoutMarginDto"];
-            /**
-             * @description Unità CSS di margin (v8)
-             * @example px
-             * @enum {string}
-             */
-            marginUnit: "px" | "em" | "rem" | "%";
-            /** @description Rientro interno della pagina per lato */
-            padding: components["schemas"]["ThemeLayoutPaddingDto"];
-            /**
-             * @description Unità CSS di padding (v8)
-             * @example px
-             * @enum {string}
-             */
-            paddingUnit: "px" | "em" | "rem" | "%";
-        };
-        ThemeConfigDto: {
-            /**
-             * @description Versione del contratto ThemeConfig
-             * @example 8
-             * @enum {number}
-             */
-            version: 8;
-            /**
-             * @description Larghezza sidebar espansa
-             * @example 210
-             */
-            navbarWidth: number;
-            /**
-             * @description Unità CSS di navbarWidth (v7)
-             * @example px
-             * @enum {string}
-             */
-            navbarWidthUnit: "px" | "em" | "rem" | "%";
-            /**
-             * @description Sidebar chiusa (solo icone) di default al caricamento
-             * @example false
-             */
-            navbarDefaultCollapsed: boolean;
-            /**
-             * @description Stile del bordo destro della sidebar: bordo sottile o ombra proiettata
-             * @example border
-             * @enum {string}
-             */
-            navbarEdgeStyle: "border" | "shadow";
-            /**
-             * @description Intensità (0–1) dell'ombra del bordo destro sidebar quando navbarEdgeStyle è 'shadow'
-             * @example 0.16
-             */
-            navbarEdgeShadowIntensity: number;
-            /** @description I 9 colori semantici del tema */
-            colors: components["schemas"]["ThemeColorsDto"];
-            /** @description Shade filled per scheme */
-            primaryShade: components["schemas"]["ThemePrimaryShadeDto"];
-            /**
-             * @description Radius di default dei componenti
-             * @example md
-             * @enum {string}
-             */
-            radius: "xs" | "sm" | "md" | "lg" | "xl";
-            /**
-             * @description Anello di focus
-             * @example auto
-             * @enum {string}
-             */
-            focusRing: "auto" | "always" | "never";
-            /**
-             * @description Cursore sui controlli interattivi
-             * @example default
-             * @enum {string}
-             */
-            cursorType: "default" | "pointer";
-            /**
-             * @description Rispetta prefers-reduced-motion
-             * @example false
-             */
-            respectReducedMotion: boolean;
-            /**
-             * @description Contrasto automatico sui filled
-             * @example false
-             */
-            autoContrast: boolean;
-            /**
-             * @description Soglia di luminanza per autoContrast (0–1)
-             * @example 0.3
-             */
-            luminanceThreshold: number;
-            /**
-             * @description Scala globale interfaccia (0.75–1.5)
-             * @example 1
-             */
-            scale: number;
-            /** @description Gradiente di default */
-            defaultGradient: components["schemas"]["ThemeGradientDto"];
-            /** @description Blocco tipografico */
-            typography: components["schemas"]["ThemeTypographyDto"];
-            /** @description Scala di spaziatura xs–xl */
-            spacing: components["schemas"]["ThemeSpacingDto"];
-            /**
-             * @description Unità CSS di spacing (v7)
-             * @example px
-             * @enum {string}
-             */
-            spacingUnit: "px" | "em" | "rem" | "%";
-            /** @description Valori dei radius token xs–xl */
-            radiusScale: components["schemas"]["ThemeRadiusScaleDto"];
-            /**
-             * @description Unità CSS di radiusScale (v7)
-             * @example px
-             * @enum {string}
-             */
-            radiusScaleUnit: "px" | "em" | "rem" | "%";
-            /** @description Ombre xs–xl strutturate */
-            shadows: components["schemas"]["ThemeShadowsDto"];
-            /**
-             * @description Unità CSS di shadows (v7) — solo lunghezze, mai %
-             * @example px
-             * @enum {string}
-             */
-            shadowUnit: "px" | "em" | "rem";
-            /** @description Default per-componente */
-            components: components["schemas"]["ThemeComponentsDto"];
-            /** @description Token per lo scheme chiaro */
-            light: components["schemas"]["ThemeSchemeTokensDto"];
-            /** @description Token per lo scheme scuro */
-            dark: components["schemas"]["ThemeSchemeTokensDto"];
-            /** @description Layout di pagina: larghezza massima boxed, margini esterni e rientro interno (v8) */
-            layout: components["schemas"]["ThemeLayoutDto"];
-        };
-        MultilingualConfigDto: {
-            /**
-             * @description Codici Locale attivi (BCP-47 libero, es. "it-IT")
-             * @example [
-             *       "it-IT",
-             *       "en-GB"
-             *     ]
-             */
-            active: string[];
-            /**
-             * @description Locale di default (senza prefisso nelle URL pubbliche, ADR-24 § 5)
-             * @example it-IT
-             */
-            default: string;
-        };
-        GlobalTokensPaletteDto: {
-            /**
-             * @description Colore primario di brand
-             * @example #93003c
-             */
-            primary: string;
-            /**
-             * @description Colore secondario di brand
-             * @example #00a0d2
-             */
-            secondary: string;
-            /**
-             * @description Colore testo di brand
-             * @example #333333
-             */
-            text: string;
-            /**
-             * @description Colore accento di brand
-             * @example #f7a600
-             */
-            accent: string;
-        };
-        GlobalTokensDimensionDto: {
-            /**
-             * @description Valore numerico della dimensione
-             * @example 16
-             */
-            value: number;
-            /**
-             * @description Unità CSS
-             * @example px
-             * @enum {string}
-             */
-            unit: "px" | "em" | "rem";
-        };
-        GlobalTokensTypographyDto: {
-            /**
-             * @description Font base di sito (ID whitelisted, stessa whitelist di ADR-4)
-             * @example inter
-             * @enum {string}
-             */
-            mainFont: "inter" | "system" | "humanist" | "geometric" | "rounded" | "serif" | "slab";
-            /** @description Dimensione base del testo */
-            baseSize: components["schemas"]["GlobalTokensDimensionDto"];
-        };
-        GlobalTokensSpacingDto: {
-            /** @description Unità di spaziatura base */
-            baseUnit: components["schemas"]["GlobalTokensDimensionDto"];
-        };
-        GlobalTokensDto: {
-            /**
-             * @description Versione del contratto GlobalTokens
-             * @example 1
-             * @enum {number}
-             */
-            version: 1;
-            /** @description Palette di brand a livello di sito */
-            palette: components["schemas"]["GlobalTokensPaletteDto"];
-            /** @description Tipografia base di sito */
-            typography: components["schemas"]["GlobalTokensTypographyDto"];
-            /** @description Spaziatura base di sito */
-            spacing: components["schemas"]["GlobalTokensSpacingDto"];
-        };
-        UploadFileDto: {
-            /**
-             * @description Nome tabella/dominio a cui associare il file
-             * @example invoice
-             */
-            entity?: string;
-            /**
-             * @description Id/guid dell'entità di dominio da associare
-             * @example a1b2c3d4e5f6a7b8
-             */
-            entityId?: string;
-        };
-        FileMetadataDto: {
-            /**
-             * @description Identificatore pubblico del file, usato nelle URL
-             * @example a1b2c3d4e5f6a7b8
-             */
-            guid: string;
-            /**
-             * @description Nome file originale (solo display)
-             * @example fattura-2026-001.pdf
-             */
-            originalName: string;
-            /**
-             * @description MIME type dichiarato dal client
-             * @example application/pdf
-             */
-            mimeType: string;
-            /**
-             * @description Dimensione del file in byte
-             * @example 348213
-             */
-            sizeBytes: number;
-            /**
-             * @description Nome tabella/dominio a cui il file è associato, se presente
-             * @example invoice
-             */
-            entity?: Record<string, never> | null;
-            /**
-             * @description Id/guid dell'entità di dominio associata, se presente
-             * @example a1b2c3d4e5f6a7b8
-             */
-            entityId?: Record<string, never> | null;
-            /**
-             * @description Larghezza in pixel, letta dagli header raster all'upload. `null` per i non-raster e per le righe caricate prima che questo campo esistesse (RFC-F09 § 3, colonna non ancora in schema — sempre `null` finché N2 non è firmata).
-             * @example null
-             */
-            width?: Record<string, never> | null;
-            /**
-             * @description Altezza in pixel, stessa provenienza e stesse condizioni di `width` (RFC-F09 § 3).
-             * @example null
-             */
-            height?: Record<string, never> | null;
-            /**
-             * @description URL pubblico derivato server-side (`api/v1/public/media/:guid`), valorizzato solo se `entity` è `page-media` (ADR-27 § 2/§ 6). `null` altrimenti — non implica che il blob sia effettivamente servibile: la verifica del formato raster reale avviene in lettura su quella rotta (ADR-27 § 3, § 4).
-             * @example api/v1/public/media/a1b2c3d4e5f6a7b8
-             */
-            url?: Record<string, never> | null;
-            /**
-             * @description Percentuale orizzontale (0-100) del soggetto, usata come centro del ritaglio quando una trasformazione non fornisce un crop esplicito. Default: centro immagine.
-             * @example 50
-             */
-            focalX: number;
-            /**
-             * @description Percentuale verticale (0-100) del soggetto, stessa semantica di focalX.
-             * @example 50
-             */
-            focalY: number;
-            /**
-             * Format: date-time
-             * @description Data di caricamento
-             * @example 2026-07-23T10:00:00.000Z
-             */
-            createdAt: string;
-        };
-        UpdateFocalPointDto: {
-            /**
-             * @description Percentuale orizzontale (0-100) del soggetto, usata come centro del ritaglio quando non è fornito un crop esplicito. Default: centro immagine.
-             * @example 50
-             */
-            focalX: number;
-            /**
-             * @description Percentuale verticale (0-100) del soggetto, stessa semantica di focalX.
-             * @example 50
-             */
-            focalY: number;
-        };
-        MediaTransformDto: {
-            /** @description Coordinata X (px) dell'angolo del ritaglio */
-            cropX?: number;
-            /** @description Coordinata Y (px) dell'angolo del ritaglio */
-            cropY?: number;
-            /** @description Larghezza (px) del ritaglio */
-            cropW?: number;
-            /** @description Altezza (px) del ritaglio */
-            cropH?: number;
-            /**
-             * @description Percentuale orizzontale (0-100) del soggetto, usata come centro del ritaglio quando non è fornito un crop esplicito. Default: centro immagine.
-             * @default 50
-             */
-            focalX: number;
-            /**
-             * @description Percentuale verticale (0-100) del soggetto, stessa semantica di focalX.
-             * @default 50
-             */
-            focalY: number;
-            /**
-             * @description Preset nominato di destinazione (ADR-49 § M6). Ignorato se è fornito un crop esplicito.
-             * @enum {string}
-             */
-            preset?: "thumbnail" | "card" | "hero" | "og";
-        };
-        MediaTransformResultDto: {
-            /**
-             * @description Id del job BullMQ accodato per la generazione della variante
-             * @example 42
-             */
-            jobId: string;
-        };
-        UnreadCountDto: {
-            /**
-             * @description Numero di notifiche non lette del chiamante
-             * @example 3
-             */
-            count: number;
-        };
-        NotificationDto: {
-            /**
-             * @description Identificatore pubblico della notifica, usato nelle URL
-             * @example a1b2c3d4e5f6a7b8
-             */
-            guid: string;
-            /**
-             * @description Codice tipo libero, definito dal progetto verticale
-             * @example system.info
-             */
-            type: string;
-            /**
-             * @description Titolo breve
-             * @example Nuovo documento caricato
-             */
-            title: string;
-            /**
-             * @description Testo del messaggio
-             * @example Il file "fattura.pdf" è stato caricato con successo.
-             */
-            message: string;
-            /**
-             * @description Percorso frontend su cui portare l'utente al click, se presente
-             * @example /files
-             */
-            link?: Record<string, never> | null;
-            /**
-             * @description Se la notifica è già stata letta
-             * @example false
-             */
-            isRead: boolean;
-            /**
-             * Format: date-time
-             * @description Data di creazione
-             * @example 2026-07-23T10:00:00.000Z
-             */
-            createdAt: string;
-        };
-        MarkAllReadDto: {
-            /**
-             * @description Numero di notifiche aggiornate
-             * @example 3
-             */
-            updated: number;
-        };
-        PageFaqEntryDto: {
-            /** @description Domanda */
-            question?: string;
-            /** @description Risposta */
-            answer?: string;
-        };
-        PageSeoDto: {
-            /** @description Titolo per i motori di ricerca (fallback al titolo Pagina) */
-            metaTitle?: string;
-            /** @description Descrizione per i motori di ricerca */
-            metaDescription?: string;
-            /** @description URL canonica (se vuota, calcolata dal percorso della Pagina) */
-            canonicalUrl?: string;
-            /**
-             * @description Direttiva indicizzazione
-             * @enum {string}
-             */
-            robotsIndex?: "index" | "noindex";
-            /**
-             * @description Direttiva crawling dei link
-             * @enum {string}
-             */
-            robotsFollow?: "follow" | "nofollow";
-            /** @description Titolo Open Graph (fallback a metaTitle) */
-            ogTitle?: string;
-            /** @description Descrizione Open Graph (fallback a metaDescription) */
-            ogDescription?: string;
-            /** @description Immagine Open Graph (fallback a immagine di copertina) */
-            ogImage?: string;
-            /** @description JSON-LD esteso a mano, oltre a quello generato dal sistema */
-            structuredData?: Record<string, never>;
-            /** @description Riassunto sintetico e autosufficiente per i motori generativi */
-            aiSummary?: string;
-            /** @description Affermazioni brevi e verificabili estratte dalla Pagina */
-            keyFacts?: string[];
-            /** @description Coppie domanda/risposta */
-            faq?: components["schemas"]["PageFaqEntryDto"][];
-            /** @description Entità/argomenti trattati dalla Pagina */
-            entities?: string[];
-            /** @description Consenso all'uso del contenuto da parte dei crawler AI (default: consentito) */
-            aiPolicyAllowed?: boolean;
-        };
-        CreatePageDto: {
-            /**
-             * @description Titolo della Pagina
-             * @example Chi siamo
-             */
-            title: string;
-            /**
-             * @description Slug proposto (normalizzato server-side); se assente, generato dal titolo
-             * @example chi-siamo
-             */
-            slug?: string;
-            /**
-             * @description Locale della Pagina
-             * @example it-IT
-             */
-            locale: string;
-            /**
-             * @description Guid della Pagina genitore; assente per una Pagina root
-             * @example a1b2c3d4e5f6a7b8
-             */
-            parentGuid?: string;
-            /** @description Albero di blocchi iniziale (default: albero vuoto) */
-            draftContent?: {
-                [key: string]: unknown;
-            };
-            /** @description Metadati SEO/GEO iniziali */
-            draftSeo?: components["schemas"]["PageSeoDto"];
-            /** @example landing-page */
-            templateSlug?: string;
-        };
-        PageDto: {
-            /**
-             * @description Identificatore pubblico della Pagina, usato nelle URL admin
-             * @example a1b2c3d4e5f6a7b8
-             */
-            guid: string;
-            /**
-             * @description Titolo della Pagina
-             * @example Chi siamo
-             */
-            title: string;
-            /**
-             * @description Slug, unico per locale + genitore fra le righe attive
-             * @example chi-siamo
-             */
-            slug: string;
-            /**
-             * @description Locale della Pagina
-             * @example it-IT
-             */
-            locale: string;
-            /** @description Guid della Pagina genitore, null per una Pagina root */
-            parentGuid?: Record<string, never> | null;
-            /**
-             * @description Chiave opaca del gruppo di traduzione
-             * @example f6a7b8a1b2c3d4e5
-             */
-            translationGroupId: string;
-            /**
-             * @description Stato del ciclo di vita
-             * @example draft
-             */
-            status: string;
-            /** @description Data di pubblicazione, se pubblicata */
-            publishedAt?: Record<string, never> | null;
-            /** @description Data di pubblicazione programmata, se impostata */
-            scheduledAt?: Record<string, never> | null;
-            /** @description Albero di blocchi della bozza corrente */
-            draftContent: {
-                [key: string]: unknown;
-            };
-            /** @description Metadati SEO/GEO della bozza corrente */
-            draftSeo: {
-                [key: string]: unknown;
-            };
-            /**
-             * @description Contatore di lock ottimistico, da inviare in ogni PATCH
-             * @example 3
-             */
-            version: number;
-            /**
-             * Format: date-time
-             * @description Data di creazione
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Data di ultimo aggiornamento della bozza
-             */
-            updatedAt: string;
-            /** @description Nodi dell'albero blocchi che falliscono migrazione o validazione in lettura (mai un'eccezione: il nodo resta esposto come persistito). Assente solo dove non calcolato per costo (liste); array vuoto quando l'albero è integro. */
-            contentIssues?: {
-                path?: string;
-                code?: string;
-                details?: {
-                    [key: string]: unknown;
-                };
-            }[];
-        };
-        CreateTranslationDto: {
-            /**
-             * @description Locale della nuova traduzione (deve essere fra i Locale attivi)
-             * @example en-GB
-             */
-            locale: string;
-            /**
-             * @description Titolo della traduzione; se assente, copiato dalla Pagina sorgente
-             * @example About us
-             */
-            title?: string;
-        };
-        PageTranslationDto: {
-            /**
-             * @description Identificatore pubblico della Pagina (URL admin)
-             * @example b1a2c3d4e5f6a7b8
-             */
-            guid: string;
-            /**
-             * @description Locale della riga
-             * @example en-GB
-             */
-            locale: string;
-            /**
-             * @description Titolo della riga
-             * @example About us
-             */
-            title: string;
-            /**
-             * @description Stato editoriale della riga (draft, review, scheduled, published)
-             * @example draft
-             */
-            status: string;
-        };
-        UpdatePageDto: {
-            /**
-             * @description Version letta al caricamento della bozza (lock ottimistico)
-             * @example 3
-             */
-            version: number;
-            /** @description Titolo della Pagina */
-            title?: string;
-            /** @description Slug (normalizzato server-side); non rigenerato automaticamente dal titolo */
-            slug?: string;
-            /**
-             * @description Guid della nuova Pagina genitore; null per spostare in radice
-             * @example a1b2c3d4e5f6a7b8
-             */
-            parentGuid?: Record<string, never> | null;
-            /** @description Albero di blocchi aggiornato (sostituisce integralmente la bozza) */
-            draftContent?: {
-                [key: string]: unknown;
-            };
-            /** @description Metadati SEO/GEO aggiornati (sostituiscono integralmente i precedenti) */
-            draftSeo?: components["schemas"]["PageSeoDto"];
-        };
-        PagePreviewTokenDto: {
-            /**
-             * @description JWT di anteprima, firmato con un segreto dedicato (mai quello di access/refresh). Claim: pageGuid, purpose="page-preview", exp a 15 minuti dall'emissione. Va passato a "GET api/v1/preview/pages/:token" (rotta separata, mai app/ o public/).
-             * @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-             */
-            token: string;
-            /**
-             * Format: date-time
-             * @description Scadenza del token (15 minuti dall'emissione, non rinnovabile: nessun refresh).
-             * @example 2026-08-19T10:15:00.000Z
-             */
-            expiresAt: string;
-        };
-        ChangeStatusDto: {
-            /**
-             * @description Stato di destinazione
-             * @example published
-             * @enum {string}
-             */
-            status: "draft" | "review" | "scheduled" | "published" | "archived";
-            /**
-             * @description Data/ora futura di pubblicazione programmata, obbligatoria se status=scheduled
-             * @example 2026-09-01T09:00:00.000Z
-             */
-            scheduledAt?: string;
-        };
-        PropertyDiffDto: {
-            /**
-             * @description Campo variato
-             * @example props.styleTextColor
-             */
-            field: string;
-            /** @description Valore nella prima Revisione */
-            before: {
-                [key: string]: unknown;
-            };
-            /** @description Valore nella seconda Revisione */
-            after: {
-                [key: string]: unknown;
-            };
-        };
-        PageRevisionDiffResponseDto: {
-            /** @description Id dei nodi presenti solo nella seconda Revisione */
-            added: string[];
-            /** @description Id dei nodi presenti solo nella prima Revisione */
-            removed: string[];
-            /** @description Variazioni per nodo modificato, chiave = id del nodo */
-            modified: {
-                [key: string]: components["schemas"]["PropertyDiffDto"][];
-            };
-            /** @description Id dei nodi identici in entrambe le Revisioni */
-            unchanged: string[];
-        };
-        PageRevisionDetailDto: {
-            /**
-             * @description Identificatore pubblico della Revisione
-             * @example b1a2c3d4e5f6a7b8
-             */
-            guid: string;
-            /**
-             * @description Progressivo della Revisione per questa Pagina
-             * @example 3
-             */
-            revisionNumber: number;
-            /**
-             * @description Titolo al momento dello snapshot
-             * @example Chi siamo
-             */
-            title: string;
-            /**
-             * @description Slug al momento dello snapshot
-             * @example chi-siamo
-             */
-            slug: string;
-            /**
-             * Format: date-time
-             * @description Data di creazione della Revisione (= data di pubblicazione)
-             */
-            createdAt: string;
-            /**
-             * @description Nome e cognome di chi ha pubblicato questa Revisione (business-rules.md § Revisioni, regola 1)
-             * @example Maria Rossi
-             */
-            authorName: string;
-            /** @description Albero di blocchi al momento della pubblicazione (snapshot immutabile) */
-            content: {
-                [key: string]: unknown;
-            };
-            /** @description Metadati SEO/GEO al momento della pubblicazione (snapshot immutabile) */
-            seo: {
-                [key: string]: unknown;
-            };
-            /** @description Nodi dell'albero blocchi che falliscono migrazione o validazione in lettura (mai un'eccezione: il nodo resta esposto come persistito, mai migrato a metà). Array vuoto quando l'albero è integro (SPEC-F02-blocchi.md § 4.3). */
-            contentIssues: {
-                path?: string;
-                code?: string;
-                details?: {
-                    [key: string]: unknown;
-                };
-            }[];
-        };
-        PublicPageDto: {
-            /**
-             * @description Titolo della Pagina, snapshot della Revisione pubblicata
-             * @example Chi siamo
-             */
-            title: string;
-            /**
-             * @description Slug dell'ultimo segmento del percorso, snapshot della Revisione pubblicata
-             * @example chi-siamo
-             */
-            slug: string;
-            /**
-             * @description Locale della Pagina risolta
-             * @example it-IT
-             */
-            locale: string;
-            /** @description Albero di blocchi della Revisione pubblicata, già migrato alla forma corrente ({version, blocks}) */
-            content: {
-                [key: string]: unknown;
-            };
-            /** @description Metadati SEO/GEO della Revisione pubblicata */
-            seo: {
-                [key: string]: unknown;
-            };
-        };
-        PublicPageGuidResolutionDto: {
-            /**
-             * @description Percorso pubblico canonico, locale-prefixed dove non è la lingua di default, della Pagina pubblicata
-             * @example /chi-siamo
-             */
-            path: string;
-        };
-        PagePreviewContentDto: {
-            /**
-             * @description Titolo della Pagina, snapshot della bozza corrente
-             * @example Chi siamo (bozza)
-             */
-            title: string;
-            /**
-             * @description Slug dell'ultimo segmento del percorso, snapshot della bozza corrente
-             * @example chi-siamo
-             */
-            slug: string;
-            /**
-             * @description Locale della Pagina
-             * @example it-IT
-             */
-            locale: string;
-            /** @description Albero di blocchi della bozza corrente, già migrato alla forma corrente ({version, blocks}) */
-            content: {
-                [key: string]: unknown;
-            };
-            /** @description Metadati SEO/GEO della bozza corrente */
-            seo: {
-                [key: string]: unknown;
-            };
-        };
-        CreateGlobalSectionDto: {
-            /**
-             * @description Titolo della Sezione Globale
-             * @example Header principale
-             */
-            title: string;
-            /**
-             * @description Slug admin proposto (normalizzato server-side); se assente, generato dal titolo
-             * @example header-principale
-             */
-            slug?: string;
-            /**
-             * @description Slot di layout pubblico (default "none")
-             * @example header
-             * @enum {string}
-             */
-            layoutSlot?: "none" | "header" | "footer";
-            /**
-             * @description Rende l'header sticky sul viewport quando lo slot è `header`.
-             * @example true
-             */
-            isSticky?: boolean;
-            /** @description Albero di blocchi iniziale (default: albero vuoto) */
-            content?: {
-                [key: string]: unknown;
-            };
-        };
-        GlobalSectionDto: {
-            /**
-             * @description Guid della Sezione Globale
-             * @example a1b2c3d4e5f6a7b8
-             */
-            guid: string;
-            /** @description Titolo della Sezione Globale */
-            title: string;
-            /** @description Slug admin */
-            slug: string;
-            /**
-             * @description Slot di layout pubblico
-             * @enum {string}
-             */
-            layoutSlot: "none" | "header" | "footer";
-            /**
-             * @description Se l'header è sticky sul viewport
-             * @example true
-             */
-            isSticky: boolean;
-            /** @description Albero di blocchi corrente */
-            content: {
-                [key: string]: unknown;
-            };
-            /**
-             * @description Version corrente (lock ottimistico)
-             * @example 1
-             */
-            version: number;
-            /**
-             * Format: date-time
-             * @description Data creazione
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Data ultimo aggiornamento
-             */
-            updatedAt: string;
-        };
-        UpdateGlobalSectionDto: {
-            /**
-             * @description Version letta al caricamento della Sezione (lock ottimistico)
-             * @example 3
-             */
-            version: number;
-            /** @description Titolo della Sezione Globale */
-            title?: string;
-            /** @description Slug admin (normalizzato server-side); non rigenerato automaticamente dal titolo */
-            slug?: string;
-            /**
-             * @description Slot di layout pubblico
-             * @example footer
-             * @enum {string}
-             */
-            layoutSlot?: "none" | "header" | "footer";
-            /**
-             * @description Rende l'header sticky sul viewport quando lo slot è `header`.
-             * @example true
-             */
-            isSticky?: boolean;
-            /** @description Albero di blocchi aggiornato (sostituisce integralmente il precedente) */
-            content?: {
-                [key: string]: unknown;
-            };
-        };
-        PublicGlobalSectionDto: {
-            /** @description Slug admin della Sezione (informativo, non una rotta pubblica) */
-            slug?: string;
-            /**
-             * @description Se l'header è sticky sul viewport
-             * @example true
-             */
-            isSticky?: boolean;
-            /** @description Albero di blocchi, già migrato/validato/sanitizzato in scrittura */
-            content?: {
-                [key: string]: unknown;
-            };
-        };
-        PublicActiveGlobalSectionsDto: {
-            header?: components["schemas"]["PublicGlobalSectionDto"] | null;
-            footer?: components["schemas"]["PublicGlobalSectionDto"] | null;
-        };
-        DisplayConditionRuleDto: {
-            /**
-             * @description Verso della regola
-             * @enum {string}
-             */
-            type: "include" | "exclude";
-            /**
-             * @description Bersaglio della regola
-             * @enum {string}
-             */
-            target: "entire_site" | "specific_page" | "path_pattern";
-            /**
-             * @description Path esatto (target specific_page) o pattern con wildcard "*" (target path_pattern); assente per entire_site.
-             * @example /blog/*
-             */
-            value?: string;
-        };
-        CreateSiteTemplateDto: {
-            /**
-             * @description Titolo del Template
-             * @example Ricerca — layout risultati
-             */
-            title: string;
-            /**
-             * @description Tipo di Template
-             * @enum {string}
-             */
-            type: "single_post" | "single_page" | "archive" | "search_results" | "loop_item" | "error_404";
-            /** @description Albero di blocchi iniziale (default: albero vuoto) */
-            contentTree?: {
-                [key: string]: unknown;
-            };
-            /**
-             * @description Pubblicato (default false)
-             * @example false
-             */
-            isPublished?: boolean;
-            /**
-             * @description Lingua (default "IT")
-             * @example IT
-             */
-            language?: string;
-            /**
-             * @description Priorità di risoluzione (default 0, più alto vince)
-             * @example 0
-             */
-            priority?: number;
-            /** @description Condizioni di visualizzazione (default nessuna) */
-            displayConditions?: components["schemas"]["DisplayConditionRuleDto"][];
-        };
-        SiteTemplateResponseDto: {
-            /**
-             * @description Guid del Template
-             * @example a1b2c3d4e5f6a7b8
-             */
-            guid: string;
-            /** @description Titolo del Template */
-            title: string;
-            /**
-             * @description Tipo di Template
-             * @enum {string}
-             */
-            type: "single_post" | "single_page" | "archive" | "search_results" | "loop_item" | "error_404";
-            /** @description Albero di blocchi corrente */
-            contentTree: {
-                [key: string]: unknown;
-            };
-            /** @description Pubblicato */
-            isPublished: boolean;
-            /** @description Lingua */
-            language: string;
-            /** @description Priorità di risoluzione (più alto vince) */
-            priority: number;
-            /** @description Condizioni di visualizzazione */
-            displayConditions: components["schemas"]["DisplayConditionRuleDto"][];
-            /**
-             * @description Version corrente (lock ottimistico)
-             * @example 1
-             */
-            version: number;
-            /**
-             * Format: date-time
-             * @description Data creazione
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Data ultimo aggiornamento
-             */
-            updatedAt: string;
-        };
-        UpdateSiteTemplateDto: {
-            /**
-             * @description Version letta al caricamento del Template (lock ottimistico)
-             * @example 3
-             */
-            version: number;
-            /** @description Titolo del Template */
-            title?: string;
-            /**
-             * @description Tipo di Template
-             * @enum {string}
-             */
-            type?: "single_post" | "single_page" | "archive" | "search_results" | "loop_item" | "error_404";
-            /** @description Albero di blocchi aggiornato (sostituisce integralmente il precedente) */
-            contentTree?: {
-                [key: string]: unknown;
-            };
-            /** @description Pubblicato */
-            isPublished?: boolean;
-            /** @description Lingua */
-            language?: string;
-            /** @description Priorità di risoluzione (più alto vince) */
-            priority?: number;
-            /** @description Condizioni di visualizzazione (sostituisce integralmente l'array precedente) */
-            displayConditions?: components["schemas"]["DisplayConditionRuleDto"][];
-        };
-        ResolveSiteTemplateDto: {
-            /**
-             * @description Path pubblico da risolvere
-             * @example /blog/il-mio-articolo
-             */
-            path: string;
-            /**
-             * @description Tipo di Template richiesto
-             * @enum {string}
-             */
-            type: "single_post" | "single_page" | "archive" | "search_results" | "loop_item" | "error_404";
-            /**
-             * @description Lingua richiesta
-             * @example IT
-             */
-            lang: string;
-        };
-        ResolvedSiteTemplateDto: {
-            /**
-             * @description Guid del Template
-             * @example a1b2c3d4e5f6a7b8
-             */
-            guid: string;
-            /** @description Titolo del Template */
-            title: string;
-            /**
-             * @description Tipo di Template
-             * @enum {string}
-             */
-            type: "single_post" | "single_page" | "archive" | "search_results" | "loop_item" | "error_404";
-            /** @description Albero di blocchi corrente */
-            contentTree: {
-                [key: string]: unknown;
-            };
-            /** @description Pubblicato */
-            isPublished: boolean;
-            /** @description Lingua */
-            language: string;
-            /** @description Priorità di risoluzione (più alto vince) */
-            priority: number;
-            /** @description Condizioni di visualizzazione */
-            displayConditions: components["schemas"]["DisplayConditionRuleDto"][];
-            /**
-             * @description Version corrente (lock ottimistico)
-             * @example 1
-             */
-            version: number;
-            /**
-             * Format: date-time
-             * @description Data creazione
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Data ultimo aggiornamento
-             */
-            updatedAt: string;
-        };
-        AnalyticsOverviewDto: {
-            /**
-             * @description Numero totale di pageview nel range
-             * @example 4820
-             */
-            totalViews: number;
-            /**
-             * @description Visitatori unici (hash distinti) nel range
-             * @example 1230
-             */
-            uniqueVisitors: number;
-            /**
-             * @description Numero di percorsi distinti con almeno una pageview nel range
-             * @example 42
-             */
-            pagesWithTraffic: number;
-            /**
-             * @description Variazione percentuale di totalViews vs il periodo immediatamente precedente di pari durata (null se il periodo precedente non ha traffico)
-             * @example 12.5
-             */
-            trendPercentage: Record<string, never> | null;
-        };
-        AnalyticsTimeseriesPointDto: {
-            /**
-             * @description Inizio del bucket (ISO 8601)
-             * @example 2026-08-28T00:00:00.000Z
-             */
-            bucket: string;
-            /** @example 320 */
-            views: number;
-            /** @example 95 */
-            uniqueVisitors: number;
-        };
-        AnalyticsTimeseriesDto: {
-            /**
-             * @example day
-             * @enum {string}
-             */
-            interval: "day" | "hour";
-            points: components["schemas"]["AnalyticsTimeseriesPointDto"][];
-        };
-        AnalyticsTopPageDto: {
-            /** @example /chi-siamo */
-            path: string;
-            /** @example 640 */
-            views: number;
-            /** @example 210 */
-            uniqueVisitors: number;
-            /**
-             * @description Percentuale sul totale delle view nel range
-             * @example 13.3
-             */
-            percentage: number;
-        };
-        AnalyticsReferrerDto: {
-            /** @example https://www.google.com/ */
-            referrer: string;
-            /** @example 340 */
-            count: number;
-            /**
-             * @description Percentuale sul totale degli eventi nel range
-             * @example 27.4
-             */
-            percentage: number;
-        };
-        AnalyticsDistributionRowDto: {
-            /** @example desktop */
-            label: string;
-            /** @example 3100 */
-            count: number;
-            /** @example 64.3 */
-            percentage: number;
-        };
-        AnalyticsDeviceStatsDto: {
-            devices: components["schemas"]["AnalyticsDistributionRowDto"][];
-            browsers: components["schemas"]["AnalyticsDistributionRowDto"][];
-        };
-        SubmitFormDto: {
-            /**
-             * @description Firma HMAC-SHA256(formKey, FORM_ANTISPAM_SECRET) calcolata dal renderer al momento del render/export e restituita invariata dal client (ADR-46 § 3, RFC-46 D6.2). Non è un token di sessione: nessuno stato, nessuna scadenza.
-             * @example a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2
-             */
-            signature: string;
-            /** @description Valori dei campi realmente sottomessi, chiave = form-field.name. La whitelist dei nomi ammessi è fatta dal service contro i form-field realmente pubblicati (RFC-46 D4.3), mai da questa DTO. */
-            values: {
-                [key: string]: unknown;
-            };
-        };
+  schemas: {
+    LoginDto: {
+      /**
+       * @description Indirizzo email dell'utente
+       * @example admin@example.com
+       */
+      email: string;
+      /**
+       * @description Password dell'utente
+       * @example Password123!
+       */
+      password: string;
     };
-    responses: never;
-    parameters: never;
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+    MfaVerifyDto: {
+      /**
+       * @description Token temporaneo restituito da /auth/login quando è richiesta la MFA
+       * @example a1b2c3...
+       */
+      tmpToken: string;
+      /**
+       * @description Codice TOTP a 6 cifre generato dall'app authenticator
+       * @example 123456
+       */
+      code: string;
+    };
+    ActivateAccountDto: {
+      /**
+       * @description Il token di attivazione ricevuto via email (64 caratteri)
+       * @example a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3d4e5f6
+       */
+      token: string;
+      /**
+       * @description La nuova password da impostare per l'account (minimo 12 caratteri)
+       * @example SicuraPassword123!
+       */
+      password: string;
+    };
+    ForgotPasswordDto: {
+      /**
+       * @description L'indirizzo email associato all'account da recuperare
+       * @example utente@example.com
+       */
+      email: string;
+    };
+    ResetPasswordDto: {
+      /**
+       * @description Il token di reimpostazione ricevuto via email (64 caratteri)
+       * @example a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3d4e5f6
+       */
+      token: string;
+      /**
+       * @description La nuova password conforme alla policy di sicurezza (minimo 12 caratteri)
+       * @example NuovaSuperPassword2026!
+       */
+      password: string;
+    };
+    UpdateProfileDto: {
+      /**
+       * @description Nome dell'utente
+       * @example Mario
+       */
+      name: string;
+      /**
+       * @description Cognome dell'utente
+       * @example Rossi
+       */
+      surname?: string;
+    };
+    ChangePasswordDto: {
+      /**
+       * @description La password attuale dell'utente, usata per confermare l'identità
+       * @example VecchiaPassword2025!
+       */
+      currentPassword: string;
+      /**
+       * @description La nuova password conforme alla policy di sicurezza (minimo 12 caratteri)
+       * @example NuovaSuperPassword2026!
+       */
+      newPassword: string;
+    };
+    MfaEnableDto: {
+      /**
+       * @description Codice TOTP a 6 cifre generato dall'app authenticator con il secret ricevuto da mfa-setup
+       * @example 123456
+       */
+      code: string;
+    };
+    MfaDisableDto: {
+      /**
+       * @description Codice TOTP a 6 cifre generato dall'app authenticator
+       * @example 123456
+       */
+      code: string;
+    };
+    CreateUserDto: {
+      /**
+       * @description Nome dell'utente
+       * @example Mario
+       */
+      name: string;
+      /**
+       * @description Cognome dell'utente
+       * @example Rossi
+       */
+      surname?: string;
+      /**
+       * @description Email dell'utente
+       * @example mario.rossi@example.com
+       */
+      email: string;
+      /**
+       * @description Ruolo assegnato
+       * @example 30
+       * @enum {number}
+       */
+      role: 5 | 10 | 20 | 30;
+      /** @description Identificatore di scope multi-tenant/multi-sede, a disposizione dei moduli del CMS */
+      scopeId?: string;
+    };
+    UpdateUserDto: {
+      /** @description Nome dell'utente */
+      name?: string;
+      /** @description Cognome dell'utente */
+      surname?: string;
+      /** @description Email dell'utente */
+      email?: string;
+      /**
+       * @description Ruolo assegnato
+       * @enum {number}
+       */
+      role?: 5 | 10 | 20 | 30;
+      /** @description Identificatore di scope multi-tenant/multi-sede */
+      scopeId?: string;
+    };
+    ThemeColorsDto: {
+      /**
+       * @description Colore primario
+       * @example #228be6
+       */
+      primary: string;
+      /**
+       * @description Colore secondario
+       * @example #868e96
+       */
+      secondary: string;
+      /**
+       * @description Colore accento
+       * @example #be4bdb
+       */
+      accent: string;
+      /**
+       * @description Colore successo
+       * @example #40c057
+       */
+      success: string;
+      /**
+       * @description Colore avviso
+       * @example #fab005
+       */
+      warning: string;
+      /**
+       * @description Colore allerta
+       * @example #f76707
+       */
+      alert: string;
+      /**
+       * @description Colore errore
+       * @example #fa5252
+       */
+      error: string;
+      /**
+       * @description Colore pericolo
+       * @example #c92a2a
+       */
+      danger: string;
+      /**
+       * @description Colore informativo
+       * @example #15aabf
+       */
+      info: string;
+    };
+    ThemePrimaryShadeDto: {
+      /**
+       * @description Shade filled nello scheme chiaro (0–9)
+       * @example 8
+       */
+      light: number;
+      /**
+       * @description Shade filled nello scheme scuro (0–9)
+       * @example 5
+       */
+      dark: number;
+    };
+    ThemeGradientDto: {
+      /**
+       * @description Colore di partenza
+       * @example #228be6
+       */
+      from: string;
+      /**
+       * @description Colore di arrivo
+       * @example #15aabf
+       */
+      to: string;
+      /**
+       * @description Angolo in gradi (0–360)
+       * @example 45
+       */
+      deg: number;
+    };
+    ThemeFontSizesDto: {
+      /**
+       * @description Dimensione testo xs
+       * @example 12
+       */
+      xs: number;
+      /**
+       * @description Dimensione testo sm
+       * @example 14
+       */
+      sm: number;
+      /**
+       * @description Dimensione testo md
+       * @example 16
+       */
+      md: number;
+      /**
+       * @description Dimensione testo lg
+       * @example 18
+       */
+      lg: number;
+      /**
+       * @description Dimensione testo xl
+       * @example 20
+       */
+      xl: number;
+    };
+    ThemeLineHeightsDto: {
+      /**
+       * @description Interlinea xs
+       * @example 1.4
+       */
+      xs: number;
+      /**
+       * @description Interlinea sm
+       * @example 1.45
+       */
+      sm: number;
+      /**
+       * @description Interlinea md
+       * @example 1.55
+       */
+      md: number;
+      /**
+       * @description Interlinea lg
+       * @example 1.6
+       */
+      lg: number;
+      /**
+       * @description Interlinea xl
+       * @example 1.65
+       */
+      xl: number;
+    };
+    ThemeHeadingSizeDto: {
+      /**
+       * @description Dimensione font
+       * @example 34
+       */
+      fontSize: number;
+      /**
+       * @description Interlinea (0.8–3)
+       * @example 1.3
+       */
+      lineHeight: number;
+    };
+    ThemeHeadingSizesDto: {
+      /** @description Titolo h1 */
+      h1: components['schemas']['ThemeHeadingSizeDto'];
+      /** @description Titolo h2 */
+      h2: components['schemas']['ThemeHeadingSizeDto'];
+      /** @description Titolo h3 */
+      h3: components['schemas']['ThemeHeadingSizeDto'];
+      /** @description Titolo h4 */
+      h4: components['schemas']['ThemeHeadingSizeDto'];
+      /** @description Titolo h5 */
+      h5: components['schemas']['ThemeHeadingSizeDto'];
+      /** @description Titolo h6 */
+      h6: components['schemas']['ThemeHeadingSizeDto'];
+    };
+    ThemeHeadingsDto: {
+      /**
+       * @description Font dei titoli (ID whitelisted)
+       * @example inter
+       * @enum {string}
+       */
+      fontFamily: 'inter' | 'system' | 'humanist' | 'geometric' | 'rounded' | 'serif' | 'slab';
+      /**
+       * @description Peso dei titoli
+       * @example 700
+       * @enum {string}
+       */
+      fontWeight: '300' | '400' | '500' | '600' | '700' | '800' | '900';
+      /**
+       * @description Unità CSS condivisa dalla dimensione di ogni livello h1–h6 (v7)
+       * @example px
+       * @enum {string}
+       */
+      fontSizeUnit: 'px' | 'em' | 'rem' | '%';
+      /** @description Dimensioni h1–h6 */
+      sizes: components['schemas']['ThemeHeadingSizesDto'];
+    };
+    ThemeTypographyDto: {
+      /**
+       * @description Font del testo (ID whitelisted)
+       * @example inter
+       * @enum {string}
+       */
+      fontFamily: 'inter' | 'system' | 'humanist' | 'geometric' | 'rounded' | 'serif' | 'slab';
+      /**
+       * @description Font monospace (ID whitelisted)
+       * @example system-mono
+       * @enum {string}
+       */
+      fontFamilyMonospace: 'system-mono' | 'courier';
+      /** @description Dimensioni testo xs–xl */
+      fontSizes: components['schemas']['ThemeFontSizesDto'];
+      /**
+       * @description Unità CSS di fontSizes (v7)
+       * @example px
+       * @enum {string}
+       */
+      fontSizeUnit: 'px' | 'em' | 'rem' | '%';
+      /** @description Interlinee xs–xl */
+      lineHeights: components['schemas']['ThemeLineHeightsDto'];
+      /** @description Configurazione titoli */
+      headings: components['schemas']['ThemeHeadingsDto'];
+    };
+    ThemeSpacingDto: {
+      /**
+       * @description Spaziatura xs
+       * @example 10
+       */
+      xs: number;
+      /**
+       * @description Spaziatura sm
+       * @example 12
+       */
+      sm: number;
+      /**
+       * @description Spaziatura md
+       * @example 16
+       */
+      md: number;
+      /**
+       * @description Spaziatura lg
+       * @example 20
+       */
+      lg: number;
+      /**
+       * @description Spaziatura xl
+       * @example 32
+       */
+      xl: number;
+    };
+    ThemeRadiusScaleDto: {
+      /**
+       * @description Radius xs
+       * @example 2
+       */
+      xs: number;
+      /**
+       * @description Radius sm
+       * @example 4
+       */
+      sm: number;
+      /**
+       * @description Radius md
+       * @example 8
+       */
+      md: number;
+      /**
+       * @description Radius lg
+       * @example 16
+       */
+      lg: number;
+      /**
+       * @description Radius xl
+       * @example 32
+       */
+      xl: number;
+    };
+    ThemeShadowSpecDto: {
+      /**
+       * @description Offset verticale
+       * @example 1
+       */
+      y: number;
+      /**
+       * @description Sfocatura
+       * @example 3
+       */
+      blur: number;
+      /**
+       * @description Espansione
+       * @example 0
+       */
+      spread: number;
+      /**
+       * @description Opacità del nero (0–1)
+       * @example 0.05
+       */
+      opacity: number;
+    };
+    ThemeShadowsDto: {
+      /** @description Ombra xs */
+      xs: components['schemas']['ThemeShadowSpecDto'];
+      /** @description Ombra sm */
+      sm: components['schemas']['ThemeShadowSpecDto'];
+      /** @description Ombra md */
+      md: components['schemas']['ThemeShadowSpecDto'];
+      /** @description Ombra lg */
+      lg: components['schemas']['ThemeShadowSpecDto'];
+      /** @description Ombra xl */
+      xl: components['schemas']['ThemeShadowSpecDto'];
+    };
+    ThemeButtonDefaultsDto: {
+      /**
+       * @description Variant di default
+       * @example unset
+       * @enum {string}
+       */
+      variant: 'unset' | 'filled' | 'light' | 'outline' | 'subtle' | 'default' | 'gradient';
+      /**
+       * @description Size di default
+       * @example unset
+       * @enum {string}
+       */
+      size: 'unset' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+      /**
+       * @description Radius di default
+       * @example unset
+       * @enum {string}
+       */
+      radius: 'unset' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+    };
+    ThemeActionIconDefaultsDto: {
+      /**
+       * @description Variant di default
+       * @example unset
+       * @enum {string}
+       */
+      variant: 'unset' | 'filled' | 'light' | 'outline' | 'subtle' | 'default' | 'transparent';
+      /**
+       * @description Radius di default
+       * @example unset
+       * @enum {string}
+       */
+      radius: 'unset' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+    };
+    ThemeBadgeDefaultsDto: {
+      /**
+       * @description Variant di default
+       * @example unset
+       * @enum {string}
+       */
+      variant: 'unset' | 'filled' | 'light' | 'outline' | 'dot' | 'default';
+      /**
+       * @description Size di default
+       * @example unset
+       * @enum {string}
+       */
+      size: 'unset' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+      /**
+       * @description Radius di default
+       * @example unset
+       * @enum {string}
+       */
+      radius: 'unset' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+    };
+    ThemeInputDefaultsDto: {
+      /**
+       * @description Variant di default
+       * @example unset
+       * @enum {string}
+       */
+      variant: 'unset' | 'default' | 'filled' | 'unstyled';
+      /**
+       * @description Size di default
+       * @example unset
+       * @enum {string}
+       */
+      size: 'unset' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+      /**
+       * @description Radius di default
+       * @example unset
+       * @enum {string}
+       */
+      radius: 'unset' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+    };
+    ThemeCardDefaultsDto: {
+      /**
+       * @description Ombra di default
+       * @example unset
+       * @enum {string}
+       */
+      shadow: 'unset' | 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+      /**
+       * @description Radius di default
+       * @example unset
+       * @enum {string}
+       */
+      radius: 'unset' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+      /**
+       * @description Padding di default
+       * @example unset
+       * @enum {string}
+       */
+      padding: 'unset' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+      /**
+       * @description Bordo visibile (withBorder)
+       * @example false
+       */
+      withBorder: boolean;
+    };
+    ThemeModalDefaultsDto: {
+      /**
+       * @description Radius di default
+       * @example unset
+       * @enum {string}
+       */
+      radius: 'unset' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+      /**
+       * @description Ombra di default
+       * @example unset
+       * @enum {string}
+       */
+      shadow: 'unset' | 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+      /**
+       * @description Padding di default
+       * @example unset
+       * @enum {string}
+       */
+      padding: 'unset' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+      /**
+       * @description Blur overlay (0–12)
+       * @example 0
+       */
+      overlayBlur: number;
+      /**
+       * @description Modale centrata verticalmente
+       * @example false
+       */
+      centered: boolean;
+    };
+    ThemeTableDefaultsDto: {
+      /**
+       * @description Righe alternate
+       * @example false
+       */
+      striped: boolean;
+      /**
+       * @description Evidenzia riga al passaggio
+       * @example false
+       */
+      highlightOnHover: boolean;
+      /**
+       * @description Bordo esterno tabella
+       * @example false
+       */
+      withTableBorder: boolean;
+      /**
+       * @description Bordi tra le colonne
+       * @example false
+       */
+      withColumnBorders: boolean;
+      /**
+       * @description Spaziatura verticale delle celle
+       * @example unset
+       * @enum {string}
+       */
+      verticalSpacing: 'unset' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+    };
+    ThemeTooltipDefaultsDto: {
+      /**
+       * @description Freccia sul tooltip
+       * @example false
+       */
+      withArrow: boolean;
+      /**
+       * @description Radius di default
+       * @example unset
+       * @enum {string}
+       */
+      radius: 'unset' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+    };
+    ThemeLoaderDefaultsDto: {
+      /**
+       * @description Tipo di animazione
+       * @example unset
+       * @enum {string}
+       */
+      type: 'unset' | 'oval' | 'bars' | 'dots';
+    };
+    ThemeComponentsDto: {
+      /** @description Default Button */
+      button: components['schemas']['ThemeButtonDefaultsDto'];
+      /** @description Default ActionIcon */
+      actionIcon: components['schemas']['ThemeActionIconDefaultsDto'];
+      /** @description Default Badge */
+      badge: components['schemas']['ThemeBadgeDefaultsDto'];
+      /** @description Default campi input */
+      input: components['schemas']['ThemeInputDefaultsDto'];
+      /** @description Default Paper/Card */
+      card: components['schemas']['ThemeCardDefaultsDto'];
+      /** @description Default Modal/Drawer */
+      modal: components['schemas']['ThemeModalDefaultsDto'];
+      /** @description Default Table */
+      table: components['schemas']['ThemeTableDefaultsDto'];
+      /** @description Default Tooltip */
+      tooltip: components['schemas']['ThemeTooltipDefaultsDto'];
+      /** @description Default Loader */
+      loader: components['schemas']['ThemeLoaderDefaultsDto'];
+    };
+    ThemeSchemeTokensDto: {
+      /**
+       * @description Sfondo applicativo
+       * @example #f8f9fa
+       */
+      pageBg: string;
+      /**
+       * @description Sfondo card / superfici contenuto
+       * @example #ffffff
+       */
+      cardBg: string;
+      /**
+       * @description Bordo card
+       * @example #ffffff
+       */
+      cardBorder: string;
+      /**
+       * @description Testo principale
+       * @example #000000
+       */
+      textPrimary: string;
+      /**
+       * @description Testo secondario/dimmed
+       * @example #868e96
+       */
+      textSecondary: string;
+      /**
+       * @description Colore del titolo H1
+       * @example #000000
+       */
+      headingH1: string;
+      /**
+       * @description Colore del titolo H2
+       * @example #000000
+       */
+      headingH2: string;
+      /**
+       * @description Colore del titolo H3
+       * @example #000000
+       */
+      headingH3: string;
+      /**
+       * @description Colore del titolo H4
+       * @example #000000
+       */
+      headingH4: string;
+      /**
+       * @description Colore del titolo H5
+       * @example #000000
+       */
+      headingH5: string;
+      /**
+       * @description Colore del titolo H6
+       * @example #000000
+       */
+      headingH6: string;
+      /**
+       * @description Sfondo sidebar
+       * @example #242424
+       */
+      navbarBg: string;
+      /**
+       * @description Testo voci navbar
+       * @example #b8b8b8
+       */
+      navbarText: string;
+      /**
+       * @description Sfondo hover voce navbar
+       * @example #2e2e2e
+       */
+      navbarHoverBg: string;
+      /**
+       * @description Sfondo voce navbar attiva
+       * @example #1971c2
+       */
+      navbarActiveBg: string;
+      /**
+       * @description Testo voce navbar attiva
+       * @example #ffffff
+       */
+      navbarActiveText: string;
+      /**
+       * @description Bordi interni sidebar
+       * @example #3b3b3b
+       */
+      navbarBorder: string;
+    };
+    ThemeLayoutMarginDto: {
+      /**
+       * @description Margine superiore
+       * @example 0
+       */
+      top: number;
+      /**
+       * @description Margine destro
+       * @example 0
+       */
+      right: number;
+      /**
+       * @description Margine inferiore
+       * @example 0
+       */
+      bottom: number;
+      /**
+       * @description Margine sinistro
+       * @example 0
+       */
+      left: number;
+    };
+    ThemeLayoutPaddingDto: {
+      /**
+       * @description Rientro superiore
+       * @example 0
+       */
+      top: number;
+      /**
+       * @description Rientro destro
+       * @example 0
+       */
+      right: number;
+      /**
+       * @description Rientro inferiore
+       * @example 0
+       */
+      bottom: number;
+      /**
+       * @description Rientro sinistro
+       * @example 0
+       */
+      left: number;
+    };
+    ThemeLayoutDto: {
+      /**
+       * @description Larghezza massima della pagina in modalità boxed
+       * @example 1200
+       */
+      pageBoxedWidth: number;
+      /**
+       * @description Unità CSS di pageBoxedWidth (v8)
+       * @example px
+       * @enum {string}
+       */
+      pageBoxedWidthUnit: 'px' | 'em' | 'rem' | '%';
+      /** @description Margini esterni della pagina per lato */
+      margin: components['schemas']['ThemeLayoutMarginDto'];
+      /**
+       * @description Unità CSS di margin (v8)
+       * @example px
+       * @enum {string}
+       */
+      marginUnit: 'px' | 'em' | 'rem' | '%';
+      /** @description Rientro interno della pagina per lato */
+      padding: components['schemas']['ThemeLayoutPaddingDto'];
+      /**
+       * @description Unità CSS di padding (v8)
+       * @example px
+       * @enum {string}
+       */
+      paddingUnit: 'px' | 'em' | 'rem' | '%';
+    };
+    ThemeConfigDto: {
+      /**
+       * @description Versione del contratto ThemeConfig
+       * @example 8
+       * @enum {number}
+       */
+      version: 8;
+      /**
+       * @description Larghezza sidebar espansa
+       * @example 210
+       */
+      navbarWidth: number;
+      /**
+       * @description Unità CSS di navbarWidth (v7)
+       * @example px
+       * @enum {string}
+       */
+      navbarWidthUnit: 'px' | 'em' | 'rem' | '%';
+      /**
+       * @description Sidebar chiusa (solo icone) di default al caricamento
+       * @example false
+       */
+      navbarDefaultCollapsed: boolean;
+      /**
+       * @description Stile del bordo destro della sidebar: bordo sottile o ombra proiettata
+       * @example border
+       * @enum {string}
+       */
+      navbarEdgeStyle: 'border' | 'shadow';
+      /**
+       * @description Intensità (0–1) dell'ombra del bordo destro sidebar quando navbarEdgeStyle è 'shadow'
+       * @example 0.16
+       */
+      navbarEdgeShadowIntensity: number;
+      /** @description I 9 colori semantici del tema */
+      colors: components['schemas']['ThemeColorsDto'];
+      /** @description Shade filled per scheme */
+      primaryShade: components['schemas']['ThemePrimaryShadeDto'];
+      /**
+       * @description Radius di default dei componenti
+       * @example md
+       * @enum {string}
+       */
+      radius: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+      /**
+       * @description Anello di focus
+       * @example auto
+       * @enum {string}
+       */
+      focusRing: 'auto' | 'always' | 'never';
+      /**
+       * @description Cursore sui controlli interattivi
+       * @example default
+       * @enum {string}
+       */
+      cursorType: 'default' | 'pointer';
+      /**
+       * @description Rispetta prefers-reduced-motion
+       * @example false
+       */
+      respectReducedMotion: boolean;
+      /**
+       * @description Contrasto automatico sui filled
+       * @example false
+       */
+      autoContrast: boolean;
+      /**
+       * @description Soglia di luminanza per autoContrast (0–1)
+       * @example 0.3
+       */
+      luminanceThreshold: number;
+      /**
+       * @description Scala globale interfaccia (0.75–1.5)
+       * @example 1
+       */
+      scale: number;
+      /** @description Gradiente di default */
+      defaultGradient: components['schemas']['ThemeGradientDto'];
+      /** @description Blocco tipografico */
+      typography: components['schemas']['ThemeTypographyDto'];
+      /** @description Scala di spaziatura xs–xl */
+      spacing: components['schemas']['ThemeSpacingDto'];
+      /**
+       * @description Unità CSS di spacing (v7)
+       * @example px
+       * @enum {string}
+       */
+      spacingUnit: 'px' | 'em' | 'rem' | '%';
+      /** @description Valori dei radius token xs–xl */
+      radiusScale: components['schemas']['ThemeRadiusScaleDto'];
+      /**
+       * @description Unità CSS di radiusScale (v7)
+       * @example px
+       * @enum {string}
+       */
+      radiusScaleUnit: 'px' | 'em' | 'rem' | '%';
+      /** @description Ombre xs–xl strutturate */
+      shadows: components['schemas']['ThemeShadowsDto'];
+      /**
+       * @description Unità CSS di shadows (v7) — solo lunghezze, mai %
+       * @example px
+       * @enum {string}
+       */
+      shadowUnit: 'px' | 'em' | 'rem';
+      /** @description Default per-componente */
+      components: components['schemas']['ThemeComponentsDto'];
+      /** @description Token per lo scheme chiaro */
+      light: components['schemas']['ThemeSchemeTokensDto'];
+      /** @description Token per lo scheme scuro */
+      dark: components['schemas']['ThemeSchemeTokensDto'];
+      /** @description Layout di pagina: larghezza massima boxed, margini esterni e rientro interno (v8) */
+      layout: components['schemas']['ThemeLayoutDto'];
+    };
+    MultilingualConfigDto: {
+      /**
+       * @description Codici Locale attivi (BCP-47 libero, es. "it-IT")
+       * @example [
+       *       "it-IT",
+       *       "en-GB"
+       *     ]
+       */
+      active: string[];
+      /**
+       * @description Locale di default (senza prefisso nelle URL pubbliche, ADR-24 § 5)
+       * @example it-IT
+       */
+      default: string;
+    };
+    GlobalTokensPaletteDto: {
+      /**
+       * @description Colore primario di brand
+       * @example #93003c
+       */
+      primary: string;
+      /**
+       * @description Colore secondario di brand
+       * @example #00a0d2
+       */
+      secondary: string;
+      /**
+       * @description Colore testo di brand
+       * @example #333333
+       */
+      text: string;
+      /**
+       * @description Colore accento di brand
+       * @example #f7a600
+       */
+      accent: string;
+    };
+    GlobalTokensDimensionDto: {
+      /**
+       * @description Valore numerico della dimensione
+       * @example 16
+       */
+      value: number;
+      /**
+       * @description Unità CSS
+       * @example px
+       * @enum {string}
+       */
+      unit: 'px' | 'em' | 'rem';
+    };
+    GlobalTokensTypographyDto: {
+      /**
+       * @description Font base di sito (ID whitelisted, stessa whitelist di ADR-4)
+       * @example inter
+       * @enum {string}
+       */
+      mainFont: 'inter' | 'system' | 'humanist' | 'geometric' | 'rounded' | 'serif' | 'slab';
+      /** @description Dimensione base del testo */
+      baseSize: components['schemas']['GlobalTokensDimensionDto'];
+    };
+    GlobalTokensSpacingDto: {
+      /** @description Unità di spaziatura base */
+      baseUnit: components['schemas']['GlobalTokensDimensionDto'];
+    };
+    GlobalTokensDto: {
+      /**
+       * @description Versione del contratto GlobalTokens
+       * @example 1
+       * @enum {number}
+       */
+      version: 1;
+      /** @description Palette di brand a livello di sito */
+      palette: components['schemas']['GlobalTokensPaletteDto'];
+      /** @description Tipografia base di sito */
+      typography: components['schemas']['GlobalTokensTypographyDto'];
+      /** @description Spaziatura base di sito */
+      spacing: components['schemas']['GlobalTokensSpacingDto'];
+    };
+    UploadFileDto: {
+      /**
+       * @description Nome tabella/dominio a cui associare il file
+       * @example invoice
+       */
+      entity?: string;
+      /**
+       * @description Id/guid dell'entità di dominio da associare
+       * @example a1b2c3d4e5f6a7b8
+       */
+      entityId?: string;
+    };
+    FileMetadataDto: {
+      /**
+       * @description Identificatore pubblico del file, usato nelle URL
+       * @example a1b2c3d4e5f6a7b8
+       */
+      guid: string;
+      /**
+       * @description Nome file originale (solo display)
+       * @example fattura-2026-001.pdf
+       */
+      originalName: string;
+      /**
+       * @description MIME type dichiarato dal client
+       * @example application/pdf
+       */
+      mimeType: string;
+      /**
+       * @description Dimensione del file in byte
+       * @example 348213
+       */
+      sizeBytes: number;
+      /**
+       * @description Nome tabella/dominio a cui il file è associato, se presente
+       * @example invoice
+       */
+      entity?: Record<string, never> | null;
+      /**
+       * @description Id/guid dell'entità di dominio associata, se presente
+       * @example a1b2c3d4e5f6a7b8
+       */
+      entityId?: Record<string, never> | null;
+      /**
+       * @description Larghezza in pixel, letta dagli header raster all'upload. `null` per i non-raster e per le righe caricate prima che questo campo esistesse (RFC-F09 § 3, colonna non ancora in schema — sempre `null` finché N2 non è firmata).
+       * @example null
+       */
+      width?: Record<string, never> | null;
+      /**
+       * @description Altezza in pixel, stessa provenienza e stesse condizioni di `width` (RFC-F09 § 3).
+       * @example null
+       */
+      height?: Record<string, never> | null;
+      /**
+       * @description URL pubblico derivato server-side (`api/v1/public/media/:guid`), valorizzato solo se `entity` è `page-media` (ADR-27 § 2/§ 6). `null` altrimenti — non implica che il blob sia effettivamente servibile: la verifica del formato raster reale avviene in lettura su quella rotta (ADR-27 § 3, § 4).
+       * @example api/v1/public/media/a1b2c3d4e5f6a7b8
+       */
+      url?: Record<string, never> | null;
+      /**
+       * @description Percentuale orizzontale (0-100) del soggetto, usata come centro del ritaglio quando una trasformazione non fornisce un crop esplicito. Default: centro immagine.
+       * @example 50
+       */
+      focalX: number;
+      /**
+       * @description Percentuale verticale (0-100) del soggetto, stessa semantica di focalX.
+       * @example 50
+       */
+      focalY: number;
+      /**
+       * Format: date-time
+       * @description Data di caricamento
+       * @example 2026-07-23T10:00:00.000Z
+       */
+      createdAt: string;
+    };
+    UpdateFocalPointDto: {
+      /**
+       * @description Percentuale orizzontale (0-100) del soggetto, usata come centro del ritaglio quando non è fornito un crop esplicito. Default: centro immagine.
+       * @example 50
+       */
+      focalX: number;
+      /**
+       * @description Percentuale verticale (0-100) del soggetto, stessa semantica di focalX.
+       * @example 50
+       */
+      focalY: number;
+    };
+    MediaTransformDto: {
+      /** @description Coordinata X (px) dell'angolo del ritaglio */
+      cropX?: number;
+      /** @description Coordinata Y (px) dell'angolo del ritaglio */
+      cropY?: number;
+      /** @description Larghezza (px) del ritaglio */
+      cropW?: number;
+      /** @description Altezza (px) del ritaglio */
+      cropH?: number;
+      /**
+       * @description Percentuale orizzontale (0-100) del soggetto, usata come centro del ritaglio quando non è fornito un crop esplicito. Default: centro immagine.
+       * @default 50
+       */
+      focalX: number;
+      /**
+       * @description Percentuale verticale (0-100) del soggetto, stessa semantica di focalX.
+       * @default 50
+       */
+      focalY: number;
+      /**
+       * @description Preset nominato di destinazione (ADR-49 § M6). Ignorato se è fornito un crop esplicito.
+       * @enum {string}
+       */
+      preset?: 'thumbnail' | 'card' | 'hero' | 'og';
+    };
+    MediaTransformResultDto: {
+      /**
+       * @description Id del job BullMQ accodato per la generazione della variante
+       * @example 42
+       */
+      jobId: string;
+    };
+    UnreadCountDto: {
+      /**
+       * @description Numero di notifiche non lette del chiamante
+       * @example 3
+       */
+      count: number;
+    };
+    NotificationDto: {
+      /**
+       * @description Identificatore pubblico della notifica, usato nelle URL
+       * @example a1b2c3d4e5f6a7b8
+       */
+      guid: string;
+      /**
+       * @description Codice tipo libero, definito dal progetto verticale
+       * @example system.info
+       */
+      type: string;
+      /**
+       * @description Titolo breve
+       * @example Nuovo documento caricato
+       */
+      title: string;
+      /**
+       * @description Testo del messaggio
+       * @example Il file "fattura.pdf" è stato caricato con successo.
+       */
+      message: string;
+      /**
+       * @description Percorso frontend su cui portare l'utente al click, se presente
+       * @example /files
+       */
+      link?: Record<string, never> | null;
+      /**
+       * @description Se la notifica è già stata letta
+       * @example false
+       */
+      isRead: boolean;
+      /**
+       * Format: date-time
+       * @description Data di creazione
+       * @example 2026-07-23T10:00:00.000Z
+       */
+      createdAt: string;
+    };
+    MarkAllReadDto: {
+      /**
+       * @description Numero di notifiche aggiornate
+       * @example 3
+       */
+      updated: number;
+    };
+    PageFaqEntryDto: {
+      /** @description Domanda */
+      question?: string;
+      /** @description Risposta */
+      answer?: string;
+    };
+    PageSeoDto: {
+      /** @description Titolo per i motori di ricerca (fallback al titolo Pagina) */
+      metaTitle?: string;
+      /** @description Descrizione per i motori di ricerca */
+      metaDescription?: string;
+      /** @description URL canonica (se vuota, calcolata dal percorso della Pagina) */
+      canonicalUrl?: string;
+      /**
+       * @description Direttiva indicizzazione
+       * @enum {string}
+       */
+      robotsIndex?: 'index' | 'noindex';
+      /**
+       * @description Direttiva crawling dei link
+       * @enum {string}
+       */
+      robotsFollow?: 'follow' | 'nofollow';
+      /** @description Titolo Open Graph (fallback a metaTitle) */
+      ogTitle?: string;
+      /** @description Descrizione Open Graph (fallback a metaDescription) */
+      ogDescription?: string;
+      /** @description Immagine Open Graph (fallback a immagine di copertina) */
+      ogImage?: string;
+      /** @description JSON-LD esteso a mano, oltre a quello generato dal sistema */
+      structuredData?: Record<string, never>;
+      /** @description Riassunto sintetico e autosufficiente per i motori generativi */
+      aiSummary?: string;
+      /** @description Affermazioni brevi e verificabili estratte dalla Pagina */
+      keyFacts?: string[];
+      /** @description Coppie domanda/risposta */
+      faq?: components['schemas']['PageFaqEntryDto'][];
+      /** @description Entità/argomenti trattati dalla Pagina */
+      entities?: string[];
+      /** @description Consenso all'uso del contenuto da parte dei crawler AI (default: consentito) */
+      aiPolicyAllowed?: boolean;
+    };
+    CreatePageDto: {
+      /**
+       * @description Titolo della Pagina
+       * @example Chi siamo
+       */
+      title: string;
+      /**
+       * @description Slug proposto (normalizzato server-side); se assente, generato dal titolo
+       * @example chi-siamo
+       */
+      slug?: string;
+      /**
+       * @description Locale della Pagina
+       * @example it-IT
+       */
+      locale: string;
+      /**
+       * @description Guid della Pagina genitore; assente per una Pagina root
+       * @example a1b2c3d4e5f6a7b8
+       */
+      parentGuid?: string;
+      /** @description Albero di blocchi iniziale (default: albero vuoto) */
+      draftContent?: {
+        [key: string]: unknown;
+      };
+      /** @description Metadati SEO/GEO iniziali */
+      draftSeo?: components['schemas']['PageSeoDto'];
+      /** @example landing-page */
+      templateSlug?: string;
+    };
+    PageDto: {
+      /**
+       * @description Identificatore pubblico della Pagina, usato nelle URL admin
+       * @example a1b2c3d4e5f6a7b8
+       */
+      guid: string;
+      /**
+       * @description Titolo della Pagina
+       * @example Chi siamo
+       */
+      title: string;
+      /**
+       * @description Slug, unico per locale + genitore fra le righe attive
+       * @example chi-siamo
+       */
+      slug: string;
+      /**
+       * @description Locale della Pagina
+       * @example it-IT
+       */
+      locale: string;
+      /** @description Guid della Pagina genitore, null per una Pagina root */
+      parentGuid?: Record<string, never> | null;
+      /**
+       * @description Chiave opaca del gruppo di traduzione
+       * @example f6a7b8a1b2c3d4e5
+       */
+      translationGroupId: string;
+      /**
+       * @description Stato del ciclo di vita
+       * @example draft
+       */
+      status: string;
+      /** @description Data di pubblicazione, se pubblicata */
+      publishedAt?: Record<string, never> | null;
+      /** @description Data di pubblicazione programmata, se impostata */
+      scheduledAt?: Record<string, never> | null;
+      /** @description Albero di blocchi della bozza corrente */
+      draftContent: {
+        [key: string]: unknown;
+      };
+      /** @description Metadati SEO/GEO della bozza corrente */
+      draftSeo: {
+        [key: string]: unknown;
+      };
+      /**
+       * @description Contatore di lock ottimistico, da inviare in ogni PATCH
+       * @example 3
+       */
+      version: number;
+      /**
+       * Format: date-time
+       * @description Data di creazione
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @description Data di ultimo aggiornamento della bozza
+       */
+      updatedAt: string;
+      /** @description Nodi dell'albero blocchi che falliscono migrazione o validazione in lettura (mai un'eccezione: il nodo resta esposto come persistito). Assente solo dove non calcolato per costo (liste); array vuoto quando l'albero è integro. */
+      contentIssues?: {
+        path?: string;
+        code?: string;
+        details?: {
+          [key: string]: unknown;
+        };
+      }[];
+    };
+    CreateTranslationDto: {
+      /**
+       * @description Locale della nuova traduzione (deve essere fra i Locale attivi)
+       * @example en-GB
+       */
+      locale: string;
+      /**
+       * @description Titolo della traduzione; se assente, copiato dalla Pagina sorgente
+       * @example About us
+       */
+      title?: string;
+    };
+    PageTranslationDto: {
+      /**
+       * @description Identificatore pubblico della Pagina (URL admin)
+       * @example b1a2c3d4e5f6a7b8
+       */
+      guid: string;
+      /**
+       * @description Locale della riga
+       * @example en-GB
+       */
+      locale: string;
+      /**
+       * @description Titolo della riga
+       * @example About us
+       */
+      title: string;
+      /**
+       * @description Stato editoriale della riga (draft, review, scheduled, published)
+       * @example draft
+       */
+      status: string;
+    };
+    UpdatePageDto: {
+      /**
+       * @description Version letta al caricamento della bozza (lock ottimistico)
+       * @example 3
+       */
+      version: number;
+      /** @description Titolo della Pagina */
+      title?: string;
+      /** @description Slug (normalizzato server-side); non rigenerato automaticamente dal titolo */
+      slug?: string;
+      /**
+       * @description Guid della nuova Pagina genitore; null per spostare in radice
+       * @example a1b2c3d4e5f6a7b8
+       */
+      parentGuid?: Record<string, never> | null;
+      /** @description Albero di blocchi aggiornato (sostituisce integralmente la bozza) */
+      draftContent?: {
+        [key: string]: unknown;
+      };
+      /** @description Metadati SEO/GEO aggiornati (sostituiscono integralmente i precedenti) */
+      draftSeo?: components['schemas']['PageSeoDto'];
+    };
+    PagePreviewTokenDto: {
+      /**
+       * @description JWT di anteprima, firmato con un segreto dedicato (mai quello di access/refresh). Claim: pageGuid, purpose="page-preview", exp a 15 minuti dall'emissione. Va passato a "GET api/v1/preview/pages/:token" (rotta separata, mai app/ o public/).
+       * @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+       */
+      token: string;
+      /**
+       * Format: date-time
+       * @description Scadenza del token (15 minuti dall'emissione, non rinnovabile: nessun refresh).
+       * @example 2026-08-19T10:15:00.000Z
+       */
+      expiresAt: string;
+    };
+    ChangeStatusDto: {
+      /**
+       * @description Stato di destinazione
+       * @example published
+       * @enum {string}
+       */
+      status: 'draft' | 'review' | 'scheduled' | 'published' | 'archived';
+      /**
+       * @description Data/ora futura di pubblicazione programmata, obbligatoria se status=scheduled
+       * @example 2026-09-01T09:00:00.000Z
+       */
+      scheduledAt?: string;
+    };
+    PropertyDiffDto: {
+      /**
+       * @description Campo variato
+       * @example props.styleTextColor
+       */
+      field: string;
+      /** @description Valore nella prima Revisione */
+      before: {
+        [key: string]: unknown;
+      };
+      /** @description Valore nella seconda Revisione */
+      after: {
+        [key: string]: unknown;
+      };
+    };
+    PageRevisionDiffResponseDto: {
+      /** @description Id dei nodi presenti solo nella seconda Revisione */
+      added: string[];
+      /** @description Id dei nodi presenti solo nella prima Revisione */
+      removed: string[];
+      /** @description Variazioni per nodo modificato, chiave = id del nodo */
+      modified: {
+        [key: string]: components['schemas']['PropertyDiffDto'][];
+      };
+      /** @description Id dei nodi identici in entrambe le Revisioni */
+      unchanged: string[];
+    };
+    PageRevisionDetailDto: {
+      /**
+       * @description Identificatore pubblico della Revisione
+       * @example b1a2c3d4e5f6a7b8
+       */
+      guid: string;
+      /**
+       * @description Progressivo della Revisione per questa Pagina
+       * @example 3
+       */
+      revisionNumber: number;
+      /**
+       * @description Titolo al momento dello snapshot
+       * @example Chi siamo
+       */
+      title: string;
+      /**
+       * @description Slug al momento dello snapshot
+       * @example chi-siamo
+       */
+      slug: string;
+      /**
+       * Format: date-time
+       * @description Data di creazione della Revisione (= data di pubblicazione)
+       */
+      createdAt: string;
+      /**
+       * @description Nome e cognome di chi ha pubblicato questa Revisione (business-rules.md § Revisioni, regola 1)
+       * @example Maria Rossi
+       */
+      authorName: string;
+      /** @description Albero di blocchi al momento della pubblicazione (snapshot immutabile) */
+      content: {
+        [key: string]: unknown;
+      };
+      /** @description Metadati SEO/GEO al momento della pubblicazione (snapshot immutabile) */
+      seo: {
+        [key: string]: unknown;
+      };
+      /** @description Nodi dell'albero blocchi che falliscono migrazione o validazione in lettura (mai un'eccezione: il nodo resta esposto come persistito, mai migrato a metà). Array vuoto quando l'albero è integro (SPEC-F02-blocchi.md § 4.3). */
+      contentIssues: {
+        path?: string;
+        code?: string;
+        details?: {
+          [key: string]: unknown;
+        };
+      }[];
+    };
+    PublicPageDto: {
+      /**
+       * @description Titolo della Pagina, snapshot della Revisione pubblicata
+       * @example Chi siamo
+       */
+      title: string;
+      /**
+       * @description Slug dell'ultimo segmento del percorso, snapshot della Revisione pubblicata
+       * @example chi-siamo
+       */
+      slug: string;
+      /**
+       * @description Locale della Pagina risolta
+       * @example it-IT
+       */
+      locale: string;
+      /** @description Albero di blocchi della Revisione pubblicata, già migrato alla forma corrente ({version, blocks}) */
+      content: {
+        [key: string]: unknown;
+      };
+      /** @description Metadati SEO/GEO della Revisione pubblicata */
+      seo: {
+        [key: string]: unknown;
+      };
+    };
+    PublicPageGuidResolutionDto: {
+      /**
+       * @description Percorso pubblico canonico, locale-prefixed dove non è la lingua di default, della Pagina pubblicata
+       * @example /chi-siamo
+       */
+      path: string;
+    };
+    PagePreviewContentDto: {
+      /**
+       * @description Titolo della Pagina, snapshot della bozza corrente
+       * @example Chi siamo (bozza)
+       */
+      title: string;
+      /**
+       * @description Slug dell'ultimo segmento del percorso, snapshot della bozza corrente
+       * @example chi-siamo
+       */
+      slug: string;
+      /**
+       * @description Locale della Pagina
+       * @example it-IT
+       */
+      locale: string;
+      /** @description Albero di blocchi della bozza corrente, già migrato alla forma corrente ({version, blocks}) */
+      content: {
+        [key: string]: unknown;
+      };
+      /** @description Metadati SEO/GEO della bozza corrente */
+      seo: {
+        [key: string]: unknown;
+      };
+    };
+    CreateGlobalSectionDto: {
+      /**
+       * @description Titolo della Sezione Globale
+       * @example Header principale
+       */
+      title: string;
+      /**
+       * @description Slug admin proposto (normalizzato server-side); se assente, generato dal titolo
+       * @example header-principale
+       */
+      slug?: string;
+      /**
+       * @description Slot di layout pubblico (default "none")
+       * @example header
+       * @enum {string}
+       */
+      layoutSlot?: 'none' | 'header' | 'footer';
+      /**
+       * @description Rende l'header sticky sul viewport quando lo slot è `header`.
+       * @example true
+       */
+      isSticky?: boolean;
+      /** @description Albero di blocchi iniziale (default: albero vuoto) */
+      content?: {
+        [key: string]: unknown;
+      };
+    };
+    GlobalSectionDto: {
+      /**
+       * @description Guid della Sezione Globale
+       * @example a1b2c3d4e5f6a7b8
+       */
+      guid: string;
+      /** @description Titolo della Sezione Globale */
+      title: string;
+      /** @description Slug admin */
+      slug: string;
+      /**
+       * @description Slot di layout pubblico
+       * @enum {string}
+       */
+      layoutSlot: 'none' | 'header' | 'footer';
+      /**
+       * @description Se l'header è sticky sul viewport
+       * @example true
+       */
+      isSticky: boolean;
+      /** @description Albero di blocchi corrente */
+      content: {
+        [key: string]: unknown;
+      };
+      /**
+       * @description Version corrente (lock ottimistico)
+       * @example 1
+       */
+      version: number;
+      /**
+       * Format: date-time
+       * @description Data creazione
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @description Data ultimo aggiornamento
+       */
+      updatedAt: string;
+    };
+    UpdateGlobalSectionDto: {
+      /**
+       * @description Version letta al caricamento della Sezione (lock ottimistico)
+       * @example 3
+       */
+      version: number;
+      /** @description Titolo della Sezione Globale */
+      title?: string;
+      /** @description Slug admin (normalizzato server-side); non rigenerato automaticamente dal titolo */
+      slug?: string;
+      /**
+       * @description Slot di layout pubblico
+       * @example footer
+       * @enum {string}
+       */
+      layoutSlot?: 'none' | 'header' | 'footer';
+      /**
+       * @description Rende l'header sticky sul viewport quando lo slot è `header`.
+       * @example true
+       */
+      isSticky?: boolean;
+      /** @description Albero di blocchi aggiornato (sostituisce integralmente il precedente) */
+      content?: {
+        [key: string]: unknown;
+      };
+    };
+    PublicGlobalSectionDto: {
+      /** @description Slug admin della Sezione (informativo, non una rotta pubblica) */
+      slug?: string;
+      /**
+       * @description Se l'header è sticky sul viewport
+       * @example true
+       */
+      isSticky?: boolean;
+      /** @description Albero di blocchi, già migrato/validato/sanitizzato in scrittura */
+      content?: {
+        [key: string]: unknown;
+      };
+    };
+    PublicActiveGlobalSectionsDto: {
+      header?: components['schemas']['PublicGlobalSectionDto'] | null;
+      footer?: components['schemas']['PublicGlobalSectionDto'] | null;
+    };
+    DisplayConditionRuleDto: {
+      /**
+       * @description Verso della regola
+       * @enum {string}
+       */
+      type: 'include' | 'exclude';
+      /**
+       * @description Bersaglio della regola
+       * @enum {string}
+       */
+      target: 'entire_site' | 'specific_page' | 'path_pattern';
+      /**
+       * @description Path esatto (target specific_page) o pattern con wildcard "*" (target path_pattern); assente per entire_site.
+       * @example /blog/*
+       */
+      value?: string;
+    };
+    CreateSiteTemplateDto: {
+      /**
+       * @description Titolo del Template
+       * @example Ricerca — layout risultati
+       */
+      title: string;
+      /**
+       * @description Tipo di Template
+       * @enum {string}
+       */
+      type:
+        'single_post' | 'single_page' | 'archive' | 'search_results' | 'loop_item' | 'error_404';
+      /** @description Albero di blocchi iniziale (default: albero vuoto) */
+      contentTree?: {
+        [key: string]: unknown;
+      };
+      /**
+       * @description Pubblicato (default false)
+       * @example false
+       */
+      isPublished?: boolean;
+      /**
+       * @description Lingua (default "IT")
+       * @example IT
+       */
+      language?: string;
+      /**
+       * @description Priorità di risoluzione (default 0, più alto vince)
+       * @example 0
+       */
+      priority?: number;
+      /** @description Condizioni di visualizzazione (default nessuna) */
+      displayConditions?: components['schemas']['DisplayConditionRuleDto'][];
+    };
+    SiteTemplateResponseDto: {
+      /**
+       * @description Guid del Template
+       * @example a1b2c3d4e5f6a7b8
+       */
+      guid: string;
+      /** @description Titolo del Template */
+      title: string;
+      /**
+       * @description Tipo di Template
+       * @enum {string}
+       */
+      type:
+        'single_post' | 'single_page' | 'archive' | 'search_results' | 'loop_item' | 'error_404';
+      /** @description Albero di blocchi corrente */
+      contentTree: {
+        [key: string]: unknown;
+      };
+      /** @description Pubblicato */
+      isPublished: boolean;
+      /** @description Lingua */
+      language: string;
+      /** @description Priorità di risoluzione (più alto vince) */
+      priority: number;
+      /** @description Condizioni di visualizzazione */
+      displayConditions: components['schemas']['DisplayConditionRuleDto'][];
+      /**
+       * @description Version corrente (lock ottimistico)
+       * @example 1
+       */
+      version: number;
+      /**
+       * Format: date-time
+       * @description Data creazione
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @description Data ultimo aggiornamento
+       */
+      updatedAt: string;
+    };
+    UpdateSiteTemplateDto: {
+      /**
+       * @description Version letta al caricamento del Template (lock ottimistico)
+       * @example 3
+       */
+      version: number;
+      /** @description Titolo del Template */
+      title?: string;
+      /**
+       * @description Tipo di Template
+       * @enum {string}
+       */
+      type?:
+        'single_post' | 'single_page' | 'archive' | 'search_results' | 'loop_item' | 'error_404';
+      /** @description Albero di blocchi aggiornato (sostituisce integralmente il precedente) */
+      contentTree?: {
+        [key: string]: unknown;
+      };
+      /** @description Pubblicato */
+      isPublished?: boolean;
+      /** @description Lingua */
+      language?: string;
+      /** @description Priorità di risoluzione (più alto vince) */
+      priority?: number;
+      /** @description Condizioni di visualizzazione (sostituisce integralmente l'array precedente) */
+      displayConditions?: components['schemas']['DisplayConditionRuleDto'][];
+    };
+    ResolveSiteTemplateDto: {
+      /**
+       * @description Path pubblico da risolvere
+       * @example /blog/il-mio-articolo
+       */
+      path: string;
+      /**
+       * @description Tipo di Template richiesto
+       * @enum {string}
+       */
+      type:
+        'single_post' | 'single_page' | 'archive' | 'search_results' | 'loop_item' | 'error_404';
+      /**
+       * @description Lingua richiesta
+       * @example IT
+       */
+      lang: string;
+    };
+    ResolvedSiteTemplateDto: {
+      /**
+       * @description Guid del Template
+       * @example a1b2c3d4e5f6a7b8
+       */
+      guid: string;
+      /** @description Titolo del Template */
+      title: string;
+      /**
+       * @description Tipo di Template
+       * @enum {string}
+       */
+      type:
+        'single_post' | 'single_page' | 'archive' | 'search_results' | 'loop_item' | 'error_404';
+      /** @description Albero di blocchi corrente */
+      contentTree: {
+        [key: string]: unknown;
+      };
+      /** @description Pubblicato */
+      isPublished: boolean;
+      /** @description Lingua */
+      language: string;
+      /** @description Priorità di risoluzione (più alto vince) */
+      priority: number;
+      /** @description Condizioni di visualizzazione */
+      displayConditions: components['schemas']['DisplayConditionRuleDto'][];
+      /**
+       * @description Version corrente (lock ottimistico)
+       * @example 1
+       */
+      version: number;
+      /**
+       * Format: date-time
+       * @description Data creazione
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @description Data ultimo aggiornamento
+       */
+      updatedAt: string;
+    };
+    AnalyticsOverviewDto: {
+      /**
+       * @description Numero totale di pageview nel range
+       * @example 4820
+       */
+      totalViews: number;
+      /**
+       * @description Visitatori unici (hash distinti) nel range
+       * @example 1230
+       */
+      uniqueVisitors: number;
+      /**
+       * @description Numero di percorsi distinti con almeno una pageview nel range
+       * @example 42
+       */
+      pagesWithTraffic: number;
+      /**
+       * @description Variazione percentuale di totalViews vs il periodo immediatamente precedente di pari durata (null se il periodo precedente non ha traffico)
+       * @example 12.5
+       */
+      trendPercentage: Record<string, never> | null;
+    };
+    AnalyticsTimeseriesPointDto: {
+      /**
+       * @description Inizio del bucket (ISO 8601)
+       * @example 2026-08-28T00:00:00.000Z
+       */
+      bucket: string;
+      /** @example 320 */
+      views: number;
+      /** @example 95 */
+      uniqueVisitors: number;
+    };
+    AnalyticsTimeseriesDto: {
+      /**
+       * @example day
+       * @enum {string}
+       */
+      interval: 'day' | 'hour';
+      points: components['schemas']['AnalyticsTimeseriesPointDto'][];
+    };
+    AnalyticsTopPageDto: {
+      /** @example /chi-siamo */
+      path: string;
+      /** @example 640 */
+      views: number;
+      /** @example 210 */
+      uniqueVisitors: number;
+      /**
+       * @description Percentuale sul totale delle view nel range
+       * @example 13.3
+       */
+      percentage: number;
+    };
+    AnalyticsReferrerDto: {
+      /** @example https://www.google.com/ */
+      referrer: string;
+      /** @example 340 */
+      count: number;
+      /**
+       * @description Percentuale sul totale degli eventi nel range
+       * @example 27.4
+       */
+      percentage: number;
+    };
+    AnalyticsDistributionRowDto: {
+      /** @example desktop */
+      label: string;
+      /** @example 3100 */
+      count: number;
+      /** @example 64.3 */
+      percentage: number;
+    };
+    AnalyticsDeviceStatsDto: {
+      devices: components['schemas']['AnalyticsDistributionRowDto'][];
+      browsers: components['schemas']['AnalyticsDistributionRowDto'][];
+    };
+    SubmitFormDto: {
+      /**
+       * @description Firma HMAC-SHA256(formKey, FORM_ANTISPAM_SECRET) calcolata dal renderer al momento del render/export e restituita invariata dal client (ADR-46 § 3, RFC-46 D6.2). Non è un token di sessione: nessuno stato, nessuna scadenza.
+       * @example a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2
+       */
+      signature: string;
+      /** @description Valori dei campi realmente sottomessi, chiave = form-field.name. La whitelist dei nomi ammessi è fatta dal service contro i form-field realmente pubblicati (RFC-46 D4.3), mai da questa DTO. */
+      values: {
+        [key: string]: unknown;
+      };
+    };
+  };
+  responses: never;
+  parameters: never;
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    AuthController_login: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LoginDto"];
-            };
-        };
-        responses: {
-            /** @description Login avvenuto con successo, oppure richiesta MFA */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Credenziali errate o account non attivato */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Troppe richieste, riprovare più tardi */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  AuthController_login: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    AuthController_mfaVerify: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MfaVerifyDto"];
-            };
-        };
-        responses: {
-            /** @description MFA verificato con successo */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Token temporaneo scaduto o codice MFA non valido */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Troppe richieste, riprovare più tardi */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LoginDto'];
+      };
     };
-    AuthController_refresh: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Login avvenuto con successo, oppure richiesta MFA */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Nuovo access token generato */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Refresh token assente, non valido o scaduto */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+        content?: never;
+      };
+      /** @description Credenziali errate o account non attivato */
+      401: {
+        headers: {
+          [name: string]: unknown;
         };
+        content?: never;
+      };
+      /** @description Troppe richieste, riprovare più tardi */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
-    AuthController_logout: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Logout avvenuto con successo */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  AuthController_mfaVerify: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    AuthController_activate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ActivateAccountDto"];
-            };
-        };
-        responses: {
-            /** @description Account attivato e password impostata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Password non conforme alla policy */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Token non valido o scaduto */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Troppe richieste, riprovare più tardi */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MfaVerifyDto'];
+      };
     };
-    AuthController_forgotPassword: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description MFA verificato con successo */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ForgotPasswordDto"];
-            };
+        content?: never;
+      };
+      /** @description Token temporaneo scaduto o codice MFA non valido */
+      401: {
+        headers: {
+          [name: string]: unknown;
         };
-        responses: {
-            /** @description Richiesta elaborata (risposta generica per sicurezza) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Troppe richieste, riprovare più tardi */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+        content?: never;
+      };
+      /** @description Troppe richieste, riprovare più tardi */
+      429: {
+        headers: {
+          [name: string]: unknown;
         };
+        content?: never;
+      };
     };
-    AuthController_resetPassword: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ResetPasswordDto"];
-            };
-        };
-        responses: {
-            /** @description Password reimpostata con successo */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Password non conforme alla policy */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Token non valido o scaduto */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Troppe richieste, riprovare più tardi */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  AuthController_refresh: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    AuthController_requestActivation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Nuovo access token generato */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ForgotPasswordDto"];
-            };
+        content?: never;
+      };
+      /** @description Refresh token assente, non valido o scaduto */
+      401: {
+        headers: {
+          [name: string]: unknown;
         };
-        responses: {
-            /** @description Email di attivazione inviata con successo */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Account già attivo */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Utente non trovato */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+        content?: never;
+      };
     };
-    AuthController_getMe: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Dati utente recuperati */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  AuthController_logout: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    AuthController_updateProfile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Logout avvenuto con successo */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateProfileDto"];
-            };
-        };
-        responses: {
-            /** @description Dati anagrafici aggiornati con successo */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Nome o cognome non validi */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+        content?: never;
+      };
     };
-    AuthController_changePassword: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ChangePasswordDto"];
-            };
-        };
-        responses: {
-            /** @description Password cambiata con successo */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Nuova password non conforme alla policy */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Password attuale non corretta */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  AuthController_activate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    AuthController_mfaSetup: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Secret e QR code generati */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ActivateAccountDto'];
+      };
     };
-    AuthController_mfaEnable: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Account attivato e password impostata */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MfaEnableDto"];
-            };
+        content?: never;
+      };
+      /** @description Password non conforme alla policy */
+      400: {
+        headers: {
+          [name: string]: unknown;
         };
-        responses: {
-            /** @description MFA abilitata con successo */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description MFA già abilitata, setup scaduto o codice non valido */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+        content?: never;
+      };
+      /** @description Token non valido o scaduto */
+      401: {
+        headers: {
+          [name: string]: unknown;
         };
+        content?: never;
+      };
+      /** @description Troppe richieste, riprovare più tardi */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
-    AuthController_mfaDisable: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MfaDisableDto"];
-            };
-        };
-        responses: {
-            /** @description MFA disabilitata con successo */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description MFA non abilitata o codice non valido */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  AuthController_forgotPassword: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    AuthController_getSessions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Elenco sessioni attive */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ForgotPasswordDto'];
+      };
     };
-    AuthController_revokeSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Identificativo opaco della sessione (16 char hex) */
-                sessionId: string;
-            };
-            cookie?: never;
+    responses: {
+      /** @description Richiesta elaborata (risposta generica per sicurezza) */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Sessione revocata con successo */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Sessione non trovata o non appartenente all'utente */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+        content?: never;
+      };
+      /** @description Troppe richieste, riprovare più tardi */
+      429: {
+        headers: {
+          [name: string]: unknown;
         };
+        content?: never;
+      };
     };
-    AuthController_impersonate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Guid pubblico (16 char) dell'utente da impersonare */
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Access token di impersonificazione generato */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Permessi insufficienti o target è un SuperAdmin/utente disabilitato */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Utente target non trovato */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  AuthController_resetPassword: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    AuthController_endImpersonation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Sessione del SuperAdmin originale ripristinata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Nessuna impersonificazione in corso */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Sessione del SuperAdmin originale non più valida */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ResetPasswordDto'];
+      };
     };
-    AdminController_seedDemo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Password reimpostata con successo */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Summary record creati per tabella */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+        content?: never;
+      };
+      /** @description Password non conforme alla policy */
+      400: {
+        headers: {
+          [name: string]: unknown;
         };
+        content?: never;
+      };
+      /** @description Token non valido o scaduto */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Troppe richieste, riprovare più tardi */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
-    AdminController_resetDemo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Summary record cancellati per tabella */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  AuthController_requestActivation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    AdminController_findAllUsers: {
-        parameters: {
-            query?: {
-                /** @description Pagina (default 1) */
-                p?: string;
-                /** @description Elementi per pagina (default 20) */
-                i?: string;
-                /** @description Ricerca testuale su nome, cognome, email */
-                q?: string;
-                /** @description Campo di ordinamento (name, surname, email, role, createdAt) */
-                o?: string;
-                /** @description Direzione ordinamento (asc|desc, default asc) */
-                d?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Lista utenti paginata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ForgotPasswordDto'];
+      };
     };
-    AdminController_createUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Email di attivazione inviata con successo */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateUserDto"];
-            };
+        content?: never;
+      };
+      /** @description Account già attivo */
+      400: {
+        headers: {
+          [name: string]: unknown;
         };
-        responses: {
-            /** @description Utente creato */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Tentativo di creare un utente SuperAdmin da parte dell'Admin */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+        content?: never;
+      };
+      /** @description Utente non trovato */
+      404: {
+        headers: {
+          [name: string]: unknown;
         };
+        content?: never;
+      };
     };
-    AdminController_findOneUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Utente trovato */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Target SuperAdmin non gestibile dall'Admin */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Utente non trovato */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  AuthController_getMe: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    AdminController_updateUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Dati utente recuperati */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateUserDto"];
-            };
-        };
-        responses: {
-            /** @description Utente aggiornato */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Target SuperAdmin non gestibile dall'Admin */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Utente non trovato */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+        content?: never;
+      };
     };
-    AdminController_toggleActiveUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Stato isActive invertito */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Target SuperAdmin non gestibile dall'Admin */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Utente non trovato */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  AuthController_updateProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    AdminController_resetMfaUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description MFA resettata con successo */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Target SuperAdmin non gestibile dall'Admin */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Utente non trovato */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateProfileDto'];
+      };
     };
-    AdminController_findAuditLog: {
-        parameters: {
-            query?: {
-                /** @description Pagina (default 1) */
-                p?: string;
-                /** @description Elementi per pagina (default 20) */
-                i?: string;
-                /** @description Filtra per id dell'utente autore */
-                userId?: string;
-                /** @description Filtra per azione (ricerca parziale, es. "login") */
-                action?: string;
-                /** @description Data/ora inizio (ISO 8601) */
-                from?: string;
-                /** @description Data/ora fine (ISO 8601) */
-                to?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Dati anagrafici aggiornati con successo */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Lista audit log paginata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+        content?: never;
+      };
+      /** @description Nome o cognome non validi */
+      400: {
+        headers: {
+          [name: string]: unknown;
         };
+        content?: never;
+      };
     };
-    SettingsController_getTheme: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Configurazione tema corrente */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ThemeConfigDto"];
-                };
-            };
-        };
+  };
+  AuthController_changePassword: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    SettingsController_updateTheme: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ThemeConfigDto"];
-            };
-        };
-        responses: {
-            /** @description Tema salvato */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ThemeConfigDto"];
-                };
-            };
-            /** @description Payload non valido (hex, palette o versione) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ChangePasswordDto'];
+      };
     };
-    SettingsController_getMultilingual: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Password cambiata con successo */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Registro Locale corrente */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MultilingualConfigDto"];
-                };
-            };
+        content?: never;
+      };
+      /** @description Nuova password non conforme alla policy */
+      400: {
+        headers: {
+          [name: string]: unknown;
         };
+        content?: never;
+      };
+      /** @description Password attuale non corretta */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
-    SettingsController_updateMultilingual: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MultilingualConfigDto"];
-            };
-        };
-        responses: {
-            /** @description Registro Locale salvato */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MultilingualConfigDto"];
-                };
-            };
-            /** @description Il Locale di default non compare fra i Locale attivi */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Ruolo inferiore ad Admin */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  AuthController_mfaSetup: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    SettingsController_getGlobalTokens: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Secret e QR code generati */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Global Design Tokens correnti */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GlobalTokensDto"];
-                };
-            };
-        };
+        content?: never;
+      };
     };
-    SettingsController_updateGlobalTokens: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["GlobalTokensDto"];
-            };
-        };
-        responses: {
-            /** @description Global Design Tokens salvati */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GlobalTokensDto"];
-                };
-            };
-            /** @description Payload non valido (hex, font, unità o versione) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Ruolo inferiore ad Admin */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  AuthController_mfaEnable: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    FilesController_findAll: {
-        parameters: {
-            query?: {
-                /** @description Pagina (default 1) */
-                p?: string;
-                /** @description Elementi per pagina (default 20) */
-                i?: string;
-                /** @description Ricerca su nome file originale */
-                q?: string;
-                /** @description Filtro per MIME type (match esatto, non prefix) */
-                mimeType?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Lista file paginata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MfaEnableDto'];
+      };
     };
-    FilesController_upload: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description MFA abilitata con successo */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["UploadFileDto"];
-            };
+        content?: never;
+      };
+      /** @description MFA già abilitata, setup scaduto o codice non valido */
+      400: {
+        headers: {
+          [name: string]: unknown;
         };
-        responses: {
-            /** @description File caricato */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FileMetadataDto"];
-                };
-            };
-            /** @description File più grande del limite configurato */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+        content?: never;
+      };
     };
-    FilesController_download: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Contenuto del file */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description File non trovato o eliminato */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  AuthController_mfaDisable: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    FilesController_delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description File eliminato */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Non sei l'autore del file e non hai un ruolo Admin/superiore */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description File non trovato o già eliminato */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MfaDisableDto'];
+      };
     };
-    FilesController_getMetadata: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
+    responses: {
+      /** @description MFA disabilitata con successo */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Metadati del file */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FileMetadataDto"];
-                };
-            };
-            /** @description File non trovato o eliminato */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+        content?: never;
+      };
+      /** @description MFA non abilitata o codice non valido */
+      400: {
+        headers: {
+          [name: string]: unknown;
         };
+        content?: never;
+      };
     };
-    FilesController_updateFocalPoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateFocalPointDto"];
-            };
-        };
-        responses: {
-            /** @description Metadati aggiornati del file */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FileMetadataDto"];
-                };
-            };
-            /** @description focalX/focalY fuori dal range 0-100 */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description File non trovato o eliminato */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  AuthController_getSessions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    FilesController_requestImageTransform: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Elenco sessioni attive */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MediaTransformDto"];
-            };
-        };
-        responses: {
-            /** @description Trasformazione accodata */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MediaTransformResultDto"];
-                };
-            };
-            /** @description File sorgente non trovato o eliminato */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+        content?: never;
+      };
     };
-    PublicMediaController_getMedia: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Identificatore pubblico del file (16 esadecimali) */
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Blob dell'immagine, Content-Type dai byte reali */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Media inesistente, non editoriale (entity <> "page-media"), soft-eliminato, o formato non riconosciuto come raster (SVG compreso) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  AuthController_revokeSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Identificativo opaco della sessione (16 char hex) */
+        sessionId: string;
+      };
+      cookie?: never;
     };
-    HealthController_check: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Sessione revocata con successo */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
+        content?: never;
+      };
+      /** @description Sessione non trovata o non appartenente all'utente */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AuthController_impersonate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Guid pubblico (16 char) dell'utente da impersonare */
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Access token di impersonificazione generato */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Permessi insufficienti o target è un SuperAdmin/utente disabilitato */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Utente target non trovato */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AuthController_endImpersonation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Sessione del SuperAdmin originale ripristinata */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Nessuna impersonificazione in corso */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Sessione del SuperAdmin originale non più valida */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminController_seedDemo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Summary record creati per tabella */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminController_resetDemo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Summary record cancellati per tabella */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminController_findAllUsers: {
+    parameters: {
+      query?: {
+        /** @description Pagina (default 1) */
+        p?: string;
+        /** @description Elementi per pagina (default 20) */
+        i?: string;
+        /** @description Ricerca testuale su nome, cognome, email */
+        q?: string;
+        /** @description Campo di ordinamento (name, surname, email, role, createdAt) */
+        o?: string;
+        /** @description Direzione ordinamento (asc|desc, default asc) */
+        d?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Lista utenti paginata */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminController_createUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateUserDto'];
+      };
+    };
+    responses: {
+      /** @description Utente creato */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Tentativo di creare un utente SuperAdmin da parte dell'Admin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminController_findOneUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Utente trovato */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Target SuperAdmin non gestibile dall'Admin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Utente non trovato */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminController_updateUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateUserDto'];
+      };
+    };
+    responses: {
+      /** @description Utente aggiornato */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Target SuperAdmin non gestibile dall'Admin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Utente non trovato */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminController_toggleActiveUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Stato isActive invertito */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Target SuperAdmin non gestibile dall'Admin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Utente non trovato */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminController_resetMfaUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description MFA resettata con successo */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Target SuperAdmin non gestibile dall'Admin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Utente non trovato */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminController_findAuditLog: {
+    parameters: {
+      query?: {
+        /** @description Pagina (default 1) */
+        p?: string;
+        /** @description Elementi per pagina (default 20) */
+        i?: string;
+        /** @description Filtra per id dell'utente autore */
+        userId?: string;
+        /** @description Filtra per azione (ricerca parziale, es. "login") */
+        action?: string;
+        /** @description Data/ora inizio (ISO 8601) */
+        from?: string;
+        /** @description Data/ora fine (ISO 8601) */
+        to?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Lista audit log paginata */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SettingsController_getTheme: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Configurazione tema corrente */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ThemeConfigDto'];
+        };
+      };
+    };
+  };
+  SettingsController_updateTheme: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ThemeConfigDto'];
+      };
+    };
+    responses: {
+      /** @description Tema salvato */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ThemeConfigDto'];
+        };
+      };
+      /** @description Payload non valido (hex, palette o versione) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SettingsController_getMultilingual: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Registro Locale corrente */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MultilingualConfigDto'];
+        };
+      };
+    };
+  };
+  SettingsController_updateMultilingual: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MultilingualConfigDto'];
+      };
+    };
+    responses: {
+      /** @description Registro Locale salvato */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MultilingualConfigDto'];
+        };
+      };
+      /** @description Il Locale di default non compare fra i Locale attivi */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Ruolo inferiore ad Admin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SettingsController_getGlobalTokens: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Global Design Tokens correnti */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GlobalTokensDto'];
+        };
+      };
+    };
+  };
+  SettingsController_updateGlobalTokens: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['GlobalTokensDto'];
+      };
+    };
+    responses: {
+      /** @description Global Design Tokens salvati */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GlobalTokensDto'];
+        };
+      };
+      /** @description Payload non valido (hex, font, unità o versione) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Ruolo inferiore ad Admin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FilesController_findAll: {
+    parameters: {
+      query?: {
+        /** @description Pagina (default 1) */
+        p?: string;
+        /** @description Elementi per pagina (default 20) */
+        i?: string;
+        /** @description Ricerca su nome file originale */
+        q?: string;
+        /** @description Filtro per MIME type (match esatto, non prefix) */
+        mimeType?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Lista file paginata */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FilesController_upload: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'multipart/form-data': components['schemas']['UploadFileDto'];
+      };
+    };
+    responses: {
+      /** @description File caricato */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FileMetadataDto'];
+        };
+      };
+      /** @description File più grande del limite configurato */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FilesController_download: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Contenuto del file */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description File non trovato o eliminato */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FilesController_delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description File eliminato */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Non sei l'autore del file e non hai un ruolo Admin/superiore */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description File non trovato o già eliminato */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FilesController_getMetadata: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Metadati del file */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FileMetadataDto'];
+        };
+      };
+      /** @description File non trovato o eliminato */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FilesController_updateFocalPoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateFocalPointDto'];
+      };
+    };
+    responses: {
+      /** @description Metadati aggiornati del file */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FileMetadataDto'];
+        };
+      };
+      /** @description focalX/focalY fuori dal range 0-100 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description File non trovato o eliminato */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  FilesController_requestImageTransform: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MediaTransformDto'];
+      };
+    };
+    responses: {
+      /** @description Trasformazione accodata */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MediaTransformResultDto'];
+        };
+      };
+      /** @description File sorgente non trovato o eliminato */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PublicMediaController_getMedia: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Identificatore pubblico del file (16 esadecimali) */
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Blob dell'immagine, Content-Type dai byte reali */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Media inesistente, non editoriale (entity <> "page-media"), soft-eliminato, o formato non riconosciuto come raster (SVG compreso) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  HealthController_check: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /**
+       * @description Tutte le dipendenze esterne sono raggiungibili
+       *
+       *     The Health Check is successful
+       */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            /** @example ok */
+            status?: string;
             /**
-             * @description Tutte le dipendenze esterne sono raggiungibili
-             *
-             *     The Health Check is successful
+             * @example {
+             *       "database": {
+             *         "status": "up"
+             *       }
+             *     }
              */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example ok */
-                        status?: string;
-                        /**
-                         * @example {
-                         *       "database": {
-                         *         "status": "up"
-                         *       }
-                         *     }
-                         */
-                        info?: {
-                            [key: string]: {
-                                status: string;
-                            } & {
-                                [key: string]: unknown;
-                            };
-                        } | null;
-                        /** @example {} */
-                        error?: {
-                            [key: string]: {
-                                status: string;
-                            } & {
-                                [key: string]: unknown;
-                            };
-                        } | null;
-                        /**
-                         * @example {
-                         *       "database": {
-                         *         "status": "up"
-                         *       }
-                         *     }
-                         */
-                        details?: {
-                            [key: string]: {
-                                status: string;
-                            } & {
-                                [key: string]: unknown;
-                            };
-                        };
-                    };
-                };
-            };
+            info?: {
+              [key: string]: {
+                status: string;
+              } & {
+                [key: string]: unknown;
+              };
+            } | null;
+            /** @example {} */
+            error?: {
+              [key: string]: {
+                status: string;
+              } & {
+                [key: string]: unknown;
+              };
+            } | null;
             /**
-             * @description Almeno una dipendenza esterna non è raggiungibile
-             *
-             *     The Health Check is not successful
+             * @example {
+             *       "database": {
+             *         "status": "up"
+             *       }
+             *     }
              */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example error */
-                        status?: string;
-                        /**
-                         * @example {
-                         *       "database": {
-                         *         "status": "up"
-                         *       }
-                         *     }
-                         */
-                        info?: {
-                            [key: string]: {
-                                status: string;
-                            } & {
-                                [key: string]: unknown;
-                            };
-                        } | null;
-                        /**
-                         * @example {
-                         *       "redis": {
-                         *         "status": "down",
-                         *         "message": "Could not connect"
-                         *       }
-                         *     }
-                         */
-                        error?: {
-                            [key: string]: {
-                                status: string;
-                            } & {
-                                [key: string]: unknown;
-                            };
-                        } | null;
-                        /**
-                         * @example {
-                         *       "database": {
-                         *         "status": "up"
-                         *       },
-                         *       "redis": {
-                         *         "status": "down",
-                         *         "message": "Could not connect"
-                         *       }
-                         *     }
-                         */
-                        details?: {
-                            [key: string]: {
-                                status: string;
-                            } & {
-                                [key: string]: unknown;
-                            };
-                        };
-                    };
-                };
+            details?: {
+              [key: string]: {
+                status: string;
+              } & {
+                [key: string]: unknown;
+              };
             };
+          };
         };
+      };
+      /**
+       * @description Almeno una dipendenza esterna non è raggiungibile
+       *
+       *     The Health Check is not successful
+       */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            /** @example error */
+            status?: string;
+            /**
+             * @example {
+             *       "database": {
+             *         "status": "up"
+             *       }
+             *     }
+             */
+            info?: {
+              [key: string]: {
+                status: string;
+              } & {
+                [key: string]: unknown;
+              };
+            } | null;
+            /**
+             * @example {
+             *       "redis": {
+             *         "status": "down",
+             *         "message": "Could not connect"
+             *       }
+             *     }
+             */
+            error?: {
+              [key: string]: {
+                status: string;
+              } & {
+                [key: string]: unknown;
+              };
+            } | null;
+            /**
+             * @example {
+             *       "database": {
+             *         "status": "up"
+             *       },
+             *       "redis": {
+             *         "status": "down",
+             *         "message": "Could not connect"
+             *       }
+             *     }
+             */
+            details?: {
+              [key: string]: {
+                status: string;
+              } & {
+                [key: string]: unknown;
+              };
+            };
+          };
+        };
+      };
     };
-    NotificationsController_findAll: {
-        parameters: {
-            query?: {
-                /** @description Pagina (default 1) */
-                p?: string;
-                /** @description Elementi per pagina (default 20) */
-                i?: string;
-                /** @description Se "true", restituisce solo le notifiche non lette */
-                unreadOnly?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Lista notifiche paginata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  NotificationsController_findAll: {
+    parameters: {
+      query?: {
+        /** @description Pagina (default 1) */
+        p?: string;
+        /** @description Elementi per pagina (default 20) */
+        i?: string;
+        /** @description Se "true", restituisce solo le notifiche non lette */
+        unreadOnly?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    NotificationsController_unreadCount: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Lista notifiche paginata */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Conteggio non lette */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UnreadCountDto"];
-                };
-            };
-        };
+        content?: never;
+      };
     };
-    NotificationsController_markRead: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Notifica aggiornata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotificationDto"];
-                };
-            };
-            /** @description Notifica non trovata o non del chiamante */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  NotificationsController_unreadCount: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    NotificationsController_markAllRead: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Conteggio non lette */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Numero di notifiche aggiornate */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MarkAllReadDto"];
-                };
-            };
+        content: {
+          'application/json': components['schemas']['UnreadCountDto'];
         };
+      };
     };
-    PagesController_findAll: {
-        parameters: {
-            query?: {
-                /** @description Pagina (default 1) */
-                p?: string;
-                /** @description Elementi per pagina (default 20) */
-                i?: string;
-                /** @description Ricerca testuale su titolo e slug */
-                q?: string;
-                /** @description Campo di ordinamento (title, slug, status, locale, createdAt, updatedAt) */
-                o?: string;
-                /** @description Direzione ordinamento (asc|desc, default desc) */
-                d?: string;
-                /** @description Filtro per stato */
-                status?: string;
-                /** @description Filtro per locale */
-                locale?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Lista Pagine paginata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  NotificationsController_markRead: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
     };
-    PagesController_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Notifica aggiornata */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreatePageDto"];
-            };
+        content: {
+          'application/json': components['schemas']['NotificationDto'];
         };
-        responses: {
-            /** @description Pagina creata */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PageDto"];
-                };
-            };
-            /** @description Slug non valido/riservato, genitore inesistente o albero blocchi malformato */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Slug già in uso per questo locale/genitore */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+      };
+      /** @description Notifica non trovata o non del chiamante */
+      404: {
+        headers: {
+          [name: string]: unknown;
         };
+        content?: never;
+      };
     };
-    PagesController_listTranslations: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Traduzioni del gruppo (bozze incluse) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PageTranslationDto"][];
-                };
-            };
-            /** @description Pagina sorgente non trovata o eliminata */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  NotificationsController_markAllRead: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    PagesController_createTranslation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Numero di notifiche aggiornate */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateTranslationDto"];
-            };
+        content: {
+          'application/json': components['schemas']['MarkAllReadDto'];
         };
-        responses: {
-            /** @description Traduzione creata */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PageDto"];
-                };
-            };
-            /** @description Locale non fra i Locale attivi */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Pagina sorgente non trovata o eliminata */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Esiste già una traduzione per questo locale */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+      };
     };
-    PagesController_findOne: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Pagina trovata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PageDto"];
-                };
-            };
-            /** @description La Pagina esiste ma non è del chiamante */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Pagina non trovata o eliminata */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  PagesController_findAll: {
+    parameters: {
+      query?: {
+        /** @description Pagina (default 1) */
+        p?: string;
+        /** @description Elementi per pagina (default 20) */
+        i?: string;
+        /** @description Ricerca testuale su titolo e slug */
+        q?: string;
+        /** @description Campo di ordinamento (title, slug, status, locale, createdAt, updatedAt) */
+        o?: string;
+        /** @description Direzione ordinamento (asc|desc, default desc) */
+        d?: string;
+        /** @description Filtro per stato */
+        status?: string;
+        /** @description Filtro per locale */
+        locale?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    PagesController_remove: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Lista Pagine paginata */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Pagina eliminata */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Pagina non trovata o già eliminata */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+        content?: never;
+      };
     };
-    PagesController_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdatePageDto"];
-            };
-        };
-        responses: {
-            /** @description Bozza aggiornata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PageDto"];
-                };
-            };
-            /** @description Slug non valido/riservato, ciclo di gerarchia o albero blocchi malformato */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Riga altrui, o propria ma non più in stato draft */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Pagina non trovata o eliminata */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Slug già in uso, oppure version non più valida (conflitto di editing) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  PagesController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    PagesController_issuePreviewToken: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Token emesso */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PagePreviewTokenDto"];
-                };
-            };
-            /** @description Riga altrui, o propria ma non più in stato draft */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Pagina non trovata o eliminata */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreatePageDto'];
+      };
     };
-    PagesController_changeStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
+    responses: {
+      /** @description Pagina creata */
+      201: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ChangeStatusDto"];
-            };
+        content: {
+          'application/json': components['schemas']['PageDto'];
         };
-        responses: {
-            /** @description Stato aggiornato */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PageDto"];
-                };
-            };
-            /** @description Transizione di stato non ammessa */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Permessi insufficienti per la transizione richiesta */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Pagina non trovata o eliminata */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Conflitto di editing (version non più valida) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+      };
+      /** @description Slug non valido/riservato, genitore inesistente o albero blocchi malformato */
+      400: {
+        headers: {
+          [name: string]: unknown;
         };
+        content?: never;
+      };
+      /** @description Slug già in uso per questo locale/genitore */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
-    PagesController_listRevisions: {
-        parameters: {
-            query?: {
-                /** @description Pagina (default 1) */
-                p?: string;
-                /** @description Elementi per pagina (default 20) */
-                i?: string;
-            };
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Lista Revisioni paginata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description La Pagina esiste ma non è del chiamante */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Pagina non trovata o eliminata */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  PagesController_listTranslations: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
     };
-    PagesController_diffRevisions: {
-        parameters: {
-            query: {
-                /** @description guid della prima Revisione */
-                revA: string;
-                /** @description guid della seconda Revisione */
-                revB: string;
-            };
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Traduzioni del gruppo (bozze incluse) */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Diff calcolato */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PageRevisionDiffResponseDto"];
-                };
-            };
-            /** @description La Pagina esiste ma non è del chiamante */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Pagina o una delle due Revisioni non trovate */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+        content: {
+          'application/json': components['schemas']['PageTranslationDto'][];
         };
+      };
+      /** @description Pagina sorgente non trovata o eliminata */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
-    PagesController_getRevision: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-                revisionGuid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Revisione trovata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PageRevisionDetailDto"];
-                };
-            };
-            /** @description La Pagina esiste ma non è del chiamante */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Pagina o Revisione non trovate */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  PagesController_createTranslation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
     };
-    PagesController_restoreRevision: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-                revisionGuid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Bozza ripristinata dallo snapshot */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PageDto"];
-                };
-            };
-            /** @description Pagina o Revisione non trovate */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Conflitto di editing (version non più valida) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateTranslationDto'];
+      };
     };
-    PublicPagesController_getPage: {
-        parameters: {
-            query: {
-                /** @description Percorso pubblico da risolvere, es. "/chi-siamo" o "/" per la home */
-                path: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Traduzione creata */
+      201: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Pagina pubblicata trovata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PublicPageDto"];
-                };
-            };
-            /** @description Percorso non in forma canonica: redirect verso la forma canonica */
-            308: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Nessuna Pagina pubblicata a questo percorso (inesistente, non pubblicata, o non servibile) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+        content: {
+          'application/json': components['schemas']['PageDto'];
         };
+      };
+      /** @description Locale non fra i Locale attivi */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Pagina sorgente non trovata o eliminata */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Esiste già una traduzione per questo locale */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
-    PublicPagesController_getPathByGuid: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Identificatore amministrativo della Pagina (16 esadecimali) */
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Percorso pubblico canonico della Pagina pubblicata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PublicPageGuidResolutionDto"];
-                };
-            };
-            /** @description Pagina inesistente, non pubblicata, non attiva, guid malformato, o catena di antenati non risolvibile */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  PagesController_findOne: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
     };
-    PublicPagesController_getGlobalTokens: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Pagina trovata */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Global Tokens correnti */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GlobalTokensDto"];
-                };
-            };
+        content: {
+          'application/json': components['schemas']['PageDto'];
         };
+      };
+      /** @description La Pagina esiste ma non è del chiamante */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Pagina non trovata o eliminata */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
-    PublicPagesController_getThemeConfig: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Configurazione tema corrente */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ThemeConfigDto"];
-                };
-            };
-        };
+  };
+  PagesController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
     };
-    PreviewPagesController_getByToken: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description JWT di anteprima emesso da POST app/pages/:guid/preview-token */
-                token: string;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Pagina eliminata */
+      204: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Bozza corrente della Pagina */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PagePreviewContentDto"];
-                };
-            };
-            /** @description Token invalido, scaduto, purpose errato, o pagina inesistente/soft-eliminata (404 uniforme, mai 401/403) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+        content?: never;
+      };
+      /** @description Pagina non trovata o già eliminata */
+      404: {
+        headers: {
+          [name: string]: unknown;
         };
+        content?: never;
+      };
     };
-    GlobalSectionsController_findAll: {
-        parameters: {
-            query?: {
-                /** @description Pagina (default 1) */
-                p?: string;
-                /** @description Elementi per pagina (default 20) */
-                i?: string;
-                /** @description Ricerca testuale su titolo e slug */
-                q?: string;
-                /** @description Campo di ordinamento (title, slug, layoutSlot, createdAt, updatedAt) */
-                o?: string;
-                /** @description Direzione ordinamento (asc|desc, default desc) */
-                d?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Lista Sezioni Globali paginata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  PagesController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
     };
-    GlobalSectionsController_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateGlobalSectionDto"];
-            };
-        };
-        responses: {
-            /** @description Sezione Globale creata */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GlobalSectionDto"];
-                };
-            };
-            /** @description Slug non valido/riservato o albero blocchi malformato */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Slug o layoutSlot già in uso */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdatePageDto'];
+      };
     };
-    GlobalSectionsController_findOne: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
+    responses: {
+      /** @description Bozza aggiornata */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Sezione Globale trovata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GlobalSectionDto"];
-                };
-            };
-            /** @description Sezione Globale non trovata o eliminata */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+        content: {
+          'application/json': components['schemas']['PageDto'];
         };
+      };
+      /** @description Slug non valido/riservato, ciclo di gerarchia o albero blocchi malformato */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Riga altrui, o propria ma non più in stato draft */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Pagina non trovata o eliminata */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Slug già in uso, oppure version non più valida (conflitto di editing) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
-    GlobalSectionsController_remove: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Sezione Globale eliminata */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Sezione Globale non trovata o già eliminata */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  PagesController_issuePreviewToken: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
     };
-    GlobalSectionsController_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Token emesso */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateGlobalSectionDto"];
-            };
+        content: {
+          'application/json': components['schemas']['PagePreviewTokenDto'];
         };
-        responses: {
-            /** @description Sezione Globale aggiornata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GlobalSectionDto"];
-                };
-            };
-            /** @description Slug non valido/riservato o albero blocchi malformato */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Sezione Globale non trovata o eliminata */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Version obsoleta, oppure slug/layoutSlot già in uso */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+      };
+      /** @description Riga altrui, o propria ma non più in stato draft */
+      403: {
+        headers: {
+          [name: string]: unknown;
         };
+        content?: never;
+      };
+      /** @description Pagina non trovata o eliminata */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
-    PublicGlobalSectionsController_getActive: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Sezioni attive (slot assenti = null) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PublicActiveGlobalSectionsDto"];
-                };
-            };
-        };
+  };
+  PagesController_changeStatus: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
     };
-    SiteTemplatesController_findAll: {
-        parameters: {
-            query?: {
-                /** @description Pagina (default 1) */
-                p?: string;
-                /** @description Elementi per pagina (default 20) */
-                i?: string;
-                /** @description Ricerca testuale sul titolo */
-                q?: string;
-                /** @description Filtro per tipo di Template */
-                type?: string;
-                /** @description Filtro per lingua */
-                language?: string;
-                /** @description Filtro per stato di pubblicazione */
-                isPublished?: string;
-                /** @description Campo di ordinamento (title, type, language, priority, createdAt, updatedAt) */
-                o?: string;
-                /** @description Direzione ordinamento (asc|desc, default desc) */
-                d?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Lista Template di tema paginata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ChangeStatusDto'];
+      };
     };
-    SiteTemplatesController_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Stato aggiornato */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateSiteTemplateDto"];
-            };
+        content: {
+          'application/json': components['schemas']['PageDto'];
         };
-        responses: {
-            /** @description Template creato */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SiteTemplateResponseDto"];
-                };
-            };
-            /** @description Payload non valido o albero blocchi malformato */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+      };
+      /** @description Transizione di stato non ammessa */
+      400: {
+        headers: {
+          [name: string]: unknown;
         };
+        content?: never;
+      };
+      /** @description Permessi insufficienti per la transizione richiesta */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Pagina non trovata o eliminata */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Conflitto di editing (version non più valida) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
-    SiteTemplatesController_findOne: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Template trovato */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SiteTemplateResponseDto"];
-                };
-            };
-            /** @description Template non trovato o eliminato */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  PagesController_listRevisions: {
+    parameters: {
+      query?: {
+        /** @description Pagina (default 1) */
+        p?: string;
+        /** @description Elementi per pagina (default 20) */
+        i?: string;
+      };
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
     };
-    SiteTemplatesController_remove: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Lista Revisioni paginata */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Template eliminato */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Template non trovato o già eliminato */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+        content?: never;
+      };
+      /** @description La Pagina esiste ma non è del chiamante */
+      403: {
+        headers: {
+          [name: string]: unknown;
         };
+        content?: never;
+      };
+      /** @description Pagina non trovata o eliminata */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
-    SiteTemplatesController_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateSiteTemplateDto"];
-            };
-        };
-        responses: {
-            /** @description Template aggiornato */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SiteTemplateResponseDto"];
-                };
-            };
-            /** @description Payload non valido o albero blocchi malformato */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Template non trovato o eliminato */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Version obsoleta */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  PagesController_diffRevisions: {
+    parameters: {
+      query: {
+        /** @description guid della prima Revisione */
+        revA: string;
+        /** @description guid della seconda Revisione */
+        revB: string;
+      };
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
     };
-    PublicSiteTemplatesController_resolve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Diff calcolato */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ResolveSiteTemplateDto"];
-            };
+        content: {
+          'application/json': components['schemas']['PageRevisionDiffResponseDto'];
         };
-        responses: {
-            /** @description Template risolto */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ResolvedSiteTemplateDto"];
-                };
-            };
-            /** @description Nessun Template applicabile alla rotta richiesta */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+      };
+      /** @description La Pagina esiste ma non è del chiamante */
+      403: {
+        headers: {
+          [name: string]: unknown;
         };
+        content?: never;
+      };
+      /** @description Pagina o una delle due Revisioni non trovate */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
-    AnalyticsController_getOverview: {
-        parameters: {
-            query?: {
-                /** @description Data iniziale inclusa (YYYY-MM-DD) */
-                from?: string;
-                /** @description Data finale inclusa (YYYY-MM-DD) */
-                to?: string;
-                /** @description Granularità dei bucket per la timeseries. Default: "day" (gestito dal service). */
-                interval?: "day" | "hour";
-                /** @description Numero massimo di righe per top-pages/referrers. Default: 10 (gestito dal service). */
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description KPI dell'intervallo richiesto */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AnalyticsOverviewDto"];
-                };
-            };
-        };
+  };
+  PagesController_getRevision: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+        revisionGuid: string;
+      };
+      cookie?: never;
     };
-    AnalyticsController_getTimeseries: {
-        parameters: {
-            query?: {
-                /** @description Data iniziale inclusa (YYYY-MM-DD) */
-                from?: string;
-                /** @description Data finale inclusa (YYYY-MM-DD) */
-                to?: string;
-                /** @description Granularità dei bucket per la timeseries. Default: "day" (gestito dal service). */
-                interval?: "day" | "hour";
-                /** @description Numero massimo di righe per top-pages/referrers. Default: 10 (gestito dal service). */
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Revisione trovata */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Serie temporale ordinata crescente */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AnalyticsTimeseriesDto"];
-                };
-            };
+        content: {
+          'application/json': components['schemas']['PageRevisionDetailDto'];
         };
+      };
+      /** @description La Pagina esiste ma non è del chiamante */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Pagina o Revisione non trovate */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
-    AnalyticsController_getTopPages: {
-        parameters: {
-            query?: {
-                /** @description Data iniziale inclusa (YYYY-MM-DD) */
-                from?: string;
-                /** @description Data finale inclusa (YYYY-MM-DD) */
-                to?: string;
-                /** @description Granularità dei bucket per la timeseries. Default: "day" (gestito dal service). */
-                interval?: "day" | "hour";
-                /** @description Numero massimo di righe per top-pages/referrers. Default: 10 (gestito dal service). */
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Righe ordinate per view decrescenti */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AnalyticsTopPageDto"][];
-                };
-            };
-        };
+  };
+  PagesController_restoreRevision: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+        revisionGuid: string;
+      };
+      cookie?: never;
     };
-    AnalyticsController_getReferrers: {
-        parameters: {
-            query?: {
-                /** @description Data iniziale inclusa (YYYY-MM-DD) */
-                from?: string;
-                /** @description Data finale inclusa (YYYY-MM-DD) */
-                to?: string;
-                /** @description Granularità dei bucket per la timeseries. Default: "day" (gestito dal service). */
-                interval?: "day" | "hour";
-                /** @description Numero massimo di righe per top-pages/referrers. Default: 10 (gestito dal service). */
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Bozza ripristinata dallo snapshot */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Righe ordinate per conteggio decrescente */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AnalyticsReferrerDto"][];
-                };
-            };
+        content: {
+          'application/json': components['schemas']['PageDto'];
         };
+      };
+      /** @description Pagina o Revisione non trovate */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Conflitto di editing (version non più valida) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
-    AnalyticsController_getDeviceStats: {
-        parameters: {
-            query?: {
-                /** @description Data iniziale inclusa (YYYY-MM-DD) */
-                from?: string;
-                /** @description Data finale inclusa (YYYY-MM-DD) */
-                to?: string;
-                /** @description Granularità dei bucket per la timeseries. Default: "day" (gestito dal service). */
-                interval?: "day" | "hour";
-                /** @description Numero massimo di righe per top-pages/referrers. Default: 10 (gestito dal service). */
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Distribuzione device/browser */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AnalyticsDeviceStatsDto"];
-                };
-            };
-        };
+  };
+  PublicPagesController_getPage: {
+    parameters: {
+      query: {
+        /** @description Percorso pubblico da risolvere, es. "/chi-siamo" o "/" per la home */
+        path: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    FormsController_listSubmissions: {
-        parameters: {
-            query?: {
-                /** @description Pagina (default 1) */
-                p?: string;
-                /** @description Elementi per pagina (default 20) */
-                i?: string;
-                /** @description Direzione ordinamento per createdAt (asc|desc, default desc) */
-                d?: string;
-                /** @description Filtro per chiave editoriale del modulo */
-                formKey?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Pagina pubblicata trovata */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Lista Invii paginata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+        content: {
+          'application/json': components['schemas']['PublicPageDto'];
         };
+      };
+      /** @description Percorso non in forma canonica: redirect verso la forma canonica */
+      308: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Nessuna Pagina pubblicata a questo percorso (inesistente, non pubblicata, o non servibile) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
-    PublicFormsController_submit: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Chiave editoriale del modulo (form.formKey) */
-                formId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SubmitFormDto"];
-            };
-        };
-        responses: {
-            /** @description Sempre 200: esito reale mai rivelato al chiamante */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Valori non conformi ai form-field realmente pubblicati */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Nessun blocco form pubblicato con questo formKey */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  PublicPagesController_getPathByGuid: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Identificatore amministrativo della Pagina (16 esadecimali) */
+        guid: string;
+      };
+      cookie?: never;
     };
+    requestBody?: never;
+    responses: {
+      /** @description Percorso pubblico canonico della Pagina pubblicata */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicPageGuidResolutionDto'];
+        };
+      };
+      /** @description Pagina inesistente, non pubblicata, non attiva, guid malformato, o catena di antenati non risolvibile */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PublicPagesController_getGlobalTokens: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Global Tokens correnti */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GlobalTokensDto'];
+        };
+      };
+    };
+  };
+  PublicPagesController_getThemeConfig: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Configurazione tema corrente */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ThemeConfigDto'];
+        };
+      };
+    };
+  };
+  PreviewPagesController_getByToken: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description JWT di anteprima emesso da POST app/pages/:guid/preview-token */
+        token: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Bozza corrente della Pagina */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PagePreviewContentDto'];
+        };
+      };
+      /** @description Token invalido, scaduto, purpose errato, o pagina inesistente/soft-eliminata (404 uniforme, mai 401/403) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  GlobalSectionsController_findAll: {
+    parameters: {
+      query?: {
+        /** @description Pagina (default 1) */
+        p?: string;
+        /** @description Elementi per pagina (default 20) */
+        i?: string;
+        /** @description Ricerca testuale su titolo e slug */
+        q?: string;
+        /** @description Campo di ordinamento (title, slug, layoutSlot, createdAt, updatedAt) */
+        o?: string;
+        /** @description Direzione ordinamento (asc|desc, default desc) */
+        d?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Lista Sezioni Globali paginata */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  GlobalSectionsController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateGlobalSectionDto'];
+      };
+    };
+    responses: {
+      /** @description Sezione Globale creata */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GlobalSectionDto'];
+        };
+      };
+      /** @description Slug non valido/riservato o albero blocchi malformato */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Slug o layoutSlot già in uso */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  GlobalSectionsController_findOne: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Sezione Globale trovata */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GlobalSectionDto'];
+        };
+      };
+      /** @description Sezione Globale non trovata o eliminata */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  GlobalSectionsController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Sezione Globale eliminata */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Sezione Globale non trovata o già eliminata */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  GlobalSectionsController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateGlobalSectionDto'];
+      };
+    };
+    responses: {
+      /** @description Sezione Globale aggiornata */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GlobalSectionDto'];
+        };
+      };
+      /** @description Slug non valido/riservato o albero blocchi malformato */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Sezione Globale non trovata o eliminata */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Version obsoleta, oppure slug/layoutSlot già in uso */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PublicGlobalSectionsController_getActive: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Sezioni attive (slot assenti = null) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicActiveGlobalSectionsDto'];
+        };
+      };
+    };
+  };
+  SiteTemplatesController_findAll: {
+    parameters: {
+      query?: {
+        /** @description Pagina (default 1) */
+        p?: string;
+        /** @description Elementi per pagina (default 20) */
+        i?: string;
+        /** @description Ricerca testuale sul titolo */
+        q?: string;
+        /** @description Filtro per tipo di Template */
+        type?: string;
+        /** @description Filtro per lingua */
+        language?: string;
+        /** @description Filtro per stato di pubblicazione */
+        isPublished?: string;
+        /** @description Campo di ordinamento (title, type, language, priority, createdAt, updatedAt) */
+        o?: string;
+        /** @description Direzione ordinamento (asc|desc, default desc) */
+        d?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Lista Template di tema paginata */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SiteTemplatesController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateSiteTemplateDto'];
+      };
+    };
+    responses: {
+      /** @description Template creato */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SiteTemplateResponseDto'];
+        };
+      };
+      /** @description Payload non valido o albero blocchi malformato */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SiteTemplatesController_findOne: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Template trovato */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SiteTemplateResponseDto'];
+        };
+      };
+      /** @description Template non trovato o eliminato */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SiteTemplatesController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Template eliminato */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Template non trovato o già eliminato */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SiteTemplatesController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateSiteTemplateDto'];
+      };
+    };
+    responses: {
+      /** @description Template aggiornato */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SiteTemplateResponseDto'];
+        };
+      };
+      /** @description Payload non valido o albero blocchi malformato */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Template non trovato o eliminato */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Version obsoleta */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PublicSiteTemplatesController_resolve: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ResolveSiteTemplateDto'];
+      };
+    };
+    responses: {
+      /** @description Template risolto */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ResolvedSiteTemplateDto'];
+        };
+      };
+      /** @description Nessun Template applicabile alla rotta richiesta */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AnalyticsController_getOverview: {
+    parameters: {
+      query?: {
+        /** @description Data iniziale inclusa (YYYY-MM-DD) */
+        from?: string;
+        /** @description Data finale inclusa (YYYY-MM-DD) */
+        to?: string;
+        /** @description Granularità dei bucket per la timeseries. Default: "day" (gestito dal service). */
+        interval?: 'day' | 'hour';
+        /** @description Numero massimo di righe per top-pages/referrers. Default: 10 (gestito dal service). */
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description KPI dell'intervallo richiesto */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AnalyticsOverviewDto'];
+        };
+      };
+    };
+  };
+  AnalyticsController_getTimeseries: {
+    parameters: {
+      query?: {
+        /** @description Data iniziale inclusa (YYYY-MM-DD) */
+        from?: string;
+        /** @description Data finale inclusa (YYYY-MM-DD) */
+        to?: string;
+        /** @description Granularità dei bucket per la timeseries. Default: "day" (gestito dal service). */
+        interval?: 'day' | 'hour';
+        /** @description Numero massimo di righe per top-pages/referrers. Default: 10 (gestito dal service). */
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Serie temporale ordinata crescente */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AnalyticsTimeseriesDto'];
+        };
+      };
+    };
+  };
+  AnalyticsController_getTopPages: {
+    parameters: {
+      query?: {
+        /** @description Data iniziale inclusa (YYYY-MM-DD) */
+        from?: string;
+        /** @description Data finale inclusa (YYYY-MM-DD) */
+        to?: string;
+        /** @description Granularità dei bucket per la timeseries. Default: "day" (gestito dal service). */
+        interval?: 'day' | 'hour';
+        /** @description Numero massimo di righe per top-pages/referrers. Default: 10 (gestito dal service). */
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Righe ordinate per view decrescenti */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AnalyticsTopPageDto'][];
+        };
+      };
+    };
+  };
+  AnalyticsController_getReferrers: {
+    parameters: {
+      query?: {
+        /** @description Data iniziale inclusa (YYYY-MM-DD) */
+        from?: string;
+        /** @description Data finale inclusa (YYYY-MM-DD) */
+        to?: string;
+        /** @description Granularità dei bucket per la timeseries. Default: "day" (gestito dal service). */
+        interval?: 'day' | 'hour';
+        /** @description Numero massimo di righe per top-pages/referrers. Default: 10 (gestito dal service). */
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Righe ordinate per conteggio decrescente */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AnalyticsReferrerDto'][];
+        };
+      };
+    };
+  };
+  AnalyticsController_getDeviceStats: {
+    parameters: {
+      query?: {
+        /** @description Data iniziale inclusa (YYYY-MM-DD) */
+        from?: string;
+        /** @description Data finale inclusa (YYYY-MM-DD) */
+        to?: string;
+        /** @description Granularità dei bucket per la timeseries. Default: "day" (gestito dal service). */
+        interval?: 'day' | 'hour';
+        /** @description Numero massimo di righe per top-pages/referrers. Default: 10 (gestito dal service). */
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Distribuzione device/browser */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AnalyticsDeviceStatsDto'];
+        };
+      };
+    };
+  };
+  FormsController_listSubmissions: {
+    parameters: {
+      query?: {
+        /** @description Pagina (default 1) */
+        p?: string;
+        /** @description Elementi per pagina (default 20) */
+        i?: string;
+        /** @description Direzione ordinamento per createdAt (asc|desc, default desc) */
+        d?: string;
+        /** @description Filtro per chiave editoriale del modulo */
+        formKey?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Lista Invii paginata */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PublicFormsController_submit: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Chiave editoriale del modulo (form.formKey) */
+        formId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SubmitFormDto'];
+      };
+    };
+    responses: {
+      /** @description Sempre 200: esito reale mai rivelato al chiamante */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Valori non conformi ai form-field realmente pubblicati */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Nessun blocco form pubblicato con questo formKey */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
 }

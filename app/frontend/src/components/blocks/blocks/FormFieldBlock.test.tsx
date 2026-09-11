@@ -5,7 +5,13 @@ import FormFieldBlock from './FormFieldBlock';
 describe('FormFieldBlock', () => {
   it('renderizza un input di testo con etichetta e indicatore obbligatorio', () => {
     const html = renderToStaticMarkup(
-      <FormFieldBlock fieldType="text" name="nome" label="Nome" required placeholder="Il tuo nome" />,
+      <FormFieldBlock
+        fieldType="text"
+        name="nome"
+        label="Nome"
+        required
+        placeholder="Il tuo nome"
+      />,
     );
 
     expect(html).toContain('<input');
@@ -17,13 +23,17 @@ describe('FormFieldBlock', () => {
   });
 
   it('renderizza un input email quando fieldType è "email"', () => {
-    const html = renderToStaticMarkup(<FormFieldBlock fieldType="email" name="email" label="Email" />);
+    const html = renderToStaticMarkup(
+      <FormFieldBlock fieldType="email" name="email" label="Email" />,
+    );
 
     expect(html).toContain('type="email"');
   });
 
   it('renderizza una textarea quando fieldType è "textarea"', () => {
-    const html = renderToStaticMarkup(<FormFieldBlock fieldType="textarea" name="messaggio" label="Messaggio" />);
+    const html = renderToStaticMarkup(
+      <FormFieldBlock fieldType="textarea" name="messaggio" label="Messaggio" />,
+    );
 
     expect(html).toContain('<textarea');
   });
@@ -125,9 +135,7 @@ describe('FormFieldBlock', () => {
   });
 
   it('omette data-validation-message quando validationMessage è assente', () => {
-    const html = renderToStaticMarkup(
-      <FormFieldBlock fieldType="text" name="nome" label="Nome" />,
-    );
+    const html = renderToStaticMarkup(<FormFieldBlock fieldType="text" name="nome" label="Nome" />);
 
     expect(html).not.toContain('data-validation-message');
   });

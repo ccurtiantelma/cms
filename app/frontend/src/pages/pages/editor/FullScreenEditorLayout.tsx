@@ -34,17 +34,16 @@
  * primo antenato comune fra i due.
  */
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
-import { ActionIcon, Button, Paper, Text } from '@mantine/core';
+import { ActionIcon, Paper, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import {
-  IconEye,
+  IconChevronLeft,
+  IconChevronRight,
   IconFileExport,
   IconFileImport,
   IconHistory,
   IconLayoutGrid,
-  IconLayoutSidebarRight,
-  IconEyeOff,
 } from '@tabler/icons-react';
 import {
   DndContext,
@@ -74,7 +73,6 @@ import { findNode } from './block-tree.utils';
 import EditorSidebar from './sidebar/EditorSidebar';
 import Toolbar from './Toolbar';
 import HistoryDrawer from './HistoryDrawer';
-import LocaleSwitcher from './LocaleSwitcher';
 import TemplateLibraryModal from './TemplateLibraryModal';
 import { exportSubtreeToJson, importJsonFile } from './utils/template-io.utils';
 import { useEditorShortcuts } from './useEditorShortcuts';
@@ -108,6 +106,16 @@ const VIEWPORT_DIMENSIONS: Record<'tablet' | 'mobile', { width: number; height: 
   tablet: { width: 768, height: 1024 },
   mobile: { width: 375, height: 667 },
 };
+
+/**
+ * Larghezza (px) della sidebar sinistra aperta — stessa costante usata per posizionare
+ * `.sidebarToggle` sul bordo verticale della sidebar (`left` inline sotto). Il valore vero
+ * della larghezza resta dichiarato in CSS (`EditorSidebar.module.css` `.root`,
+ * `FullScreenEditorLayout.module.css` `.sidebar`): questa costante esiste solo perché lo
+ * stile inline della maniglia non può leggere un valore da un CSS Module, e deve restare
+ * in sincrono con quei due file a mano (restyle Elementor Pro, griglia widget a 3 colonne).
+ */
+const SIDEBAR_WIDTH = 340;
 
 /**
  * Legge dal payload di dnd-kit (`event.active.data.current`, valorizzato sia da
@@ -154,7 +162,8 @@ export interface FullScreenEditorLayoutProps {
   /**
    * Genera e apre l'anteprima in una nuova scheda. `undefined` quando la Pagina non è in
    * bozza: il backend nega il token su ogni altro stato (ADR-25), quindi il pulsante non
-   * compare invece di offrire un'azione che risponderebbe sempre con un errore.
+   * compare invece di offrire un'azione che risponderebbe sempre con un errore. Propagato a
+   * `Toolbar` (icona "occhio" in alto a destra).
    */
   onPreview?: () => void;
   /** Stato di caricamento del pulsante "Anteprima". */
@@ -173,11 +182,12 @@ export interface FullScreenEditorLayoutProps {
   onPageUpdated?: (page: PageRecord) => void;
   onVersionConflict?: () => void;
   /**
-   * Stato/transizioni ammesse e handler di cambio stato per il menu "Cambia Stato" della
-   * topbar (E01) — vedi lo stesso commento su `BlockEditorPanelProps` in
-   * `BlockEditorPanel.tsx`. Opzionali per lo stesso motivo di `onPageUpdated` sopra (Builder
-   * Sezioni Globali, che non ha una macchina a stati Pagina): il menu resta vuoto/nascosto in
-   * quel contesto invece di ricevere transizioni inventate.
+   * Stato/transizioni ammesse e handler di cambio stato per il menu "Cambia Stato" — vedi lo
+   * stesso commento su `BlockEditorPanelProps` in `BlockEditorPanel.tsx`. Opzionali per lo
+   * stesso motivo di `onPageUpdated` sopra (Builder Sezioni Globali, che non ha una macchina a
+   * stati Pagina): il menu resta vuoto/nascosto in quel contesto invece di ricevere
+   * transizioni inventate. Propagati a `Toolbar` (in alto a destra, bordi squadrati, altezza
+   * piena della topbar — non più in fondo alla sidebar sinistra).
    */
   pageStatus?: PageStatus;
   visibleTransitions?: readonly PageStatus[];
@@ -209,17 +219,24 @@ export default function FullScreenEditorLayout({
 }: FullScreenEditorLayoutProps): JSX.Element {
   const activeViewport = useActiveViewport();
   const setActiveViewport = useBlockEditorStore((state) => state.setActiveViewport);
+  // Il pulsante che apriva/chiudeva questo pannello è stato rimosso dalla topbar (E01): la
+  // stessa "Struttura" è già raggiungibile dalla sidebar sinistra (`EditorSidebar`, scheda
+  // "Struttura"). `isStructurePanelOpen` resta comunque letto qui sotto — parte a `false`
+  // (default dello store) e non ha più modo di diventare `true`, quindi il pannello non
+  // monta mai — invece di rimuovere anche il markup del pannello destro, fuori scope di
+  // questo task (CLAUDE.md — solo il task corrente, zero refactoring fuori scope).
   const isStructurePanelOpen = useIsStructurePanelOpen();
-  const toggleStructurePanel = useBlockEditorStore((state) => state.toggleStructurePanel);
   const isSidebarOpen = useIsSidebarOpen();
   const toggleSidebar = useBlockEditorStore((state) => state.toggleSidebar);
+  // "Anteprima Pura" (E01): il pulsante "occhio" della topbar che la attivava ora apre invece
+  // l'anteprima reale della Pagina in una nuova scheda (richiesta esplicita del task —
+  // `onPreview` su `Toolbar`, non più `onTogglePreviewMode`). `isPreviewMode` non ha più modo
+  // di diventare `true` (nessun trigger residuo), quindi `isSidebarVisible`/`disabled`/
+  // `data-preview-mode` sotto restano sempre nel loro stato "non in anteprima" — letti ancora
+  // da qui invece di rimuovere il markup che dipende da loro, fuori scope di questo task
+  // (CLAUDE.md — solo il task corrente, zero refactoring fuori scope), stesso principio di
+  // `isStructurePanelOpen` sopra.
   const isPreviewMode = useIsPreviewMode();
-  const togglePreviewMode = useBlockEditorStore((state) => state.togglePreviewMode);
-  // "Anteprima Pura" nasconde la sidebar sinistra (E01): stesso meccanismo di
-  // `isSidebarOpen` (`.sidebarCollapsed`, transizione di `flex-basis` invece di
-  // montare/smontare l'elemento), solo con una seconda condizione che lo forza chiuso.
-  // Il pulsante "+" della topbar resta comunque governato dal solo `isSidebarOpen` sotto:
-  // uscendo dall'anteprima la sidebar riappare nello stato in cui l'utente l'aveva lasciata.
   const isSidebarVisible = isSidebarOpen && !isPreviewMode;
   const undo = useBlockEditorStore((state) => state.undo);
   const redo = useBlockEditorStore((state) => state.redo);
@@ -420,25 +437,13 @@ export default function FullScreenEditorLayout({
         saving={saving}
         onSaveDraft={onSaveDraft}
         pageStatus={pageStatus}
+        onPreview={onPreview}
+        previewLoading={previewLoading}
         visibleTransitions={visibleTransitions}
         statusSubmitting={statusSubmitting}
         onRequestStatusChange={onRequestStatusChange}
-        isPreviewMode={isPreviewMode}
-        onTogglePreviewMode={togglePreviewMode}
         leadingActions={
           <>
-            {/* Visibilita della sidebar sinistra: l'occhio rende esplicita l'azione di mostrare
-              o nascondere il pannello, senza duplicare un controllo di aggiunta. */}
-            <ActionIcon
-              variant={isSidebarOpen ? 'filled' : 'subtle'}
-              size="lg"
-              aria-label="Mostra/Nascondi pannello widget"
-              aria-pressed={isSidebarOpen}
-              disabled={isPreviewMode}
-              onClick={toggleSidebar}
-            >
-              {isSidebarOpen ? <IconEye size={18} /> : <IconEyeOff size={18} />}
-            </ActionIcon>
             {/* Storia/Navigatore (restyle Elementor Pro): spostate qui dal gruppo di destra
                 — stessi due `ActionIcon`, stessi handler, solo la posizione nella topbar
                 cambia (nessun "Impostazioni" aggiunto: nessuna funzionalità corrispondente
@@ -454,19 +459,8 @@ export default function FullScreenEditorLayout({
             </ActionIcon>
           </>
         }
-        centerActions={page ? <LocaleSwitcher page={page} /> : undefined}
         trailingActions={
           <>
-            {onPreview && (
-              <Button
-                variant="default"
-                leftSection={<IconEye size={16} />}
-                loading={previewLoading}
-                onClick={onPreview}
-              >
-                Anteprima
-              </Button>
-            )}
             <ActionIcon
               variant="subtle"
               size="lg"
@@ -496,15 +490,6 @@ export default function FullScreenEditorLayout({
               onClick={handleImportClick}
             >
               <IconFileImport size={18} />
-            </ActionIcon>
-            <ActionIcon
-              variant={isStructurePanelOpen ? 'filled' : 'subtle'}
-              size="lg"
-              aria-label="Pannello struttura"
-              aria-pressed={isStructurePanelOpen}
-              onClick={toggleStructurePanel}
-            >
-              <IconLayoutSidebarRight size={18} />
             </ActionIcon>
           </>
         }
@@ -555,6 +540,34 @@ export default function FullScreenEditorLayout({
                 onVersionConflict={onVersionConflict}
               />
             </aside>
+
+            {/*
+              Freccina di collasso/espansione (stile Elementor): sostituisce l'icona "occhio"
+              rimossa dalla topbar — stesso `toggleSidebar`/`isSidebarVisible` di prima, solo
+              spostata sul bordo della sidebar sinistra, verticalmente centrata. Posizionata
+              come fratello di `.sidebar` dentro `.workArea` (`position: relative`), non
+              dentro l'`aside`: quando la sidebar collassa a `flex-basis: 0` il suo contenuto
+              sparisce (`overflow: hidden`), quindi la maniglia deve vivere fuori per restare
+              cliccabile in entrambi gli stati. La posizione orizzontale segue `left` inline
+              (`SIDEBAR_WIDTH` aperta, 0 chiusa) invece di una seconda classe CSS, per la
+              stessa transizione morbida di `.sidebar` (`flex-basis 200ms ease`, vedi CSS
+              module).
+            */}
+            <ActionIcon
+              variant="default"
+              size="sm"
+              radius="xl"
+              className={styles.sidebarToggle}
+              style={{ left: isSidebarVisible ? SIDEBAR_WIDTH : 0 }}
+              aria-label={
+                isSidebarVisible ? 'Comprimi pannello sinistro' : 'Espandi pannello sinistro'
+              }
+              aria-pressed={isSidebarVisible}
+              disabled={isPreviewMode}
+              onClick={toggleSidebar}
+            >
+              {isSidebarVisible ? <IconChevronLeft size={14} /> : <IconChevronRight size={14} />}
+            </ActionIcon>
 
             <div
               className={styles.canvasArea}

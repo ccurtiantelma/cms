@@ -5,7 +5,9 @@
   border-radius: 10px;
   background: var(--mantine-color-body);
   overflow: hidden;
-  transition: border-color 140ms ease, box-shadow 140ms ease;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .card:hover {

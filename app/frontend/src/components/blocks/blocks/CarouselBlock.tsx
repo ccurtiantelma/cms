@@ -32,7 +32,10 @@ import styles from './CarouselBlock.module.css';
 export type CarouselEffectiveTransition = 'manual-scroll' | 'fade-loop' | 'slide-loop';
 
 /** Vedi il commento di {@link CarouselEffectiveTransition}. Unico punto di calcolo, riusato da `BlockRenderer.tsx`. */
-export function resolveCarouselTransition(autoplay: unknown, transition: unknown): CarouselEffectiveTransition {
+export function resolveCarouselTransition(
+  autoplay: unknown,
+  transition: unknown,
+): CarouselEffectiveTransition {
   if (autoplay !== true) return 'manual-scroll';
   return transition === 'fade-loop' || transition === 'slide-loop' ? transition : 'manual-scroll';
 }

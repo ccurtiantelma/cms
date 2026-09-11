@@ -1,13 +1,15 @@
 /**
  * Elenco Pagine (F01/T7) — stesso pattern CRUD di `PageUsers`
- * (`ResponsiveTable` + `ListToolbar` + `usePaginatedList`), con filtri
- * `status`/`locale` e ricerca testuale. La creazione qui gestisce solo i
- * metadati minimi (titolo, slug, locale, genitore): il resto (SEO, stato,
- * revisioni) si gestisce nella pagina di dettaglio dopo la creazione.
+ * (`ResponsiveTable` + `ListToolbar` + `usePaginatedList`), con filtro
+ * `status` e ricerca testuale. Nessun filtro/colonna "Lingua": il
+ * multilingua non è ancora gestito in questa vista (F05 fuori scope qui).
+ * La creazione qui gestisce solo i metadati minimi (titolo, slug, locale,
+ * genitore): il resto (SEO, stato, revisioni) si gestisce nella pagina di
+ * dettaglio dopo la creazione.
  * L'API applica già ownership per riga (ADR-18): un `User` vede solo le
  * proprie Pagine, nessun filtro di ruolo è reimplementato qui lato client.
  */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Badge, Group, ScrollArea, Select, Stack, Text, TextInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
@@ -22,11 +24,9 @@ import {
   createPage,
   deletePage,
   fetchPage,
-  fetchPageTranslations,
   fetchPages,
   issuePagePreviewToken,
 } from '../../services/pages.service';
-import { getMultilingualConfigApi } from '../../services/settings.service';
 import type {
   CreatePagePayload,
   PageRecord,
@@ -50,14 +50,7 @@ const STATUS_FILTER_OPTIONS = [
 ];
 
 /** Colonne ordinabili lato API (`o=` — vedi `PagesController_findAll`). */
-const PAGES_SORTABLE: (keyof PageRecord)[] = [
-  'title',
-  'slug',
-  'status',
-  'locale',
-  'createdAt',
-  'updatedAt',
-];
+const PAGES_SORTABLE: (keyof PageRecord)[] = ['title', 'slug', 'status', 'createdAt', 'updatedAt'];
 
 /** Valori del form di creazione rapida (solo metadati minimi). */
 interface CreatePageFormValues {
@@ -78,17 +71,6 @@ const EMPTY_CREATE_FORM: CreatePageFormValues = {
   parentGuid: '',
   templateSlug: DEFAULT_TEMPLATE_SLUG,
 };
-
-/**
- * Bandiera del Locale, derivata dal sottotag regione (es. `it-IT` → 🇮🇹) — stessa logica di
- * `LocaleSwitcher.tsx`, duplicata qui perché non esposta come utility condivisa.
- */
-function localeFlag(locale: string): string {
-  const region = locale.split('-')[1];
-  if (!region || region.length !== 2) return '🌐';
-  const codePoints = [...region.toUpperCase()].map((char) => 127397 + char.charCodeAt(0));
-  return String.fromCodePoint(...codePoints);
-}
 
 /**
  * Tetto alle risalite verso gli antenati per risolvere il percorso pubblico dallo slug
@@ -122,39 +104,14 @@ export default function PagePages(): JSX.Element {
   const navigate = useNavigate();
 
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [localeFilter, setLocaleFilter] = useState<string>('');
   const [createOpened, setCreateOpened] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<PageRecord | null>(null);
   const [submitting, setSubmitting] = useState(false);
   /** Guid della riga per cui "Mostra Pagina" è in corso: evita doppio click concorrente. */
   const [showPageLoadingGuid, setShowPageLoadingGuid] = useState<string | null>(null);
-  /** Locale attivi (`GET app/settings/multilingual`), per il filtro a tendina e i badge. */
-  const [activeLocales, setActiveLocales] = useState<string[]>([]);
-  /** Locale delle traduzioni sorelle per `translationGroupId`, popolato lazy per le righe visibili. */
-  const [groupLocales, setGroupLocales] = useState<Record<string, string[]>>({});
-
-  useEffect(() => {
-    let cancelled = false;
-    getMultilingualConfigApi()
-      .then((config) => {
-        if (!cancelled) setActiveLocales(config.active);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          notifications.show({
-            color: 'red',
-            message: getErrorMessage(err, 'Errore nel caricamento dei Locale attivi'),
-          });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const extraParams: Partial<PagesQueryParams> = {
     status: statusFilter ? (statusFilter as PageStatus) : undefined,
-    locale: localeFilter || undefined,
   };
 
   const {
@@ -175,49 +132,6 @@ export default function PagePages(): JSX.Element {
     errorMessage: 'Errore nel caricamento delle Pagine',
     extraParams,
   });
-
-  // Badge lingua per riga: un gruppo di traduzione con una sola riga (nessuna
-  // traduzione ancora creata) non genera una chiamata — solo i gruppi con più
-  // di una riga fra quelle visibili in questa pagina di risultati vengono
-  // interrogati, e ogni translationGroupId è richiesto una sola volta anche
-  // se compare su più righe.
-  useEffect(() => {
-    const groupCounts = new Map<string, number>();
-    for (const row of records) {
-      groupCounts.set(row.translationGroupId, (groupCounts.get(row.translationGroupId) ?? 0) + 1);
-    }
-    const toLoad = records.filter(
-      (row) =>
-        (groupCounts.get(row.translationGroupId) ?? 0) > 1 &&
-        !(row.translationGroupId in groupLocales),
-    );
-    if (toLoad.length === 0) return;
-
-    let cancelled = false;
-    Promise.all(
-      toLoad.map((row) =>
-        fetchPageTranslations(row.guid).then((siblings) => ({
-          groupId: row.translationGroupId,
-          locales: Array.from(new Set([row.locale, ...siblings.map((s) => s.locale)])),
-        })),
-      ),
-    )
-      .then((results) => {
-        if (cancelled) return;
-        setGroupLocales((prev) => {
-          const next = { ...prev };
-          for (const { groupId, locales } of results) next[groupId] = locales;
-          return next;
-        });
-      })
-      .catch(() => {
-        // Silenzioso: i badge lingua sono un'informazione consultiva, non
-        // bloccante — la colonna "Lingua" resta comunque leggibile.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [records, groupLocales]);
 
   const form = useForm<CreatePageFormValues>({
     mode: 'controlled',
@@ -343,33 +257,6 @@ export default function PagePages(): JSX.Element {
     },
     { key: 'slug', label: 'Slug', hideInCard: true },
     {
-      key: 'locale',
-      label: 'Lingua',
-      render: (row) => {
-        const siblings = groupLocales[row.translationGroupId];
-        if (!siblings) {
-          return (
-            <Badge variant="filled" size="sm">
-              {localeFlag(row.locale)} {row.locale}
-            </Badge>
-          );
-        }
-        return (
-          <Group gap={4} wrap="wrap">
-            {siblings.map((locale) => (
-              <Badge
-                key={locale}
-                variant={locale === row.locale ? 'filled' : 'light'}
-                size="sm"
-              >
-                {localeFlag(locale)} {locale}
-              </Badge>
-            ))}
-          </Group>
-        );
-      },
-    },
-    {
       key: 'status',
       label: 'Stato',
       render: (row) => (
@@ -413,23 +300,6 @@ export default function PagePages(): JSX.Element {
                 }}
                 w={180}
                 allowDeselect={false}
-              />
-              <Select
-                data={[
-                  { value: '', label: 'Tutte le lingue' },
-                  ...activeLocales.map((locale) => ({
-                    value: locale,
-                    label: `${localeFlag(locale)} ${locale}`,
-                  })),
-                ]}
-                value={localeFilter}
-                onChange={(value) => {
-                  setLocaleFilter(value ?? '');
-                  setPage(1);
-                }}
-                w={180}
-                allowDeselect={false}
-                aria-label="Filtra per lingua"
               />
             </Group>
           }

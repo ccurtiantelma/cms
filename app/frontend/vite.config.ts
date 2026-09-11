@@ -23,7 +23,13 @@ export default defineConfig({
       output: {
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
-          mantine: ['@mantine/core', '@mantine/dates', '@mantine/form', '@mantine/hooks', '@mantine/notifications'],
+          mantine: [
+            '@mantine/core',
+            '@mantine/dates',
+            '@mantine/form',
+            '@mantine/hooks',
+            '@mantine/notifications',
+          ],
         },
       },
     },

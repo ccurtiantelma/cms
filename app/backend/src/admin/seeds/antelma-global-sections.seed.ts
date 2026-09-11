@@ -188,7 +188,11 @@ function buildHeaderBlocks(navMenuPageGuids: NavMenuPageGuids): BlockNode[] {
                   v: 1,
                   props: {},
                   children: [
-                    { id: 'antelma-gs-header-nav-home', label: 'Home', pageGuid: navMenuPageGuids.home },
+                    {
+                      id: 'antelma-gs-header-nav-home',
+                      label: 'Home',
+                      pageGuid: navMenuPageGuids.home,
+                    },
                     {
                       id: 'antelma-gs-header-nav-chi-siamo',
                       label: 'Chi Siamo',
@@ -516,9 +520,17 @@ async function upsertGlobalSection(
  * davvero, perché il seed la crea nello stesso processo). SELECT preventiva
  * deliberata, stesso principio di `antelmaContactSeed` (script mono-processo).
  */
-async function resolvePageGuid(dbService: DbService, slug: string, locale: string): Promise<string> {
+async function resolvePageGuid(
+  dbService: DbService,
+  slug: string,
+  locale: string,
+): Promise<string> {
   const page = await dbService.db.query.pageEntity.findFirst({
-    where: and(eq(pageEntity.slug, slug), eq(pageEntity.locale, locale), isNull(pageEntity.parentId)),
+    where: and(
+      eq(pageEntity.slug, slug),
+      eq(pageEntity.locale, locale),
+      isNull(pageEntity.parentId),
+    ),
   });
   if (!page) {
     throw new Error(

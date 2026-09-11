@@ -242,7 +242,9 @@ export async function antelmaChiSiamoPageSeed(
     where: eq(userEntity.role, AppUserRoles.SuperAdmin),
   });
   if (!author) {
-    throw new Error(`Seed "${PAGE_SLUG}": nessun utente SuperAdmin trovato — eseguire prima il seed utenti.`);
+    throw new Error(
+      `Seed "${PAGE_SLUG}": nessun utente SuperAdmin trovato — eseguire prima il seed utenti.`,
+    );
   }
 
   const content = buildPersistableContentTree();

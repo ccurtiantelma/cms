@@ -173,7 +173,10 @@ export default function WidgetPalette(): JSX.Element {
     const extraGroups: { category: string; descriptors: BlockTypeDescriptor[] }[] = Array.from(
       map.entries(),
     )
-      .filter(([categoryName]) => !CATEGORY_ORDER.includes(categoryName as (typeof CATEGORY_ORDER)[number]))
+      .filter(
+        ([categoryName]) =>
+          !CATEGORY_ORDER.includes(categoryName as (typeof CATEGORY_ORDER)[number]),
+      )
       .map(([categoryName, descriptors]) => ({ category: categoryName, descriptors }));
 
     return orderedGroups.concat(extraGroups);
@@ -195,11 +198,7 @@ export default function WidgetPalette(): JSX.Element {
         onChange={(event) => setQuery(event.currentTarget.value)}
         className={styles.search}
       />
-      <WidgetPaletteGrid
-        presetsOnly
-        parentId={presetTarget.parentId}
-        index={presetTarget.index}
-      />
+      <WidgetPaletteGrid presetsOnly parentId={presetTarget.parentId} index={presetTarget.index} />
 
       {groups.length === 0 ? (
         <Text size="sm" c="dimmed" ta="center" mt="md">

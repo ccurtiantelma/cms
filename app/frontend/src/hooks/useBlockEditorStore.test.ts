@@ -19,7 +19,12 @@
  * interroga `canContainType` prima di invocarla, e l'undo/redo del comando risultante.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useBlockEditorStore, useCanRedo, useCanUndo, useHasUnsavedChanges } from './useBlockEditorStore';
+import {
+  useBlockEditorStore,
+  useCanRedo,
+  useCanUndo,
+  useHasUnsavedChanges,
+} from './useBlockEditorStore';
 import { renderHook, act } from '@testing-library/react';
 import { findNode, type BlockNode } from '../pages/pages/editor/block-tree.utils';
 
@@ -559,9 +564,7 @@ describe('useBlockEditorStore — moveNodeToAction: rispetta il registro (canCon
     // `BLOCK_NESTING_NOT_ALLOWED` — qui si copre che il client non lasci nemmeno tentare
     // il salvataggio.
     const treeWithTwoSections: BlockNode[] = [
-      node('sec-outer', 'section', {}, [
-        node('head-1', 'heading', { level: 'h2', text: 'Primo' }),
-      ]),
+      node('sec-outer', 'section', {}, [node('head-1', 'heading', { level: 'h2', text: 'Primo' })]),
       node('sec-inner', 'section', {}, []),
     ];
     useBlockEditorStore.getState().initTree(treeWithTwoSections);
@@ -576,7 +579,7 @@ describe('useBlockEditorStore — moveNodeToAction: rispetta il registro (canCon
     expect(notifications.show).toHaveBeenCalledWith(
       expect.objectContaining({
         color: 'red',
-        message: 'Impossibile inserire una Sezione all\'interno di un\'altra Sezione.',
+        message: "Impossibile inserire una Sezione all'interno di un'altra Sezione.",
       }),
     );
   });
@@ -605,7 +608,7 @@ describe('useBlockEditorStore — addBlockAction: rispetta il registro (canConta
     expect(notifications.show).toHaveBeenCalledWith(
       expect.objectContaining({
         color: 'red',
-        message: 'Impossibile inserire una Sezione all\'interno di un\'altra Sezione.',
+        message: "Impossibile inserire una Sezione all'interno di un'altra Sezione.",
       }),
     );
   });
@@ -653,9 +656,7 @@ describe('useBlockEditorStore — duplicateNodeAction', () => {
           node('leaf-a1', 'heading', { level: 'h2', text: 'A1' }),
           node('leaf-a2', 'heading', { level: 'h2', text: 'A2' }),
         ]),
-        node('mid-b', 'section', {}, [
-          node('leaf-b1', 'heading', { level: 'h2', text: 'B1' }),
-        ]),
+        node('mid-b', 'section', {}, [node('leaf-b1', 'heading', { level: 'h2', text: 'B1' })]),
       ]),
       node('head-root', 'heading', { level: 'h3', text: 'Radice' }),
     ];

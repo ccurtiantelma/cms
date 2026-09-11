@@ -99,8 +99,12 @@
    è solo il contenitore flex a larghezza fissa dentro `.workArea`. Sempre montata nel DOM
    (vedi FullScreenEditorLayout.tsx): la transizione anima `flex-basis`, non presenza/assenza
    dell'elemento, così apertura/chiusura non scattano di colpo. */
+/* Larghezza allineata a `EditorSidebar.module.css` `.root` (340px, restyle Elementor Pro:
+   griglia widget a 3 colonne — vedi `WidgetPalette.module.css` `.grid`) e alla costante
+   `SIDEBAR_WIDTH` di `FullScreenEditorLayout.tsx`, che posiziona `.sidebarToggle` sullo
+   stesso bordo. */
 .sidebar {
-  flex: 0 0 300px;
+  flex: 0 0 340px;
   overflow: hidden;
   transition: flex-basis 200ms ease;
 }
@@ -109,6 +113,39 @@
    ma l'elemento resta nel DOM — `EditorSidebar` non perde `activeSidebarTab`/scroll. */
 .sidebarCollapsed {
   flex-basis: 0;
+}
+
+/*
+ * Maniglia di collasso/espansione della sidebar sinistra — restyle Elementor Pro (richiesta
+ * esplicita del task): un cerchietto piccolo ed essenziale, non più "scatolato" (bordo/ombra
+ * pesanti di prima). Sfondo pieno e ombra compaiono solo all'hover/focus, per restare quasi
+ * invisibile a riposo, appoggiato esattamente al centro verticale del bordo della sidebar.
+ * `transition: left` rispecchia `flex-basis 200ms ease` di `.sidebar` sopra, così la maniglia
+ * scorre insieme al bordo invece di scattare alla posizione finale.
+ */
+.sidebarToggle {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  transition:
+    left 200ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+  background-color: var(--mantine-color-body);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: none;
+}
+
+.sidebarToggle:hover,
+.sidebarToggle:focus-visible {
+  background-color: var(--mantine-color-body);
+  border-color: rgba(148, 163, 184, 0.55);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+
+[data-mantine-color-scheme='dark'] .sidebarToggle {
+  border-color: rgba(148, 163, 184, 0.25);
 }
 
 /*

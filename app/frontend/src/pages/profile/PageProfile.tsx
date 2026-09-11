@@ -547,14 +547,10 @@ export default function PageProfile(): JSX.Element {
                                 </Stack>
                               </Table.Td>
                               <Table.Td>
-                                <Text size="sm">
-                                  {formatDate(session.lastUsedAt)}
-                                </Text>
+                                <Text size="sm">{formatDate(session.lastUsedAt)}</Text>
                               </Table.Td>
                               <Table.Td>
-                                <Text size="sm">
-                                  {formatDate(session.createdAt)}
-                                </Text>
+                                <Text size="sm">{formatDate(session.createdAt)}</Text>
                               </Table.Td>
                               <Table.Td>
                                 <Button

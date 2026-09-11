@@ -109,9 +109,7 @@ export default function CanvasContextMenu({ children }: CanvasContextMenuProps):
    */
   function openInsertFlow(offset: 0 | 1): void {
     if (!targetId || !location || !position) return;
-    const parentType = location.parentId
-      ? findNode(tree, location.parentId)?.type
-      : undefined;
+    const parentType = location.parentId ? findNode(tree, location.parentId)?.type : undefined;
     insertFlowIdRef.current += 1;
     const anchor = position;
     setInsertFlow({
@@ -151,12 +149,12 @@ export default function CanvasContextMenu({ children }: CanvasContextMenuProps):
         </Menu.Target>
         <Menu.Dropdown onContextMenu={(event) => event.preventDefault()}>
           <Menu.Item
-          leftSection={<IconCopy size={14} />}
-          rightSection={<span>Ctrl+D</span>}
-          disabled={!node}
-          onClick={() => targetId && run(() => duplicateNodeAction(targetId))}
-        >
-          Duplica
+            leftSection={<IconCopy size={14} />}
+            rightSection={<span>Ctrl+D</span>}
+            disabled={!node}
+            onClick={() => targetId && run(() => duplicateNodeAction(targetId))}
+          >
+            Duplica
           </Menu.Item>
           {/*
             "Inserisci Prima"/"Inserisci Dopo" (PLAN-F04e): azioni di inserimento, vicine a
@@ -164,62 +162,62 @@ export default function CanvasContextMenu({ children }: CanvasContextMenuProps):
             blocco resta una scelta dell'utente (`openInsertFlow` sopra), mai deciso qui.
           */}
           <Menu.Item
-          leftSection={<IconRowInsertTop size={14} />}
-          disabled={!node}
-          onClick={() => openInsertFlow(0)}
-        >
-          Inserisci Prima
+            leftSection={<IconRowInsertTop size={14} />}
+            disabled={!node}
+            onClick={() => openInsertFlow(0)}
+          >
+            Inserisci Prima
           </Menu.Item>
           <Menu.Item
-          leftSection={<IconRowInsertBottom size={14} />}
-          disabled={!node}
-          onClick={() => openInsertFlow(1)}
-        >
-          Inserisci Dopo
+            leftSection={<IconRowInsertBottom size={14} />}
+            disabled={!node}
+            onClick={() => openInsertFlow(1)}
+          >
+            Inserisci Dopo
           </Menu.Item>
           <Menu.Item
-          leftSection={<IconPalette size={14} />}
-          disabled={!node}
-          onClick={() => targetId && run(() => copyStyleAction(targetId))}
-        >
-          Copia stile
+            leftSection={<IconPalette size={14} />}
+            disabled={!node}
+            onClick={() => targetId && run(() => copyStyleAction(targetId))}
+          >
+            Copia stile
           </Menu.Item>
           <Menu.Item
-          leftSection={<IconClipboard size={14} />}
-          disabled={!node || !styleClipboard}
-          onClick={() => targetId && run(() => pasteStyleAction(targetId))}
-        >
-          Incolla stile
-          </Menu.Item>
-          <Menu.Divider />
-          <Menu.Item
-          leftSection={<IconArrowUp size={14} />}
-          disabled={!canMoveUp}
-          onClick={() => targetId && run(() => moveBlockAction(targetId, 'up'))}
-        >
-          Sposta su
-          </Menu.Item>
-          <Menu.Item
-          leftSection={<IconArrowDown size={14} />}
-          disabled={!canMoveDown}
-          onClick={() => targetId && run(() => moveBlockAction(targetId, 'down'))}
-        >
-          Sposta giù
+            leftSection={<IconClipboard size={14} />}
+            disabled={!node || !styleClipboard}
+            onClick={() => targetId && run(() => pasteStyleAction(targetId))}
+          >
+            Incolla stile
           </Menu.Item>
           <Menu.Divider />
           <Menu.Item
-          color="red"
-          leftSection={<IconTrash size={14} />}
-          disabled={!node}
-          onClick={() =>
-            targetId &&
-            run(() => {
-              removeBlockAction(targetId);
-              notifications.show({ color: 'blue', message: 'Blocco eliminato.' });
-            })
-          }
-        >
-          Elimina
+            leftSection={<IconArrowUp size={14} />}
+            disabled={!canMoveUp}
+            onClick={() => targetId && run(() => moveBlockAction(targetId, 'up'))}
+          >
+            Sposta su
+          </Menu.Item>
+          <Menu.Item
+            leftSection={<IconArrowDown size={14} />}
+            disabled={!canMoveDown}
+            onClick={() => targetId && run(() => moveBlockAction(targetId, 'down'))}
+          >
+            Sposta giù
+          </Menu.Item>
+          <Menu.Divider />
+          <Menu.Item
+            color="red"
+            leftSection={<IconTrash size={14} />}
+            disabled={!node}
+            onClick={() =>
+              targetId &&
+              run(() => {
+                removeBlockAction(targetId);
+                notifications.show({ color: 'blue', message: 'Blocco eliminato.' });
+              })
+            }
+          >
+            Elimina
           </Menu.Item>
         </Menu.Dropdown>
       </Menu>

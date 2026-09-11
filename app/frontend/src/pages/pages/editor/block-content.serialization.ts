@@ -78,8 +78,7 @@ function stripEmptyProps(
   );
   return Object.fromEntries(
     Object.entries(props).filter(
-      ([name, value]) =>
-        requiredProps.has(name) || (value !== '' && value !== null),
+      ([name, value]) => requiredProps.has(name) || (value !== '' && value !== null),
     ),
   );
 }

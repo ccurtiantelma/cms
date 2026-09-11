@@ -13,7 +13,9 @@
   border: 2px dashed var(--mantine-color-gray-4);
   border-radius: var(--mantine-radius-md);
   background-color: transparent;
-  transition: border-color 120ms ease, background-color 120ms ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
 }
 
 .dropZoneActive {
@@ -57,7 +59,9 @@
   border-radius: var(--mantine-radius-md);
   background-color: transparent;
   cursor: pointer;
-  transition: border-color 120ms ease, background-color 120ms ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
 }
 
 .tile:hover,

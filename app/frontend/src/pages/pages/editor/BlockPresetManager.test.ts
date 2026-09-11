@@ -11,7 +11,9 @@ const source: BlockNode = {
       id: 'container-original',
       type: 'container',
       props: { gap: 'md' },
-      children: [{ id: 'heading-original', type: 'heading', props: { text: 'Ciao' }, children: [] }],
+      children: [
+        { id: 'heading-original', type: 'heading', props: { text: 'Ciao' }, children: [] },
+      ],
     },
   ],
 };
@@ -29,7 +31,11 @@ describe('BlockPresetManager', () => {
     expect(instanceIds).toHaveLength(3);
     expect(new Set(instanceIds).size).toBe(3);
     expect(instanceIds).not.toEqual(ids(source));
-    expect(instanceIds.every((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))).toBe(true);
+    expect(
+      instanceIds.every((id) =>
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id),
+      ),
+    ).toBe(true);
     expect(instance.children[0].children[0].id).not.toBe(source.children[0].children[0].id);
   });
 

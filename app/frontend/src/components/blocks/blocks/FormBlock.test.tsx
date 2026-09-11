@@ -64,7 +64,12 @@ describe('FormBlock', () => {
   it('due `form-field` con colSpan a 6 si affiancano nella stessa riga della griglia (ADR-51)', () => {
     const html = renderToStaticMarkup(
       <FormBlock formKey="contatti">
-        <FormFieldBlock fieldType="text" name="cognome" label="Cognome" colSpan={{ default: '6' }} />
+        <FormFieldBlock
+          fieldType="text"
+          name="cognome"
+          label="Cognome"
+          colSpan={{ default: '6' }}
+        />
         <FormFieldBlock fieldType="email" name="email" label="Email" colSpan={{ default: '6' }} />
       </FormBlock>,
     );

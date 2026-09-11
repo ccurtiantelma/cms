@@ -32,7 +32,10 @@ import {
   updateBlockProps,
   type BlockNode,
 } from '../pages/pages/editor/block-tree.utils';
-import { canContainType, nestingRejectionMessage } from '../pages/pages/editor/block-registry.utils';
+import {
+  canContainType,
+  nestingRejectionMessage,
+} from '../pages/pages/editor/block-registry.utils';
 import { toPersistableBlocks } from '../pages/pages/editor/block-content.serialization';
 import {
   CONTAINER_WIDTH_PROP,
@@ -828,7 +831,10 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       return { ...patch, selectedId: pointerNode.id };
     });
 
-    notifications.show({ color: 'green', message: `Sezione Globale "${title}" creata e collegata` });
+    notifications.show({
+      color: 'green',
+      message: `Sezione Globale "${title}" creata e collegata`,
+    });
     return true;
   },
 
@@ -852,9 +858,12 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       const command: TreeCommand = {
         kind: 'tree',
         apply: (tree) => updateBlockProps(tree, id, applicable),
-        invert: (tree) => updateBlockProps(tree, id, Object.fromEntries(
-          Object.keys(applicable).map((key) => [key, node.props[key]]),
-        )),
+        invert: (tree) =>
+          updateBlockProps(
+            tree,
+            id,
+            Object.fromEntries(Object.keys(applicable).map((key) => [key, node.props[key]])),
+          ),
       };
       return pushCommand(state, command, `Modificato stile ${id}`);
     });
@@ -935,8 +944,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       return { hiddenInCanvasIds: next };
     }),
 
-  setHoveredId: (id) =>
-    set((state) => (state.hoveredId === id ? {} : { hoveredId: id })),
+  setHoveredId: (id) => set((state) => (state.hoveredId === id ? {} : { hoveredId: id })),
 
   setHoveredBlock: (id) =>
     set((state) => (state.hoveredBlockId === id ? {} : { hoveredBlockId: id })),
@@ -1022,7 +1030,10 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       // oggi in un iframe (nessun `contentDocument` da aggiornare in parallelo — vedi il
       // commento di `applyGlobalTokensToDocument`), quindi questo è l'unico documento da
       // sincronizzare finché non esisterà un componente canvas con un riferimento proprio.
-      applyGlobalTokensToDocument(compileTokensToCss(tokens, GLOBAL_TOKENS_SCOPE_SELECTOR), document);
+      applyGlobalTokensToDocument(
+        compileTokensToCss(tokens, GLOBAL_TOKENS_SCOPE_SELECTOR),
+        document,
+      );
       return {
         globalTokens: tokens,
         undoStack: [...state.undoStack, command],

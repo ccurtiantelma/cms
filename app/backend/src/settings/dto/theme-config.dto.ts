@@ -695,7 +695,10 @@ export class ThemeLayoutDto {
   @IsIn(THEME_UNITS, { message: 'Unità margine non ammessa.' })
   marginUnit!: ThemeUnit;
 
-  @ApiProperty({ description: 'Rientro interno della pagina per lato', type: ThemeLayoutPaddingDto })
+  @ApiProperty({
+    description: 'Rientro interno della pagina per lato',
+    type: ThemeLayoutPaddingDto,
+  })
   @IsDefined({ message: 'Il blocco padding è obbligatorio.' })
   @ValidateNested()
   @Type(() => ThemeLayoutPaddingDto)
@@ -1256,7 +1259,8 @@ export class ThemeConfigDto {
   dark!: ThemeSchemeTokensDto;
 
   @ApiProperty({
-    description: 'Layout di pagina: larghezza massima boxed, margini esterni e rientro interno (v8)',
+    description:
+      'Layout di pagina: larghezza massima boxed, margini esterni e rientro interno (v8)',
     type: ThemeLayoutDto,
   })
   @IsDefined({ message: 'Il blocco layout è obbligatorio.' })

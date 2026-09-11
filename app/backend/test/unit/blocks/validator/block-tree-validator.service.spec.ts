@@ -778,20 +778,23 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
       expect(result.valid).toBe(true);
     });
 
-    it.each(['%', 'vw'])('image.styleWidth con unit "%s" (nell\'elenco chiuso) è accettato', (unit) => {
-      const result = validator.validateTree([
-        node({
-          type: 'image',
-          props: {
-            mediaRef: '0123456789abcdef',
-            alt: 'alt valido',
-            styleSizePreset: 'custom',
-            styleWidth: { value: 50, unit },
-          },
-        }),
-      ]);
-      expect(result.valid).toBe(true);
-    });
+    it.each(['%', 'vw'])(
+      'image.styleWidth con unit "%s" (nell\'elenco chiuso) è accettato',
+      (unit) => {
+        const result = validator.validateTree([
+          node({
+            type: 'image',
+            props: {
+              mediaRef: '0123456789abcdef',
+              alt: 'alt valido',
+              styleSizePreset: 'custom',
+              styleWidth: { value: 50, unit },
+            },
+          }),
+        ]);
+        expect(result.valid).toBe(true);
+      },
+    );
 
     it('image.styleWidth con value oltre il massimo (3840) produce reason "range" sul sotto-path .value', () => {
       const result = validator.validateTree([
@@ -1941,7 +1944,9 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
           id: 'sec',
           type: 'section',
           props: {},
-          children: [node({ id: 'gr', type: 'globalRef', props: { globalSectionGuid: '0123456789abcdef' } })],
+          children: [
+            node({ id: 'gr', type: 'globalRef', props: { globalSectionGuid: '0123456789abcdef' } }),
+          ],
         }),
       ]);
       expect(result).toEqual({ valid: true, errors: [] });
@@ -2023,7 +2028,7 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
         ]);
       });
 
-      it('un globalRef annidato dentro una section, con insideGlobalSection:true, è comunque respinto (l\'intero albero, non solo la radice)', () => {
+      it("un globalRef annidato dentro una section, con insideGlobalSection:true, è comunque respinto (l'intero albero, non solo la radice)", () => {
         const result = validator.validateTree(
           [
             node({
@@ -2031,7 +2036,11 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
               type: 'section',
               props: {},
               children: [
-                node({ id: 'gr', type: 'globalRef', props: { globalSectionGuid: '0123456789abcdef' } }),
+                node({
+                  id: 'gr',
+                  type: 'globalRef',
+                  props: { globalSectionGuid: '0123456789abcdef' },
+                }),
               ],
             }),
           ],
@@ -2082,7 +2091,11 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
 
         const codes = result.errors.map((e) => e.code).sort();
         expect(codes).toEqual(
-          ['BLOCK_TYPE_NOT_ALLOWED_IN_GLOBAL_SECTION', 'BLOCK_PROP_INVALID', 'BLOCK_PROP_INVALID'].sort(),
+          [
+            'BLOCK_TYPE_NOT_ALLOWED_IN_GLOBAL_SECTION',
+            'BLOCK_PROP_INVALID',
+            'BLOCK_PROP_INVALID',
+          ].sort(),
         );
       });
     });
@@ -2227,7 +2240,7 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
       ['tabPanel', { label: 'L' }],
       ['carouselSlide', {}],
     ] as const)(
-      '%s alla radice dell\'albero è respinto con BLOCK_NESTING_NOT_ALLOWED, parentType null (ADR-57 § Decisione punto 2: mai in ROOT_ALLOWED)',
+      "%s alla radice dell'albero è respinto con BLOCK_NESTING_NOT_ALLOWED, parentType null (ADR-57 § Decisione punto 2: mai in ROOT_ALLOWED)",
       (type, props) => {
         const result = validator.validateTree([node({ type, props })]);
 
@@ -2348,33 +2361,38 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
 
     // ─── BLOCK_PROP_NOT_DECLARED ─────────────────────────────────────────
 
-    it.each(['accordion', 'accordionItem', 'tabs', 'tabPanel', 'carousel', 'carouselSlide', 'modalTrigger'])(
-      '%s con una prop non dichiarata produce BLOCK_PROP_NOT_DECLARED',
-      (type) => {
-        const requiredPropsByType: Record<string, Record<string, unknown>> = {
-          accordion: {},
-          accordionItem: { title: 'T' },
-          tabs: {},
-          tabPanel: { label: 'L' },
-          carousel: {},
-          carouselSlide: {},
-          modalTrigger: { triggerLabel: 'Apri' },
-        };
+    it.each([
+      'accordion',
+      'accordionItem',
+      'tabs',
+      'tabPanel',
+      'carousel',
+      'carouselSlide',
+      'modalTrigger',
+    ])('%s con una prop non dichiarata produce BLOCK_PROP_NOT_DECLARED', (type) => {
+      const requiredPropsByType: Record<string, Record<string, unknown>> = {
+        accordion: {},
+        accordionItem: { title: 'T' },
+        tabs: {},
+        tabPanel: { label: 'L' },
+        carousel: {},
+        carouselSlide: {},
+        modalTrigger: { triggerLabel: 'Apri' },
+      };
 
-        const result = validator.validateTree([
-          node({ type, props: { ...requiredPropsByType[type], nonEsiste: true } }),
-        ]);
+      const result = validator.validateTree([
+        node({ type, props: { ...requiredPropsByType[type], nonEsiste: true } }),
+      ]);
 
-        expect(result.errors).toContainEqual({
-          code: 'BLOCK_PROP_NOT_DECLARED',
-          details: expect.objectContaining({
-            path: 'blocks[0].props.nonEsiste',
-            type,
-            prop: 'nonEsiste',
-          }),
-        });
-      },
-    );
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_NOT_DECLARED',
+        details: expect.objectContaining({
+          path: 'blocks[0].props.nonEsiste',
+          type,
+          prop: 'nonEsiste',
+        }),
+      });
+    });
 
     // ─── BLOCK_PROP_INVALID — reason "required" su title/label/triggerLabel ─
 
@@ -2469,7 +2487,7 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
       },
     );
 
-    it('carousel.transition fuori dall\'elenco chiuso produce BLOCK_PROP_INVALID reason enum', () => {
+    it("carousel.transition fuori dall'elenco chiuso produce BLOCK_PROP_INVALID reason enum", () => {
       const result = validator.validateTree([
         node({ type: 'carousel', props: { transition: 'auto' } }),
       ]);
@@ -2487,14 +2505,17 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
       });
     });
 
-    it.each(['none', 'fade', 'slide-down'])('modalTrigger.animation = %j è accettato', (animation) => {
-      const result = validator.validateTree([
-        node({ type: 'modalTrigger', props: { triggerLabel: 'Apri', animation } }),
-      ]);
-      expect(result.valid).toBe(true);
-    });
+    it.each(['none', 'fade', 'slide-down'])(
+      'modalTrigger.animation = %j è accettato',
+      (animation) => {
+        const result = validator.validateTree([
+          node({ type: 'modalTrigger', props: { triggerLabel: 'Apri', animation } }),
+        ]);
+        expect(result.valid).toBe(true);
+      },
+    );
 
-    it('modalTrigger.animation fuori dall\'elenco chiuso produce BLOCK_PROP_INVALID reason enum', () => {
+    it("modalTrigger.animation fuori dall'elenco chiuso produce BLOCK_PROP_INVALID reason enum", () => {
       const result = validator.validateTree([
         node({ type: 'modalTrigger', props: { triggerLabel: 'Apri', animation: 'bounce' } }),
       ]);

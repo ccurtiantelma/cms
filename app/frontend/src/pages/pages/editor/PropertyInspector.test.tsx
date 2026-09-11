@@ -998,7 +998,9 @@ describe('PropertyInspector — i sette tipi widget interattivi (ADR-57)', () =>
 
   it('carousel: Switch "Avvio automatico" e Select "Transizione" con i soli valori del registro', async () => {
     const user = userEvent.setup();
-    renderInspectorWith(node('car-1', 'carousel', { autoplay: false, transition: 'manual-scroll' }));
+    renderInspectorWith(
+      node('car-1', 'carousel', { autoplay: false, transition: 'manual-scroll' }),
+    );
 
     const autoplayToggle = screen.getByLabelText('Avvio automatico');
     await user.click(autoplayToggle);
@@ -1019,9 +1021,7 @@ describe('PropertyInspector — i sette tipi widget interattivi (ADR-57)', () =>
 
   it('modalTrigger: TextInput "Etichetta del link" e Select "Animazione"', async () => {
     const user = userEvent.setup();
-    renderInspectorWith(
-      node('modal-1', 'modalTrigger', { triggerLabel: '', animation: 'fade' }),
-    );
+    renderInspectorWith(node('modal-1', 'modalTrigger', { triggerLabel: '', animation: 'fade' }));
 
     const labelInput = screen.getByRole('textbox', { name: 'Etichetta del link' });
     expect(labelInput).toHaveAttribute('maxlength', '80');
@@ -1179,7 +1179,9 @@ describe('PropertyInspector — section.styleBackgroundType (ADR-50)', () => {
     renderInspectorWith(node('sec-bg', 'section', {}));
 
     expect(screen.getByRole('textbox', { name: 'Tipo sfondo' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Scegli Immagine|Sostituisci Immagine/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Scegli Immagine|Sostituisci Immagine/ }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Posizione sfondo' })).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Dimensione sfondo' })).not.toBeInTheDocument();
     expect(screen.queryByText('Colore iniziale gradiente')).not.toBeInTheDocument();

@@ -21,7 +21,9 @@
   padding: 24px;
   background-color: #ffffff;
   text-align: center;
-  transition: border-color 120ms ease, background-color 120ms ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
 }
 
 [data-mantine-color-scheme='dark'] .box {

@@ -5,7 +5,9 @@
   border-radius: 50%;
   box-shadow: 0 0 0 1px var(--mantine-color-default-border);
   cursor: pointer;
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .trigger:hover {

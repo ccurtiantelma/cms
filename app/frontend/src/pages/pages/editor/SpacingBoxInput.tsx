@@ -30,7 +30,11 @@ const UNIT_OPTIONS = [
   { value: '%', label: '%' },
 ];
 
-export default function SpacingBoxInput({ value, onChange, label }: SpacingBoxInputProps): JSX.Element {
+export default function SpacingBoxInput({
+  value,
+  onChange,
+  label,
+}: SpacingBoxInputProps): JSX.Element {
   const [linked, setLinked] = useState(false);
 
   function updateSide(side: (typeof SIDES)[number]['key'], next: number | string): void {
@@ -57,10 +61,7 @@ export default function SpacingBoxInput({ value, onChange, label }: SpacingBoxIn
               onChange={(next) => updateSide(key, next)}
             />
           ))}
-          <Tooltip
-            label={linked ? 'Sblocca i lati' : 'Collega i lati'}
-            withArrow
-          >
+          <Tooltip label={linked ? 'Sblocca i lati' : 'Collega i lati'} withArrow>
             <ActionIcon
               className={styles.linkButton}
               variant={linked ? 'light' : 'subtle'}

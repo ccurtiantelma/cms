@@ -140,9 +140,7 @@ describe('GlobalSectionsController / PublicGlobalSectionsController (e2e) — AD
   function ordinaryContent(text: string): Record<string, unknown> {
     return {
       version: ENVELOPE_VERSION,
-      blocks: [
-        { id: 'h1', type: 'heading', v: 1, props: { level: 'h2', text }, children: [] },
-      ],
+      blocks: [{ id: 'h1', type: 'heading', v: 1, props: { level: 'h2', text }, children: [] }],
     };
   }
 
@@ -233,11 +231,7 @@ describe('GlobalSectionsController / PublicGlobalSectionsController (e2e) — AD
 
     // Stessa `version` di partenza (obsoleta dopo il primo PATCH): simula un secondo
     // editor che aveva caricato la Sezione prima dell'aggiornamento del primo.
-    const secondPatch = await authedRequest(
-      'patch',
-      `/api/v1/app/global-sections/${guid}`,
-      manager,
-    )
+    const secondPatch = await authedRequest('patch', `/api/v1/app/global-sections/${guid}`, manager)
       .send({ version, content: ordinaryContent('Perso: mai persistito') })
       .expect(409);
     expect(secondPatch.body.code).toBe('GLOBAL_SECTION_VERSION_CONFLICT');

@@ -34,7 +34,8 @@ export const usePresetStore = create<PresetState>()(
           ],
         }));
       },
-      deletePreset: (id) => set((state) => ({ presets: state.presets.filter((preset) => preset.id !== id) })),
+      deletePreset: (id) =>
+        set((state) => ({ presets: state.presets.filter((preset) => preset.id !== id) })),
       getPresets: () => get().presets,
     }),
     {

@@ -45,12 +45,9 @@ describe('block-registry (unit) — invarianti di ADR-29/ADR-30', () => {
     ['accordion', ['accordionItem']],
     ['tabs', ['tabPanel']],
     ['carousel', ['carouselSlide']],
-  ] as const)(
-    '%s dichiara children.allow: %j (ADR-57 § Decisione punto 2)',
-    (type, allow) => {
-      expect(DEFAULT_BLOCK_REGISTRY.definitions.get(type)?.children.allow).toEqual(allow);
-    },
-  );
+  ] as const)('%s dichiara children.allow: %j (ADR-57 § Decisione punto 2)', (type, allow) => {
+    expect(DEFAULT_BLOCK_REGISTRY.definitions.get(type)?.children.allow).toEqual(allow);
+  });
 
   it.each(['accordionItem', 'tabPanel', 'carouselSlide', 'modalTrigger'])(
     '%s dichiara children.allow limitato a heading/richText/image/button/container, mai un altro widget interattivo (ADR-57 § Decisione punto 2)',

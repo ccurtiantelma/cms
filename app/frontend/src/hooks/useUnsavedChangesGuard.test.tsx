@@ -56,7 +56,10 @@ function clickAnchor(anchor: HTMLAnchorElement): MouseEvent {
 }
 
 /** Monta un'ancora `href` nel `document.body` reale (il listener della guardia è su `document`). */
-function mountAnchor(href: string, options: { target?: string; download?: boolean } = {}): HTMLAnchorElement {
+function mountAnchor(
+  href: string,
+  options: { target?: string; download?: boolean } = {},
+): HTMLAnchorElement {
   const anchor = document.createElement('a');
   anchor.href = href;
   if (options.target) anchor.target = options.target;

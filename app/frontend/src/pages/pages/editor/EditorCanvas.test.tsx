@@ -73,10 +73,12 @@ describe('EditorCanvas — scope isolation dei Global Design Tokens', () => {
     expect(rootStyles.getPropertyValue('--eaidos-global-color-primary').trim()).toBe('');
   });
 
-  it('un aggiornamento dei token non ri-monta l\'albero di blocchi esistente', () => {
-    useBlockEditorStore.getState().initTree([
-      { id: 'h-1', type: 'heading', props: { level: 'h2', text: 'Titolo' }, children: [] },
-    ]);
+  it("un aggiornamento dei token non ri-monta l'albero di blocchi esistente", () => {
+    useBlockEditorStore
+      .getState()
+      .initTree([
+        { id: 'h-1', type: 'heading', props: { level: 'h2', text: 'Titolo' }, children: [] },
+      ]);
     const { container } = renderWithProviders(<EditorCanvas />);
     const blockNodeBefore = container.querySelector('[data-block-id="h-1"]');
 

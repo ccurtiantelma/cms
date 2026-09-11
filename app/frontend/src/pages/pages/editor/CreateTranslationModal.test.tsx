@@ -126,7 +126,9 @@ describe('CreateTranslationModal — creazione riuscita', () => {
 
   it("non reindirizza e mostra una notifica persistente quando l'editor ha modifiche non salvate", async () => {
     useBlockEditorStore.setState({
-      undoStack: [{ kind: 'tree', apply: (tree: BlockNode[]) => tree, invert: (tree: BlockNode[]) => tree }],
+      undoStack: [
+        { kind: 'tree', apply: (tree: BlockNode[]) => tree, invert: (tree: BlockNode[]) => tree },
+      ],
       savePoint: CLEAN_SAVE_POINT,
     });
     createPageTranslation.mockResolvedValue(

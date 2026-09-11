@@ -144,7 +144,8 @@ export default function GlobalTokensDrawer({
             comboboxProps={{ zIndex: 1200 }}
             onChange={(next) =>
               updateTokens((draft) => {
-                draft.typography.mainFont = (next ?? draft.typography.mainFont) as ThemeFontFamilyId;
+                draft.typography.mainFont = (next ??
+                  draft.typography.mainFont) as ThemeFontFamilyId;
               })
             }
           />
@@ -156,7 +157,8 @@ export default function GlobalTokensDrawer({
               value={globalTokens.typography.baseSize.value}
               onChange={(next) =>
                 updateTokens((draft) => {
-                  draft.typography.baseSize.value = typeof next === 'number' ? next : draft.typography.baseSize.value;
+                  draft.typography.baseSize.value =
+                    typeof next === 'number' ? next : draft.typography.baseSize.value;
                 })
               }
             />
@@ -190,7 +192,8 @@ export default function GlobalTokensDrawer({
               value={globalTokens.spacing.baseUnit.value}
               onChange={(next) =>
                 updateTokens((draft) => {
-                  draft.spacing.baseUnit.value = typeof next === 'number' ? next : draft.spacing.baseUnit.value;
+                  draft.spacing.baseUnit.value =
+                    typeof next === 'number' ? next : draft.spacing.baseUnit.value;
                 })
               }
             />
@@ -228,8 +231,8 @@ export default function GlobalTokensDrawer({
         </Group>
 
         <Text size="xs" c="dimmed">
-          Le modifiche sono già applicate live all&apos;editor. Il salvataggio le rende
-          permanenti per tutti gli utenti dell&apos;installazione.
+          Le modifiche sono già applicate live all&apos;editor. Il salvataggio le rende permanenti
+          per tutti gli utenti dell&apos;installazione.
         </Text>
       </Stack>
     </Drawer>

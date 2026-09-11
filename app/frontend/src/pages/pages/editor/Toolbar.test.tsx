@@ -1,8 +1,8 @@
 /**
  * Component test dei controlli E01 della topbar dell'editor full-screen (`Toolbar.tsx`):
- * badge di stato, toggle "Anteprima Pura", separazione fra "Salva Bozza" e il menu
- * "Cambia Stato" (che riusa `onRequestStatusChange`, mai una seconda macchina a stati —
- * vedi il commento di `ToolbarProps` in `Toolbar.tsx`).
+ * badge di stato, "Anteprima" (apre l'anteprima in una nuova scheda, non più un toggle
+ * "Anteprima Pura" — richiesta esplicita del task), "Salva Bozza" e il menu "Cambia Stato",
+ * spostato qui dalla barra di pubblicazione in fondo alla sidebar sinistra (rimossa).
  */
 import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
@@ -23,11 +23,6 @@ const baseProps: ToolbarProps = {
   saving: false,
   onSaveDraft: vi.fn(),
   pageStatus: 'draft',
-  visibleTransitions: ['review', 'scheduled', 'published'],
-  statusSubmitting: false,
-  onRequestStatusChange: vi.fn(),
-  isPreviewMode: false,
-  onTogglePreviewMode: vi.fn(),
 };
 
 describe('Toolbar — E01', () => {
@@ -43,75 +38,56 @@ describe('Toolbar — E01', () => {
     expect(screen.queryByText('Bozza')).not.toBeInTheDocument();
   });
 
-  it('il toggle "Anteprima Pura" invoca onTogglePreviewMode', async () => {
+  it('non mostra l\'icona "Anteprima" quando onPreview non è fornito', () => {
+    renderWithProviders(<Toolbar {...baseProps} />);
+
+    expect(screen.queryByRole('button', { name: 'Anteprima' })).not.toBeInTheDocument();
+  });
+
+  it('"Anteprima" invoca onPreview (apertura in nuova scheda), non un toggle di sidebar', async () => {
     const user = userEvent.setup();
-    const onTogglePreviewMode = vi.fn();
-    renderWithProviders(<Toolbar {...baseProps} onTogglePreviewMode={onTogglePreviewMode} />);
+    const onPreview = vi.fn();
+    renderWithProviders(<Toolbar {...baseProps} onPreview={onPreview} />);
 
-    await user.click(screen.getByRole('button', { name: 'Anteprima Pura' }));
+    await user.click(screen.getByRole('button', { name: 'Anteprima' }));
 
-    expect(onTogglePreviewMode).toHaveBeenCalledTimes(1);
+    expect(onPreview).toHaveBeenCalledTimes(1);
   });
 
-  it('riflette isPreviewMode su aria-pressed del toggle', () => {
-    const { rerender } = renderWithProviders(<Toolbar {...baseProps} isPreviewMode={false} />);
-    expect(screen.getByRole('button', { name: 'Anteprima Pura' })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    );
-
-    rerender(<Toolbar {...baseProps} isPreviewMode />);
-    expect(screen.getByRole('button', { name: 'Anteprima Pura' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
-  });
-
-  it('separa "Salva Bozza" da "Cambia Stato": il primo salva la bozza, mai una transizione', async () => {
+  it('"Salva Bozza" invoca onSaveDraft', async () => {
     const user = userEvent.setup();
     const onSaveDraft = vi.fn();
-    const onRequestStatusChange = vi.fn();
-    renderWithProviders(
-      <Toolbar
-        {...baseProps}
-        onSaveDraft={onSaveDraft}
-        onRequestStatusChange={onRequestStatusChange}
-      />,
-    );
+    renderWithProviders(<Toolbar {...baseProps} onSaveDraft={onSaveDraft} />);
 
     expect(screen.getByRole('button', { name: 'Salva Bozza' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cambia Stato' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Salva Bozza' }));
 
     expect(onSaveDraft).toHaveBeenCalledTimes(1);
-    expect(onRequestStatusChange).not.toHaveBeenCalled();
   });
 
-  it('il menu "Cambia Stato" elenca solo le transizioni ammesse e invoca onRequestStatusChange col target scelto', async () => {
+  it('il pulsante "Cambia Stato" resta disabilitato senza transizioni ammesse', () => {
+    renderWithProviders(
+      <Toolbar {...baseProps} onRequestStatusChange={vi.fn()} visibleTransitions={[]} />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Cambia Stato' })).toBeDisabled();
+  });
+
+  it('il menu "Cambia Stato" elenca le transizioni ammesse e invoca onRequestStatusChange', async () => {
     const user = userEvent.setup();
     const onRequestStatusChange = vi.fn();
     renderWithProviders(
       <Toolbar
         {...baseProps}
-        visibleTransitions={['review']}
         onRequestStatusChange={onRequestStatusChange}
+        visibleTransitions={['published']}
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Cambia Stato' }));
-    const item = await screen.findByRole('menuitem', { name: 'Invia in revisione' });
-    expect(screen.queryByRole('menuitem', { name: 'Pubblica' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Altre opzioni di pubblicazione' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Pubblica' }));
 
-    await user.click(item);
-
-    expect(onRequestStatusChange).toHaveBeenCalledTimes(1);
-    expect(onRequestStatusChange).toHaveBeenCalledWith('review');
-  });
-
-  it('disabilita "Cambia Stato" quando non ci sono transizioni ammesse dal ruolo corrente', () => {
-    renderWithProviders(<Toolbar {...baseProps} visibleTransitions={[]} />);
-
-    expect(screen.getByRole('button', { name: 'Cambia Stato' })).toBeDisabled();
+    expect(onRequestStatusChange).toHaveBeenCalledWith('published');
   });
 });

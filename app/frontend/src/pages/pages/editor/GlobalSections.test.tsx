@@ -65,12 +65,14 @@ describe('EditorBlockWrapper — "Salva come Preset Globale" sulla toolbar della
 
     renderWithProviders(<EditorBlockWrapper id="sec-1" />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Salva il blocco Sezione come Preset Globale' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Salva il blocco Sezione come Preset Globale' }),
+    );
 
     expect(screen.getByRole('textbox', { name: 'Nome del preset' })).toBeInTheDocument();
   });
 
-  it('confermando il nome, l\'intero sottoalbero della Sezione viene salvato in usePresetStore', () => {
+  it("confermando il nome, l'intero sottoalbero della Sezione viene salvato in usePresetStore", () => {
     const child = node('h-child', 'heading', { level: 'h2', text: 'Titolo' });
     const section = node('sec-1', 'section', { columns: { default: '1' } }, [child]);
     useBlockEditorStore.getState().initTree([section]);
@@ -78,7 +80,9 @@ describe('EditorBlockWrapper — "Salva come Preset Globale" sulla toolbar della
 
     renderWithProviders(<EditorBlockWrapper id="sec-1" />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Salva il blocco Sezione come Preset Globale' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Salva il blocco Sezione come Preset Globale' }),
+    );
     fireEvent.change(screen.getByRole('textbox', { name: 'Nome del preset' }), {
       target: { value: 'Hero aziendale' },
     });
@@ -99,7 +103,9 @@ describe('EditorBlockWrapper — "Salva come Preset Globale" sulla toolbar della
 
     renderWithProviders(<EditorBlockWrapper id="sec-1" />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Salva il blocco Sezione come Preset Globale' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Salva il blocco Sezione come Preset Globale' }),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Annulla' }));
 
     expect(usePresetStore.getState().presets).toHaveLength(0);
@@ -156,10 +162,14 @@ describe('WidgetPaletteGrid — tab "I Miei Preset" (F14-01)', () => {
   });
 
   it('due inserimenti consecutivi dello stesso preset producono alberi con id distinti (nessuna collisione nel Canvas)', () => {
-    usePresetStore.getState().savePreset(
-      'Hero',
-      node('sec-original', 'section', {}, [node('heading-original', 'heading', { level: 'h2', text: 'Ciao' })]),
-    );
+    usePresetStore
+      .getState()
+      .savePreset(
+        'Hero',
+        node('sec-original', 'section', {}, [
+          node('heading-original', 'heading', { level: 'h2', text: 'Ciao' }),
+        ]),
+      );
     useBlockEditorStore.getState().initTree([]);
 
     renderWithProviders(<WidgetPaletteGrid />);

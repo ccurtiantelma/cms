@@ -12,7 +12,9 @@
   border: 1px solid #3f4a59;
   border-radius: 6px;
   background: #202731;
-  box-shadow: 0 10px 28px rgb(9 14 21 / 32%), 0 2px 6px rgb(9 14 21 / 22%);
+  box-shadow:
+    0 10px 28px rgb(9 14 21 / 32%),
+    0 2px 6px rgb(9 14 21 / 22%);
   color: #e8edf3;
 }
 

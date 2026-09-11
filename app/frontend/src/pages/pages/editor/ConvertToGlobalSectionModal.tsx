@@ -78,8 +78,8 @@ export default function ConvertToGlobalSectionModal({
       <Stack>
         <Text size="sm">
           Il blocco &laquo;{blockLabel}&raquo; viene estratto dalla Pagina e sostituito con un
-          riferimento a una nuova Sezione Globale. Da quel momento, modificarne il contenuto
-          dal modulo Sezioni Globali aggiorna ogni Pagina che la referenzia — non solo questa.
+          riferimento a una nuova Sezione Globale. Da quel momento, modificarne il contenuto dal
+          modulo Sezioni Globali aggiorna ogni Pagina che la referenzia — non solo questa.
         </Text>
         <TextInput
           label="Nome della Sezione Globale"

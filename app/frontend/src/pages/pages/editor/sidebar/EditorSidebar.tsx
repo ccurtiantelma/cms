@@ -13,8 +13,11 @@
  * `Tabs.List` senza `Tabs.Panel`: il contenuto sotto l'header è gestito a mano (un `if`
  * sulla scheda attiva), non dal meccanismo di rendering condizionale di Mantine — serve un
  * contenitore scrollabile indipendente dall'header, che `Tabs.Panel` non offre da solo.
+ *
+ * Anteprima e "Cambia Stato" non vivono qui: sono nella topbar (`Toolbar.tsx`), in alto a
+ * destra — richiesta esplicita del task di riportarli lì dal fondo di questa sidebar.
  */
-import { Tabs, Text } from '@mantine/core';
+import { Tabs, Text, Tooltip } from '@mantine/core';
 import { IconAdjustments, IconListTree, IconSettings, IconStack2 } from '@tabler/icons-react';
 import {
   useActiveSidebarTab,
@@ -60,18 +63,26 @@ export default function EditorSidebar({
         className={styles.tabs}
       >
         <Tabs.List grow>
-          <Tabs.Tab value="widgets" leftSection={<IconStack2 size={16} />}>
-            Widgets
-          </Tabs.Tab>
-          <Tabs.Tab value="structure" leftSection={<IconListTree size={16} />}>
-            Struttura
-          </Tabs.Tab>
-          <Tabs.Tab value="properties" leftSection={<IconAdjustments size={16} />}>
-            Proprietà
-          </Tabs.Tab>
-          <Tabs.Tab value="page" leftSection={<IconSettings size={16} />}>
-            Pagina
-          </Tabs.Tab>
+          <Tooltip label="Widgets" openDelay={300} withinPortal>
+            <Tabs.Tab value="widgets" aria-label="Widgets">
+              <IconStack2 size={20} />
+            </Tabs.Tab>
+          </Tooltip>
+          <Tooltip label="Struttura" openDelay={300} withinPortal>
+            <Tabs.Tab value="structure" aria-label="Struttura">
+              <IconListTree size={20} />
+            </Tabs.Tab>
+          </Tooltip>
+          <Tooltip label="Proprietà" openDelay={300} withinPortal>
+            <Tabs.Tab value="properties" aria-label="Proprietà">
+              <IconAdjustments size={20} />
+            </Tabs.Tab>
+          </Tooltip>
+          <Tooltip label="Pagina" openDelay={300} withinPortal>
+            <Tabs.Tab value="page" aria-label="Pagina">
+              <IconSettings size={20} />
+            </Tabs.Tab>
+          </Tooltip>
         </Tabs.List>
       </Tabs>
 

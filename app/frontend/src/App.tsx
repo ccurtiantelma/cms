@@ -179,12 +179,7 @@ export default function App(): JSX.Element {
                 </RequireRole>
               }
             />
-            <Route
-              path="theme-editor"
-              element={
-                <PageThemeEditor />
-              }
-            />
+            <Route path="theme-editor" element={<PageThemeEditor />} />
           </Route>
 
           {/*

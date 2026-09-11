@@ -271,9 +271,7 @@ export default function RevisionDiffModal({
             {diff.unchanged.length > 0 && (
               <Accordion variant="contained">
                 <Accordion.Item value="unchanged">
-                  <Accordion.Control>
-                    Blocchi invariati ({diff.unchanged.length})
-                  </Accordion.Control>
+                  <Accordion.Control>Blocchi invariati ({diff.unchanged.length})</Accordion.Control>
                   <Accordion.Panel>
                     <Group gap="xs">
                       {diff.unchanged.map((nodeId) => (
