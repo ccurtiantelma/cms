@@ -1,11 +1,31 @@
 # Plan — F05 Multilingua e localizzazione dei contenuti
 
 ## Spec di riferimento
-`docs/ai/rfc/RFC-F05-multilingua.md` (in discussione — nessun punto M1-M6 ancora firmato)
+`docs/ai/rfc/RFC-F05-multilingua.md` — **approvata, M1–M6 tutti firmati il 2026-08-25**
 
 > ⚠️ Nessun task di questo piano può iniziare prima della firma dei punti corrispondenti
 > della RFC (`CLAUDE.md` § Ask first, § Documentation Policy). Il piano è ordinato per
 > essere eseguibile a mano a mano che le firme arrivano, non tutto insieme.
+>
+> **Stato al 2026-09-11** (riconciliazione, progress-tracker § Riconciliazione registro ↔
+> repository): le firme ci sono tutte e la maggior parte del piano è **consegnata** —
+> T1 (registro Locale, chiave `multilingual.locales`), T2 (indice
+> `pages_translation_group_locale_uq`), T3 (`POST`/`GET app/pages/:guid/translations`),
+> T4 (risoluzione pubblica locale-prefissata, `extractLocalePrefix`), T6
+> (`LocaleSwitcher`, `CreateTranslationModal`) e le collezioni Bruno di T7.
+> **T5 consegnato il 2026-09-11**: `PublicPageDto.translations` espone locale e percorso
+> canonico delle altre traduzioni pubblicate dello stesso gruppo. Il piano è **completo**.
+>
+> Due cose emerse costruendolo, entrambe risolte: (1) da T5 il payload pubblico di una Pagina
+> contiene dati di righe vicine, quindi una transizione di stato su una traduzione sporca
+> anche la cache delle sorelle — aggiunta `PublicPageCacheService.invalidateTranslationGroup`,
+> che non allarga il principio di ADR-23 (invalidazione per evento, chiavi calcolate dal
+> database, mai `SCAN`) ma gli fa toccare le chiavi che l'evento sporca davvero;
+> (2) il percorso composto da una riga non era in **forma canonica** — un Locale BCP-47 porta
+> la regione maiuscola (`en-GB`) e `GET public/pages?path=/en-GB/...` risponde `308`. Un
+> `hreflang` che punta a un redirect è un difetto: `buildPublicPath` ora canonicalizza, e la
+> correzione ricade anche su `resolveByGuid`, cioè sugli `href` dei menu di navigazione, che
+> avevano lo stesso difetto latente.
 
 ---
 
@@ -211,12 +231,18 @@ Step 3 — UI Editor Switcher Locale                            (T6)
 ## Definition of Done — Checklist globale
 
 ### Prerequisiti di firma (bloccanti)
-- [ ] **M1** Registro Locale come chiave `app_settings` approvato
-- [ ] **M2** Migrazione indice `pages_translation_group_locale_uq` approvata
-- [ ] **M3** Endpoint `POST app/pages/:guid/translations` con la semantica descritta approvato
-- [ ] **M4** Risoluzione pubblica locale-prefissata approvata
-- [ ] **M5** Debito ADR modello multilingua: sciolto (ADR di registrazione o aggiornamento roadmap)
-- [ ] **M6** RBAC Admin+ sul registro Locale approvato
+> **Tutti firmati il 2026-08-25** in `docs/ai/rfc/RFC-F05-multilingua.md` § Decisione umana
+> (approvato da marketing@antelmagroup.net). Questa checklist è rimasta a `[ ]` fino al
+> 2026-09-11, e per due settimane e mezzo ha fatto risultare F05 bloccata da firme che
+> esistevano: la fonte di una firma è la sezione «Decisione umana» della RFC, mai il mirror
+> nel plan. Riconciliata il 2026-09-11 (progress-tracker § Riconciliazione, debito D5).
+
+- [x] **M1** Registro Locale come chiave `app_settings` approvato — chiave `multilingual.locales`
+- [x] **M2** Migrazione indice `pages_translation_group_locale_uq` approvata — in `schema.ts`
+- [x] **M3** Endpoint `POST app/pages/:guid/translations` con la semantica descritta approvato
+- [x] **M4** Risoluzione pubblica locale-prefissata approvata
+- [x] **M5** Debito ADR modello multilingua: sciolto — `ADR-36-modello-multilingua-righe-autonome.md`, approvata il 2026-08-25
+- [x] **M6** RBAC Admin+ sul registro Locale approvato
 
 ### Implementazione
 - [ ] Tutti i task implementati

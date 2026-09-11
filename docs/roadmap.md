@@ -4,7 +4,13 @@
 > Non è un impegno di date: è l'ordine in cui le cose possono essere costruite senza
 > doverle rifare. Lo stato reale di avanzamento vive in `docs/ai/progress-tracker.md`.
 >
-> Ultima revisione: 2026-08-13.
+> Ultima revisione: 2026-09-11 — **riconciliazione con lo stato reale del repository**, su
+> richiesta umana esplicita. Le righe «Stato» erano ferme al 2026-08-13 e dichiaravano
+> `⏳ Da avviare` otto feature su dodici, fra cui cinque già consegnate. Sono state allineate a
+> `docs/ai/progress-tracker.md` e al codice verificato. Corrette anche tre voci
+> «Richiede ADR» che annunciavano decisioni in realtà già firmate (ADR-36, ADR-48, ADR-49):
+> restava aperto solo il provider del chatbot (F11).
+> Precedente: 2026-08-13.
 
 ---
 
@@ -33,7 +39,7 @@ F01 Pagine ──┬── F02 Blocchi ──┬── F04 Editor visivo
 
 ### F01 — Gestione Pagine (fondativa)
 
-**Pilastro**: prerequisito di tutti · **Stato**: 📝 Feature redatta, spec in bozza
+**Pilastro**: prerequisito di tutti · **Stato**: ✅ Done (2026-08-17)
 
 Modello dati della Pagina, stati e transizioni, slug e gerarchia, revisioni, CRUD
 amministrativo sotto `app/pages`. Nessun editor visivo: il contenuto si salva come
@@ -46,7 +52,7 @@ albero JSON via API.
 
 ### F02 — Registro e validazione dei Blocchi
 
-**Pilastro**: 1 (editor visivo) · **Stato**: ⏳ Da avviare · **Dipende da**: F01
+**Pilastro**: 1 (editor visivo) · **Stato**: ✅ Done · **Dipende da**: F01
 
 Registro dei tipi di blocco condiviso backend/frontend, schema di validazione per tipo,
 regole di annidamento, sanitizzazione server-side del rich text, versionamento degli
@@ -94,7 +100,7 @@ il completamento sull'air-gap di consegna, non una sua sostituzione.
 
 ### F04 — Editor visivo (page builder)
 
-**Pilastro**: 1 · **Stato**: ⏳ Da avviare · **Dipende da**: F02
+**Pilastro**: 1 · **Stato**: ✅ Done (2026-08-19; round F04b/F04c/F04d successivi) · **Dipende da**: F02
 
 Canvas di editing, albero dei blocchi, pannello proprietà, drag & drop, anteprima
 responsive, salvataggio con controllo ottimistico, error boundary per singolo blocco,
@@ -114,12 +120,13 @@ sync debounced, toolbar fluttuante su `richText`) è già costruito — vedi
 
 ### F05 — Multilingua
 
-**Pilastro**: 4 · **Stato**: ⏳ Da avviare · **Dipende da**: F01
+**Pilastro**: 4 · **Stato**: ✅ Done (2026-09-11) · **Dipende da**: F01
 
 Locale attivi, lingua di default, gruppi di traduzione, creazione di una traduzione da
 Pagina esistente, `hreflang`, menu per lingua.
 
-**Richiede ADR**: modello multilingua (righe autonome vs. campi affiancati).
+**ADR**: `ADR-36-modello-multilingua-righe-autonome.md`, approvata il 2026-08-25 — righe
+autonome. La decisione **non è più aperta**.
 **Perché presto**: aggiungere le lingue dopo aver popolato il sito costringe a
 migrare contenuti già pubblicati.
 
@@ -127,7 +134,7 @@ migrare contenuti già pubblicati.
 
 ### F06 — Template e Sezioni globali
 
-**Pilastro**: 1 · **Stato**: ⏳ Da avviare · **Dipende da**: F02
+**Pilastro**: 1 · **Stato**: ✅ Done (2026-09-03) · **Dipende da**: F02
 
 Template come punto di partenza copiato; Sezioni globali come riferimento condiviso, con
 invalidazione a cascata della cache delle Pagine che le usano.
@@ -136,17 +143,20 @@ invalidazione a cascata della cache delle Pagine che le usano.
 
 ### F07 — SEO per pagina
 
-**Pilastro**: 2 · **Stato**: ⏳ Da avviare · **Dipende da**: F03, F05
+**Pilastro**: 2 · **Stato**: 🔄 In progress · **Dipende da**: F03, F05
 
 Metadati per Pagina, canonical, `robots`, Open Graph, JSON-LD, sitemap XML con
 `hreflang`, `robots.txt`, redirect e compattazione delle catene, checklist consultiva
 in editor.
 
+**ADR**: `ADR-48-seo-graph-generation.md`, approvata il 2026-09-02 — generazione
+JSON-LD/OpenGraph a publish-time. La decisione **non è più aperta**.
+
 ---
 
 ### F08 — GEO per pagina
 
-**Pilastro**: 2 · **Stato**: ⏳ Da avviare · **Dipende da**: F07
+**Pilastro**: 2 · **Stato**: 🔄 In progress (parziale) · **Dipende da**: F07
 
 `aiSummary`, `keyFacts`, `faq` (con JSON-LD `FAQPage`), `entities`, `aiPolicy`,
 generazione di `llms.txt`, direttive per crawler AI.
@@ -160,19 +170,20 @@ generazione di `llms.txt`, direttive per crawler AI.
 
 ### F09 — Media editoriali
 
-**Pilastro**: 6 · **Stato**: ⏳ Da avviare · **Dipende da**: F02
+**Pilastro**: 6 · **Stato**: 🔄 In progress · **Dipende da**: F02
 
 Metadati editoriali sopra il `FilesModule` esistente (alt, didascalia, crediti),
 libreria media navigabile, varianti dimensionali asincrone, protezione dei media
 referenziati, verifica MIME reale.
 
-**Richiede ADR**: pipeline di trasformazione media e trattamento SVG.
+**ADR**: `ADR-49-media-processing-pipeline.md`, approvata il 2026-09-02 — worker `sharp`,
+preset finiti, SVG fuori pipeline. La decisione **non è più aperta**.
 
 ---
 
 ### F10 — Moduli di contatto
 
-**Pilastro**: 3 · **Stato**: ⏳ Da avviare · **Dipende da**: F02, F03
+**Pilastro**: 3 · **Stato**: ✅ Done (2026-09-03) · **Dipende da**: F02, F03
 
 Definizione dei campi, blocco form, validazione server-side, persistenza degli Invii
 prima della notifica, notifiche via coda BullMQ, anti-spam (rate limit + honeypot +
@@ -207,7 +218,7 @@ conversazionali. Resta opt-in e disattivato di default.
 
 ### F12 — Dashboard editoriale
 
-**Pilastro**: 5 · **Stato**: ⏳ Da avviare · **Dipende da**: F01, F10
+**Pilastro**: 5 · **Stato**: 🔄 In progress (parziale) · **Dipende da**: F01, F10
 
 Estensione della dashboard esistente al dominio: contenuti in bozza e in revisione,
 pubblicazioni programmate, ultimi Invii ricevuti, media senza testo alternativo,

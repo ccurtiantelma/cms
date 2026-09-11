@@ -4,7 +4,13 @@
 > Le AI non lo modificano autonomamente: lo stato viene aggiornato a fine feature, su
 > richiesta esplicita.
 >
-> Ultima revisione: 2026-09-03 — **F06 e F10 chiuse, registro Blocchi a undici tipi**: vedi
+> Ultima revisione: 2026-09-11 — **riconciliazione del registro con lo stato reale del
+> repository**, su richiesta umana esplicita. Tre delle quattro "ADR mancanti che bloccano il
+> dominio" erano firmate da settimane e F05/F07/F09 risultavano ⏳ Pending mentre il codice
+> era in gran parte consegnato. Vedi § "Riconciliazione registro ↔ repository (2026-09-11)"
+> più sotto. Stesso giro: firmati **N2/N4/N6** di `RFC-F09-media-library.md` e sciolta la
+> contraddizione sulle Revisioni con **ADR-61**.
+> Precedente: 2026-09-03 — **F06 e F10 chiuse, registro Blocchi a undici tipi**: vedi
 > § "F06/F10/ADR-52 — chiusura e allineamento registro Blocchi (2026-09-03)" più sotto.
 > Precedente: 2026-08-20 — **round F04c (editor maturo) chiuso**: T1–T8 di
 > `PLAN-F04c-editor-maturo.md` completati, quattro ADR firmate (ADR-27/28/29/30), copertura
@@ -72,14 +78,14 @@
 | F02 | Registro e validazione dei Blocchi | 1 | plans/PLAN-F02-blocchi.md | ✅ Done (2026-08-19, riconciliata) |
 | F03 | Superficie pubblica di lettura (Air-Gapped SSG) | 2, 7 | specs/SPEC-F03-superficie-pubblica.md · plans/PLAN-F03-superficie-pubblica.md · ADR-53-air-gapped-ssg-zero-db.md | 🚀 Ready for Implementation (Air-Gapped SSG) — baseline SSR/cache del 2026-08-19 superata da ADR-45/ADR-53, delta di consegna edge/CLS/SEO in `PLAN-F03` § Task |
 | F04 | Editor visivo (page builder) | 1 | plans/PLAN-F04-editor-visivo.md · plans/PLAN-F04c-editor-maturo.md | ✅ Done (2026-08-19). Anteprima bozza (voce 1.10 di `docs/TODO.md`) chiusa lo stesso giorno — `plans/PLAN-anteprima-bozza.md`, ADR-25. Round **F04b (upgrade editor)** ✅ Done (2026-08-20): undo/redo + guardia + inserimento posizionale + `moveNodeTo` coperti da test (voce 3.11). Round **F04c (editor maturo)** ✅ Done (2026-08-20), T1–T8 di `plans/PLAN-F04c-editor-maturo.md`: props di stile responsive (ADR-29), metadati d'editor nel registro + ispettore a schede/etichette (ADR-30, chiude la voce 3.10), lettura pubblica dei media (ADR-27, chiude la voce 1.12), duplicazione blocco + drag & drop via `dnd-kit` (ADR-28). Quattro ADR di questo round tutte firmate. Copertura di test chiusa da `test-engineer` (voce 3.12). WYSIWYG (ADR-26) resta l'unica decisione ancora in attesa di firma, confermata fuori scope, rinviata a **F04d** |
-| F05 | Multilingua | 4 | — | ⏳ Pending |
+| F05 | Multilingua | 4 | rfc/RFC-F05-multilingua.md · plans/PLAN-F05-multilingua.md · ADR-36-modello-multilingua-righe-autonome.md | ✅ **Done (2026-09-11)** — M1–M6 firmati il 2026-08-25, T1–T7 tutti consegnati. T5 (dati `hreflang` sulla superficie pubblica, `PublicPageDto.translations`) era l'ultimo aperto e si è chiuso l'11 settembre, insieme a due difetti trovati costruendolo: invalidazione di cache cross-traduzione e canonicalizzazione dei percorsi composti da una riga |
 | F06 | Template e Sezioni globali | 1 | `GlobalSectionsModule` (`app/backend/src/global-sections/`) · ADR-40-sezioni-globali-e-layout.md | ✅ Done |
-| F07 | SEO per pagina | 2 | — | ⏳ Pending |
-| F08 | GEO per pagina | 2 | — | ⏳ Pending |
-| F09 | Media editoriali | 6 | — | ⏳ Pending |
+| F07 | SEO per pagina | 2 | rfc/RFC-F07-seo-graph-generation.md · ADR-48-seo-graph-generation.md | 🔄 In progress — **non bloccata dal 2026-09-02** (ADR-48 approvata). `SeoGraphService` scritto, testato (`test/unit/pages/seo-graph.service.spec.ts`) e iniettato in `PagesService`: il grafo JSON-LD/OpenGraph è generato a publish-time. `sitemap.xml`/`robots.txt` emessi a fine batch dal job di export (ADR-45). Nessun plan formale aperto: il perimetro residuo di F07 va delimitato prima di dichiararla chiusa |
+| F08 | GEO per pagina | 2 | ADR-48-seo-graph-generation.md | 🔄 In progress (parziale) — il contratto GEO esiste (`PageSeoDto.faq`, `PageFaqEntryDto`) e `SeoGraphService` emette già l'entità JSON-LD `FAQPage` quando la FAQ è compilata. Nessun plan aperto: il resto del perimetro GEO non è delimitato |
+| F09 | Media editoriali | 6 | rfc/RFC-F09-media-library.md · rfc/RFC-F09-media-transform-pipeline.md · plans/PLAN-F09-media-library.md · ADR-35 · ADR-49 | 🔄 In progress — **non bloccata dal 2026-09-02** (ADR-49 approvata). T1 elenco/metadati, T3 `MediaLibraryModal`, T4 degrado senza dimensioni, T5 integrazione `PropertyInspector` consegnati; pipeline `sharp` (`queues/media-queue/`), focal point e `POST :guid/transform` consegnati. **T2 sbloccato il 2026-09-11** dalla firma di N2/N4: colonne `width`/`height` e verifica raster in scrittura da implementare. Aperto **T6** (immagini in RichText), che dipende da una decisione di sicurezza su ADR-20, non da una firma di RFC-F09 |
 | F10 | Moduli di contatto | 3 | `FormsModule` (`app/backend/src/forms/`) · RFC-46-dynamic-form-builder.md · ADR-46-dynamic-form-builder.md | ✅ Done |
 | F11 | Chatbot integrato | 7 | — | ⏳ Pending |
-| F12 | Dashboard editoriale | 5 | — | ⏳ Pending |
+| F12 | Dashboard editoriale | 5 | `app/frontend/src/pages/dashboard/` | 🔄 In progress (parziale) — `PageDashboard.tsx` e i suoi componenti esistono. Nessun plan aperto: il perimetro editoriale di F12 (code editoriali, contenuti in scadenza, attività) non è delimitato |
 
 **Legenda**: ⏳ Pending · 📝 In definizione · 🔄 In progress · ✅ Done · ⚠️ Bloccata
 
@@ -89,23 +95,29 @@
 
 Decisioni architetturali richieste dalla Architecture Policy e non ancora prese. Ognuna va
 proposta come RFC e approvata prima dell'implementazione della feature che la richiede.
-**Riconciliata il 2026-08-19**: quattro delle otto voci originarie sono state approvate nel
-frattempo (ADR-19, ADR-21, ADR-23, ADR-24) e non bloccano più nulla — restano solo le quattro
-sotto.
+**Riconciliata il 2026-08-19** (ADR-19/21/23/24 firmate) e di nuovo il **2026-09-11**: delle
+quattro voci rimaste, tre erano già state approvate senza che questa tabella lo registrasse, e
+nel frattempo fermavano il lavoro su feature che non erano bloccate.
 
 | ADR da produrre | Blocca |
 |---|---|
-| Modello multilingua | F05 |
-| Pipeline di trasformazione media e trattamento SVG | F09 |
 | Scelta e confine del provider del chatbot | F11 |
-| Generazione di sitemap e structured data | F07 |
 
-**Redatte, in attesa di firma** (non bloccano il roadmap-livello, bloccano solo la loro parte
-di codice — rinviata a **F04d**):
+Unica voce ancora vera: nessuna RFC, nessuna ADR, nessuna riga di codice. **Non è urgente**:
+F11 dipende da F03 e F08, nessuna delle due chiusa, e scegliere provider e modello di costo
+prima di sapere cosa conterrà la base di conoscenza è una decisione presa troppo presto.
 
-| ADR redatta | Blocca |
+**Chiuse dalla riconciliazione del 2026-09-11** — erano in tabella come "da produrre" mentre
+il file esisteva già, firmato:
+
+| Voce che era in tabella | Realtà |
 |---|---|
-| `ADR-26-wysiwyg-rich-text.md` — editor WYSIWYG del rich text (Tiptap via `@mantine/tiptap`) | F04d (parte rich text) |
+| Modello multilingua — bloccava F05 | `ADR-36-modello-multilingua-righe-autonome.md`, **approvata il 2026-08-25**. F05 era implementabile da quel giorno |
+| Pipeline di trasformazione media e trattamento SVG — bloccava F09 | `ADR-49-media-processing-pipeline.md`, **approvata il 2026-09-02** |
+| Generazione di sitemap e structured data — bloccava F07 | `ADR-48-seo-graph-generation.md`, **approvata il 2026-09-02** |
+
+**Redatte, in attesa di firma**: nessuna. `ADR-26-wysiwyg-rich-text.md` figurava qui fino al
+2026-09-11, ma è **approvata dal 2026-08-24**: la riga era scaduta di due settimane e mezzo.
 
 **Approvate nel round F04c (2026-08-20)**, in aggiunta alle già firmate elencate altrove in
 questo documento:
@@ -124,9 +136,14 @@ questo documento:
 | # | Voce | Nota |
 |---|---|---|
 | D1 | ADR-13 e ADR-17 in attesa di approvazione umana | Il codice è già in produzione: la firma manca, non l'implementazione |
-| D2 | ADR-4 disallineata dal codice | L'ADR descrive il contratto fino a `version: 7`, il codice è più avanti. Va chiusa con una nuova ADR, non riscrivendo quella approvata |
+| D2 | ADR-4 disallineata dal codice | **ADR-62 redatta il 2026-09-11, in attesa di firma**: ratifica il contratto `v8` e conferma la soglia SuperAdmin. Delle due divergenze misurate, la seconda è già sanata — `PUT app/settings/theme` era rimasto **senza alcun guard** dal commit `8b272f7`, conformità ad ADR-4 § 4 ripristinata l'11 settembre. Resta la sola versione del contratto: 4 test di `settings.e2e-spec.ts` asseriscono `version: 7` mentre il codice risponde `8`, e si allineano **alla firma di ADR-62**, non prima |
 | D3 | Le ADR 1–17 conservano il lessico dell'origine del progetto (`starter-kit`, `progetto verticale`, `gestionale`) e i riferimenti ai repository progenitori (`cima-infortunistica`, `openbridge`) | Voluto: sono record storici immutabili. La nuova identità vive nei documenti normativi, non nella riscrittura del passato |
 | D4 | ADR-5, ADR-6 e ADR-15 rinviano a file eliminati nella ristrutturazione del 2026-08-13 | Non correggibile senza modificare ADR approvate. Mappa dei rinvii qui sotto |
+| D5 | Le checklist «Prerequisiti di firma» dei plan sono mirror scaduti delle RFC | `PLAN-F05-multilingua.md` teneva M1–M6 a `[ ]` mentre `RFC-F05-multilingua.md` li ha firmati tutti il 2026-08-25. Un plan non è la fonte di una firma: la fonte è la sezione «Decisione umana» della RFC. Allineato il 2026-09-11, ma il meccanismo resta: ogni firma va riportata su entrambi i file nello stesso giro |
+| D6 | `RFC-40-theme-builder-template-registry.md` ha la sezione «Decisione umana» **in bianco** e l'ADR conseguente non è mai stata prodotta, mentre `site_templates` e `TemplateResolverService` sono in produzione (`schema.ts:443`, `app/backend/src/site-templates/`) | Debito retroattivo su codice già spedito, non un blocco. `RFC-43` § N4 lo nomina esplicitamente come precondizione a qualunque estensione di `site_templates`: la precondizione è stata scavalcata |
+| D7 | `RFC-43-categorie-e-template-pagina.md` è ancora `[x] In discussione` con N1–N5 non firmati | Nessun codice ne dipende oggi. Da chiudere insieme a D6, perché N4 di RFC-43 è la chiusura di D6 |
+| D8 | `RFC-F06-template-sezioni.md` ha la «Decisione umana» in bianco mentre F06 risulta ✅ Done | Come D6: la feature è stata consegnata e ratificata via ADR-40, ma la RFC non porta la firma. Formalità, non rischio tecnico |
+| ~~D9~~ | ~~`business-rules.md` § Revisioni e cronologia nella forma contraddittoria~~ | **Chiuso il 2026-09-11**: sezione riscritta su autorizzazione umana esplicita (regole 1-9, ADR-61 applicata), potatura implementata. In fase di stesura una delle tre righe protette di ADR-61 è stata **tolta** prima di scrivere codice: `pages` non traccia la discendenza della bozza dalla Revisione ripristinata, e introdurla sarebbe una modifica di schema non approvata. Vedi la nota di stesura in ADR-61 § 4 |
 
 ### Mappa dei rinvii storici
 
@@ -749,3 +766,170 @@ in `PLAN-F03` § Definition of Done come voce aperta.
 (T1 verifica baseline, T2 CSS critico, T3 media AVIF/CLS, T4 SEO/sitemap, T5 adapter edge,
 T6 test), di competenza backend-developer/frontend-developer/test-engineer per task —
 non coperta da questo task documentale.
+
+---
+
+## Riconciliazione registro ↔ repository (2026-09-11)
+
+Task documentale su richiesta umana esplicita, autorizzato su quattro file:
+`docs/ai/progress-tracker.md`, `docs/roadmap.md`, `docs/ai/plans/PLAN-F05-multilingua.md`,
+`docs/ai/plans/PLAN-F09-media-library.md`. Nessuna ADR approvata è stata toccata;
+`docs/business-rules.md` **non** è stato modificato (vedi D9).
+
+### Il problema trovato
+
+La tabella «ADR mancanti che bloccano il dominio» dichiarava quattro decisioni da prendere.
+Aprendo i file: tre su quattro erano già firmate — ADR-36 dal 2026-08-25, ADR-48 e ADR-49 dal
+2026-09-02. Non era una decisione da prendere: era una decisione presa e mai registrata.
+L'effetto pratico è che ogni ruolo AI apriva la documentazione, leggeva che F05, F07 e F09
+erano bloccate da ADR inesistenti, e si fermava.
+
+Lo stesso disallineamento sulla tabella di Parte 2: F05, F07 e F09 risultavano ⏳ Pending. La
+verifica sul codice dice altro — F05 ha endpoint, schema, indici, UI e collezioni Bruno
+consegnati; F07 ha `SeoGraphService` iniettato in `PagesService` e quindi attivo a
+publish-time; F09 ha quattro task su sette consegnati più l'intera pipeline `sharp` di ADR-49.
+Il registro non nascondeva tre feature sbloccate: ne nascondeva due in gran parte **consegnate**
+e una a tre quarti.
+
+### Cosa è stato corretto
+
+| Voce | Prima | Dopo |
+|---|---|---|
+| Tabella ADR bloccanti | 4 righe | 1 riga (solo il provider chatbot), le altre tre spostate fra le chiuse con data di firma |
+| ADR-26 | «redatta, in attesa di firma» | Approvata dal 2026-08-24, riga rimossa |
+| F05 / F07 / F09 | ⏳ Pending | 🔄 In progress, con l'elenco puntuale di cosa è consegnato e cosa resta |
+| F08 / F12 | ⏳ Pending | 🔄 In progress (parziale): verificate durante la riconciliazione, hanno entrambe codice in produzione (`PageSeoDto.faq` + `FAQPage` in `SeoGraphService`; `PageDashboard.tsx`). Nessuna delle due ha un plan aperto — il perimetro va delimitato prima di parlare di chiusura |
+| `PLAN-F05` M1–M6 | `[ ]` | `[x]`, firmati 2026-08-25 |
+| `PLAN-F09` N2/N4/N6 | `[ ]`, T2 bloccato | `[x]`, firmati 2026-09-11, T2 sbloccato |
+
+### Firme raccolte nello stesso giro
+
+- **N2 / N4 / N6** di `RFC-F09-media-library.md`, firmati il 2026-09-11. N2 non era un
+  "nice to have": `files.service.ts` restituisce `width: null, height: null` hardcoded con un
+  commento che cita la firma mancante, mentre `media.types.ts` il campo lo dichiara già.
+  **Rettifica del 2026-09-11**: una prima stesura di questa stessa sezione sosteneva che N2
+  fosse il prerequisito della clausola di conformità di ADR-53 sul CLS e che senza le colonne
+  quel gate non fosse implementabile. **È falso, verificato sul codice**:
+  `ExportProcessor.readIntrinsicDimensions()` legge le dimensioni con `sharp` dal buffer che
+  sta già copiando e `augmentImgTag()` le inietta nel markup. N2 serve alla libreria media
+  dell'amministrazione — senza, `GET app/files` dovrebbe aprire ogni blob — non all'HTML
+  esportato. Il gate di CI resta da scrivere (`PLAN-F03` T3), ma era scrivibile anche prima.
+- **Revisioni**: sciolta la contraddizione regola 2 ↔ regola 5 rinviata da ADR-19, con
+  **ADR-61 — Retention delle Revisioni** (opzione «retention dichiarata»): la potatura esiste
+  solo come processo di sistema, mai come azione utente, mai sull'ultima pubblicata, mai come
+  soft delete su una tabella append-only.
+
+### Consegnato nello stesso giro (2026-09-11, secondo blocco)
+
+Su autorizzazione umana esplicita («completiamo tutto»), oltre alla riconciliazione:
+
+**`business-rules.md` § Revisioni e cronologia riscritto** per applicare ADR-61 — da 5 regole
+contraddittorie a 9 coerenti. D9 è chiuso.
+
+**T2 di `PLAN-F09` implementato** (backend):
+- migrazione additiva `0014_add_files_dimensions` — `files.width`/`files.height` nullable e
+  indice `(entity, created_at)`. Nessun backfill: le righe preesistenti restano a `null`;
+- `readRasterDimensions()` in `raster-mime-sniffer.ts` — JPEG, PNG, GIF, WebP (VP8/VP8L/VP8X)
+  e AVIF (box `ispe` dentro `meta`), **dai soli header**, nessuna dipendenza npm nuova.
+  `sharp` non è importato: ADR-49 § Conformità lo confina al worker BullMQ e questo codice sta
+  nel percorso di una richiesta HTTP;
+- verifica della firma raster **in scrittura** per `entity='page-media'` → `400` normalizzato,
+  nessuna scrittura su storage né DB. Lo storage documenti di ADR-8 non regredisce: un PDF con
+  `entity='invoice'` resta accettato come prima;
+- `FileMetadataDto` smette di restituire `null` hardcoded; il contratto OpenAPI passa da
+  `Record<string, never>` a `number | null`;
+- 18 test unit sul parser, 5 sul service, 3 di integrazione; Bruno `Upload Media` e
+  `Upload Media - Non Raster`.
+
+**Potatura delle Revisioni di ADR-61 implementata**: chiave `app_settings`
+`revisions.retentionCount` con `GET`/`PUT app/settings/revisions-retention` (Admin+, audit
+logged), coda `revisions-retention-queue` con repeatable job BullMQ (mai `@Cron`), doppio
+interruttore — `REVISIONS_RETENTION_ENABLED` a livello di deploy e la soglia a livello di
+policy, `0` = nessuna potatura, che è il default. 13 test, di cui 6 sull'invariante di
+protezione isolata in una funzione pura (`computeProtectedRevisionIds`).
+
+**Tre suite di test rotte prima di questo giro, riparate**:
+- `files.e2e-spec.ts` (16 test) e `settings.e2e-spec.ts` (48) non compilavano il modulo di
+  test: mancavano i provider `MediaQueueService` (aggiunto a `FilesService` da ADR-49) e
+  `ExportService` (aggiunto a `SettingsService` da ADR-45/53). Ogni test della suite falliva
+  in `beforeEach`, non su un'asserzione;
+- `pages-diff-restore.e2e-spec.ts` calcolava a mano `page.version + 1` fra due pubblicazioni,
+  ma un ciclo PATCH+publish incrementa **due** volte: il lock ottimistico rifiutava con `409`.
+- Complessivamente la suite e2e passa da **18 suite / 186 test rossi** a **1 suite / 5 test
+  rossi**, e i 5 rimasti sono il debito D2 (contratto tema), non un difetto nuovo.
+
+### Consegnato nello stesso giro (2026-09-11, terzo blocco)
+
+**T5 di `PLAN-F05` implementato**: `PublicPageDto.translations` (locale + percorso canonico
+delle altre traduzioni pubblicate del gruppo). `PLAN-F05` è **completo**. Due difetti trovati
+costruendolo e corretti: l'invalidazione di cache cross-traduzione
+(`invalidateTranslationGroup`) e la canonicalizzazione dei percorsi composti da una riga, che
+mancava anche a `resolveByGuid` e produceva `href` di menu verso un `308`. 6 test e2e nuovi.
+
+**Guard di `PUT app/settings/theme` ripristinato.** Il commit `8b272f7` (2026-09-09, messaggio
+"size") aveva rimosso `GuardSuperAdmin` **senza sostituirlo**: dal 9 settembre un qualunque
+utente autenticato — ruolo `User` compreso — poteva riscrivere il tema dell'intero sito, e la
+voce "Editor tema" era visibile a tutti nella sidebar. Non era una decisione: ADR-4 § 4
+prescrive `GuardSuperAdmin`, il JSDoc del componente frontend continuava a dire SuperAdmin e
+il test e2e continuava ad attendersi `403`. Ripristinata la conformità su entrambi i lati
+(guard + `roles` sulla voce di navigazione). **Spostare la soglia ad Admin resta possibile,
+ma richiede una ADR che superi ADR-4.**
+
+**`ADR-62-contratto-tema-v8.md` redatta, in attesa di firma.** Ratifica il contratto `v8`
+(sezione `layout`: larghezza boxed, margini e rientri per lato con unità), la catena di
+migrazione in lettura `v1→…→v8` e la conferma della soglia SuperAdmin. Chiude D2.
+
+### Header `Status` delle RFC incoerenti con la propria firma
+
+Rilevati, **non corretti**: la sezione «Decisione umana» è firmata ma l'intestazione in cima
+al file dice ancora `[x] In discussione`. Chi apre il documento dall'alto legge l'opposto di
+quello che c'è in fondo — la stessa dinamica che teneva F05 ferma per due settimane e mezzo.
+Sono modifiche a file `docs/` non compresi nell'autorizzazione di questo giro.
+
+| RFC | Decisione in fondo | Header in cima |
+|---|---|---|
+| `RFC-31-layout-colonne-section.md` | Approvato | `[x] In discussione` |
+| `RFC-38-block-schema-expansion-elementor-parity.md` | Approvato · Modificato | `[x] In discussione` |
+| `RFC-F04d-template-library.md` | Approvato | `[x] In discussione` |
+| `RFC-F09-media-transform-pipeline.md` | Approvato (M1–M8) | `[x] In discussione` |
+
+### F03 — delta reale verificato sul codice (2026-09-11)
+
+`PLAN-F03-superficie-pubblica.md` ha sei task e nessuna casella spuntata, ma la checklist
+vuota non significa che nulla sia stato fatto. Verifica contro il codice:
+
+| Task | Stato reale |
+|---|---|
+| T1 — non regressione della baseline | **Parziale**: `test/unit/export/export.processor.spec.ts` e `export.processor.integration.spec.ts` esistono e passano; manca la verifica esplicita di non regressione dichiarata dal task |
+| T2 — CSS critico inline | **Fatto**: `app/public-site/src/App.tsx`, `entry-server.tsx`, `PreviewDocument.tsx` |
+| T3 — media AVIF/WebP multi-risoluzione, `width`/`height`, CLS = 0 | **Fatto**: `ExportProcessor` compone `<picture>` con `srcset` AVIF/WebP (`renderMediaMarkup`), legge le dimensioni intrinseche con `sharp` (`readIntrinsicDimensions`) e le inietta con `aspect-ratio` (`augmentImgTag`). **Manca solo il gate di CI** che rende rossa la build su un `<img>` senza dimensioni |
+| T4 — SEO/JSON-LD/OpenGraph nel documento + `sitemap.xml`/`robots.txt` | **Fatto**: JSON-LD in `app/public-site/src/App.tsx`, sitemap e robots rigenerati a fine batch da `ExportProcessor` |
+| T5 — adapter di consegna edge e air-gap di rete | **Parziale**: esiste l'astrazione (`export/deploy/static-site-deployer.interface.ts`) con un solo deployer, `local-folder.deployer.ts`. Manca l'adapter edge vero e la verifica dell'air-gap di rete |
+| T6 — test della superficie pubblica air-gapped | **Da fare**: nessuna suite dedicata all'air-gap |
+
+**Ordine per dipendenza di ciò che manca**: gate di CI di T3 (isolato, nessuna dipendenza) →
+adapter edge di T5 → T6 (verifica l'air-gap che T5 deve prima garantire) → chiusura di T1.
+Nessuno dei tre è bloccato da una firma.
+
+> Nota di conformità rilevata durante l'audit, **non sanata**: `export.processor.ts` importa
+> `sharp` (via `require` CJS isolato) per la sola lettura dei metadati, mentre ADR-49
+> § Conformità dice «`sharp` non è mai importato fuori da
+> `app/backend/src/queues/media-queue/`». La sostanza della regola è rispettata — nessuna
+> trasformazione pixel-level, e il codice sta in un worker BullMQ, non in un controller — ma
+> la lettera no. Da sciogliere con una riga nella ADR che ratificherà il perimetro di F03, non
+> spostando il file.
+
+### Prossimo passo
+
+Il backlog implementativo è vuoto. Restano **decisioni**, non lavoro:
+
+| Voce | Cosa serve |
+|---|---|
+| **D2** / 4 test rossi in `settings.e2e-spec.ts` | Firma di **ADR-62**. I test asseriscono `version: 7`, il codice risponde `8`: si allineano **contestualmente alla firma**, non prima — spegnerli senza decidere renderebbe il debito invisibile |
+| **T6 di `PLAN-F09`** (immagini in RichText) | Decisione di sicurezza sull'allowlist di ADR-20 (`<img>` nel rich text sanitizzato) |
+| **D6/D7** (RFC-40, RFC-43) | Firme su documenti in bianco, con `site_templates` già in produzione |
+| **D8** (RFC-F06) | Firma retroattiva su una feature già chiusa |
+| **D1** (ADR-13, ADR-17) | Firme su codice già in produzione |
+| **Gate di CI di ADR-53** | Nessuna decisione, solo lavoro: appartiene a `PLAN-F03` T3. L'export **già** emette `width`/`height`/`aspect-ratio` (`ExportProcessor`), manca il controllo in `.github/workflows/` che rende rossa la build se un `<img>` ne esce senza |
+| **F11 chatbot** | Unica ADR di dominio davvero mancante; non blocca nulla finché F03/F08 non sono chiuse |
+| **`version` sulle 4 entità mutabili storiche** | Task a sé già dichiarato in `CLAUDE.md` § Database, da non retrofittare dentro una feature |

@@ -1,7 +1,7 @@
 # RFC-F09 — Media Library e gestione integrata degli asset immagine
 
 ## Status
-[ ] In discussione · [x] Approvato (parziale — N1/N3/N5/N7) → genera ADR-35 · [ ] Rifiutato
+[ ] In discussione · [x] Approvato (N1/N3/N5/N7 il 2026-08-25 → ADR-35; N2/N4/N6 il 2026-09-11) · [ ] Rifiutato
 
 ## Proposto da
 AI Solution Architect · Data: 2026-08-25
@@ -299,18 +299,28 @@ potatura delle revisioni (ADR-19), né A6.
 **Punti che richiedono una firma esplicita, singolarmente:**
 
 - [x] **N1** — Numerazione: `F05` → **`F09`** (raccomandato) o rinumerazione della roadmap
-- [ ] **N2** — Migrazione `files`: colonne `width` / `height` nullable + indice `(entity, created_at)` — **non firmata, fuori scope di questo giro**
+- [x] **N2** — Migrazione `files`: colonne `width` / `height` nullable + indice `(entity, created_at)` — **firmata il 2026-09-11** ⚠️ tocca lo schema
 - [x] **N3** — Elenco `GET app/files` **senza** predicato di ownership (deroga consapevole al riflesso di ADR-18)
-- [ ] **N4** — Verifica firma raster **in scrittura** per `entity = 'page-media'` (`400` all'upload) — **non firmata, fuori scope di questo giro**
+- [x] **N4** — Verifica firma raster **in scrittura** per `entity = 'page-media'` (`400` all'upload) — **firmata il 2026-09-11**
 - [x] **N5** — Rinuncia alla rotta `/files/upload` a favore del `POST api/v1/app/files` esistente
-- [ ] **N6** — Conferma che la prop del blocco `image` resta **`mediaRef`** (nessuna prop `url`, nessuna modifica al registro) — **non toccata da questo giro, nessuna modifica al blocco `image` implementata**
+- [x] **N6** — Conferma che la prop del blocco `image` resta **`mediaRef`** (nessuna prop `url`, nessuna modifica al registro) — **confermata il 2026-09-11**: ADR-21 non viene riaperta
 - [x] **N7** — Protezione dei media referenziati: **risolta come rifiuto `409 Conflict`** su `DELETE` di un file referenziato da un blocco `mediaRef` di una pagina `published` (non la cancellazione-con-avviso, l'altra opzione valutata dalla RFC)
 
-**Note**: Approvazione parziale — solo i punti necessari a `GET api/v1/app/files` (elenco) e
-alla protezione referenziale su `DELETE`. Le colonne dimensionali (N2/N4) e l'integrazione
-frontend (T3–T6 del Plan) restano fuori da questo giro e vanno firmate a parte quando
-affrontate.
+**Note**: Firmata in due giri.
+**Giro 1 — 2026-08-25 (approvazione parziale)**: N1, N3, N5, N7 — solo i punti necessari a
+`GET api/v1/app/files` (elenco) e alla protezione referenziale su `DELETE`.
+**Giro 2 — 2026-09-11 (chiusura)**: N2, N4, N6. Sblocca **T2** di `PLAN-F09-media-library.md`,
+fin qui l'unico task bloccato da una firma. N2 serve alla libreria media
+dell'amministrazione: senza le colonne, l'elenco `GET app/files` dovrebbe aprire ogni blob per
+conoscerne le dimensioni. **Non** è invece un prerequisito della clausola di conformità di
+ADR-53 sul CLS, come una prima nota di questo giro aveva sostenuto: l'HTML esportato riceve
+`width`/`height`/`aspect-ratio` da `ExportProcessor`, che le legge con `sharp` dal buffer che
+sta già copiando. N6 è una conferma dello stato esistente: nessuna modifica
+al registro dei blocchi, ADR-21 non viene riaperta.
+Restano fuori: T6 (immagini in RichText), che dipende da una decisione di sicurezza su ADR-20,
+non da questa RFC.
 
-**Approvato da**: marketing@antelmagroup.net · **Data**: 2026-08-25
+**Approvato da**: marketing@antelmagroup.net · **Data**: 2026-08-25 (N1/N3/N5/N7) ·
+2026-09-11 (N2/N4/N6)
 
 **Azione successiva**: [x] Genera ADR-35 · [ ] Archivio

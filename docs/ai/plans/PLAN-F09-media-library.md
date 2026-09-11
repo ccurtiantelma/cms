@@ -1,9 +1,28 @@
 # Plan — F09 Media Library e gestione integrata degli asset immagine
 
 ## Spec di riferimento
-`docs/ai/rfc/RFC-F09-media-library.md` (approvata parzialmente il 2026-08-25 — N1/N3/N5/N7
-firmati, N2/N4/N6 restano aperti e fuori scope di questo giro: nessuna colonna `width`/
-`height`, nessuna verifica MIME in scrittura)
+`docs/ai/rfc/RFC-F09-media-library.md` — **firmata per intero**: N1/N3/N5/N7 il 2026-08-25,
+**N2/N4/N6 l'11 settembre 2026**. Nessun punto della RFC resta aperto.
+
+> **Stato al 2026-09-11** (riconciliazione, progress-tracker § Riconciliazione registro ↔
+> repository). Consegnati: **T1** (`GET app/files`, `GET app/files/:guid/metadata`),
+> **T3** (`MediaLibraryModal`), **T4** (degrado senza dimensioni), **T5** (integrazione in
+> `PropertyInspector`), più l'intera pipeline `sharp` di ADR-49 (`queues/media-queue/`,
+> focal point, `POST app/files/:guid/transform`) che questo piano non prevedeva.
+> **T2 consegnato il 2026-09-11**: era l'unico task fermo per una firma, le firme sono
+> arrivate e il task è stato implementato lo stesso giorno.
+> **T6** (immagini in RichText) resta aperto ma non per una firma di questa RFC: dipende da
+> una decisione di sicurezza su ADR-20 (§ T6).
+>
+> **Rettifica del 2026-09-11**: una prima nota di questo giro legava N2 alla clausola di
+> conformità di **ADR-53** (« un'immagine senza dimensioni intrinseche fa fallire il gate di
+> CI »), sostenendo che senza le colonne il gate non fosse implementabile. **È falso**:
+> `ExportProcessor.readIntrinsicDimensions()` legge le dimensioni con `sharp` dal buffer che
+> sta già copiando e `augmentImgTag()` inietta `width`/`height`/`aspect-ratio` nel markup — il
+> CLS del sito pubblicato non è mai dipeso da queste colonne. N2 serve alla **libreria media
+> dell'amministrazione**: senza, `GET app/files` dovrebbe aprire ogni blob per sapere quanto è
+> grande un'immagine. Il gate di CI resta da scrivere (`PLAN-F03` T3), ma era scrivibile anche
+> prima.
 
 > ⚠️ **Numerazione — risolta.** `docs/roadmap.md` assegna F05 a *Multilingua* e **F09 a
 > *Media editoriali***. Il contenuto di questo piano è F09. Rinominato da F05 a F09 il
@@ -117,7 +136,12 @@ Step 3 — Integrazione blocchi Image / RichText             (T5, T6)
   `app/backend/src/files/public-media/raster-mime-sniffer.ts` (`readRasterDimensions`) ·
   `app/backend/src/files/files.service.ts` (popolamento all'upload, `400` su non-raster
   quando `entity = 'page-media'`)
-- **Dipendenze**: T1 · **firma N2 e N4 — non firmate, task bloccato, fuori scope del giro 2026-08-25**
+- **Dipendenze**: T1 (consegnato) · **firma N2 e N4 — firmate il 2026-09-11**
+- **Stato**: ✅ **Consegnato il 2026-09-11**. Migrazione `0014_add_files_dimensions`
+  (additiva, nessun backfill), `readRasterDimensions()` per JPEG/PNG/GIF/WebP/AVIF dai soli
+  header, rifiuto `400` del non-raster su `entity='page-media'`, `FileMetadataDto` che smette
+  di restituire `null` hardcoded. Copertura: 18 test sul parser, 5 sul service, 3 di
+  integrazione, 2 collezioni Bruno.
 - **Criterio di Done**: un upload PNG/JPEG/GIF/WebP/AVIF con `entity=page-media` salva
   `width`/`height` corretti letti dai soli header (nessuna decodifica dell'immagine
   intera, nessuna dipendenza npm nuova); un upload non-raster con `entity=page-media`
@@ -190,7 +214,7 @@ Step 3 — Integrazione blocchi Image / RichText             (T5, T6)
 
 | Rischio | Probabilità | Impatto | Mitigazione |
 |---|---|---|---|
-| Firma N2 negata (colonne `width`/`height`) | Media | Basso | T4 rende il degrado progettato: `aspect-ratio` fisso, varianti fuori scope. T2 decade, il resto no. |
+| ~~Firma N2 negata (colonne `width`/`height`)~~ | — | — | **Rischio chiuso**: N2 firmata il 2026-09-11. Il degrado di T4 resta comunque necessario, non come ripiego ma come comportamento permanente sulle righe caricate prima della migrazione, che restano a `null`. |
 | Media referenziato e poi soft-eliminato → immagine rotta in produzione | Media | **Alto** | **Non mitigato in questo piano.** Difetto preesistente che questa feature rende più raggiungibile. Firma **N7**: voce separata. |
 | Elenco che espone allegati privati dello storage documenti | Bassa | Alto | Esclusione **server-side di default** (T1), mai affidata al parametro del client. |
 | Deriva verso un `ImageInspector` dedicato | Media | Medio | Criterio di Done di T5 esplicito; il test di copertura dei `kind` in `PropertyInspector.test.tsx` fallisce se la mappa smette di essere indicizzata per `kind`. |
@@ -205,11 +229,11 @@ Step 3 — Integrazione blocchi Image / RichText             (T5, T6)
 
 ### Prerequisiti di firma (bloccanti)
 - [x] **N1** Numerazione F05 → F09 sciolta (2026-08-25)
-- [ ] **N2** Migrazione `files` (`width`, `height`, indice) approvata — **non firmata, T2 resta bloccato**
+- [x] **N2** Migrazione `files` (`width`, `height` nullable + indice `(entity, created_at)`) approvata (**2026-09-11**) — migrazione additiva: le righe esistenti restano valide a `null`
 - [x] **N3** Elenco senza ownership approvato (2026-08-25)
-- [ ] **N4** Verifica firma raster in scrittura approvata — **non firmata, T2 resta bloccato**
+- [x] **N4** Verifica firma raster in scrittura approvata (**2026-09-11**) — `400` sull'upload non-raster con `entity='page-media'`, letta dai byte reali
 - [x] **N5** Rinuncia a `/files/upload` approvata (2026-08-25)
-- [ ] **N6** Prop del blocco `image` confermata come `mediaRef` — non toccata (T3/T5, fuori scope del giro 2026-08-25)
+- [x] **N6** Prop del blocco `image` confermata come `mediaRef` (**2026-09-11**) — conferma dello stato esistente: nessuna prop `url`, ADR-21 non riaperta
 - [x] **N7** Protezione dei media referenziati: risolta come `409` su `DELETE` (2026-08-25)
 
 ### Implementazione
