@@ -18,5 +18,5 @@
       "@api-types": ["../frontend/src/types/api.types.ts"]
     }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "vite.config.ts", "../frontend/src/global.d.ts"]
 }
