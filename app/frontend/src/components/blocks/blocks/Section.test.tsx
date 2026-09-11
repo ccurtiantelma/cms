@@ -21,6 +21,15 @@ const tokenCss = readFileSync(
   'utf-8',
 );
 
+/**
+ * Collassa spazi/interruzioni di riga in un singolo spazio, cosi le asserzioni su CSS letto
+ * da filesystem verificano le dichiarazioni, non la formattazione: `npm run format` (prettier)
+ * puo espandere una regola da riga singola a multi-riga senza cambiarne il significato (vedi
+ * commit 5d0af8e), e un'asserzione `toContain` su una stringa esatta multi-riga si romperebbe
+ * comunque.
+ */
+const normalizeCss = (css: string): string => css.replace(/\s+/g, ' ').trim();
+
 describe('Section', () => {
   it('renderizza il colore di sfondo nell attributo style', () => {
     const html = renderToStaticMarkup(<Section styleBackgroundColor="#123456">Contenuto</Section>);
@@ -225,31 +234,34 @@ describe('Section', () => {
    */
   describe('anti-overflow orizzontale — griglia a colonne e testo lungo', () => {
     it('ogni traccia di columns_* usa minmax(0, 1fr), mai 1fr da solo', () => {
-      expect(tokenCss).not.toMatch(/grid-template-columns:\s*repeat\(\d,\s*1fr\)/);
-      expect(tokenCss).toContain('repeat(2, minmax(0, 1fr))');
-      expect(tokenCss).toContain('repeat(3, minmax(0, 1fr))');
-      expect(tokenCss).toContain('repeat(4, minmax(0, 1fr))');
+      const normalized = normalizeCss(tokenCss);
+      expect(normalized).not.toMatch(/grid-template-columns:\s*repeat\(\d,\s*1fr\)/);
+      expect(normalized).toContain('repeat(2, minmax(0, 1fr))');
+      expect(normalized).toContain('repeat(3, minmax(0, 1fr))');
+      expect(normalized).toContain('repeat(4, minmax(0, 1fr))');
     });
 
     it('ogni columnRatio_* asimmetrico usa minmax(0, Nfr) su entrambe le tracce', () => {
-      expect(tokenCss).toContain(
+      const normalized = normalizeCss(tokenCss);
+      expect(normalized).toContain(
         '.columnRatio_33-66 { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }',
       );
-      expect(tokenCss).toContain(
+      expect(normalized).toContain(
         '.columnRatio_66-33 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }',
       );
-      expect(tokenCss).toContain(
+      expect(normalized).toContain(
         '.columnRatio_30-70 { grid-template-columns: minmax(0, 3fr) minmax(0, 7fr); }',
       );
-      expect(tokenCss).toContain(
+      expect(normalized).toContain(
         '.columnRatio_70-30 { grid-template-columns: minmax(0, 7fr) minmax(0, 3fr); }',
       );
     });
 
     it('.section azzera il proprio min-width e spezza il testo troppo lungo per la propria colonna', () => {
-      expect(sectionCss).toMatch(/\.section\s*{[^}]*min-width:\s*0;/s);
-      expect(sectionCss).toMatch(/\.section\s*{[^}]*overflow-wrap:\s*anywhere;/s);
-      expect(sectionCss).toMatch(/\.section\s*{[^}]*word-break:\s*break-word;/s);
+      const normalized = normalizeCss(sectionCss);
+      expect(normalized).toMatch(/\.section\s*{[^}]*min-width:\s*0;/);
+      expect(normalized).toMatch(/\.section\s*{[^}]*overflow-wrap:\s*anywhere;/);
+      expect(normalized).toMatch(/\.section\s*{[^}]*word-break:\s*break-word;/);
     });
   });
 });

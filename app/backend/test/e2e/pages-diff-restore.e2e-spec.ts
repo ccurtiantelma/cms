@@ -420,17 +420,14 @@ describe('PagesController — Diff + Restore Revisioni (e2e, DB/Redis reali)', (
       const author = await seedAuth(AppUserRoles.Manager, 'differr3author');
       const other = await seedAuth(AppUserRoles.User, 'differr3other');
       const page = await createDraftPage(author, { title: 'Pagina altrui per diff' });
-      const revisionV1 = await publishNewRevision(
-        author,
-        { guid: page.guid, version: page.version },
-        contentTreeV2('Titolo v2'),
-      );
+      // Stato condiviso fra le due pubblicazioni: `publishNewRevision` aggiorna
+      // `version` sull'oggetto che riceve. Calcolarlo a mano (`page.version + 1`)
+      // sbagliava di uno — un ciclo PATCH+publish incrementa **due** volte — e
+      // faceva rifiutare la seconda bozza con `409` dal lock ottimistico.
+      const pageState = { guid: page.guid, version: page.version };
+      const revisionV1 = await publishNewRevision(author, pageState, contentTreeV2('Titolo v2'));
       // Serve una seconda Revisione valida per l'altro guid della query.
-      const revisionV2 = await publishNewRevision(
-        author,
-        { guid: page.guid, version: page.version + 1 },
-        contentTreeV1('Titolo v3'),
-      );
+      const revisionV2 = await publishNewRevision(author, pageState, contentTreeV1('Titolo v3'));
 
       const res = await authedRequest(
         'get',

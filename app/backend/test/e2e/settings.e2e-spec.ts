@@ -23,6 +23,7 @@ import { AuthMiddleware } from '../../src/auth/auth.middleware';
 import { DbService } from '../../src/db/db.service';
 import { RedisService } from '../../src/redis/redis.service';
 import { AuditLogService } from '../../src/common/audit-log.service';
+import { ExportService } from '../../src/export/export.service';
 import { AllExceptionsFilter } from '../../src/common/filters/all-exceptions.filter';
 import { AppConstants } from '../../src/common/app-constants';
 import { AppUserRoles } from '../../src/common/enums';
@@ -186,6 +187,13 @@ describe('SettingsController (integration)', () => {
           },
         },
         { provide: AuditLogService, useValue: { log: auditLogMock } },
+        // `SettingsService` dipende da `ExportService` da quando il salvataggio del
+        // tema riaccoda l'export statico (ADR-45/ADR-53). Mock obbligatorio: questa
+        // suite non deve accodare job reali su BullMQ.
+        {
+          provide: ExportService,
+          useValue: { enqueueFullSiteExport: jest.fn().mockResolvedValue(undefined) },
+        },
       ],
     }).compile();
 
