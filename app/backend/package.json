@@ -29,7 +29,7 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "transformIgnorePatterns": [
-      "node_modules/(?!(htmlparser2|domhandler|domutils|domelementtype|dom-serializer|entities)/)"
+      "node_modules/(?!(?:.*/)?(htmlparser2|domhandler|domutils|domelementtype|dom-serializer|entities)/)"
     ],
     "testEnvironment": "node"
   },
@@ -61,7 +61,7 @@
     "joi": "^17.13.0",
     "js-yaml": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
-    "nodemailer": "^9.0.3",
+    "nodemailer": "^9.1.1",
     "otplib": "^12.0.1",
     "pdfkit": "^0.19.1",
     "pg": "^8.11.3",
