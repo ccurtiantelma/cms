@@ -424,7 +424,7 @@ export interface paths {
     };
     /** Tema globale dell'installazione (default di fabbrica se mai salvato) */
     get: operations['SettingsController_getTheme'];
-    /** Salva il tema globale (registrato su audit log) */
+    /** Salva il tema globale (SuperAdmin only, registrato su audit log) */
     put: operations['SettingsController_updateTheme'];
     post?: never;
     delete?: never;
@@ -3904,6 +3904,13 @@ export interface operations {
       };
       /** @description Payload non valido (hex, palette o versione) */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Ruolo inferiore a SuperAdmin */
+      403: {
         headers: {
           [name: string]: unknown;
         };

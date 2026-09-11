@@ -559,9 +559,11 @@ paths:
                 $ref: '#/components/schemas/ThemeConfigDto'
         '400':
           description: Payload non valido (hex, palette o versione)
+        '403':
+          description: Ruolo inferiore a SuperAdmin
       security:
         - access-token: []
-      summary: Salva il tema globale (registrato su audit log)
+      summary: Salva il tema globale (SuperAdmin only, registrato su audit log)
       tags:
         - Settings
   /api/v1/app/settings/multilingual:
