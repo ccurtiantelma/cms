@@ -40,8 +40,20 @@ jobs:
       - name: Lint
         run: npm run lint:backend
 
+      # `STATIC_EXPORT_ARTIFACT_DIR`: la suite di export copia qui l'HTML che
+      # scrive davvero su disco, perché il gate sotto lo ispezioni dopo che il
+      # tombstone ha ripulito la directory temporanea del test.
       - name: Unit test
+        env:
+          STATIC_EXPORT_ARTIFACT_DIR: ${{ runner.temp }}/export-artifacts
         run: npm run test --workspace=app/backend
+
+      # Gate di ADR-53 § 3 (CLS = 0) e § Conformità: un `<img>` che esce
+      # dall'export senza `width`/`height` rende rossa la build. Gira
+      # sull'HTML prodotto dal job di export, non sul componente React —
+      # stesso spostamento di verifica già imposto per l'escaping (§ 7).
+      - name: Gate immagini esportate (ADR-53, CLS = 0)
+        run: node check-exported-images.js "${{ runner.temp }}/export-artifacts"
 
       - name: Build
         run: npm run build:backend

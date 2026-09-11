@@ -36,9 +36,9 @@ const mockAppConstants: {
 };
 jest.mock('../../../src/common/app-constants', () => ({ AppConstants: mockAppConstants }));
 
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import type { Job } from 'bullmq';
 import { ExportProcessor } from '../../../src/export/export.processor';
 import { LocalFolderDeployer } from '../../../src/export/deploy/local-folder.deployer';
@@ -49,6 +49,24 @@ import type { PublicMediaService } from '../../../src/files/public-media/public-
 import type { StaticExportJobData } from '../../../src/export/export.types';
 import { buildDerivedFileName } from '../../../src/files/media-variant-naming';
 import { MediaTransformPreset } from '../../../src/files/dto/media-transform.dto';
+
+/**
+ * Copia un documento appena esportato nella directory di artefatti del gate di
+ * CI di ADR-53 (`check-exported-images.js`), quando `STATIC_EXPORT_ARTIFACT_DIR`
+ * è valorizzato — solo in CI, mai in un run locale, dove la variabile è assente
+ * e la funzione è un no-op.
+ *
+ * Serve una copia e non la directory temporanea stessa: la fase 2 di questo
+ * test è un tombstone, che rimuove fisicamente il file dal filesystem. Il gate
+ * troverebbe una directory vuota e, per costruzione, fallirebbe.
+ */
+function persistCiArtifact(relativePath: string, html: string): void {
+  const artifactDir = process.env.STATIC_EXPORT_ARTIFACT_DIR;
+  if (!artifactDir) return;
+  const target = join(artifactDir, relativePath);
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(target, html);
+}
 
 function buildJob(data: StaticExportJobData): Job<StaticExportJobData> {
   return { data } as Job<StaticExportJobData>;
@@ -277,6 +295,7 @@ describe('ExportProcessor (integration — LocalFolderDeployer reale su filesyst
       // Il file è realmente su disco (non un argomento di mock).
       expect(existsSync(pageFilePath)).toBe(true);
       const writtenHtml = readFileSync(pageFilePath, 'utf-8');
+      persistCiArtifact('it-IT/chi-siamo/index.html', writtenHtml);
 
       // Requisito 1 — Output statico/zero-JS: <style data-critical-css> presente
       // PRIMA del <link rel="stylesheet"> esterno; nessuno script di
