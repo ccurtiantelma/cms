@@ -37,6 +37,21 @@ tests: |-
     }
   });
 
+  test("su successo espone l'elenco delle traduzioni pubblicate (PLAN-F05 T5)", function() {
+    if (res.getStatus() === 200) {
+      const body = res.getBody();
+      expect(body.translations).to.be.an("array");
+      body.translations.forEach(function(t) {
+        expect(t).to.have.all.keys("locale", "path");
+        // Percorso in forma canonica (ADR-24 § 4): un hreflang non punta a un 308.
+        expect(t.path).to.equal(t.path.toLowerCase());
+        expect(t.path.charAt(0)).to.equal("/");
+        // La Pagina corrente non compare nel proprio elenco.
+        expect(t.locale).to.not.equal(body.locale);
+      });
+    }
+  });
+
   test("su 308 il redirect punta alla stessa risorsa in forma canonica, nessun 403 in nessun caso", function() {
     if (res.getStatus() === 308) {
       expect(res.getHeader("location")).to.include("/api/v1/public/pages?path=");

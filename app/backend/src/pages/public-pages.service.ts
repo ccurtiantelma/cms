@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, ne } from 'drizzle-orm';
 import { DbService } from '../db/db.service';
 import { pageEntity, pageRevisionEntity } from '../db/schema';
 import { BLOCK_REGISTRY_TOKEN, BlockRegistry } from '../blocks/block-registry';
@@ -8,8 +8,9 @@ import { ValidatableBlockNode } from '../blocks/validator/validatable-node.types
 import { migrateEnvelope, ENVELOPE_VERSION } from '../blocks/migration/envelope-migration.engine';
 import { migrateBlockTree } from '../blocks/migration/block-tree-migration.engine';
 import { MigratableBlockNode } from '../blocks/migration/block-migration.types';
-import { PublicPageDto } from './dto/public-page.dto';
+import { PublicPageDto, PublicPageTranslationDto } from './dto/public-page.dto';
 import {
+  canonicalizePublicPath,
   extractLocalePrefix,
   HOME_SLUG,
   MAX_PUBLIC_PATH_SEGMENTS,
@@ -107,6 +108,7 @@ export class PublicPagesService {
       locale: page.locale,
       content,
       seo: (revision.seo as Record<string, unknown>) ?? {},
+      translations: await this.collectPublishedTranslations(page, multilingualConfig.default),
     };
 
     await this.publicPageCache.setCached(locale, residualPath, dto);
@@ -137,7 +139,22 @@ export class PublicPagesService {
     }
 
     const multilingualConfig = await this.settingsService.getMultilingualConfig();
+    return { path: await this.buildPublicPath(page, multilingualConfig.default) };
+  }
 
+  /**
+   * Percorso pubblico canonico di una riga `pages`: risalita degli antenati
+   * per `parentId` più il prefisso di lingua quando il Locale non è quello di
+   * default (inverso di `extractLocalePrefix`, ADR-24 § 5). Unico punto che
+   * compone un percorso pubblico a partire da una riga — {@link resolveByGuid}
+   * e l'elenco delle traduzioni (PLAN-F05 T5) ne condividono il risultato, mai
+   * due calcoli divergenti.
+   *
+   * @throws NotFoundException Catena di antenati interrotta o oltre il
+   * guardrail anti-abuso (dato incoerente/ciclico): stesso principio di
+   * `resolvePageRow` sul lato discesa.
+   */
+  private async buildPublicPath(page: PageRow, defaultLocale: string): Promise<string> {
     // Caso radice (ADR-52 § 4): nessun antenato e slug = home → segmento
     // proprio omesso, la home resta raggiungibile da "/" (o dal proprio
     // prefisso di lingua, sotto).
@@ -147,9 +164,6 @@ export class PublicPagesService {
     let lookups = 0;
     while (parentId !== null) {
       if (lookups >= MAX_PUBLIC_PATH_SEGMENTS) {
-        // Catena di antenati oltre il guardrail anti-abuso (dato
-        // incoerente/ciclico): non risolvibile, stesso principio di
-        // `resolvePageRow` sul lato discesa.
         throw new NotFoundException();
       }
       const ancestor = await this.loadActiveById(parentId);
@@ -158,13 +172,61 @@ export class PublicPagesService {
       lookups += 1;
     }
 
-    if (page.locale !== multilingualConfig.default) {
-      // Inverso di `extractLocalePrefix` (ADR-24 § 5): la lingua di default
-      // non ha mai prefisso, ogni altra lo porta come primo segmento.
+    if (page.locale !== defaultLocale) {
       segments.unshift(page.locale);
     }
 
-    return { path: segments.length > 0 ? `/${segments.join('/')}` : '/' };
+    // Forma canonica obbligatoria (ADR-24 § 4): un Locale BCP-47 porta il
+    // sottotag di regione in maiuscolo (`en-GB`) e comporlo grezzo produrrebbe
+    // un percorso che `GET public/pages?path=` fa `308` verso la propria forma
+    // minuscola. Un `hreflang` o un `href` di menu che punta a un redirect è un
+    // difetto, non un dettaglio: `extractLocalePrefix` riconosce il prefisso
+    // case-insensitive proprio perché la forma servita è quella minuscola.
+    return canonicalizePublicPath(segments.length > 0 ? `/${segments.join('/')}` : '/');
+  }
+
+  /**
+   * Le altre traduzioni **pubblicate** dello stesso gruppo (PLAN-F05 T5,
+   * firmato il 2026-08-25). Materia prima per gli `hreflang`: questo endpoint
+   * non genera markup, che appartiene a F07.
+   *
+   * La Pagina corrente è esclusa per costruzione (`locale <> page.locale`,
+   * unico per gruppo dall'indice `pages_translation_group_locale_uq`): il
+   * consumatore conosce già il proprio Locale e il percorso che ha richiesto.
+   *
+   * Una traduzione con la catena di antenati rotta non fa fallire la lettura
+   * della Pagina che la cita: viene **saltata** con un warning. Un dato
+   * incoerente su una riga vicina non deve togliere dal web una Pagina sana —
+   * lo stesso criterio per cui `resolveByPath` logga e risponde `404` solo
+   * sulla riga che sta servendo.
+   */
+  private async collectPublishedTranslations(
+    page: PageRow,
+    defaultLocale: string,
+  ): Promise<PublicPageTranslationDto[]> {
+    const siblings = await this.db.db.query.pageEntity.findMany({
+      where: and(
+        eq(pageEntity.translationGroupId, page.translationGroupId),
+        eq(pageEntity.isActive, true),
+        eq(pageEntity.status, 'published'),
+        ne(pageEntity.locale, page.locale),
+      ),
+    });
+
+    const translations: PublicPageTranslationDto[] = [];
+    for (const sibling of siblings) {
+      try {
+        translations.push({
+          locale: sibling.locale,
+          path: await this.buildPublicPath(sibling, defaultLocale),
+        });
+      } catch {
+        this.logger.warn(
+          `Traduzione guid=${sibling.guid} (locale=${sibling.locale}) non risolvibile a un percorso pubblico: esclusa dall'elenco delle traduzioni.`,
+        );
+      }
+    }
+    return translations.sort((a, b) => a.locale.localeCompare(b.locale));
   }
 
   /** Una singola lettura per `id` fra le righe attive, per la risalita degli antenati; `404` se assente. */

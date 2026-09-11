@@ -592,6 +592,10 @@ export class PagesService {
     // toccato. Invalidazione incondizionata: su una Pagina mai pubblicata è
     // un `DEL` a vuoto, innocuo.
     await this.publicPageCache.invalidatePage(row.id, authInfo.userId);
+    // PLAN-F05 T5: il payload pubblico delle traduzioni contiene l'elenco
+    // delle altre traduzioni pubblicate, quindi questa transizione sporca
+    // anche le loro chiavi, non solo la propria.
+    await this.publicPageCache.invalidateTranslationGroup(row.id, authInfo.userId);
 
     // RFC-44 Decisione 5: `toStatus === 'published'` è già intercettato sopra
     // (delegato a `publishTransactionally`), quindi qui si arriva solo per
@@ -739,6 +743,9 @@ export class PagesService {
     // Dopo il commit (ADR-23 § 4): una lettura concorrente prima di questo
     // punto ripopolerebbe la chiave con lo stato pre-pubblicazione.
     await this.publicPageCache.invalidatePage(finalRow.id, authInfo.userId);
+    // PLAN-F05 T5: vedi `changeStatus` — una pubblicazione entra negli elenchi
+    // di traduzioni delle Pagine sorelle, che vanno rilette dal database.
+    await this.publicPageCache.invalidateTranslationGroup(finalRow.id, authInfo.userId);
 
     // RFC-44 Decisione 1/4: job di export a singola pagina, stesso percorso
     // appena invalidato in cache, priorità alta/SLA 5s (ExportService).

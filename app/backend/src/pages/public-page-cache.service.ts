@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { DbService } from '../db/db.service';
 import { pageEntity } from '../db/schema';
 import { RedisService } from '../redis/redis.service';
@@ -99,6 +99,50 @@ export class PublicPageCacheService {
     const location = await this.resolveOwnLocation(pageId);
     if (!location) return;
     await this.invalidateKeys(this.expandHomeAliases(location), actingUserId);
+  }
+
+  /**
+   * Invalida le **altre** Pagine dello stesso gruppo di traduzione (PLAN-F05
+   * T5). Serve perché da T5 il payload pubblico di una Pagina contiene dati di
+   * righe vicine — l'elenco delle traduzioni pubblicate — e quindi una
+   * transizione di stato su una traduzione rende stantio il payload cacheato
+   * delle altre, non solo il proprio.
+   *
+   * Non allarga il principio di ADR-23, lo applica: l'invalidazione resta per
+   * evento e mai per TTL, e l'insieme delle chiavi si calcola dal database
+   * (`translation_group_id`), mai da uno `SCAN`. Cambia solo **quante** chiavi
+   * un evento tocca, perché da T5 l'evento ne sporca davvero di più.
+   *
+   * Da chiamare **dopo** il commit della transizione, come
+   * {@link invalidatePage}. Le righe non pubblicate del gruppo sono incluse:
+   * il loro `DEL` è a vuoto e innocuo, e una riga appena spubblicata va tolta
+   * comunque dalle liste altrui.
+   */
+  async invalidateTranslationGroup(pageId: number, actingUserId: number): Promise<void> {
+    const page = await this.db.db.query.pageEntity.findFirst({
+      where: eq(pageEntity.id, pageId),
+      columns: { translationGroupId: true, locale: true },
+    });
+    if (!page) return;
+
+    const siblings = await this.db.db.query.pageEntity.findMany({
+      where: and(
+        eq(pageEntity.translationGroupId, page.translationGroupId),
+        eq(pageEntity.isActive, true),
+        ne(pageEntity.locale, page.locale),
+      ),
+      columns: { id: true },
+    });
+    if (siblings.length === 0) return;
+
+    const locations: CacheableLocation[] = [];
+    for (const sibling of siblings) {
+      const location = await this.resolveOwnLocation(sibling.id);
+      if (location) {
+        locations.push(location);
+      }
+    }
+    await this.invalidateLocations(locations, actingUserId);
   }
 
   /**

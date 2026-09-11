@@ -391,4 +391,148 @@ describe('PagesController — Multilingua/i18n (e2e, DB/Redis reali)', () => {
       expect(sourceAfter.body.status).toBe('draft');
     });
   });
+
+  // ─── 4. Dati per hreflang sulla superficie pubblica (PLAN-F05 T5) ──────
+
+  describe('GET /public/pages?path= — elenco delle traduzioni pubblicate (T5)', () => {
+    /** Legge una Pagina dalla superficie pubblica: anonima, nessun header di auth. */
+    function readPublic(path: string): request.Test {
+      return request(app.getHttpServer()).get(
+        `/api/v1/public/pages?path=${encodeURIComponent(path)}`,
+      );
+    }
+
+    it('espone locale e percorso delle altre traduzioni pubblicate, con prefisso di lingua sulle non-default', async () => {
+      const manager = await seedAuth(AppUserRoles.Manager, 'i18n-t5-1');
+      const admin = await seedAuth(AppUserRoles.Admin, 'i18n-t5-1-admin');
+      await setActiveLocales(admin, ['it-IT', 'en-GB'], 'it-IT');
+
+      const source = await createDraftPage(manager, { title: 'Servizi', slug: 'servizi-t5' });
+      const translation = await authedRequest(
+        'post',
+        `/api/v1/app/pages/${source.guid}/translations`,
+        manager,
+      )
+        .send({ locale: 'en-GB' })
+        .expect(201);
+
+      await changeStatus(manager, source.guid, 'published').expect(200);
+      await changeStatus(manager, translation.body.guid, 'published').expect(200);
+
+      const res = await readPublic('/servizi-t5').expect(200);
+
+      // Il `locale` resta BCP-47 (`en-GB`), il percorso è in forma canonica
+      // minuscola (ADR-24 § 4): un `hreflang` non deve puntare a un `308`.
+      expect(res.body.translations).toEqual([{ locale: 'en-GB', path: '/en-gb/servizi-t5' }]);
+
+      // L'URL pubblicato risponde davvero `200`, non un redirect.
+      await readPublic('/en-gb/servizi-t5').expect(200);
+    });
+
+    it('la Pagina corrente non compare nel proprio elenco', async () => {
+      const manager = await seedAuth(AppUserRoles.Manager, 'i18n-t5-2');
+      const admin = await seedAuth(AppUserRoles.Admin, 'i18n-t5-2-admin');
+      await setActiveLocales(admin, ['it-IT', 'en-GB'], 'it-IT');
+
+      const source = await createDraftPage(manager, { title: 'Contatti', slug: 'contatti-t5' });
+      const translation = await authedRequest(
+        'post',
+        `/api/v1/app/pages/${source.guid}/translations`,
+        manager,
+      )
+        .send({ locale: 'en-GB' })
+        .expect(201);
+
+      await changeStatus(manager, source.guid, 'published').expect(200);
+      await changeStatus(manager, translation.body.guid, 'published').expect(200);
+
+      const res = await readPublic('/en-gb/contatti-t5').expect(200);
+
+      expect(res.body.locale).toBe('en-GB');
+      expect(res.body.translations.map((t: { locale: string }) => t.locale)).toEqual(['it-IT']);
+    });
+
+    it('una traduzione non pubblicata non compare: la superficie pubblica non rivela bozze', async () => {
+      const manager = await seedAuth(AppUserRoles.Manager, 'i18n-t5-3');
+      const admin = await seedAuth(AppUserRoles.Admin, 'i18n-t5-3-admin');
+      await setActiveLocales(admin, ['it-IT', 'en-GB'], 'it-IT');
+
+      const source = await createDraftPage(manager, { title: 'Blog', slug: 'blog-t5' });
+      await authedRequest('post', `/api/v1/app/pages/${source.guid}/translations`, manager)
+        .send({ locale: 'en-GB' })
+        .expect(201);
+
+      await changeStatus(manager, source.guid, 'published').expect(200);
+
+      const res = await readPublic('/blog-t5').expect(200);
+
+      expect(res.body.translations).toEqual([]);
+    });
+
+    it('array vuoto per una Pagina senza traduzioni', async () => {
+      const manager = await seedAuth(AppUserRoles.Manager, 'i18n-t5-4');
+      const page = await createDraftPage(manager, { title: 'Sola', slug: 'sola-t5' });
+      await changeStatus(manager, page.guid, 'published').expect(200);
+
+      const res = await readPublic('/sola-t5').expect(200);
+
+      expect(res.body.translations).toEqual([]);
+    });
+
+    /**
+     * Invalidazione cross-riga: da T5 il payload di una Pagina contiene dati
+     * delle sorelle, quindi pubblicarne una deve invalidare anche le altre.
+     * Senza `invalidateTranslationGroup` questo test legge dalla cache un
+     * `translations: []` stantio.
+     */
+    it("pubblicare una traduzione invalida la cache della sorella: l'elenco non resta stantio", async () => {
+      const manager = await seedAuth(AppUserRoles.Manager, 'i18n-t5-5');
+      const admin = await seedAuth(AppUserRoles.Admin, 'i18n-t5-5-admin');
+      await setActiveLocales(admin, ['it-IT', 'en-GB'], 'it-IT');
+
+      const source = await createDraftPage(manager, { title: 'Cache', slug: 'cache-t5' });
+      const translation = await authedRequest(
+        'post',
+        `/api/v1/app/pages/${source.guid}/translations`,
+        manager,
+      )
+        .send({ locale: 'en-GB' })
+        .expect(201);
+
+      await changeStatus(manager, source.guid, 'published').expect(200);
+
+      // Prima lettura: popola la cache con un elenco vuoto.
+      const before = await readPublic('/cache-t5').expect(200);
+      expect(before.body.translations).toEqual([]);
+
+      await changeStatus(manager, translation.body.guid, 'published').expect(200);
+
+      const after = await readPublic('/cache-t5').expect(200);
+      expect(after.body.translations).toEqual([{ locale: 'en-GB', path: '/en-gb/cache-t5' }]);
+    });
+
+    it('spubblicare una traduzione la toglie dagli elenchi delle sorelle', async () => {
+      const manager = await seedAuth(AppUserRoles.Manager, 'i18n-t5-6');
+      const admin = await seedAuth(AppUserRoles.Admin, 'i18n-t5-6-admin');
+      await setActiveLocales(admin, ['it-IT', 'en-GB'], 'it-IT');
+
+      const source = await createDraftPage(manager, { title: 'Giù', slug: 'giu-t5' });
+      const translation = await authedRequest(
+        'post',
+        `/api/v1/app/pages/${source.guid}/translations`,
+        manager,
+      )
+        .send({ locale: 'en-GB' })
+        .expect(201);
+
+      await changeStatus(manager, source.guid, 'published').expect(200);
+      await changeStatus(manager, translation.body.guid, 'published').expect(200);
+      await readPublic('/giu-t5').expect(200);
+
+      await changeStatus(manager, translation.body.guid, 'draft').expect(200);
+
+      const res = await readPublic('/giu-t5').expect(200);
+      expect(res.body.translations).toEqual([]);
+    });
+  });
 });
