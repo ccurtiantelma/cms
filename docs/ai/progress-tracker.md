@@ -904,16 +904,23 @@ vuota non significa che nulla sia stato fatto. Verifica contro il codice:
 
 | Task | Stato reale |
 |---|---|
-| T1 — non regressione della baseline | **Parziale**: `test/unit/export/export.processor.spec.ts` e `export.processor.integration.spec.ts` esistono e passano; manca la verifica esplicita di non regressione dichiarata dal task |
+| T1 — non regressione della baseline | ~~Parziale~~ → **Fatto il 2026-09-12**, vedi § «F03 — T1 e T3 chiusi» sotto |
 | T2 — CSS critico inline | **Fatto**: `app/public-site/src/App.tsx`, `entry-server.tsx`, `PreviewDocument.tsx` |
-| T3 — media AVIF/WebP multi-risoluzione, `width`/`height`, CLS = 0 | **Fatto**: `ExportProcessor` compone `<picture>` con `srcset` AVIF/WebP (`renderMediaMarkup`), legge le dimensioni intrinseche con `sharp` (`readIntrinsicDimensions`) e le inietta con `aspect-ratio` (`augmentImgTag`). **Manca solo il gate di CI** che rende rossa la build su un `<img>` senza dimensioni |
+| T3 — media AVIF/WebP multi-risoluzione, `width`/`height`, CLS = 0 | **Fatto**: `ExportProcessor` compone `<picture>` con `srcset` AVIF/WebP (`renderMediaMarkup`), legge le dimensioni intrinseche con `sharp` (`readIntrinsicDimensions`) e le inietta con `aspect-ratio` (`augmentImgTag`). ~~Manca solo il gate di CI~~ → **gate scritto il 2026-09-12** (`check-exported-images.js`, step `Gate immagini esportate` del job `backend`): T3 è chiuso |
 | T4 — SEO/JSON-LD/OpenGraph nel documento + `sitemap.xml`/`robots.txt` | **Fatto**: JSON-LD in `app/public-site/src/App.tsx`, sitemap e robots rigenerati a fine batch da `ExportProcessor` |
 | T5 — adapter di consegna edge e air-gap di rete | **Parziale**: esiste l'astrazione (`export/deploy/static-site-deployer.interface.ts`) con un solo deployer, `local-folder.deployer.ts`. Manca l'adapter edge vero e la verifica dell'air-gap di rete |
 | T6 — test della superficie pubblica air-gapped | **Da fare**: nessuna suite dedicata all'air-gap |
 
 **Ordine per dipendenza di ciò che manca**: gate di CI di T3 (isolato, nessuna dipendenza) →
 adapter edge di T5 → T6 (verifica l'air-gap che T5 deve prima garantire) → chiusura di T1.
-Nessuno dei tre è bloccato da una firma.
+
+> Correzione del 2026-09-12 alla riga sopra: «nessuno dei tre è bloccato da una firma» **era
+> sbagliata per T5**. L'audit dell'11 settembre aveva letto il task come lavoro di
+> refactoring, ma l'adapter di consegna edge *è* la scelta di un provider concreto, e sia
+> `PLAN-F03` T5 («nessun provider esterno attivato senza ADR propria») sia
+> `static-site-deployer.interface.ts` sia `CLAUDE.md` § Ask first la subordinano a una firma
+> che non esiste. T1 e T3 sono chiusi; T5 è **bloccato**, e T6 con lui per dipendenza
+> dichiarata.
 
 > Nota di conformità rilevata durante l'audit, **non sanata**: `export.processor.ts` importa
 > `sharp` (via `require` CJS isolato) per la sola lettura dei metadati, mentre ADR-49
@@ -933,6 +940,59 @@ Il backlog implementativo è vuoto. Restano **decisioni**, non lavoro:
 | **D6/D7** (RFC-40, RFC-43) | Firme su documenti in bianco, con `site_templates` già in produzione |
 | **D8** (RFC-F06) | Firma retroattiva su una feature già chiusa |
 | **D1** (ADR-13, ADR-17) | Firme su codice già in produzione |
-| **Gate di CI di ADR-53** | Nessuna decisione, solo lavoro: appartiene a `PLAN-F03` T3. L'export **già** emette `width`/`height`/`aspect-ratio` (`ExportProcessor`), manca il controllo in `.github/workflows/` che rende rossa la build se un `<img>` ne esce senza |
+| **T5 di `PLAN-F03`** (adapter di consegna edge) | Firma su un provider concreto — ADR-53 § 4 ne lascia tre aperti (CDN edge, bucket S3-compatibile, volume Nginx isolato) e non ne sceglie nessuno. Serve una RFC (**RFC-62**, primo numero libero) e l'ADR che ne discende (**ADR-63**). Nessuna riga di codice prima della firma: `PLAN-F03` T5 e `static-site-deployer.interface.ts` vietano perfino lo stub |
+| **T6 di `PLAN-F03`** (suite air-gap) | Dipendenza dichiarata da T5: verifica la proprietà che l'adapter deve garantire |
 | **F11 chatbot** | Unica ADR di dominio davvero mancante; non blocca nulla finché F03/F08 non sono chiuse |
 | **`version` sulle 4 entità mutabili storiche** | Task a sé già dichiarato in `CLAUDE.md` § Database, da non retrofittare dentro una feature |
+
+---
+
+## F03 — T1 e T3 chiusi, T5/T6 bloccati (2026-09-12)
+
+### T3 — gate di CI delle immagini esportate: **chiuso**
+
+`check-exported-images.js` (root, stesso posto e stesso stile di
+`generate-blocks-types.js`) ispeziona l'HTML **realmente scritto dal job di export** e esce
+`1` se un `<img>` non porta `width`/`height` interi positivi. Esce `1` anche quando non
+trova alcun documento da ispezionare: un gate che non ha guardato nulla non è un gate verde,
+ed è il modo più comune in cui un controllo di CI smette di controllare senza che nessuno se
+ne accorga.
+
+Gli artefatti li produce la suite di export già esistente
+(`export.processor.integration.spec.ts`), che copia il documento in
+`STATIC_EXPORT_ARTIFACT_DIR` quando la variabile è valorizzata — solo in CI, no-op in
+locale. La copia è necessaria perché la fase 2 dello stesso test è un tombstone, che rimuove
+il file dal filesystem: il gate troverebbe una directory vuota.
+
+Verificato nei tre esiti: export valido → verde; stesso documento privato di
+`width`/`height` → rosso con il tag colpevole in `::error file=`; directory vuota o assente
+→ rosso.
+
+### T1 — non regressione della baseline (ADR-45/48/49/25): **nessuna regressione**
+
+Verificato su codice e suite, non sulle caselle del piano:
+
+| Proprietà dichiarata dal task | Esito |
+|---|---|
+| La coda `static-export` accoda e processa i tre tipi di job | ✅ `page`/`tombstone`/`full-site` in `export.types.ts` e nello `switch` di `ExportProcessor`, ognuno con `describe` proprio in `export.processor.spec.ts` |
+| Il tombstone rimuove fisicamente il file | ✅ asserito su filesystem reale (`existsSync(...) === false`), non su un mock del deployer |
+| `SeoGraphService` scrive `revision.seo` dentro `publishTransactionally()` | ✅ `generateSeoMetadata` chiamato **prima** della transazione, `seo: enrichedSeo` nell'`INSERT` della Revisione dentro `db.transaction` |
+| Il worker media produce WebP non distruttivo con focal point | ✅ `media.processor.ts`: `webp` (q80) e `avif` (q60) come righe derivate con `parentFileId` verso l'originale, mai riscritto; ritaglio centrato sul focal point |
+| `/__preview/:token` risponde solo con token valido e mai in cache | ⚠️ vedi sotto |
+
+**Gap registrato, non corretto** (T1 § Criterio di Done: le regressioni si registrano come
+bug a sé, non si correggono dentro il task): le risposte di `/__preview/` portano sempre
+`X-Robots-Tag: noindex, nofollow, noarchive` — senza eccezioni, anche sul `500` non
+gestito — ma **nessun `Cache-Control`**. La lettura è fresca lato server, come vuole ADR-25
+(nessuna cache Redis sull'anteprima), però un proxy o il browser possono trattenere l'HTML
+di una bozza. Non è una regressione — non c'è mai stato — è un requisito mai implementato.
+Rimedio quando verrà deciso: `Cache-Control: no-store` in `securityHeaders()` o nel ramo di
+anteprima di `server.ts`.
+
+### T5 e T6 — bloccati da una firma mancante
+
+Vedi § Prossimo passo. In sintesi: l'adapter di consegna edge non è un refactoring ma la
+scelta di un provider, e le tre fonti che la governano (`PLAN-F03` T5,
+`static-site-deployer.interface.ts`, `CLAUDE.md` § Ask first) la subordinano tutte a un'ADR
+che non esiste. Servono **RFC-62** e **ADR-63** (primi numeri liberi: RFC-61 e ADR-62 sono
+occupate).
