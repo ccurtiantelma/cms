@@ -41,7 +41,7 @@ export const REVISIONS_RETENTION_SETTING_KEY = 'revisions.retentionCount';
 export const DEFAULT_REVISIONS_RETENTION: RevisionsRetentionDto = { retentionCount: 0 };
 
 /**
- * Default di fabbrica del tema (contratto v7) — SPECULARE a
+ * Default di fabbrica del tema (contratto v8) — SPECULARE a
  * `DEFAULT_THEME_CONFIG` in `app/frontend/src/theme.ts` (hex della
  * `DEFAULT_THEME` di Mantine 7.17 installata). Restituito da
  * `GET /app/settings/theme` finché nessun SuperAdmin ha mai salvato un tema:

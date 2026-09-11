@@ -252,7 +252,7 @@ describe('SettingsController (integration)', () => {
       expect(res.body).toEqual(savedTheme);
     });
 
-    it('migrazione: riga v6 storica → restituita come v7 con le unità di ogni campo dimensionale a px', async () => {
+    it('migrazione: riga v6 storica → restituita come v8 con le unità di ogni campo dimensionale a px', async () => {
       const legacyV6 = { ...legacyV6Fields(), radius: 'lg' };
       findFirstMock.mockResolvedValue({ id: 1, key: THEME_SETTING_KEY, value: legacyV6 });
       const auth = makeAuthFor(AppUserRoles.User);
@@ -263,7 +263,7 @@ describe('SettingsController (integration)', () => {
         .set('Cookie', auth.cookie)
         .expect(200);
 
-      expect(res.body.version).toBe(7);
+      expect(res.body.version).toBe(8);
       expect(res.body.radius).toBe('lg');
       expect(res.body.typography.fontSizeUnit).toBe('px');
       expect(res.body.typography.headings.fontSizeUnit).toBe('px');
@@ -273,7 +273,7 @@ describe('SettingsController (integration)', () => {
       expect(res.body.navbarWidthUnit).toBe('px');
     });
 
-    it('migrazione: riga v1 storica → restituita come v7 con radius/token preservati e colors derivato dal nome nativo', async () => {
+    it('migrazione: riga v1 storica → restituita come v8 con radius/token preservati e colors derivato dal nome nativo', async () => {
       const legacyV1 = {
         version: 1,
         primaryColor: 'grape',
@@ -290,7 +290,7 @@ describe('SettingsController (integration)', () => {
         .set('Cookie', auth.cookie)
         .expect(200);
 
-      expect(res.body.version).toBe(7);
+      expect(res.body.version).toBe(8);
       expect(res.body.colors.primary).toBe('#be4bdb'); // grape[6]
       expect(res.body.radius).toBe('xl');
       expect(res.body.light.pageBg).toBe('#112233');
@@ -305,7 +305,7 @@ describe('SettingsController (integration)', () => {
       expect(res.body.navbarWidthUnit).toBe('px');
     });
 
-    it('migrazione: riga v2 storica → restituita come v7 con ogni campo preservato e colori titolo di default', async () => {
+    it('migrazione: riga v2 storica → restituita come v8 con ogni campo preservato e colori titolo di default', async () => {
       const legacyV2 = {
         ...legacyV5Fields(),
         version: 2,
@@ -322,7 +322,7 @@ describe('SettingsController (integration)', () => {
         .set('Cookie', auth.cookie)
         .expect(200);
 
-      expect(res.body.version).toBe(7);
+      expect(res.body.version).toBe(8);
       expect(res.body.colors.primary).toBe('#12b886'); // teal[6]
       expect(res.body.light.textPrimary).toBe('#111111');
       expect(res.body.dark.textPrimary).toBe('#eeeeee');
@@ -331,7 +331,7 @@ describe('SettingsController (integration)', () => {
       expect(res.body.dark.headingH4).toBe(DEFAULT_THEME_CONFIG.dark.headingH4);
     });
 
-    it('migrazione: riga v5 storica → restituita come v7 con colors.primary derivato da primaryColor/customPrimary e unità px', async () => {
+    it('migrazione: riga v5 storica → restituita come v8 con colors.primary derivato da primaryColor/customPrimary e unità px', async () => {
       const legacyV5 = { ...legacyV5Fields(), primaryColor: 'orange' };
       findFirstMock.mockResolvedValue({ id: 1, key: THEME_SETTING_KEY, value: legacyV5 });
       const auth = makeAuthFor(AppUserRoles.User);
@@ -342,7 +342,7 @@ describe('SettingsController (integration)', () => {
         .set('Cookie', auth.cookie)
         .expect(200);
 
-      expect(res.body.version).toBe(7);
+      expect(res.body.version).toBe(8);
       expect(res.body.colors.primary).toBe('#fd7e14'); // orange[6]
       expect(res.body.colors.secondary).toBe(DEFAULT_THEME_CONFIG.colors.secondary);
       expect(res.body.typography.fontSizeUnit).toBe('px');
@@ -457,7 +457,7 @@ describe('SettingsController (integration)', () => {
       expect(insertMock).not.toHaveBeenCalled();
     });
 
-    it('errore: versione v1, v2, v5 o v6 sul PUT → 400 (in scrittura è ammesso solo il contratto v7)', async () => {
+    it('errore: versione v1, v2, v5 o v6 sul PUT → 400 (in scrittura è ammesso solo il contratto v8)', async () => {
       const auth = makeAuthFor(AppUserRoles.SuperAdmin);
 
       const resV1 = await request(app.getHttpServer())

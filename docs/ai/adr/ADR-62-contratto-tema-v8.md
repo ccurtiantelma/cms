@@ -2,11 +2,11 @@
 
 ## Status
 
-[x] **In discussione — redatta, in attesa di firma umana** · [ ] Approvata · [ ] Rifiutata · [ ] Superseded da ADR-XXX
+[ ] In discussione · [x] **Approvata** · [ ] Rifiutata · [ ] Superseded da ADR-XXX
 
 ## Data approvazione
 
-___________ — approvata da: ___________
+**2026-09-12** — approvata da: marketing@antelmagroup.net
 
 ## Rapporto con ADR-4
 

@@ -1,7 +1,7 @@
 # RFC-31 — Layout Engine a colonne responsive per il blocco `Section`
 
 ## Status
-[x] In discussione · [ ] Approvato → genera ADR-31 · [ ] Rifiutato
+[ ] In discussione · [x] **Approvato** (2026-08-23, marketing@antelmagroup.net) → ADR-31 · [ ] Rifiutato
 
 ## Proposto da
 AI Orchestrator · Data: 2026-08-23

@@ -1,7 +1,7 @@
 # RFC-F04d — Libreria di preset di Sezione: quarto preset "Text & Media"
 
 ## Status
-[x] In discussione · [ ] Approvato → genera ADR-[N] · [ ] Rifiutato
+[ ] In discussione · [x] **Approvato** (2026-08-25, marketing@antelmagroup.net) → archivio, nessuna nuova ADR (copertura in ADR-34) · [ ] Rifiutato
 
 ## Proposto da
 AI Orchestrator · Data: 2026-08-25

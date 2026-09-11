@@ -1,7 +1,7 @@
 # RFC-F09 — Pipeline di trasformazione media: ritaglio non distruttivo e focal point
 
 ## Status
-[x] In discussione · [ ] Approvato → genera ADR-[N] · [ ] Rifiutato
+[ ] In discussione · [x] **Approvato** (M1–M8, 2026-09-02, marketing@antelmagroup.net) → ADR-49 · [ ] Rifiutato
 
 ## Proposto da
 AI Orchestrator · Data: 2026-09-02

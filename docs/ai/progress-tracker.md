@@ -136,7 +136,7 @@ questo documento:
 | # | Voce | Nota |
 |---|---|---|
 | D1 | ADR-13 e ADR-17 in attesa di approvazione umana | Il codice è già in produzione: la firma manca, non l'implementazione |
-| D2 | ADR-4 disallineata dal codice | **ADR-62 redatta il 2026-09-11, in attesa di firma**: ratifica il contratto `v8` e conferma la soglia SuperAdmin. Delle due divergenze misurate, la seconda è già sanata — `PUT app/settings/theme` era rimasto **senza alcun guard** dal commit `8b272f7`, conformità ad ADR-4 § 4 ripristinata l'11 settembre. Resta la sola versione del contratto: 4 test di `settings.e2e-spec.ts` asseriscono `version: 7` mentre il codice risponde `8`, e si allineano **alla firma di ADR-62**, non prima |
+| ~~D2~~ | ~~ADR-4 disallineata dal codice~~ | **Chiuso il 2026-09-12 con la firma di ADR-62**, che ratifica il contratto `v8` (sezione `layout`, catena di migrazione in lettura `v1→…→v8`) e conferma la soglia SuperAdmin. Entrambe le divergenze misurate sono sanate: il guard di `PUT app/settings/theme`, rimosso senza sostituto dal commit `8b272f7`, è tornato l'11 settembre; i 4 test di `settings.e2e-spec.ts` asseriscono `version: 8` dalla firma, non prima |
 | D3 | Le ADR 1–17 conservano il lessico dell'origine del progetto (`starter-kit`, `progetto verticale`, `gestionale`) e i riferimenti ai repository progenitori (`cima-infortunistica`, `openbridge`) | Voluto: sono record storici immutabili. La nuova identità vive nei documenti normativi, non nella riscrittura del passato |
 | D4 | ADR-5, ADR-6 e ADR-15 rinviano a file eliminati nella ristrutturazione del 2026-08-13 | Non correggibile senza modificare ADR approvate. Mappa dei rinvii qui sotto |
 | D5 | Le checklist «Prerequisiti di firma» dei plan sono mirror scaduti delle RFC | `PLAN-F05-multilingua.md` teneva M1–M6 a `[ ]` mentre `RFC-F05-multilingua.md` li ha firmati tutti il 2026-08-25. Un plan non è la fonte di una firma: la fonte è la sezione «Decisione umana» della RFC. Allineato il 2026-09-11, ma il meccanismo resta: ogni firma va riportata su entrambi i file nello stesso giro |
@@ -875,23 +875,27 @@ il test e2e continuava ad attendersi `403`. Ripristinata la conformità su entra
 (guard + `roles` sulla voce di navigazione). **Spostare la soglia ad Admin resta possibile,
 ma richiede una ADR che superi ADR-4.**
 
-**`ADR-62-contratto-tema-v8.md` redatta, in attesa di firma.** Ratifica il contratto `v8`
-(sezione `layout`: larghezza boxed, margini e rientri per lato con unità), la catena di
-migrazione in lettura `v1→…→v8` e la conferma della soglia SuperAdmin. Chiude D2.
+**`ADR-62-contratto-tema-v8.md` firmata il 2026-09-12** (marketing@antelmagroup.net).
+Ratifica il contratto `v8` (sezione `layout`: larghezza boxed, margini e rientri per lato con
+unità), la catena di migrazione in lettura `v1→…→v8` e la conferma della soglia SuperAdmin.
+Contestualmente alla firma — mai prima — i 4 test di migrazione di `settings.e2e-spec.ts`
+asseriscono `version: 8` e ne dichiarano il contratto nel titolo. **D2 chiuso**: la suite e2e
+non ha più test rossi.
 
 ### Header `Status` delle RFC incoerenti con la propria firma
 
-Rilevati, **non corretti**: la sezione «Decisione umana» è firmata ma l'intestazione in cima
-al file dice ancora `[x] In discussione`. Chi apre il documento dall'alto legge l'opposto di
-quello che c'è in fondo — la stessa dinamica che teneva F05 ferma per due settimane e mezzo.
-Sono modifiche a file `docs/` non compresi nell'autorizzazione di questo giro.
+Rilevati il 2026-09-11, **corretti il 2026-09-12** su autorizzazione umana esplicita per
+questi quattro file: la sezione «Decisione umana» era firmata ma l'intestazione in cima al
+file diceva ancora `[x] In discussione`, e chi apriva il documento dall'alto leggeva
+l'opposto di quello che c'era in fondo — la stessa dinamica che teneva F05 ferma per due
+settimane e mezzo. È cambiato **solo** l'header `Status`; nessun'altra riga di quelle RFC.
 
 | RFC | Decisione in fondo | Header in cima |
 |---|---|---|
-| `RFC-31-layout-colonne-section.md` | Approvato | `[x] In discussione` |
-| `RFC-38-block-schema-expansion-elementor-parity.md` | Approvato · Modificato | `[x] In discussione` |
-| `RFC-F04d-template-library.md` | Approvato | `[x] In discussione` |
-| `RFC-F09-media-transform-pipeline.md` | Approvato (M1–M8) | `[x] In discussione` |
+| `RFC-31-layout-colonne-section.md` | Approvato | ~~`[x] In discussione`~~ → `[x] Approvato` |
+| `RFC-38-block-schema-expansion-elementor-parity.md` | Approvato · Modificato | ~~`[x] In discussione`~~ → `[x] Approvato` |
+| `RFC-F04d-template-library.md` | Approvato | ~~`[x] In discussione`~~ → `[x] Approvato` |
+| `RFC-F09-media-transform-pipeline.md` | Approvato (M1–M8) | ~~`[x] In discussione`~~ → `[x] Approvato` |
 
 ### F03 — delta reale verificato sul codice (2026-09-11)
 
@@ -925,7 +929,6 @@ Il backlog implementativo è vuoto. Restano **decisioni**, non lavoro:
 
 | Voce | Cosa serve |
 |---|---|
-| **D2** / 4 test rossi in `settings.e2e-spec.ts` | Firma di **ADR-62**. I test asseriscono `version: 7`, il codice risponde `8`: si allineano **contestualmente alla firma**, non prima — spegnerli senza decidere renderebbe il debito invisibile |
 | **T6 di `PLAN-F09`** (immagini in RichText) | Decisione di sicurezza sull'allowlist di ADR-20 (`<img>` nel rich text sanitizzato) |
 | **D6/D7** (RFC-40, RFC-43) | Firme su documenti in bianco, con `site_templates` già in produzione |
 | **D8** (RFC-F06) | Firma retroattiva su una feature già chiusa |

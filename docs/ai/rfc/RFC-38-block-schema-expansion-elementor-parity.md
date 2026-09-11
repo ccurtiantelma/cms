@@ -1,7 +1,7 @@
 # RFC-38 — Espansione schema blocchi per parità di controlli con Elementor Pro
 
 ## Status
-[x] In discussione · [ ] Approvato → genera ADR-38 · [ ] Rifiutato
+[ ] In discussione · [x] **Approvato · Modificato** (2026-08-26, marketing@antelmagroup.net) → ADR-38 · [ ] Rifiutato
 
 ## Proposto da
 AI Orchestrator · Data: 2026-08-26
