@@ -29,7 +29,7 @@
  * visibilità è lo stesso stato UI effimero `hiddenInCanvasIds` che `EditorBlockWrapper`
  * traduce in un `display: none` reale — mai una seconda fonte di verità.
  */
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { createElement, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { ActionIcon, Group, NavLink, ScrollArea, Text, Tooltip } from '@mantine/core';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -179,7 +179,12 @@ function StructureNode({
   onMove,
 }: StructureNodeProps): JSX.Element {
   const label = nodeLabel(node);
-  const Icon = blockIcon(blockIconName(node.type));
+  // `createElement` invece del tag JSX `<Icon />`: `blockIcon` restituisce sempre lo stesso
+  // riferimento stabile di `ICON_MAP` (mai una funzione creata qui), ma un tag JSX con nome
+  // dinamico assegnato a una variabile locale è indistinguibile, per l'analisi statica di
+  // React Compiler (`react-hooks/static-components`), da un componente creato a ogni render —
+  // stesso idioma già in uso in `WidgetPalette.tsx` e `EditorBlockWrapper.tsx`.
+  const iconElement = createElement(blockIcon(blockIconName(node.type)), { size: 16 });
   const isHiddenInCanvas = useIsHiddenInCanvas(node.id);
   const toggleHiddenInCanvas = useBlockEditorStore((state) => state.toggleHiddenInCanvas);
 
@@ -238,7 +243,7 @@ function StructureNode({
 
         <NavLink
           style={{ flex: 1, minWidth: 0 }}
-          leftSection={<Icon size={16} />}
+          leftSection={iconElement}
           label={label}
           active={node.id === selectedId}
           onClick={() => onSelect(node.id)}

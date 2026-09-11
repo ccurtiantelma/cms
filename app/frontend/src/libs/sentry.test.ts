@@ -3,6 +3,11 @@
  * `import.meta.env.VITE_SENTRY_ENABLED`): serve `vi.resetModules()` +
  * `import()` dinamico dopo `vi.stubEnv(...)` per testare sia lo stato
  * disattivato (default) sia quello attivo in test separati.
+ *
+ * L'SDK vero è caricato da `sentry.ts` con un `import()` dinamico (code
+ * splitting, fuori dal chunk d'ingresso): `initSentry()`/`captureException()`
+ * ritornano la `Promise` dell'`import()` (solo per i test, nessun chiamante
+ * reale la usa) — va attesa prima di verificare le chiamate al mock.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -21,7 +26,7 @@ describe('libs/sentry (frontend, ADR-15)', () => {
     vi.doMock('@sentry/react', () => ({ init, captureException: vi.fn() }));
 
     const { initSentry } = await import('./sentry');
-    initSentry();
+    await initSentry();
 
     expect(init).not.toHaveBeenCalled();
   });
@@ -33,7 +38,7 @@ describe('libs/sentry (frontend, ADR-15)', () => {
     vi.doMock('@sentry/react', () => ({ init, captureException: vi.fn() }));
 
     const { initSentry } = await import('./sentry');
-    initSentry();
+    await initSentry();
 
     expect(init).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -48,7 +53,7 @@ describe('libs/sentry (frontend, ADR-15)', () => {
     vi.doMock('@sentry/react', () => ({ init: vi.fn(), captureException: captureExceptionMock }));
 
     const { captureException } = await import('./sentry');
-    captureException(new Error('boom'));
+    await captureException(new Error('boom'));
 
     expect(captureExceptionMock).not.toHaveBeenCalled();
   });
@@ -61,7 +66,7 @@ describe('libs/sentry (frontend, ADR-15)', () => {
 
     const { captureException } = await import('./sentry');
     const error = new Error('boom');
-    captureException(error, { componentStack: 'stack' });
+    await captureException(error, { componentStack: 'stack' });
 
     expect(captureExceptionMock).toHaveBeenCalledWith(error, {
       extra: { componentStack: 'stack' },

@@ -8,8 +8,6 @@ import { Center, Loader } from '@mantine/core';
 import ErrorBoundary from './components/ErrorBoundary';
 import PageNotFound from './components/PageNotFound';
 import PageServerError from './components/PageServerError';
-import LayoutProtected from './layouts/LayoutProtected';
-import LayoutStudio from './layouts/LayoutStudio';
 import { getToken, homePathForRole } from './utils/auth.utils';
 import { useAuthInit, useAuthStore } from './hooks/useAuth';
 import { AppUserRoles } from './types/common.types';
@@ -30,6 +28,8 @@ const GLOBAL_SECTIONS_ROLES = [AppUserRoles.SuperAdmin, AppUserRoles.Admin, AppU
  */
 const SITE_TEMPLATES_ROLES = [AppUserRoles.SuperAdmin, AppUserRoles.Admin, AppUserRoles.Manager];
 
+const LayoutProtected = lazy(() => import('./layouts/LayoutProtected'));
+const LayoutStudio = lazy(() => import('./layouts/LayoutStudio'));
 const PageLogin = lazy(() => import('./pages/auth/PageLogin'));
 const PageSetPassword = lazy(() => import('./pages/auth/PageSetPassword'));
 const PageForgottenPassword = lazy(() => import('./pages/auth/PageForgottenPassword'));
