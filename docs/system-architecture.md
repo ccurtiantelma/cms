@@ -76,6 +76,10 @@ canonico (`/en-gb/about-us` → `en-gb/about-us/index.html`, ADR-65). L'air-gap 
 CI da `check-air-gap.js` sulla topologia versionata; il firewall reale dell'ambiente di
 hosting e le porte pubblicate sull'host restano nella checklist di go-live.
 
+Il flusso inverso esiste per un solo dato: le visite. `nginx-static` scrive i propri log di
+accesso sul volume `edge_logs`, che il backend legge e svuota (ADR-68). Anche qui nessuna
+connessione di rete: il piano pubblico scrive un file, il Piano di Gestione lo legge.
+
 L'unico punto di attraversamento fra i due piani è il **worker della coda `static-export`**
 (`app/backend/src/export/`, ADR-45): legge dal Piano di Gestione, scrive/spinge verso il
 Piano di Erogazione Pubblica. Nessun altro componente attraversa il confine.

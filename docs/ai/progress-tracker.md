@@ -4,7 +4,10 @@
 > Le AI non lo modificano autonomamente: lo stato viene aggiornato a fine feature, su
 > richiesta esplicita.
 >
-> Ultima revisione: 2026-09-13 (secondo giro) — **F03 e F09 chiuse, conformità di ADR-53 sanata,
+> Ultima revisione: 2026-09-13 (terzo giro) — **contatore visite dai log di Nginx (ADR-68), F08
+> chiusa (ADR-69), meta SEO nel documento, pulsante "Rigenera sito pubblico"**. Vedi § "Passi
+> veloci chiusi (2026-09-13, terzo giro)" in fondo.
+> Precedente: 2026-09-13 (secondo giro) — **F03 e F09 chiuse, conformità di ADR-53 sanata,
 > registri allineati**: ADR-65/66/67, RFC-61 rifiutata, RFC-F04c registrata. Vedi § "Chiusura del
 > riallineamento (2026-09-13)" in fondo.
 > Precedente: 2026-09-13 — **firme di sblocco e chiusura del debito decisionale**, su
@@ -87,8 +90,8 @@
 | F04 | Editor visivo (page builder) | 1 | plans/PLAN-F04-editor-visivo.md · plans/PLAN-F04c-editor-maturo.md | ✅ Done (2026-08-19). Anteprima bozza (voce 1.10 di `docs/TODO.md`) chiusa lo stesso giorno — `plans/PLAN-anteprima-bozza.md`, ADR-25. Round **F04b (upgrade editor)** ✅ Done (2026-08-20): undo/redo + guardia + inserimento posizionale + `moveNodeTo` coperti da test (voce 3.11). Round **F04c (editor maturo)** ✅ Done (2026-08-20), T1–T8 di `plans/PLAN-F04c-editor-maturo.md`: props di stile responsive (ADR-29), metadati d'editor nel registro + ispettore a schede/etichette (ADR-30, chiude la voce 3.10), lettura pubblica dei media (ADR-27, chiude la voce 1.12), duplicazione blocco + drag & drop via `dnd-kit` (ADR-28). Quattro ADR di questo round tutte firmate. Copertura di test chiusa da `test-engineer` (voce 3.12). WYSIWYG (ADR-26) resta l'unica decisione ancora in attesa di firma, confermata fuori scope, rinviata a **F04d** |
 | F05 | Multilingua | 4 | rfc/RFC-F05-multilingua.md · plans/PLAN-F05-multilingua.md · ADR-36-modello-multilingua-righe-autonome.md | ✅ **Done (2026-09-11)** — M1–M6 firmati il 2026-08-25, T1–T7 tutti consegnati. T5 (dati `hreflang` sulla superficie pubblica, `PublicPageDto.translations`) era l'ultimo aperto e si è chiuso l'11 settembre, insieme a due difetti trovati costruendolo: invalidazione di cache cross-traduzione e canonicalizzazione dei percorsi composti da una riga |
 | F06 | Template e Sezioni globali | 1 | `GlobalSectionsModule` (`app/backend/src/global-sections/`) · ADR-40-sezioni-globali-e-layout.md | ✅ Done |
-| F07 | SEO per pagina | 2 | rfc/RFC-F07-seo-graph-generation.md · ADR-48-seo-graph-generation.md | 🔄 In progress — **non bloccata dal 2026-09-02** (ADR-48 approvata). `SeoGraphService` scritto, testato (`test/unit/pages/seo-graph.service.spec.ts`) e iniettato in `PagesService`: il grafo JSON-LD/OpenGraph è generato a publish-time. `sitemap.xml`/`robots.txt` emessi a fine batch dal job di export (ADR-45). Nessun plan formale aperto: il perimetro residuo di F07 va delimitato prima di dichiararla chiusa |
-| F08 | GEO per pagina | 2 | ADR-48-seo-graph-generation.md | 🔄 In progress (parziale) — il contratto GEO esiste (`PageSeoDto.faq`, `PageFaqEntryDto`) e `SeoGraphService` emette già l'entità JSON-LD `FAQPage` quando la FAQ è compilata. Nessun plan aperto: il resto del perimetro GEO non è delimitato |
+| F07 | SEO per pagina | 2 | rfc/RFC-F07-seo-graph-generation.md · ADR-48-seo-graph-generation.md | 🔄 In progress — `<title>`/meta description/meta robots nel documento consegnati il 2026-09-13. Residuo: `hreflang` in sitemap (seconda fase, con il multilingua) e redirect (ADR di schema, prima di un go-live che cambia URL) |
+| F08 | GEO per pagina | 2 | ADR-48-seo-graph-generation.md | ✅ **Done (2026-09-13)** — `llms.txt`, direttive per i crawler AI in `robots.txt`, `noai` nel documento (ADR-69). L'uso di `keyFacts`/`faq` nel chatbot arriva con F11 |
 | F09 | Media editoriali | 6 | rfc/RFC-F09-media-library.md · rfc/RFC-F09-media-transform-pipeline.md · plans/PLAN-F09-media-library.md · ADR-35 · ADR-49 | ✅ **Done (2026-09-13)** — T1–T5 consegnati, T2 (dimensioni raster) con il commit `1cc8adf`, T6 chiuso come presa d'atto (nessun `<img>` nel rich text, si usa il blocco `image`), T7 coperto da `files.e2e-spec.ts` e `bruno/files/` |
 | F10 | Moduli di contatto | 3 | `FormsModule` (`app/backend/src/forms/`) · RFC-46-dynamic-form-builder.md · ADR-46-dynamic-form-builder.md | ✅ Done |
 | F11 | Chatbot integrato | 7 | — | ⏳ Pending |
@@ -1115,3 +1118,34 @@ esteso), `SPEC-F03` (layout), `PLAN-F03` e `PLAN-F09` (Definition of Done), head
 | File orfani se cambia la lingua di default (ADR-65) | Miglioria prima di rendere il cambio ordinario |
 | `version` sulle 4 entità mutabili storiche | Task a sé (`CLAUDE.md` § Database) |
 | `EXPORT_RENDER_SECRET` nel `.env` di produzione | Operativo, al prossimo deploy |
+
+---
+
+## Passi veloci chiusi (2026-09-13, terzo giro)
+
+Su richiesta umana: rendere operativo il contatore e chiudere i passi veloci; multilingua,
+chatbot e simili rinviati a dopo il completamento del clone di Elementor Pro.
+
+| Passo | Esito |
+|---|---|
+| **Contatore delle visite** (ADR-68) | Log JSON di `nginx-static` per le sole Pagine, letti ogni 5 minuti da `edge-log-ingestion-queue`, IP ridotto a hash giornaliero, file cancellati il giorno dopo. Verificato end-to-end in locale: 7 righe, 4 visite registrate, scartati 404, bot e sitemap. Rimosso il middleware di ingestione |
+| **Sito statico in locale** | `docker compose up -d nginx-static` serve `app/backend/storage/static-site` su `http://localhost:58080` |
+| **F07 — meta nel documento** | Il documento ignorava i metadati SEO salvati: ora `<title>` usa `metaTitle`, c'è la meta description e il meta `robots` |
+| **F08 — chiusa** (ADR-69) | `llms.txt`, direttive per i crawler AI in `robots.txt`, `noai` nel documento |
+| **Rigenera sito pubblico** | `POST app/admin/system/rebuild-static-site` (SuperAdmin) e pulsante nell'elenco Pagine; anche `seed-demo` ora rigenera |
+
+### Difetti trovati e corretti
+
+| Difetto | Effetto | Correzione |
+|---|---|---|
+| Default `dist/static-site` per l'export | `nest start --watch` svuota `dist/` a ogni ricompilazione: il sito esportato spariva in sviluppo | Default in `storage/` |
+| Seed Antelma passavano i campi SEO nel sanitizzatore HTML | `&` salvato come `&amp;`, titolo doppiamente escapato | SEO salvato verbatim, come `PagesService` |
+| `STATIC_SITE_BASE_URL` assente da `.env.example` | Sitemap e `robots.txt` di produzione verso `http://localhost` | Documentata |
+| Database di sviluppo senza la migrazione 0014 | Seed e upload di immagini in errore (`column "width" does not exist`) | Migrazione applicata in locale |
+| `seed-demo` non rigenerava il sito | Pagine seedate assenti dal sito statico | Accoda il rebuild |
+
+### Prossimo passo
+
+Audit dell'editor rispetto a Elementor Pro, poi completamento a round firmati. Restano in
+attesa: redirect (F07, prima di un go-live che cambia URL), `hreflang` in sitemap e resto del
+multilingua, widget editoriali di F12, F11 chatbot.

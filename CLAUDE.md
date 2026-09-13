@@ -76,7 +76,7 @@ Prefix globale `api/v1`. JWT middleware esclude `auth/*`, `health`, `/metrics`, 
 - ~~Routing e risoluzione degli slug~~ → **chiusa**: ADR-24 (superata da ADR-53 come record, forma degli URL ereditata): risoluzione per segmenti, `404` uniforme, canonica `308`, lingua di default senza prefisso, redirect fuori da F03. Un solo calcolo dell'URL pubblico: `composePublicPath` (ADR-65).
 - ~~Potatura delle Revisioni~~ → **chiusa**: ADR-61 approvata il 2026-09-11 (potatura di sistema, mai azione utente, opt-in di deploy).
 - ~~Adapter di consegna statica~~ → **chiusa**: ADR-63 approvata il 2026-09-13 (volume Nginx isolato, air-gap verificato in CI da `check-air-gap.js`).
-- **Raccolta analytics sul sito statico**: aperta (ADR-67 § Conseguenze). Nessun visitatore raggiunge più il backend, quindi le analytics di F12 non vedono visite reali. Metodo di raccolta da decidere prima di costruire altri widget di traffico.
+- ~~Raccolta analytics sul sito statico~~ → **chiusa**: ADR-68 approvata il 2026-09-13 (log JSON di `nginx-static` letti ogni 5 minuti dal job `edge-log-ingestion-queue`, IP ridotto a hash giornaliero, file grezzi cancellati il giorno dopo).
 - ~~Ownership per riga permessi editoriali~~ → **chiusa**: ADR-18 approvata il 2026-08-17 (P1/P2/P3 incluse).
 - ~~Sanitizzazione HTML server-side~~ → **chiusa**: ADR-20 approvata il 2026-08-17, libreria `sanitize-html`.
 - ~~Schema dei blocchi e versionamento~~ → **chiusa**: ADR-21 approvata il 2026-08-17 (`v` per nodo, registro nel backend, migrazioni in lettura, `kind` di sanitizzazione per prop, cinque tipi). Un sesto tipo o un nuovo `kind` richiede una nuova firma. Un incremento di `v` è un deploy a senso unico: il rollback del backend esige il rollback dei contenuti.

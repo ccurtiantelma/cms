@@ -156,16 +156,17 @@ in editor.
 **ADR**: `ADR-48-seo-graph-generation.md`, approvata il 2026-09-02 — generazione
 JSON-LD/OpenGraph a publish-time. La decisione **non è più aperta**.
 
-**Consegnato**: metadati, canonical, `robots`, Open Graph e JSON-LD a publish-time,
-`sitemap.xml` e `robots.txt` dall'export. **Residuo**: `hreflang` dentro `sitemap.xml`;
-redirect con compattazione delle catene (tabella `redirects` prevista ma non approvata:
-serve una ADR con modifica di schema); verifica della checklist consultiva in editor.
+**Consegnato**: metadati, canonical, Open Graph e JSON-LD a publish-time; `<title>`, meta
+description e meta `robots` nel documento (2026-09-13); `sitemap.xml` e `robots.txt`
+dall'export. **Residuo**: `hreflang` dentro `sitemap.xml` (seconda fase, con il
+multilingua); redirect con compattazione delle catene (tabella `redirects` da approvare:
+serve una ADR con modifica di schema, prima di un go-live che cambia URL).
 
 ---
 
 ### F08 — GEO per pagina
 
-**Pilastro**: 2 · **Stato**: 🔄 In progress (parziale) · **Dipende da**: F07
+**Pilastro**: 2 · **Stato**: ✅ Done (2026-09-13) · **Dipende da**: F07
 
 `aiSummary`, `keyFacts`, `faq` (con JSON-LD `FAQPage`), `entities`, `aiPolicy`,
 generazione di `llms.txt`, direttive per crawler AI.
@@ -176,8 +177,9 @@ generazione di `llms.txt`, direttive per crawler AI.
 > blocco di metadati sulla Pagina e vanno progettate insieme.
 
 **Consegnato**: campi `aiSummary`, `keyFacts`, `faq`, `entities`, `aiPolicyAllowed` nel
-contratto SEO della Pagina, JSON-LD `FAQPage`. **Residuo**: generazione di `llms.txt` e
-direttive per crawler AI in `robots.txt` dal job di export.
+contratto SEO della Pagina, JSON-LD `FAQPage`; `llms.txt`, direttive per i crawler AI in
+`robots.txt` e `noai` nel documento (ADR-69, 2026-09-13). **Residuo**: nessuno sul sito;
+l'uso di `keyFacts`/`faq` come conoscenza del chatbot arriva con F11.
 
 ---
 
@@ -239,7 +241,8 @@ redirect rotti, Pagine senza metadati SEO.
 
 **Perché in fondo**: una dashboard è una vista su dati che devono esistere prima.
 
-**Consegnato**: dashboard con analytics di traffico. **Residuo**: i widget editoriali
+**Consegnato**: dashboard con analytics di traffico, alimentata dai log di `nginx-static`
+(ADR-68, 2026-09-13). **Residuo**: i widget editoriali
 elencati sopra (bozze e revisioni, programmate, ultimi Invii, media senza alt, Pagine
 senza metadati SEO); «redirect rotti» dipende dai redirect di F07.
 

@@ -3,7 +3,10 @@
 > Regole di dominio. Priorità: dopo Constitution. Le AI non le modificano di propria
 > iniziativa (vedi `docs/constitution.md` → "Documentation Policy").
 >
-> Ultima revisione: 2026-09-11 — riscrittura del § "Revisioni e cronologia" su richiesta
+> Ultima revisione: 2026-09-13 — § "Freschezza del contenuto pubblico" riallineato all'export
+> statico (ADR-67) e rigenerazione del sito aggiunta alle funzioni di sistema, su richiesta
+> umana esplicita.
+> Precedente: 2026-09-11 — riscrittura del § "Revisioni e cronologia" su richiesta
 > esplicita dell'umano, per applicare **ADR-61** (retention delle Revisioni): la regola 2 e
 > la regola 5 si contraddicevano dal 2026-08-13 e il conflitto era stato rinviato una volta
 > da ADR-19. Revisione precedente: 2026-08-17 — conferma delle assunzioni A2, A3, A4, A5 su
@@ -386,15 +389,18 @@ Regole di sistema:
 
 ---
 
-## Cache e invalidazione del contenuto pubblico
+## Freschezza del contenuto pubblico
 
-1. Le risposte degli endpoint `public/` sono cacheate in Redis.
-2. L'invalidazione è **per evento, non per TTL**: pubblicazione, ripubblicazione,
-   archiviazione, cambio slug, modifica di una Sezione globale o di un Menu invalidano
-   esplicitamente le chiavi coinvolte.
-3. Sitemap e `llms.txt` sono invalidati da qualsiasi cambio di stato di pubblicazione.
-4. Un contenuto archiviato non deve mai restare servito dalla cache: l'invalidazione fa
-   parte della transazione di archiviazione, non è un'operazione "best effort".
+1. Il sito pubblico è fatto di file statici rigenerati dal job di export (ADR-53, ADR-67):
+   nessuna cache runtime, nessuna chiave Redis pubblica.
+2. La rigenerazione è **per evento, non per TTL**: pubblicazione e ripubblicazione
+   riscrivono la Pagina e le traduzioni pubblicate; l'uscita da `published` rimuove il file;
+   cambio di slug, di genitore o soft delete rimuovono i file del sottoalbero e rigenerano
+   il sito; modifica di tema o Sezioni globali rigenera il sito.
+3. Sitemap, `robots.txt` e `llms.txt` sono rigenerati a ogni cambio di stato di
+   pubblicazione.
+4. Un contenuto archiviato non deve mai restare servito: il tombstone del file è accodato
+   nella stessa operazione di archiviazione.
 
 ---
 
@@ -580,7 +586,9 @@ Ogni riga registra: `userId`, `impersonatedBy` (nullable), `action`, `entity`/`e
 - `POST app/admin/system/reset-demo`: wipe transazionale FK-safe di tutti i dati
   applicativi, mantenendo solo l'utente SuperAdmin. Operazione distruttiva e irreversibile
   — richiede conferma esplicita in UI.
-- Entrambe richiedono `role === AppUserRoles.SuperAdmin` (controllo esatto, non `<=`),
+- `POST app/admin/system/rebuild-static-site`: accoda la rigenerazione completa del sito
+  statico (primo deploy, ripristino). Non distruttiva, registrata su audit log.
+- Tutte richiedono `role === AppUserRoles.SuperAdmin` (controllo esatto, non `<=`),
   guard dedicato `GuardSuperAdmin`.
 
 ---
