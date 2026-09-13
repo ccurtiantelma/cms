@@ -1,7 +1,10 @@
 # RFC-40 — Theme Builder: registro dei Template di tema e condizioni di visualizzazione
 
 ## Status
-[x] In discussione · [ ] Approvato → genera ADR-40 · [ ] Rifiutato
+[ ] In discussione · [x] Approvato (Modificato) → genera ADR-64 · [ ] Rifiutato
+
+> La numerazione `→ ADR-40` scritta in origine non vale: ADR-40 è stata assegnata il
+> 2026-08-27 alle Sezioni globali (header/footer) e l'ADR conseguente a questa RFC è ADR-64.
 
 ## Proposto da
 AI Orchestrator · Data: 2026-08-27
@@ -209,20 +212,32 @@ la regola 1 del modello di contenuto oggi esclude.
 
 ## Decisione umana
 
-**Esito**: [ ] Approvato · [ ] Rifiutato · [ ] Modificato
+**Esito**: [ ] Approvato · [ ] Rifiutato · [x] Modificato
 
 **Punti che richiedono una firma esplicita:**
 
-- [ ] **N1** — Perimetro: Opzione A (solo header/footer come Sezione globale, F06) / Opzione B
+- [x] **N1** — Perimetro: Opzione A (solo header/footer come Sezione globale, F06) / Opzione B
   (Theme Builder a sé, nuova sigla roadmap) / Opzione C (nessuna, richiede altro giro)
-- [ ] **N2** — Se Opzione A: conferma che `single`/`archive` restano fuori scope fino a una
-  decisione sui tipi di contenuto
-- [ ] **N3** — RBAC: soglia Manager (20) o Admin (10) per la gestione dei template di tema
-- [ ] **N4** — Autorizzazione a procedere con una ADR di persistenza (tabella + motore
-  `displayConditions`) come task successivo
+  → **A + B, entrambe già in produzione**: header/footer sono Sezioni globali
+  (ADR-40, approvata il 2026-08-27); `site_templates` è un Theme Builder a sé che **non**
+  gestisce header/footer. La nuova sigla di roadmap resta atto umano, non assegnata qui.
+- [x] **N2** — Se Opzione A: conferma che `single`/`archive` restano fuori scope fino a una
+  decisione sui tipi di contenuto → **confermato anche per B**: `single_post` e `archive`
+  esistono nell'enum ma restano fuori da `RESOLVABLE_SITE_TEMPLATE_TYPES`, senza semantica
+  di risoluzione, finché non esiste una decisione sui tipi di contenuto.
+- [x] **N3** — RBAC: soglia Manager (20) o Admin (10) per la gestione dei template di tema
+  → **Manager (20)**, come già applicato da `GuardManager` su `app/site-templates`.
+- [x] **N4** — Autorizzazione a procedere con una ADR di persistenza (tabella + motore
+  `displayConditions`) come task successivo → **ADR-64**, di ratifica.
 
-**Note**: ___________
+**Note**: firma retroattiva. Il codice è in produzione dal 2026-08-31 con il commento
+«RFC-40 Opzione B, decisione umana 2026-08-31» in `schema.ts`, senza record scritto in
+questa sezione (rilievo di RFC-43 § Problema 2). La firma chiude quel debito e registra
+quello che il codice fa davvero, compresi due scostamenti dalla RFC: i valori
+`single_post`/`archive` persistiti nell'enum, che l'Opzione C sconsigliava, e l'assenza di
+qualunque consumer del resolver in `app/public-site` o nell'export statico. Firma data in
+chat il 2026-09-13, dopo la presentazione di questi scostamenti.
 
-**Approvato da**: ___________ · **Data**: ___________
+**Approvato da**: marketing@antelmagroup.net · **Data**: 2026-09-13
 
-**Azione successiva**: [ ] Genera ADR-40 · [ ] Archivio
+**Azione successiva**: [x] Genera ADR-64 · [ ] Archivio

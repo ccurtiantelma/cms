@@ -1,15 +1,22 @@
 # ADR-17 — State management frontend con Zustand
 
 ## Status
-[x] In discussione · [ ] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
+[ ] In discussione · [x] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
 
-> ⚠️ **Bozza — non approvata.** Il codice è già stato implementato su richiesta
-> esplicita dell'utente (2026-08-05) prima della stesura di questa ADR; questo
-> documento formalizza a posteriori la decisione e resta in attesa di
-> approvazione umana. Vedi "Note sul processo" in fondo.
+> Ratifica a posteriori: il codice è stato implementato su richiesta esplicita
+> dell'utente (2026-08-05) prima della stesura di questa ADR. Vedi "Note sul
+> processo" in fondo.
 
 ## Data approvazione
-N/D — in attesa di approvazione umana
+**2026-09-13** — approvata da: marketing@antelmagroup.net
+
+> **Nota di firma.** Verifica di conformità eseguita alla firma: criteri 2–4
+> rispettati. Il criterio 1 non è soddisfatto alla lettera:
+> `app/frontend/src/pages/pages/editor/EditorBlockWrapper.tsx` usa
+> `createContext` per `InvalidBlockContext`, l'id del nodo respinto dall'ultima
+> validazione, montato solo sotto l'editor. Non è stato globale e non rientra
+> nel problema che questa ADR risolve; resta ammesso, e il criterio 1 va letto
+> come «nessun `React Context` per stato **globale** dell'applicazione».
 
 ## RFC di riferimento
 Nessuna (decisione presa direttamente su richiesta dell'utente).

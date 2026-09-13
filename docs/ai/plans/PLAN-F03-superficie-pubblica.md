@@ -8,7 +8,7 @@ piano segue la stessa distinzione: **non riparte da zero**.
 ## ADR di riferimento
 `ADR-53` (decisione corrente) · `ADR-45` (non superata: coda `static-export`, orchestrazione
 NestJS senza rendering, tombstone) · `ADR-48` (dati SEO) · `ADR-49` (pipeline media) ·
-`ADR-25` (anteprima) · `ADR-21` (escaping) · `ADR-22`/`ADR-23`/`ADR-24` (superseded, record
+`ADR-25` (anteprima) · `ADR-63` (adapter di consegna, T5/T6) · `ADR-21` (escaping) · `ADR-22`/`ADR-23`/`ADR-24` (superseded, record
 storico).
 
 ---
@@ -156,6 +156,11 @@ loro debito dichiarato altrove.
   (scrittura atomica invariata); nessun provider esterno attivato senza ADR propria.
 - **Agente**: backend-developer per l'interfaccia/adapter, orchestrator per l'eventuale RFC
   di un provider edge concreto se il task lo richiede in futuro (fuori da questo piano).
+- **Sblocco (2026-09-13)**: il provider è deciso da `ADR-63-consegna-statica-volume-nginx-isolato.md`
+  (RFC-62 M1–M6). L'interfaccia e `LocalFolderDeployer` esistono già; resta la topologia
+  air-gap in `docker-compose.prod.yml` (servizio `nginx-static` solo su `edge_net`, volume
+  `rw` backend / `ro` Nginx, conf di cache di ADR-53 § 2) e l'allineamento di
+  `STATIC_EXPORT_PATH`. Nessuno stub `S3Deployer`/`CloudflarePagesDeployer` (ADR-63 § 5).
 
 ### T6 — Test della superficie pubblica air-gapped
 - **Serve al percorso**: dimostra che il file esportato è completo e che l'anteprima non
@@ -173,6 +178,10 @@ loro debito dichiarato altrove.
 - **Criterio di Done**: suite verde nel gate `backend-e2e`/`public-site` CI; ogni asserzione
   gira sul file prodotto dal job di export, non sul componente React isolato.
 - **Agente**: test-engineer.
+- **Sblocco (2026-09-13)**: oltre alle asserzioni sopra, verifica l'air-gap sulla topologia
+  versionata come fissato da ADR-63 § 3 (connessioni da `nginx-static` verso
+  `postgres`/`redis`/`backend` che falliscono, mount `ro`, `GET` = file esportato,
+  tombstone → `404`).
 
 ---
 

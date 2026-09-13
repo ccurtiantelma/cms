@@ -1,7 +1,7 @@
 # RFC-43 — Categorie di Pagina e Template per Pagina: due decisioni distinte dietro un solo task esterno
 
 ## Status
-[x] In discussione · [ ] Approvato → genera ADR-[N] · [ ] Rifiutato
+[ ] In discussione · [x] Approvato → nessuna ADR nuova (N1 = A, N3 = A) · [ ] Rifiutato
 
 ## Proposto da
 AI Orchestrator · Data: 2026-08-31
@@ -318,28 +318,36 @@ esplicita in una ADR.
 
 ## Decisione umana
 
-**Esito**: [ ] Approvato · [ ] Rifiutato · [ ] Modificato
+**Esito**: [x] Approvato · [ ] Rifiutato · [ ] Modificato
 
 **Punti che richiedono una firma esplicita, singolarmente:**
 
-- [ ] **N1** — Categorie: Opzione A (non costruire ora, raccomandata) / Opzione B (tag
+- [x] **N1** — Categorie: Opzione A (non costruire ora, raccomandata) / Opzione B (tag
   piatti, senza gerarchia) / Opzione C (aprire una decisione formale su tipi di
-  contenuto/tassonomie, voce di roadmap nuova)
-- [ ] **N2** — Se N1 = B o C: conferma che serve comunque una voce di
-  `docs/roadmap.md` prima di ogni ADR (compito umano)
-- [ ] **N3** — Template: Opzione A (estendere `site_templates`/`TemplateResolverService`
+  contenuto/tassonomie, voce di roadmap nuova) → **Opzione A**: nessuna tabella
+  `categories`, nessuna FK su `pages`.
+- [x] **N2** — Se N1 = B o C: conferma che serve comunque una voce di
+  `docs/roadmap.md` prima di ogni ADR (compito umano) → **non applicabile** (N1 = A);
+  la regola resta valida se le Categorie verranno riaperte.
+- [x] **N3** — Template: Opzione A (estendere `site_templates`/`TemplateResolverService`
   esistente) / Opzione B (terzo concetto distinto, nuovo nome in glossario e in codice) /
-  Opzione C (rinviare a dopo la chiusura di RFC-F06)
-- [ ] **N4** — Autorizzazione a chiudere per iscritto il debito di governance già presente
+  Opzione C (rinviare a dopo la chiusura di RFC-F06) → **Opzione A**, nella sequenza
+  raccomandata: un bisogno di «template per Pagina» si verifica prima contro
+  `displayConditions.specific_page`; nessun secondo resolver, nessuna tabella `templates`.
+- [x] **N4** — Autorizzazione a chiudere per iscritto il debito di governance già presente
   su `RFC-40-theme-builder-template-registry.md` § Opzione B (sezione "Decisione umana"
   in bianco, ADR-conseguente mai prodotta) come precondizione a qualunque estensione di
-  `site_templates` — indipendente dall'esito di N1/N3, va comunque chiuso
-- [ ] **N5** — RBAC: soglia esplicita per la gestione di Categorie (se N1 ≠ A) e per il
+  `site_templates` — indipendente dall'esito di N1/N3, va comunque chiuso → **chiuso il
+  2026-09-13**: RFC-40 firmata (esito Modificato) e `ADR-64-template-di-tema-site-templates.md`.
+- [x] **N5** — RBAC: soglia esplicita per la gestione di Categorie (se N1 ≠ A) e per il
   concetto di Template scelto in N3, senza dedurla dalla riga "Gestire Menu, Template,
-  Sezioni globali" già ambigua (RFC-40 § 5)
+  Sezioni globali" già ambigua (RFC-40 § 5) → Categorie: non applicabile. Template di
+  tema: **Manager (20)**, deciso esplicitamente in RFC-40 N3 / ADR-64 § 5.
 
-**Note**: ___________
+**Note**: nessun codice discende da questa firma. Un'estensione di `site_templates` per
+Pagina resta un task che parte da ADR-64 e dalle due precondizioni che quella ADR elenca
+(consumer pubblico, vincolo di `language`).
 
-**Approvato da**: ___________ · **Data**: ___________
+**Approvato da**: marketing@antelmagroup.net · **Data**: 2026-09-13
 
-**Azione successiva**: [ ] Genera ADR-[N] (una per N1 se ≠ A, una per N3 se ≠ A) · [ ] Archivio
+**Azione successiva**: [x] Nessuna ADR nuova (N1 = A, N3 = A) · [ ] Archivio

@@ -1,7 +1,7 @@
 # RFC-F06 — Template e Sezioni globali: cosa costruiamo davvero
 
 ## Status
-[x] In discussione · [ ] Approvato → genera ADR-[N] · [ ] Rifiutato
+[ ] In discussione · [x] Approvato → genera ADR-[N] · [ ] Rifiutato
 
 ## Proposto da
 AI Orchestrator · Data: 2026-08-25
@@ -200,13 +200,21 @@ diventare un binario di fatto senza mai passare da uno schema approvato.
 
 ## Decisione umana
 
-**Esito**: [ ] Approvato · [ ] Rifiutato · [ ] Modificato
+**Esito**: [x] Approvato · [ ] Rifiutato · [ ] Modificato
 
-**Note**: ___________
+**Note**: firma retroattiva che ratifica quanto già consegnato, nessuna decisione nuova.
+Scelta **Opzione C**: fase 1 (catalogo statico di preset, nessuna persistenza) realizzata nei fatti da
+`ADR-34-subtree-insertion-engine-preset-statici.md` (approvata il 2026-08-25, che non cita
+questa RFC ma ne implementa T3–T5 della bozza di piano), estesa con
+import/export JSON client-side da `ADR-56-template-library-import-export-json.md`
+(approvata il 2026-09-05), sempre senza tabella nuova. La libreria personale persistita
+«I miei Template» resta **non costruita** e richiede una RFC propria. Le Sezioni globali
+header/footer sono regolate da `ADR-40-sezioni-globali-e-layout.md` (approvata il
+2026-08-27), che non discende da questa RFC.
 
-**Approvato da**: ___________ · **Data**: ___________
+**Approvato da**: marketing@antelmagroup.net · **Data**: 2026-09-13
 
-**Azione successiva**: [ ] Genera ADR-[N] · [ ] Archivio
+**Azione successiva**: [x] Nessuna ADR nuova: le ADR conseguenti sono ADR-34 e ADR-56, già approvate · [ ] Archivio
 
 ---
 

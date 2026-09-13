@@ -4,7 +4,11 @@
 > Le AI non lo modificano autonomamente: lo stato viene aggiornato a fine feature, su
 > richiesta esplicita.
 >
-> Ultima revisione: 2026-09-11 — **riconciliazione del registro con lo stato reale del
+> Ultima revisione: 2026-09-13 — **firme di sblocco e chiusura del debito decisionale**, su
+> richiesta umana esplicita: RFC-62 (M1–M6) → ADR-63, RFC-40 (Modificato) → ADR-64, RFC-43,
+> RFC-F06, ADR-17. `PLAN-F03` T5/T6 sbloccati, D1/D6/D7/D8 chiusi, gap `Cache-Control`
+> dell'anteprima corretto. Vedi § "Firme di sblocco (2026-09-13)" in fondo.
+> Precedente: 2026-09-11 — **riconciliazione del registro con lo stato reale del
 > repository**, su richiesta umana esplicita. Tre delle quattro "ADR mancanti che bloccano il
 > dominio" erano firmate da settimane e F05/F07/F09 risultavano ⏳ Pending mentre il codice
 > era in gran parte consegnato. Vedi § "Riconciliazione registro ↔ repository (2026-09-11)"
@@ -63,7 +67,7 @@
 | Cookie SameSite / valutazione CSRF | ADR-14-cookie-samesite-csrf.md | ✅ Done | — |
 | Osservabilità opzionale (Sentry + `/metrics`) | ADR-15-observability-sentry-prometheus.md | ✅ Done | 2026-07-23 |
 | E2E browser (Playwright) | ADR-16-e2e-browser-playwright.md | ✅ Done | 2026-07-26 |
-| State management frontend con Zustand | ADR-17-state-management-zustand.md | ⚠️ Bloccata — codice implementato e verificato, ADR in attesa di approvazione umana | — |
+| State management frontend con Zustand | ADR-17-state-management-zustand.md | ✅ Done — ADR ratificata il 2026-09-13 | 2026-08-05 |
 
 ---
 
@@ -76,7 +80,7 @@
 |---|---|---|---|---|
 | F01 | Gestione Pagine (modello, stati, slug, revisioni) | fondativa | features/F01-gestione-pagine.md · specs/SPEC-F01-gestione-pagine.md · plans/PLAN-F01-innesto.md | ✅ Done (2026-08-17) |
 | F02 | Registro e validazione dei Blocchi | 1 | plans/PLAN-F02-blocchi.md | ✅ Done (2026-08-19, riconciliata) |
-| F03 | Superficie pubblica di lettura (Air-Gapped SSG) | 2, 7 | specs/SPEC-F03-superficie-pubblica.md · plans/PLAN-F03-superficie-pubblica.md · ADR-53-air-gapped-ssg-zero-db.md | 🚀 Ready for Implementation (Air-Gapped SSG) — baseline SSR/cache del 2026-08-19 superata da ADR-45/ADR-53, delta di consegna edge/CLS/SEO in `PLAN-F03` § Task |
+| F03 | Superficie pubblica di lettura (Air-Gapped SSG) | 2, 7 | specs/SPEC-F03-superficie-pubblica.md · plans/PLAN-F03-superficie-pubblica.md · ADR-53-air-gapped-ssg-zero-db.md | 🚀 Ready for Implementation (Air-Gapped SSG) — baseline SSR/cache del 2026-08-19 superata da ADR-45/ADR-53, delta di consegna edge/CLS/SEO in `PLAN-F03` § Task. **Al 2026-09-13**: T1–T4 chiusi, T5/T6 sbloccati da ADR-63 (volume Nginx isolato), da implementare |
 | F04 | Editor visivo (page builder) | 1 | plans/PLAN-F04-editor-visivo.md · plans/PLAN-F04c-editor-maturo.md | ✅ Done (2026-08-19). Anteprima bozza (voce 1.10 di `docs/TODO.md`) chiusa lo stesso giorno — `plans/PLAN-anteprima-bozza.md`, ADR-25. Round **F04b (upgrade editor)** ✅ Done (2026-08-20): undo/redo + guardia + inserimento posizionale + `moveNodeTo` coperti da test (voce 3.11). Round **F04c (editor maturo)** ✅ Done (2026-08-20), T1–T8 di `plans/PLAN-F04c-editor-maturo.md`: props di stile responsive (ADR-29), metadati d'editor nel registro + ispettore a schede/etichette (ADR-30, chiude la voce 3.10), lettura pubblica dei media (ADR-27, chiude la voce 1.12), duplicazione blocco + drag & drop via `dnd-kit` (ADR-28). Quattro ADR di questo round tutte firmate. Copertura di test chiusa da `test-engineer` (voce 3.12). WYSIWYG (ADR-26) resta l'unica decisione ancora in attesa di firma, confermata fuori scope, rinviata a **F04d** |
 | F05 | Multilingua | 4 | rfc/RFC-F05-multilingua.md · plans/PLAN-F05-multilingua.md · ADR-36-modello-multilingua-righe-autonome.md | ✅ **Done (2026-09-11)** — M1–M6 firmati il 2026-08-25, T1–T7 tutti consegnati. T5 (dati `hreflang` sulla superficie pubblica, `PublicPageDto.translations`) era l'ultimo aperto e si è chiuso l'11 settembre, insieme a due difetti trovati costruendolo: invalidazione di cache cross-traduzione e canonicalizzazione dei percorsi composti da una riga |
 | F06 | Template e Sezioni globali | 1 | `GlobalSectionsModule` (`app/backend/src/global-sections/`) · ADR-40-sezioni-globali-e-layout.md | ✅ Done |
@@ -135,14 +139,14 @@ questo documento:
 
 | # | Voce | Nota |
 |---|---|---|
-| D1 | ADR-13 e ADR-17 in attesa di approvazione umana | Il codice è già in produzione: la firma manca, non l'implementazione |
+| ~~D1~~ | ~~ADR-13 e ADR-17 in attesa di approvazione umana~~ | **Chiuso il 2026-09-13.** ADR-13 era **approvata dal 2026-07-23**: la voce era sbagliata per metà. ADR-17 ratificata il 2026-09-13, con una nota di conformità sul criterio 1 (`InvalidBlockContext`, Context locale all'editor, ammesso) |
 | ~~D2~~ | ~~ADR-4 disallineata dal codice~~ | **Chiuso il 2026-09-12 con la firma di ADR-62**, che ratifica il contratto `v8` (sezione `layout`, catena di migrazione in lettura `v1→…→v8`) e conferma la soglia SuperAdmin. Entrambe le divergenze misurate sono sanate: il guard di `PUT app/settings/theme`, rimosso senza sostituto dal commit `8b272f7`, è tornato l'11 settembre; i 4 test di `settings.e2e-spec.ts` asseriscono `version: 8` dalla firma, non prima |
 | D3 | Le ADR 1–17 conservano il lessico dell'origine del progetto (`starter-kit`, `progetto verticale`, `gestionale`) e i riferimenti ai repository progenitori (`cima-infortunistica`, `openbridge`) | Voluto: sono record storici immutabili. La nuova identità vive nei documenti normativi, non nella riscrittura del passato |
 | D4 | ADR-5, ADR-6 e ADR-15 rinviano a file eliminati nella ristrutturazione del 2026-08-13 | Non correggibile senza modificare ADR approvate. Mappa dei rinvii qui sotto |
 | D5 | Le checklist «Prerequisiti di firma» dei plan sono mirror scaduti delle RFC | `PLAN-F05-multilingua.md` teneva M1–M6 a `[ ]` mentre `RFC-F05-multilingua.md` li ha firmati tutti il 2026-08-25. Un plan non è la fonte di una firma: la fonte è la sezione «Decisione umana» della RFC. Allineato il 2026-09-11, ma il meccanismo resta: ogni firma va riportata su entrambi i file nello stesso giro |
-| D6 | `RFC-40-theme-builder-template-registry.md` ha la sezione «Decisione umana» **in bianco** e l'ADR conseguente non è mai stata prodotta, mentre `site_templates` e `TemplateResolverService` sono in produzione (`schema.ts:443`, `app/backend/src/site-templates/`) | Debito retroattivo su codice già spedito, non un blocco. `RFC-43` § N4 lo nomina esplicitamente come precondizione a qualunque estensione di `site_templates`: la precondizione è stata scavalcata |
-| D7 | `RFC-43-categorie-e-template-pagina.md` è ancora `[x] In discussione` con N1–N5 non firmati | Nessun codice ne dipende oggi. Da chiudere insieme a D6, perché N4 di RFC-43 è la chiusura di D6 |
-| D8 | `RFC-F06-template-sezioni.md` ha la «Decisione umana» in bianco mentre F06 risulta ✅ Done | Come D6: la feature è stata consegnata e ratificata via ADR-40, ma la RFC non porta la firma. Formalità, non rischio tecnico |
+| ~~D6~~ | **Chiuso il 2026-09-13**: RFC-40 firmata (esito Modificato, Opzione B ratificata) e `ADR-64-template-di-tema-site-templates.md`. Testo originale: `RFC-40-theme-builder-template-registry.md` ha la sezione «Decisione umana» **in bianco** e l'ADR conseguente non è mai stata prodotta, mentre `site_templates` e `TemplateResolverService` sono in produzione (`schema.ts:443`, `app/backend/src/site-templates/`) | Debito retroattivo su codice già spedito, non un blocco. `RFC-43` § N4 lo nomina esplicitamente come precondizione a qualunque estensione di `site_templates`: la precondizione è stata scavalcata |
+| ~~D7~~ | **Chiuso il 2026-09-13**: RFC-43 firmata, N1 = A (nessuna Categoria), N3 = A (estendere `site_templates`), N4 chiuso da ADR-64. Testo originale: `RFC-43-categorie-e-template-pagina.md` è ancora `[x] In discussione` con N1–N5 non firmati | Nessun codice ne dipende oggi. Da chiudere insieme a D6, perché N4 di RFC-43 è la chiusura di D6 |
+| ~~D8~~ | **Chiuso il 2026-09-13**: RFC-F06 firmata, Opzione C, realizzata da ADR-34 e ADR-56. Testo originale: `RFC-F06-template-sezioni.md` ha la «Decisione umana» in bianco mentre F06 risulta ✅ Done | Come D6: la feature è stata consegnata e ratificata via ADR-40, ma la RFC non porta la firma. Formalità, non rischio tecnico |
 | ~~D9~~ | ~~`business-rules.md` § Revisioni e cronologia nella forma contraddittoria~~ | **Chiuso il 2026-09-11**: sezione riscritta su autorizzazione umana esplicita (regole 1-9, ADR-61 applicata), potatura implementata. In fase di stesura una delle tre righe protette di ADR-61 è stata **tolta** prima di scrivere codice: `pages` non traccia la discendenza della bozza dalla Revisione ripristinata, e introdurla sarebbe una modifica di schema non approvata. Vedi la nota di stesura in ADR-61 § 4 |
 
 ### Mappa dei rinvii storici
@@ -989,6 +993,11 @@ di una bozza. Non è una regressione — non c'è mai stato — è un requisito 
 Rimedio quando verrà deciso: `Cache-Control: no-store` in `securityHeaders()` o nel ramo di
 anteprima di `server.ts`.
 
+> **Corretto il 2026-09-13** (commit `5910186`): `Cache-Control: no-store, private` nel ramo di
+> anteprima di `server.ts`, su ogni esito. Non in `securityHeaders()`, che avrebbe reso non
+> cacheabili anche le Pagine pubblicate e il CSS con fingerprint (ADR-53 § 2).
+> `test/preview-cache-control.spec.ts` asserisce entrambe le cose.
+
 ### T5 e T6 — bloccati da una firma mancante
 
 Vedi § Prossimo passo. In sintesi: l'adapter di consegna edge non è un refactoring ma la
@@ -996,3 +1005,56 @@ scelta di un provider, e le tre fonti che la governano (`PLAN-F03` T5,
 `static-site-deployer.interface.ts`, `CLAUDE.md` § Ask first) la subordinano tutte a un'ADR
 che non esiste. Servono **RFC-62** e **ADR-63** (primi numeri liberi: RFC-61 e ADR-62 sono
 occupate).
+
+---
+
+## Firme di sblocco (2026-09-13)
+
+Su richiesta umana esplicita, dopo una sessione chiusa senza registrare le firme concordate.
+Ogni firma è stata riconfermata in chat punto per punto prima di essere scritta, e ogni
+ratifica di codice già in produzione è stata verificata sul codice, non sui registri.
+
+### Firme raccolte
+
+| Documento | Esito | Conseguenza |
+|---|---|---|
+| `RFC-62-consegna-statica-e-air-gap.md` | Approvato, M1–M6 | `ADR-63-consegna-statica-volume-nginx-isolato.md`: volume Nginx isolato, reti `mgmt_net`/`edge_net`, nessuno stub di provider. Sblocca `PLAN-F03` T5 e T6 |
+| `RFC-40-theme-builder-template-registry.md` | **Modificato** | `ADR-64-template-di-tema-site-templates.md`: ratifica `site_templates` come Theme Builder a sé (Opzione B), soglia Manager. Chiude D6 |
+| `RFC-43-categorie-e-template-pagina.md` | Approvato | N1 = A (nessuna Categoria), N3 = A (estendere `site_templates`). Nessuna ADR. Chiude D7 |
+| `RFC-F06-template-sezioni.md` | Approvato | Opzione C, già realizzata da ADR-34 e ADR-56. Chiude D8 |
+| `ADR-17-state-management-zustand.md` | Approvata | Ratifica. Chiude D1 insieme alla scoperta che ADR-13 era approvata dal 2026-07-23 |
+
+### Cosa è emerso verificando il codice prima di firmare
+
+- **RFC-40**: il commento di `schema.ts` dichiarava «Opzione B, decisione umana 2026-08-31»,
+  cioè l'opzione che la RFC **non** raccomandava, con due scostamenti che la firma ora
+  registra: `single_post`/`archive` persistiti nell'enum senza semantica, e **nessun
+  consumer** del resolver. Né `app/public-site` né `ExportProcessor` chiamano
+  `TemplateResolverService`: oggi un Template di tema non cambia il sito pubblicato.
+  ADR-64 § Conseguenze elenca le due precondizioni per collegarlo (decisione sul
+  rigenerare l'export, vincolo di `language` sulle lingue del sito).
+- **ADR-17**: il criterio di conformità 1 («`grep createContext` vuoto») non è soddisfatto
+  alla lettera da `InvalidBlockContext` in `EditorBlockWrapper.tsx`, Context locale
+  all'editor. Ammesso nella nota di firma.
+- **ADR-63**: `STATIC_EXPORT_PATH` vale `./dist/static-export` in `.env.example` e
+  `dist/static-site` come default in `AppConstants`. Allinearli fa parte di T5.
+
+### Incoerenza nuova, non sanata
+
+`RFC-61-rate-limit-superficie-pubblica-consumer-ssr.md` è **non firmata**, con tre valori
+numerici da fissare in sede di firma, e nessuna riga di codice ne discende (nessun throttler
+`ssr` nel backend). Il suo footer dice «Genera ADR-61», ma `ADR-61` è stata assegnata l'11
+settembre alla retention delle Revisioni: l'ADR conseguente, se firmata, prenderà il primo
+numero libero (oggi **ADR-65**). Non era in nessun registro.
+
+### Prossimo passo
+
+| Voce | Stato |
+|---|---|
+| **T5 di `PLAN-F03`** | **Pronto**. Solo config di root (Backend Developer): servizio `nginx-static` e reti in `docker-compose.prod.yml`, conf Nginx con le regole di cache di ADR-53 § 2, allineamento di `STATIC_EXPORT_PATH` |
+| **T6 di `PLAN-F03`** | Pronto dopo T5 (Test Engineer): asserzioni di ADR-63 § 3 sulla topologia versionata |
+| **RFC-61** (rate limit pubblico) | Decisione umana: tre valori numerici |
+| **T6 di `PLAN-F09`** (immagini in RichText) | Decisione di sicurezza sull'allowlist di ADR-20 |
+| **F07/F08/F12** | Perimetro residuo da delimitare prima di dichiararle chiuse |
+| **F11 chatbot** | ADR del provider, non urgente |
+| **`version` sulle 4 entità mutabili storiche** | Task a sé (`CLAUDE.md` § Database) |
