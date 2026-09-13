@@ -237,32 +237,32 @@ Step 3 — Integrazione blocchi Image / RichText             (T5, T6)
 - [x] **N7** Protezione dei media referenziati: risolta come `409` su `DELETE` (2026-08-25)
 
 ### Implementazione
-- [ ] Tutti i task implementati
-- [ ] Nessun `any` TypeScript senza commento
-- [ ] Nessun `console.log` rimasto
-- [ ] Ogni funzione pubblica con JSDoc
-- [ ] Nessuna dipendenza npm nuova
-- [ ] `PropertyInspector` ancora indicizzato per `kind`, mai per `type`
-- [ ] Registro dei blocchi **non** modificato (nessun `blocks:types` rigenerato)
+- [x] Tutti i task implementati (T6 chiuso come presa d'atto, come da piano: nessun `<img>` nel rich text)
+- [x] Nessun `any` TypeScript senza commento
+- [x] Nessun `console.log` rimasto
+- [x] Ogni funzione pubblica con JSDoc
+- [x] Nessuna dipendenza npm nuova
+- [x] `PropertyInspector` ancora indicizzato per `kind`, mai per `type`
+- [x] Registro dei blocchi **non** modificato (nessun `blocks:types` rigenerato)
 
 ### Test
-- [ ] Unit test scritti e superati (Jest backend, Vitest frontend)
-- [ ] Integration test Supertest per `GET app/files` e `GET app/files/:guid/metadata`
-- [ ] Collezioni Bruno per ogni endpoint nuovo
-- [ ] Mock per servizi esterni
-- [ ] Nessun test placeholder
+- [x] Unit test scritti e superati (Jest backend, Vitest frontend)
+- [x] Integration test Supertest per `GET app/files` e `GET app/files/:guid/metadata` (`test/e2e/files.e2e-spec.ts`)
+- [x] Collezioni Bruno per ogni endpoint nuovo (`bruno/files/List Files.yml`, `File Metadata.yml`, `Upload Media*.yml`)
+- [x] Mock per servizi esterni
+- [x] Nessun test placeholder
 
 ### Build e qualità
-- [ ] `npm run build --workspace=app/backend` superata
-- [ ] `npm run build --workspace=app/frontend` superata
-- [ ] `npx tsc --noEmit` pulito su frontend
-- [ ] Lint superato
+- [x] `npm run build --workspace=app/backend` superata
+- [x] `npm run build --workspace=app/frontend` superata
+- [x] `npx tsc --noEmit` pulito su frontend
+- [x] Lint superato
 
 ### Contratti e documentazione
-- [ ] `npm run openapi:export` eseguito
-- [ ] `npm run openapi:types` eseguito
-- [ ] `docs/ai/progress-tracker.md` aggiornato **su richiesta umana esplicita**
+- [x] `npm run openapi:export` eseguito
+- [x] `npm run openapi:types` eseguito
+- [x] `docs/ai/progress-tracker.md` aggiornato **su richiesta umana esplicita** (2026-09-13)
 
 ### Commit
-- [ ] Commit atomico per task, Conventional Commits
-- [ ] Branch `feature/F09-media-library` (o `F05`, secondo l'esito di **N1**)
+- [x] Conventional Commits · ⚠️ non sempre un commit per task
+- [ ] ~~Branch `feature/F09-media-library`~~ — **non rispettato**: il lavoro è stato consegnato direttamente su `main`. Registrato, non sanabile a posteriori

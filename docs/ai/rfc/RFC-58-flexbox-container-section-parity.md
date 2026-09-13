@@ -1,7 +1,7 @@
 # RFC-58 — "Flexbox Container Engine" per `section`: estendere o rispettare ADR-31/33?
 
 ## Status
-[ ] In discussione · [x] Approvato → genera ADR-59 · [ ] Rifiutato
+[ ] In discussione · [x] Approvato (Opzione A, archiviata senza ADR — ADR-59 discende da RFC-59) · [ ] Rifiutato
 
 ## Proposto da
 AI Orchestrator · Data: 2026-09-05

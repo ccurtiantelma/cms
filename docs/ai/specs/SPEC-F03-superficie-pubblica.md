@@ -300,7 +300,8 @@ server-side (ADR-20).
 ## Criteri di verifica
 
 - Ogni Pagina `published` produce un file `index.html` sotto
-  `<staticExportPath>/<locale>/<path>/`; un cambio di stato fuori da `published` rimuove
+  `<staticExportPath>/<URL pubblico canonico>/` (ADR-65: lingua di default senza prefisso,
+  home radice in `index.html`); un cambio di stato fuori da `published` rimuove
   fisicamente il file (nessun 404 dinamico necessario, il file non esiste).
 - L'HTML esportato contiene `<style>` inline per il CSS above-the-fold e almeno un
   `<link rel="stylesheet">` esterno con fingerprint per il resto.

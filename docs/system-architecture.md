@@ -64,9 +64,17 @@ piani infrastrutturali distinti, con un solo canale ammesso fra loro: **push**, 
 - **Piano di Gestione** — Backend NestJS (porta 3000), PostgreSQL, Redis (solo backend
   BullMQ da F03 in poi), il motore di rendering `app/public-site` (porta 55000, uso interno +
   anteprima autenticata). Qui vive ogni scrittura, ogni stato, ogni segreto.
-- **Piano di Erogazione Pubblica** — storage edge (CDN, bucket S3-compatibile o volume Nginx
-  isolato) che serve file `.html`/asset statici al traffico anonimo. Nessun processo
-  applicativo, nessun database, nessuna sessione.
+- **Piano di Erogazione Pubblica** — **volume Nginx isolato** (ADR-63): il servizio
+  `nginx-static` di `docker-compose.prod.yml` (porta host 58080), unico membro della rete
+  `edge_net`, che legge il volume `static_site` in sola lettura e serve file `.html`/asset
+  statici al traffico anonimo. Nessun processo applicativo, nessun database, nessuna
+  sessione, nessuna variabile d'ambiente. CDN edge e bucket S3-compatibile non sono attivati
+  (ADR-63 § 1, § 5).
+
+Il Piano di Gestione sta sulla rete `mgmt_net`. Il file esportato vive all'URL pubblico
+canonico (`/en-gb/about-us` → `en-gb/about-us/index.html`, ADR-65). L'air-gap è verificato in
+CI da `check-air-gap.js` sulla topologia versionata; il firewall reale dell'ambiente di
+hosting e le porte pubblicate sull'host restano nella checklist di go-live.
 
 L'unico punto di attraversamento fra i due piani è il **worker della coda `static-export`**
 (`app/backend/src/export/`, ADR-45): legge dal Piano di Gestione, scrive/spinge verso il
@@ -86,8 +94,8 @@ flowchart LR
 
     subgraph edge["Piano di Erogazione Pubblica (rete pubblica)"]
         direction TB
-        storage[("Storage edge\nCDN / S3 / volume Nginx isolato")]
-        nginx["Nginx / CDN edge"]
+        storage[("Volume static_site\n(ro per Nginx, ADR-63)")]
+        nginx["nginx-static\nsolo edge_net"]
         storage --> nginx
     end
 

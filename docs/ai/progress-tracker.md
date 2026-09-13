@@ -4,7 +4,10 @@
 > Le AI non lo modificano autonomamente: lo stato viene aggiornato a fine feature, su
 > richiesta esplicita.
 >
-> Ultima revisione: 2026-09-13 — **firme di sblocco e chiusura del debito decisionale**, su
+> Ultima revisione: 2026-09-13 (secondo giro) — **F03 e F09 chiuse, conformità di ADR-53 sanata,
+> registri allineati**: ADR-65/66/67, RFC-61 rifiutata, RFC-F04c registrata. Vedi § "Chiusura del
+> riallineamento (2026-09-13)" in fondo.
+> Precedente: 2026-09-13 — **firme di sblocco e chiusura del debito decisionale**, su
 > richiesta umana esplicita: RFC-62 (M1–M6) → ADR-63, RFC-40 (Modificato) → ADR-64, RFC-43,
 > RFC-F06, ADR-17. `PLAN-F03` T5/T6 sbloccati, D1/D6/D7/D8 chiusi, gap `Cache-Control`
 > dell'anteprima corretto. Vedi § "Firme di sblocco (2026-09-13)" in fondo.
@@ -80,13 +83,13 @@
 |---|---|---|---|---|
 | F01 | Gestione Pagine (modello, stati, slug, revisioni) | fondativa | features/F01-gestione-pagine.md · specs/SPEC-F01-gestione-pagine.md · plans/PLAN-F01-innesto.md | ✅ Done (2026-08-17) |
 | F02 | Registro e validazione dei Blocchi | 1 | plans/PLAN-F02-blocchi.md | ✅ Done (2026-08-19, riconciliata) |
-| F03 | Superficie pubblica di lettura (Air-Gapped SSG) | 2, 7 | specs/SPEC-F03-superficie-pubblica.md · plans/PLAN-F03-superficie-pubblica.md · ADR-53-air-gapped-ssg-zero-db.md | 🚀 Ready for Implementation (Air-Gapped SSG) — baseline SSR/cache del 2026-08-19 superata da ADR-45/ADR-53, delta di consegna edge/CLS/SEO in `PLAN-F03` § Task. **Al 2026-09-13**: T1–T4 chiusi, T5/T6 sbloccati da ADR-63 (volume Nginx isolato), da implementare |
+| F03 | Superficie pubblica di lettura (Air-Gapped SSG) | 2, 7 | specs/SPEC-F03-superficie-pubblica.md · plans/PLAN-F03-superficie-pubblica.md · ADR-53-air-gapped-ssg-zero-db.md | ✅ **Done (2026-09-13)** — — baseline SSR/cache del 2026-08-19 superata da ADR-45/ADR-53, delta di consegna edge/CLS/SEO in `PLAN-F03` § Task. **Al 2026-09-13**: T1–T4 chiusi, T5/T6 sbloccati da ADR-63 (volume Nginx isolato), da implementare |
 | F04 | Editor visivo (page builder) | 1 | plans/PLAN-F04-editor-visivo.md · plans/PLAN-F04c-editor-maturo.md | ✅ Done (2026-08-19). Anteprima bozza (voce 1.10 di `docs/TODO.md`) chiusa lo stesso giorno — `plans/PLAN-anteprima-bozza.md`, ADR-25. Round **F04b (upgrade editor)** ✅ Done (2026-08-20): undo/redo + guardia + inserimento posizionale + `moveNodeTo` coperti da test (voce 3.11). Round **F04c (editor maturo)** ✅ Done (2026-08-20), T1–T8 di `plans/PLAN-F04c-editor-maturo.md`: props di stile responsive (ADR-29), metadati d'editor nel registro + ispettore a schede/etichette (ADR-30, chiude la voce 3.10), lettura pubblica dei media (ADR-27, chiude la voce 1.12), duplicazione blocco + drag & drop via `dnd-kit` (ADR-28). Quattro ADR di questo round tutte firmate. Copertura di test chiusa da `test-engineer` (voce 3.12). WYSIWYG (ADR-26) resta l'unica decisione ancora in attesa di firma, confermata fuori scope, rinviata a **F04d** |
 | F05 | Multilingua | 4 | rfc/RFC-F05-multilingua.md · plans/PLAN-F05-multilingua.md · ADR-36-modello-multilingua-righe-autonome.md | ✅ **Done (2026-09-11)** — M1–M6 firmati il 2026-08-25, T1–T7 tutti consegnati. T5 (dati `hreflang` sulla superficie pubblica, `PublicPageDto.translations`) era l'ultimo aperto e si è chiuso l'11 settembre, insieme a due difetti trovati costruendolo: invalidazione di cache cross-traduzione e canonicalizzazione dei percorsi composti da una riga |
 | F06 | Template e Sezioni globali | 1 | `GlobalSectionsModule` (`app/backend/src/global-sections/`) · ADR-40-sezioni-globali-e-layout.md | ✅ Done |
 | F07 | SEO per pagina | 2 | rfc/RFC-F07-seo-graph-generation.md · ADR-48-seo-graph-generation.md | 🔄 In progress — **non bloccata dal 2026-09-02** (ADR-48 approvata). `SeoGraphService` scritto, testato (`test/unit/pages/seo-graph.service.spec.ts`) e iniettato in `PagesService`: il grafo JSON-LD/OpenGraph è generato a publish-time. `sitemap.xml`/`robots.txt` emessi a fine batch dal job di export (ADR-45). Nessun plan formale aperto: il perimetro residuo di F07 va delimitato prima di dichiararla chiusa |
 | F08 | GEO per pagina | 2 | ADR-48-seo-graph-generation.md | 🔄 In progress (parziale) — il contratto GEO esiste (`PageSeoDto.faq`, `PageFaqEntryDto`) e `SeoGraphService` emette già l'entità JSON-LD `FAQPage` quando la FAQ è compilata. Nessun plan aperto: il resto del perimetro GEO non è delimitato |
-| F09 | Media editoriali | 6 | rfc/RFC-F09-media-library.md · rfc/RFC-F09-media-transform-pipeline.md · plans/PLAN-F09-media-library.md · ADR-35 · ADR-49 | 🔄 In progress — **non bloccata dal 2026-09-02** (ADR-49 approvata). T1 elenco/metadati, T3 `MediaLibraryModal`, T4 degrado senza dimensioni, T5 integrazione `PropertyInspector` consegnati; pipeline `sharp` (`queues/media-queue/`), focal point e `POST :guid/transform` consegnati. **T2 sbloccato il 2026-09-11** dalla firma di N2/N4: colonne `width`/`height` e verifica raster in scrittura da implementare. Aperto **T6** (immagini in RichText), che dipende da una decisione di sicurezza su ADR-20, non da una firma di RFC-F09 |
+| F09 | Media editoriali | 6 | rfc/RFC-F09-media-library.md · rfc/RFC-F09-media-transform-pipeline.md · plans/PLAN-F09-media-library.md · ADR-35 · ADR-49 | ✅ **Done (2026-09-13)** — T1–T5 consegnati, T2 (dimensioni raster) con il commit `1cc8adf`, T6 chiuso come presa d'atto (nessun `<img>` nel rich text, si usa il blocco `image`), T7 coperto da `files.e2e-spec.ts` e `bruno/files/` |
 | F10 | Moduli di contatto | 3 | `FormsModule` (`app/backend/src/forms/`) · RFC-46-dynamic-form-builder.md · ADR-46-dynamic-form-builder.md | ✅ Done |
 | F11 | Chatbot integrato | 7 | — | ⏳ Pending |
 | F12 | Dashboard editoriale | 5 | `app/frontend/src/pages/dashboard/` | 🔄 In progress (parziale) — `PageDashboard.tsx` e i suoi componenti esistono. Nessun plan aperto: il perimetro editoriale di F12 (code editoriali, contenuti in scadenza, attività) non è delimitato |
@@ -1058,3 +1061,57 @@ numero libero (oggi **ADR-65**). Non era in nessun registro.
 | **F07/F08/F12** | Perimetro residuo da delimitare prima di dichiararle chiuse |
 | **F11 chatbot** | ADR del provider, non urgente |
 | **`version` sulle 4 entità mutabili storiche** | Task a sé (`CLAUDE.md` § Database) |
+
+---
+
+## Chiusura del riallineamento (2026-09-13)
+
+Secondo giro dello stesso giorno, su richiesta umana esplicita di chiudere documentazione e
+problemi aperti prima di riprendere lo sviluppo. Tutto verificato sul codice e sulla CI locale
+completa (lint, unit, e2e con Postgres/Redis reali, build, sync OpenAPI e registro blocchi,
+gate immagini, gate air-gap con container reali).
+
+### Decisioni firmate
+
+| Documento | Esito |
+|---|---|
+| `ADR-65-layout-export-su-url-pubblico.md` | Il file esportato vive all'URL pubblico; `composePublicPath` unico calcolo |
+| `ADR-66-sharp-in-lettura-nel-worker-di-export.md` | `sharp` ammesso nel worker di export solo per i metadati, dopo `files.width/height` |
+| `ADR-67-eventi-di-export-e-render-riservato.md` | Nessuna cache Redis pubblica; export/tombstone per evento; `public-site` rende solo per il worker |
+| `RFC-61-rate-limit-superficie-pubblica-consumer-ssr.md` | **Rifiutata**: superata da ADR-63 |
+| `RFC-F04c-editor-maturo.md` | Decisioni registrate: erano già approvate il 2026-08-20 via ADR-27/28/29/30 |
+
+### Difetti trovati e corretti
+
+| Difetto | Effetto | Correzione |
+|---|---|---|
+| Export chiedeva a `public-site` il percorso senza prefisso di lingua | Pagine non di default in 404 o nella lingua sbagliata; sitemap con URL errati; home esportata come `/home` | ADR-65 |
+| Nessun servizio statico e nessuna rete separata | Air-gap solo dichiarato | ADR-63: `nginx-static` su `edge_net`, `check-air-gap.js` in CI |
+| Chiavi Redis `public:*` ancora scritte | Violazione di ADR-53 § Conformità | ADR-67 |
+| Traduzioni sorelle non riesportate | `hreflang` stantio sui file statici | ADR-67 |
+| Spostamento di un ramo pubblicato riesportava solo la radice | Discendenti con file ai vecchi percorsi | ADR-67 (tombstone del sottoalbero + rebuild) |
+| `public-site` rendeva Pagine a chiunque | Violazione di ADR-53 § Conformità | ADR-67 (`EXPORT_RENDER_SECRET`) |
+| Render di export contati come visite; chiamata a endpoint di ingest rimosso | Analytics sporche | ADR-67 |
+| `manifest.json` sotto la radice pubblica | Esposto da Nginx | Negato in `nginx/static-site.conf` |
+| `console.log` di avvio in `public-site` | Divieto di `CLAUDE.md` | `process.stdout.write` |
+| `.env.example` di `public-site` con un valore esadecimale per `ANALYTICS_INGEST_SECRET` | Segreto dall'aspetto reale in un file versionato | Variabile rimossa |
+
+### Documenti allineati
+
+`CLAUDE.md` (decisioni aperte, superfici API, tabelle presenti, scenario di test obbligatorio),
+`docs/system-architecture.md` (topologia concreta), `docs/non-functional-requirements.md`
+(superficie pubblica statica), `docs/roadmap.md` (F03/F09 Done, residuo di F07/F08/F12 per
+esteso), `SPEC-F03` (layout), `PLAN-F03` e `PLAN-F09` (Definition of Done), header delle RFC.
+
+### Resta aperto — e non blocca lo sviluppo
+
+| Voce | Tipo |
+|---|---|
+| **Raccolta analytics sul sito statico** (pixel, log Nginx, altro) | Decisione, prima di nuovi widget di traffico in F12 |
+| F07: `hreflang` in sitemap, redirect (tabella `redirects` da approvare) | Sviluppo + ADR di schema per i redirect |
+| F08: `llms.txt` e direttive per crawler AI | Sviluppo |
+| F12: widget editoriali | Sviluppo |
+| F11 chatbot | ADR del provider, non urgente |
+| File orfani se cambia la lingua di default (ADR-65) | Miglioria prima di rendere il cambio ordinario |
+| `version` sulle 4 entità mutabili storiche | Task a sé (`CLAUDE.md` § Database) |
+| `EXPORT_RENDER_SECRET` nel `.env` di produzione | Operativo, al prossimo deploy |

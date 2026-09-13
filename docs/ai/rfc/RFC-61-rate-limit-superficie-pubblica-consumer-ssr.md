@@ -1,7 +1,7 @@
 # RFC-61 — Rate limit della superficie pubblica con consumer SSR a IP unico
 
 ## Status
-[ ] In discussione · [ ] Approvato → genera ADR-61 · [ ] Rifiutato
+[ ] In discussione · [ ] Approvato → genera ADR-61 · [x] Rifiutato (superata da ADR-63)
 
 > **Numerazione**: il primo numero libero della serie RFC sarebbe 60, ma la serie ADR ha già
 > `ADR-60-form-builder-defaultvalue-messaggi-custom.md` (approvata) e il template lega
@@ -355,15 +355,20 @@ sede di plan.
 ---
 
 ## Decisione umana
-**Esito**: [ ] Approvato · [ ] Rifiutato · [ ] Modificato
+**Esito**: [ ] Approvato · [x] Rifiutato · [ ] Modificato
 
 **Valori da fissare in sede di firma** (D4):
 - Limite per visitatore, `public-site`: _______ pageview / IP / 60s
 - Limite consumer SSR, throttler `ssr`: _______ richieste / 60s
 - Limite `public` su media: _______ richieste / IP / 60s (Form: confermato 10/60s?)
 
-**Note**: ___________
+**Note**: superata da `ADR-63-consegna-statica-volume-nginx-isolato.md`. Il traffico
+anonimo è servito da `nginx-static` sui file esportati; `app/public-site` resta solo motore
+di anteprima e job di export, quindi l'amplificazione per pageview che questa RFC voleva
+limitare non esiste più in produzione. Il throttler `public` resta sugli endpoint che il sito
+statico chiama ancora dal browser (form 10/60s, media 300/60s). Il footer «Genera ADR-61» non
+è più applicabile: quel numero è stato assegnato l'11 settembre alla retention delle Revisioni.
 
-**Approvato da**: ___________ · **Data**: ___________
+**Approvato da**: marketing@antelmagroup.net (rifiuto) · **Data**: 2026-09-13
 
-**Azione successiva**: [ ] Genera ADR-61 · [ ] Archivio
+**Azione successiva**: [ ] Genera ADR-61 · [x] Archivio

@@ -3,7 +3,10 @@
 > Soglie di qualità che il sistema deve rispettare. Priorità: dopo System Architecture.
 > Le AI non modificano questo file di propria iniziativa.
 >
-> Ultima revisione: 2026-08-13 — aggiunti i requisiti specifici di un CMS a pagine
+> Ultima revisione: 2026-09-13 — superficie pubblica riallineata all'export statico
+> (ADR-53, ADR-63, ADR-65) su richiesta umana esplicita: le soglie restano quelle del
+> 2026-08-13, cambia il componente che deve rispettarle.
+> Precedente: 2026-08-13 — aggiunti i requisiti specifici di un CMS a pagine
 > (lettura pubblica, editor, contenuto).
 
 ---
@@ -21,14 +24,19 @@
 È la superficie che giustifica l'aggettivo "ad alte prestazioni": anonima, ad alto volume,
 in sola lettura.
 
-- Risoluzione di una Pagina pubblicata **con cache calda**: < 50ms al 95° percentile
-- Risoluzione di una Pagina pubblicata **con cache fredda**: < 200ms al 95° percentile
-- Una richiesta di Pagina non deve mai generare più di una query di risoluzione + una di
-  caricamento del contenuto: **nessun problema N+1** sull'albero dei blocchi o sulle
-  Sezioni globali referenziate
-- Sitemap e `llms.txt`: generati da cache, mai ricalcolati a ogni richiesta
-- L'invalidazione di cache successiva a una pubblicazione deve completarsi entro 5 secondi
-  dalla conferma dell'operazione
+Con ADR-53 il traffico anonimo è servito da file statici (`nginx-static`, ADR-63): nessuna
+lettura di Pagina raggiunge backend, database o Redis (solo l'invio dei form li raggiunge). Le soglie si applicano quindi a due
+componenti distinti.
+
+- Servizio di una Pagina pubblicata dall'origine statica: < 50ms al 95° percentile
+- Pubblicazione, ripubblicazione o archiviazione: file statico scritto o rimosso entro
+  5 secondi dalla conferma dell'operazione (job `static-export` a priorità alta, RFC-44)
+- Il job di export di una Pagina non deve generare **problemi N+1** sull'albero dei blocchi
+  o sulle Sezioni globali referenziate
+- Sitemap e `llms.txt`: file statici rigenerati dal job di export, mai calcolati a ogni
+  richiesta
+- HTML sempre rivalidato (`Cache-Control: no-cache`), asset con fingerprint `immutable`:
+  la freschezza dipende dall'evento di pubblicazione, mai da una TTL
 
 ## Performance — editor
 
@@ -104,9 +112,9 @@ aggiustamento incrementale.
 - Target uptime: 99.5%
 - Graceful shutdown NestJS (gestione SIGTERM)
 - Health check endpoint: `GET api/v1/health` — `200`/`503`, adatto a readiness probe
-- **Degradazione del contenuto pubblico**: un guasto di Redis non deve rendere il sito
-  irraggiungibile. La cache è un acceleratore, non una dipendenza dura: senza cache il
-  contenuto si serve dal database, più lentamente
+- **Degradazione del contenuto pubblico**: un guasto di backend, database o Redis non rende
+  il sito irraggiungibile. `nginx-static` serve l'ultimo export riuscito; si fermano solo
+  pubblicazioni, form e anteprima finché il Piano di Gestione non torna disponibile
 - Un guasto del provider del chatbot non deve impattare il resto del sito
 
 ---

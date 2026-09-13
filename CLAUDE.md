@@ -1,6 +1,6 @@
 # CLAUDE.md — CMS
 
-> Fonte canonica delle regole operative. Vince su ogni mirror (`.claude/agents/`, `.kilo/agents/`, `.github/agents/`); perde solo contro `docs/constitution.md`. Ultima revisione: 2026-08-13 — versione compatta.
+> Fonte canonica delle regole operative. Vince su ogni mirror (`.claude/agents/`, `.kilo/agents/`, `.github/agents/`); perde solo contro `docs/constitution.md`. Ultima revisione: 2026-09-13 — riallineamento a ADR-53/61/63–67 (su richiesta umana esplicita).
 
 ## Identità
 
@@ -37,7 +37,7 @@ Dominio CMS: ogni blocco in Error Boundary dedicato · selettori Zustand mirati 
 ### Test Engineer
 Solo test/`e2e/`/`bruno/`. **Mai logica applicativa** — bug trovati si segnalano, non si correggono. Legge: constitution → spec → plan → openapi.
 Ogni endpoint nuovo/modificato → `bruno/<mod>/*.yml` (OpenCollection, `Authorization: Bearer {{token}}`) · integration test Supertest con JWT+cookie simulati · mock obbligatori per servizi esterni (SMTP, Socket.io, LLM) · no `any` su mock/payload, no test placeholder.
-Copertura minima/endpoint: happy path, 1 errore, 1 RBAC non autorizzato. Copertura dominio obbligatoria: XSS neutralizzato a DB · blocchi con type/nesting/props invalidi sempre respinti per intero · ogni transizione di stato non ammessa → 400 · pagina non pubblicata mai raggiungibile (404) · doppio salvataggio concorrente → 409 senza perdita dati · autore non modifica bozze altrui · Revisioni immutabili senza eccezioni · cache invalidata dopo archiviazione.
+Copertura minima/endpoint: happy path, 1 errore, 1 RBAC non autorizzato. Copertura dominio obbligatoria: XSS neutralizzato a DB · blocchi con type/nesting/props invalidi sempre respinti per intero · ogni transizione di stato non ammessa → 400 · pagina non pubblicata mai raggiungibile (404) · doppio salvataggio concorrente → 409 senza perdita dati · autore non modifica bozze altrui · Revisioni immutabili senza eccezioni · file statico rimosso dopo archiviazione (tombstone, ADR-67).
 
 ## Architecture
 
@@ -51,7 +51,7 @@ Vale dalla ADR-19 in poi. ADR 1–18 restano com'erano scritte: non si riformatt
 | Prefisso | `api/v1/app/<mod>` | `api/v1/public/<risorsa>` |
 | Auth | JWT + RBAC soglie | Anonima |
 | Operazioni | R/W, tutti gli stati | Sola lettura, solo `published` |
-| Cache | Mai | Redis, invalidazione per evento |
+| Cache | Mai | Nessuna cache runtime: file statici rigenerati per evento (ADR-53, ADR-67) |
 | Errore risorsa non visibile | 403 | **404 sempre** |
 
 Prefix globale `api/v1`. JWT middleware esclude `auth/*`, `health`, `/metrics`, `public/*`. Paginazione `?p=&i=&q=&o=&d=` → `Pagination<T>`. URL admin con `guid` (16 hex), pubbliche con `slug` (+ `locale`).
@@ -71,10 +71,12 @@ Prefix globale `api/v1`. JWT middleware esclude `auth/*`, `health`, `/metrics`, 
 
 ## Decisioni aperte — non costruirci sopra
 
-- ~~Consumer HTML pubblico~~ → **chiusa**: ADR-22 approvata il 2026-08-17 (SSR a richiesta in `app/public-site`, `renderToStaticMarkup`, componenti condivisi per alias di build). Resta in vigore il **vincolo ereditato da ADR-21**: ogni renderer escapa `plainText`, verificato sull'HTML prodotto come gate di CI.
-- ~~Caching e invalidazione pubblica~~ → **chiusa**: ADR-23 approvata il 2026-08-17 (chiave per percorso col token del registro, nessuna TTL, `DEL` post-commit, fallimento del `DEL` → `200` più job BullMQ di retry, nessun negative caching).
-- ~~Routing e risoluzione degli slug~~ → **chiusa**: ADR-24 approvata il 2026-08-17 (risoluzione iterativa per segmenti, `404` uniforme, canonica `308`, lingua di default senza prefisso, redirect fuori da F03).
-- **Potatura delle Revisioni**: rinviata da ADR-19. Le regole 2 e 5 di `business-rules.md` § Revisioni si contraddicono e vanno sciolte **prima che esista contenuto in volume**. Nessuna retention si implementa nel frattempo.
+- ~~Consumer HTML pubblico~~ → **chiusa**: ADR-22 superata da ADR-45/ADR-53. Il traffico anonimo legge file statici da `nginx-static` su rete isolata (ADR-63), scritti all'URL pubblico (ADR-65); `app/public-site` rende solo per il worker di export e per l'anteprima con token (ADR-67). Resta in vigore il **vincolo ereditato da ADR-21**: ogni renderer escapa `plainText`, verificato sull'HTML esportato come gate di CI.
+- ~~Caching e invalidazione pubblica~~ → **chiusa**: ADR-23 superata da ADR-53. Nessuna chiave Redis `public:*`; ogni evento che cambia contenuto pubblico accoda export o tombstone sulla coda `static-export` (ADR-67).
+- ~~Routing e risoluzione degli slug~~ → **chiusa**: ADR-24 (superata da ADR-53 come record, forma degli URL ereditata): risoluzione per segmenti, `404` uniforme, canonica `308`, lingua di default senza prefisso, redirect fuori da F03. Un solo calcolo dell'URL pubblico: `composePublicPath` (ADR-65).
+- ~~Potatura delle Revisioni~~ → **chiusa**: ADR-61 approvata il 2026-09-11 (potatura di sistema, mai azione utente, opt-in di deploy).
+- ~~Adapter di consegna statica~~ → **chiusa**: ADR-63 approvata il 2026-09-13 (volume Nginx isolato, air-gap verificato in CI da `check-air-gap.js`).
+- **Raccolta analytics sul sito statico**: aperta (ADR-67 § Conseguenze). Nessun visitatore raggiunge più il backend, quindi le analytics di F12 non vedono visite reali. Metodo di raccolta da decidere prima di costruire altri widget di traffico.
 - ~~Ownership per riga permessi editoriali~~ → **chiusa**: ADR-18 approvata il 2026-08-17 (P1/P2/P3 incluse).
 - ~~Sanitizzazione HTML server-side~~ → **chiusa**: ADR-20 approvata il 2026-08-17, libreria `sanitize-html`.
 - ~~Schema dei blocchi e versionamento~~ → **chiusa**: ADR-21 approvata il 2026-08-17 (`v` per nodo, registro nel backend, migrazioni in lettura, `kind` di sanitizzazione per prop, cinque tipi). Un sesto tipo o un nuovo `kind` richiede una nuova firma. Un incremento di `v` è un deploy a senso unico: il rollback del backend esige il rollback dei contenuti.
@@ -99,7 +101,7 @@ Su una tabella append-only `updatedAt`/`updatedBy` sono colonne morte che dichia
 
 > Le quattro entità mutabili già in produzione non hanno `version`: divergenza nota e **non sanata**, il cui allineamento è un task a sé — non si retrofitta dentro una feature di dominio.
 FK sempre `{onDelete:'restrict', onUpdate:'restrict'}` · `relations()` dopo le tabelle · migrazioni `drizzle-kit generate → migrate`, mai `push` in prod · contenuto in `jsonb`, mai testo JSON serializzato · indici su `slug`/`locale`/`status`/ogni FK · `Utils.applyScopeFilter(authInfo)` se multi-tenant · password con `Utils.hashPassword`/`verifyPassword` (bcrypt cost 12).
-Presenti: `users`, `audit_log`, `app_settings`, `files`, `notifications`. Previste (da approvare): `pages`, `page_revisions`, `redirects`, `menus`, `forms`, `form_submissions`.
+Presenti: `users`, `audit_log`, `app_settings`, `files`, `notifications`, `pages`, `page_revisions`, `global_sections`, `site_templates`, `form_submissions`, `analytics_events`, `analytics_daily_rollups`. Previste (da approvare): `redirects` (F07), `menus`.
 
 ## RBAC
 

@@ -4,7 +4,9 @@
 > Non è un impegno di date: è l'ordine in cui le cose possono essere costruite senza
 > doverle rifare. Lo stato reale di avanzamento vive in `docs/ai/progress-tracker.md`.
 >
-> Ultima revisione: 2026-09-11 — **riconciliazione con lo stato reale del repository**, su
+> Ultima revisione: 2026-09-13 — **F03 e F09 chiuse**, residuo di F07/F08/F12 verificato sul
+> codice e scritto per esteso, su richiesta umana esplicita.
+> Precedente: 2026-09-11 — **riconciliazione con lo stato reale del repository**, su
 > richiesta umana esplicita. Le righe «Stato» erano ferme al 2026-08-13 e dichiaravano
 > `⏳ Da avviare` otto feature su dodici, fra cui cinque già consegnate. Sono state allineate a
 > `docs/ai/progress-tracker.md` e al codice verificato. Corrette anche tre voci
@@ -64,8 +66,7 @@ schemi e migrazione dei contenuti esistenti.
 
 ### F03 — Superficie pubblica di lettura
 
-**Pilastro**: prerequisito di 2 e 7 · **Stato**: 🚀 **Ready for Implementation (Air-Gapped
-SSG)** · **Dipende da**: F01, F02
+**Pilastro**: prerequisito di 2 e 7 · **Stato**: ✅ Done (2026-09-13) · **Dipende da**: F01, F02
 
 Il contenuto pubblicato è compilato asincronamente in HTML5 statico (worker BullMQ
 `static-export`) e consegnato in push a uno storage edge isolato (CDN/S3/volume Nginx),
@@ -85,7 +86,10 @@ e `docs/ai/plans/PLAN-F03-superficie-pubblica.md` (2026-09-04).
 compilazione/tombstone (ADR-45), generazione dati SEO (`SeoGraphService`, ADR-48), pipeline
 media `sharp` con preset/focal point (ADR-49), token di anteprima dedicato (ADR-25).
 
-**Delta da costruire per la piena conformità ad ADR-53** (piano § Task): CSS critico
+**Chiusura (2026-09-13)**: consegna su volume Nginx isolato (ADR-63), file esportati
+sull'URL pubblico (ADR-65), air-gap verificato in CI da `check-air-gap.js`.
+
+**Delta che era da costruire per la piena conformità ad ADR-53** (piano § Task): CSS critico
 inline nel documento esportato, output AVIF oltre a WebP con dimensioni intrinseche/
 `srcset` per CLS = 0, assemblaggio di JSON-LD/OpenGraph nel file statico + rigenerazione
 `sitemap.xml`/`robots.txt`, adapter di consegna edge dietro un'interfaccia esplicita
@@ -152,6 +156,11 @@ in editor.
 **ADR**: `ADR-48-seo-graph-generation.md`, approvata il 2026-09-02 — generazione
 JSON-LD/OpenGraph a publish-time. La decisione **non è più aperta**.
 
+**Consegnato**: metadati, canonical, `robots`, Open Graph e JSON-LD a publish-time,
+`sitemap.xml` e `robots.txt` dall'export. **Residuo**: `hreflang` dentro `sitemap.xml`;
+redirect con compattazione delle catene (tabella `redirects` prevista ma non approvata:
+serve una ADR con modifica di schema); verifica della checklist consultiva in editor.
+
 ---
 
 ### F08 — GEO per pagina
@@ -166,11 +175,15 @@ generazione di `llms.txt`, direttive per crawler AI.
 > non sostituita — alla SEO tradizionale di F07. Le due feature condividono lo stesso
 > blocco di metadati sulla Pagina e vanno progettate insieme.
 
+**Consegnato**: campi `aiSummary`, `keyFacts`, `faq`, `entities`, `aiPolicyAllowed` nel
+contratto SEO della Pagina, JSON-LD `FAQPage`. **Residuo**: generazione di `llms.txt` e
+direttive per crawler AI in `robots.txt` dal job di export.
+
 ---
 
 ### F09 — Media editoriali
 
-**Pilastro**: 6 · **Stato**: 🔄 In progress · **Dipende da**: F02
+**Pilastro**: 6 · **Stato**: ✅ Done (2026-09-13) · **Dipende da**: F02
 
 Metadati editoriali sopra il `FilesModule` esistente (alt, didascalia, crediti),
 libreria media navigabile, varianti dimensionali asincrone, protezione dei media
@@ -225,6 +238,10 @@ pubblicazioni programmate, ultimi Invii ricevuti, media senza testo alternativo,
 redirect rotti, Pagine senza metadati SEO.
 
 **Perché in fondo**: una dashboard è una vista su dati che devono esistere prima.
+
+**Consegnato**: dashboard con analytics di traffico. **Residuo**: i widget editoriali
+elencati sopra (bozze e revisioni, programmate, ultimi Invii, media senza alt, Pagine
+senza metadati SEO); «redirect rotti» dipende dai redirect di F07.
 
 ---
 

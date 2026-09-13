@@ -1,7 +1,7 @@
 # RFC-F04c — Editor maturo: drag & drop, stile per blocco, metadati d'editor
 
 ## Status
-[x] **In discussione — seconda versione** · [ ] Approvato → genera ADR-28/29/30 · [ ] Rifiutato
+[ ] In discussione — seconda versione · [x] Approvato → genera ADR-28/29/30 · [ ] Rifiutato
 
 ## Proposto da
 AI Orchestrator · Data: 2026-08-20 (v1) · **riscritta il 2026-08-20 (v2)**
@@ -695,17 +695,22 @@ svuota per metà la Decisione 3, che resterebbe la sola voce 3.10.
 
 | # | Decisione | Esito | ADR generata |
 |---|---|---|---|
-| 1 | Drag & drop — `dnd-kit` sopra `moveNodeToAction` *(confermata dalla v1)* | [ ] Approvata · [ ] Modificata · [ ] Respinta | ADR-28 |
-| 2 | Props di stile **per breakpoint dalla nascita**, `enum` + `responsive`, `v: 1` invariato | [ ] Approvata · [ ] Modificata · [ ] Respinta | ADR-29 |
-| 3 | Metadati d'editor unificati nel registro + ispettore a schede (assorbe 3.10) | [ ] Approvata · [ ] Modificata · [ ] Respinta | ADR-30 |
-| 4 | Perimetro — dentro duplica e indicatore di rilascio, **fuori** colonne/annidamento/navigator/schermo intero (→ F04d) | [ ] Approvata · [ ] Modificata · [ ] Respinta | — (scope) |
-| 5 | ADR-27 dentro F04c, ADR-26 in F04d *(confermata dalla v1)* | [ ] Approvata · [ ] Modificata · [ ] Respinta | — (firma di ADR-26/27 come sono) |
+| 1 | Drag & drop — `dnd-kit` sopra `moveNodeToAction` *(confermata dalla v1)* | [x] Approvata · [ ] Modificata · [ ] Respinta | ADR-28 |
+| 2 | Props di stile **per breakpoint dalla nascita**, `enum` + `responsive`, `v: 1` invariato | [x] Approvata · [ ] Modificata · [ ] Respinta | ADR-29 |
+| 3 | Metadati d'editor unificati nel registro + ispettore a schede (assorbe 3.10) | [x] Approvata · [ ] Modificata · [ ] Respinta | ADR-30 |
+| 4 | Perimetro — dentro duplica e indicatore di rilascio, **fuori** colonne/annidamento/navigator/schermo intero (→ F04d) | [x] Approvata · [ ] Modificata · [ ] Respinta | — (scope) |
+| 5 | ADR-27 dentro F04c, ADR-26 in F04d *(confermata dalla v1)* | [x] Approvata · [ ] Modificata · [ ] Respinta | — (firma di ADR-26/27 come sono) |
 
-**Note**: ___________
+**Note**: registrazione retroattiva, nessuna decisione nuova. Le cinque decisioni sono state
+approvate il 2026-08-20 attraverso le ADR che ne discendono, tutte con data di approvazione
+2026-08-20 (ADR-27, ADR-28, ADR-29, ADR-30), il round F04c è chiuso nello stesso giorno
+(progress tracker § F04c) e ADR-26 è stata approvata in F04d il 2026-08-24, come prevede la
+decisione 5. Questa tabella era rimasta in bianco; allineata il 2026-09-13 su richiesta umana
+esplicita.
 
-**Approvato da**: ___________ · **Data**: ___________
+**Approvato da**: marketing@antelmagroup.net (registrazione) · **Data**: 2026-08-20 (decisioni) · 2026-09-13 (registrazione)
 
-**Azione successiva**: [ ] Scrivere ADR-28/29/30 e attivare `docs/ai/plans/PLAN-F04c-editor-maturo.md` ·
+**Azione successiva**: [x] Scrivere ADR-28/29/30 e attivare `docs/ai/plans/PLAN-F04c-editor-maturo.md` ·
 [ ] Archivio
 
 > Nessuna ADR, nessuna riga di codice e nessuna installazione di pacchetto precedono le firme

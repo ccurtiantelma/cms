@@ -1,5 +1,7 @@
 # Plan — F03 Superficie pubblica di lettura (Architettura Air-Gapped SSG — ADR-53)
 
+> **✅ Chiuso il 2026-09-13.** T1–T6 consegnati; verifica d'air-gap in CI (`check-air-gap.js`).
+
 ## Spec di riferimento
 `docs/ai/specs/SPEC-F03-superficie-pubblica.md` — riscritta il 2026-09-04 su ADR-53, con la
 tabella "Stato reale" che distingue baseline già implementata da delta da costruire. Questo
@@ -201,25 +203,24 @@ loro debito dichiarato altrove.
 ## Definition of Done — Checklist globale
 
 ### Implementazione
-- [ ] Sei task chiusi
-- [ ] Nessun `any` senza commento, nessun `console.log`, JSDoc sulle funzioni pubbliche
-- [ ] Nessuna dipendenza npm pesante nuova oltre `sharp` (già approvata) senza ADR dedicata
-- [ ] Nessuna coda BullMQ nuova: `static-export` resta l'unica, riusata per sitemap/robots
-- [ ] `app/backend` non importa mai `react`/`react-dom/server` (invariante ADR-45, verificata
+- [x] Sei task chiusi (T1/T3 il 2026-09-12, T5/T6 il 2026-09-13 con ADR-63/65/66)
+- [x] Nessun `any` senza commento, nessun `console.log`, JSDoc sulle funzioni pubbliche
+- [x] Nessuna dipendenza npm pesante nuova oltre `sharp` (già approvata) senza ADR dedicata
+- [x] Nessuna coda BullMQ nuova: `static-export` resta l'unica, riusata per sitemap/robots
+- [x] `app/backend` non importa mai `react`/`react-dom/server` (invariante ADR-45, verificata
       di nuovo dopo ogni task che tocca `export.processor.ts`)
 
 ### Test
-- [ ] T1 di verifica baseline eseguito prima di ogni delta
-- [ ] Ogni asserzione di T6 gira sul file scritto dal job di export, non sul componente isolato
-- [ ] Invariante di escaping verificata sull'HTML esportato
-- [ ] Nessun test placeholder
+- [x] T1 di verifica baseline eseguito prima di ogni delta
+- [x] Ogni asserzione di T6 gira sul file scritto dal job di export, non sul componente isolato
+- [x] Invariante di escaping verificata sull'HTML esportato
+- [x] Nessun test placeholder
 
 ### Contratti e documentazione
-- [ ] `SPEC-F03-superficie-pubblica.md` riscritta e approvata (questa revisione)
-- [ ] `docs/system-architecture.md`, `docs/roadmap.md`, `docs/ai/progress-tracker.md`
+- [x] `SPEC-F03-superficie-pubblica.md` riscritta e approvata (questa revisione)
+- [x] `docs/system-architecture.md`, `docs/roadmap.md`, `docs/ai/progress-tracker.md`
       aggiornati nello stesso task documentale che ha originato questa revisione (richiesta
       umana esplicita, non un'iniziativa AI)
-- [ ] `docs/non-functional-requirements.md` — segnalato ma **non aggiornato qui**: il profilo
-      "cache calda/fredda" della superficie pubblica descrive un traffico che con ADR-53 non
-      esiste più; la correzione richiede autorizzazione umana esplicita per quel file
-- [ ] Nessuna implementazione di `S3Deployer`/`CloudflarePagesDeployer` senza ADR propria
+- [x] `docs/non-functional-requirements.md` — profilo "cache calda/fredda" riallineato
+      all'export statico il 2026-09-13, su autorizzazione umana esplicita
+- [x] Nessuna implementazione di `S3Deployer`/`CloudflarePagesDeployer` senza ADR propria (ADR-63 § 5)
