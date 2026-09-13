@@ -80,6 +80,7 @@ services:
       # scritto solo da qui (ADR-63). Il worker chiede l'HTML a public-site.
       STATIC_EXPORT_PATH: /srv/static-site
       PUBLIC_SITE_URL: http://public-site:4000
+      EXPORT_RENDER_SECRET: ${EXPORT_RENDER_SECRET:?Imposta EXPORT_RENDER_SECRET in .env}
     volumes:
       - static_site:/srv/static-site
     depends_on:
@@ -121,7 +122,9 @@ services:
     environment:
       PORT: 4000
       PUBLIC_API_BASE_URL: http://backend:3000
-      ANALYTICS_INGEST_SECRET: ${ANALYTICS_INGEST_SECRET:?Imposta ANALYTICS_INGEST_SECRET in .env}
+      # ADR-67: con il segreto configurato le Pagine si rendono solo per il
+      # worker di export; il traffico anonimo riceve 404 (ADR-53 § 5).
+      EXPORT_RENDER_SECRET: ${EXPORT_RENDER_SECRET:?Imposta EXPORT_RENDER_SECRET in .env}
     depends_on:
       - backend
     # Solo il lato host (stesso motivo del backend sopra): il container resta

@@ -1,14 +1,13 @@
 import { Module } from '@nestjs/common';
 import { DbModule } from '../db/db.module';
 import { BlocksModule } from '../blocks/blocks.module';
-import { CacheInvalidationQueueModule } from '../queues/cache-invalidation-queue/cache-invalidation-queue.module';
 import { ExportModule } from '../export/export.module';
 import { SettingsModule } from '../settings/settings.module';
 import { PagesController } from './pages.controller';
 import { PagesService } from './pages.service';
 import { PublicPagesController } from './public-pages.controller';
 import { PublicPagesService } from './public-pages.service';
-import { PublicPageCacheService } from './public-page-cache.service';
+import { PublicPageLocationService } from './public-page-location.service';
 import { BlockDiffEngineService } from './diff/block-diff-engine.service';
 import { SeoGraphService } from './seo-graph.service';
 
@@ -24,14 +23,9 @@ import { SeoGraphService } from './seo-graph.service';
  * `BlocksModule` porta `BlockTreeValidatorService`/`BLOCK_REGISTRY_TOKEN` in
  * DI. `AuditLogService`/`TreeSanitizerService`/`BlockPropSanitizerService`
  * vengono da `CommonModule` (globale, nessun import esplicito necessario).
- * `PublicPageCacheService` (F03/T3, ADR-23) è condiviso fra le due
- * superfici: letto/scritto da `PublicPagesService` sul percorso di lettura,
- * invalidato da `PagesService` sui percorsi di scrittura che cambiano
- * contenuto pubblico. `CacheInvalidationQueueModule` porta il ricorso
- * BullMQ di un `DEL` fallito (ADR-23 § 6). `ExportModule` (RFC-44) porta
- * `ExportService`: chiamato da `PagesService` sugli stessi quattro
- * call-site che invalidano `PublicPageCacheService`, per accodare
- * export/tombstone del file statico con lo stesso percorso già calcolato.
+ * `PublicPageLocationService` (ADR-67) calcola i percorsi con cui
+ * `PagesService` accoda export e tombstone su `ExportService` (RFC-44):
+ * nessuna cache Redis pubblica (ADR-53).
  * `PagesService` è esportato: la
  * rotta di anteprima (`PreviewPagesModule`, ADR-25 § 3, terzo prefisso
  * accanto ad `app/`/`public/`) riusa {@link PagesService.findDraftForPreview}
@@ -39,12 +33,12 @@ import { SeoGraphService } from './seo-graph.service';
  * lettura ad-hoc duplicata in un altro modulo.
  */
 @Module({
-  imports: [DbModule, BlocksModule, CacheInvalidationQueueModule, ExportModule, SettingsModule],
+  imports: [DbModule, BlocksModule, ExportModule, SettingsModule],
   controllers: [PagesController, PublicPagesController],
   providers: [
     PagesService,
     PublicPagesService,
-    PublicPageCacheService,
+    PublicPageLocationService,
     BlockDiffEngineService,
     SeoGraphService,
   ],

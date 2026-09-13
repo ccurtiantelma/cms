@@ -2,7 +2,7 @@
  * Nome dello slug radice, in attesa di F05/`app_settings` (ADR-24 § 7).
  * Condiviso fra la risoluzione pubblica (T2) e l'invalidazione della cache
  * (T3): la home è raggiungibile sia da `/` sia dal proprio segmento `/home`
- * (stessa riga, due chiavi di cache — vedi `PublicPageCacheService`).
+ * (stessa riga, due percorsi — vedi `composePublicPath`).
  */
 export const HOME_SLUG = 'home';
 
@@ -78,7 +78,7 @@ export function extractLocalePrefix(
 
 /**
  * Percorso pubblico canonico a partire da `locale` e dal percorso di slug
- * senza prefisso (quello di `PublicPageCacheService.resolveLocation`):
+ * senza prefisso (quello di `PublicPageLocationService.resolveLocation`):
  * inverso di {@link extractLocalePrefix}. La home radice perde il proprio
  * segmento (`/home` → `/`, ADR-24 § 7) e una lingua diversa dalla default
  * guadagna il prefisso (ADR-24 § 5), minuscolo come ogni percorso servito.

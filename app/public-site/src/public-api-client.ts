@@ -12,23 +12,6 @@ export type PublicPageResolution =
   | { kind: 'not-found' }
   | { kind: 'error' };
 
-/** Invia una pageview validata senza propagare errori al consumer HTML. */
-export function ingestPageview(path: string): void {
-  if (!PublicSiteConfig.analyticsIngestSecret) return;
-
-  const url = `${PublicSiteConfig.apiBaseUrl}/api/v1/analytics/ingest/pageview`;
-  void fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Analytics-Secret': PublicSiteConfig.analyticsIngestSecret,
-    },
-    body: JSON.stringify({ path }),
-  }).catch((error: unknown) => {
-    console.error('public-site: ingest analytics non riuscito', error);
-  });
-}
-
 /**
  * Estrae il valore di `?path=` dalla `Location` del `308` del backend
  * (`/api/v1/public/pages?path=X`, ADR-24 § 4) per ridirigere sul percorso del
@@ -47,12 +30,20 @@ function extractCanonicalPath(location: string): string | null {
  * F03/T2). `redirect: 'manual'` per poter leggere la `Location` del `308` di
  * canonicalizzazione e propagarla, non reimplementarla (ADR-24 § 4).
  */
-export async function resolvePublicPage(pathname: string): Promise<PublicPageResolution> {
+export async function resolvePublicPage(
+  pathname: string,
+  isExportRender: boolean,
+): Promise<PublicPageResolution> {
   const url = `${PublicSiteConfig.apiBaseUrl}/api/v1/public/pages?path=${encodeURIComponent(pathname)}`;
 
   let res: Response;
   try {
-    res = await fetch(url, { redirect: 'manual' });
+    res = await fetch(url, {
+      redirect: 'manual',
+      // ADR-67: una lettura per l'export statico non è una visita, il backend
+      // non la registra nelle analytics.
+      headers: isExportRender ? { 'X-Export-Render': '1' } : undefined,
+    });
   } catch {
     return { kind: 'error' };
   }

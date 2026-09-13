@@ -120,6 +120,15 @@ export class AppConstants {
    * indipendentemente (RFC-46 § Alternative valutate).
    */
   static readonly formAntispamSecret = str('FORM_ANTISPAM_SECRET', 'change_me_form_antispam');
+  /**
+   * Segreto condiviso fra il worker di export e `app/public-site` (ADR-67):
+   * inviato come `X-Export-Render-Token` a ogni render di Pagina. Quando
+   * `public-site` lo ha configurato, rende le Pagine pubblicate **solo** a chi
+   * lo presenta, così in produzione il traffico anonimo non raggiunge mai il
+   * motore di rendering (ADR-53 § 5). Vuoto in sviluppo: `public-site` resta
+   * navigabile in locale.
+   */
+  static readonly exportRenderSecret = str('EXPORT_RENDER_SECRET');
 
   static readonly frontendUrl = str('FRONTEND_URL', 'http://localhost:55173');
   /**

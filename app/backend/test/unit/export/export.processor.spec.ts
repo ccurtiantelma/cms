@@ -3,6 +3,7 @@ jest.mock('../../../src/common/app-constants', () => ({
     publicSiteUrl: 'http://public-site.internal:4000',
     staticExportFullSiteBatchSize: 2,
     staticSiteBaseUrl: 'https://www.example.test',
+    exportRenderSecret: 'segreto-export-test',
   },
 }));
 
@@ -28,6 +29,9 @@ import { MediaTransformPreset } from '../../../src/files/dto/media-transform.dto
 function buildJob(data: StaticExportJobData): Job<StaticExportJobData> {
   return { data } as Job<StaticExportJobData>;
 }
+
+/** Ogni render di Pagina chiesto a public-site porta il segreto di export (ADR-67). */
+const EXPORT_RENDER_REQUEST = { headers: { 'X-Export-Render-Token': 'segreto-export-test' } };
 
 describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
   let manifestService: jest.Mocked<Pick<ManifestService, 'upsertEntry' | 'removeEntry'>>;
@@ -137,7 +141,11 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
         buildJob({ kind: 'page', pageId: 'guid-1', locale: 'it-IT', path: '/chi-siamo' }),
       );
 
-      expect(fetchMock).toHaveBeenNthCalledWith(1, 'http://public-site.internal:4000/chi-siamo');
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        1,
+        'http://public-site.internal:4000/chi-siamo',
+        EXPORT_RENDER_REQUEST,
+      );
       expect(fetchMock).toHaveBeenNthCalledWith(
         2,
         'http://public-site.internal:4000/assets/style.abc123.css',
@@ -178,6 +186,7 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
       expect(fetchMock).toHaveBeenNthCalledWith(
         1,
         'http://public-site.internal:4000/en-gb/about-us',
+        EXPORT_RENDER_REQUEST,
       );
       expect(deployer.write).toHaveBeenCalledWith('en-gb/about-us/index.html', html);
       expect(manifestService.upsertEntry).toHaveBeenCalledWith(
@@ -194,7 +203,11 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
         buildJob({ kind: 'page', pageId: 'guid-home', locale: 'en-GB', path: '/home' }),
       );
 
-      expect(fetchMock).toHaveBeenNthCalledWith(1, 'http://public-site.internal:4000/en-gb');
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        1,
+        'http://public-site.internal:4000/en-gb',
+        EXPORT_RENDER_REQUEST,
+      );
       expect(deployer.write).toHaveBeenCalledWith('en-gb/index.html', html);
     });
 

@@ -27,6 +27,12 @@ import { canonicalizePublicPath } from '../pages/public-path.util';
  * atteso nel path della richiesta. Un fallimento è solo loggato, mai
  * propagato al client.
  */
+/**
+ * Marcatore che `app/public-site` aggiunge alle letture fatte per rendere una
+ * Pagina destinata all'export statico (ADR-67): non sono visite.
+ */
+export const EXPORT_RENDER_MARKER_HEADER = 'x-export-render';
+
 @Injectable()
 export class AnalyticsIngestionMiddleware implements NestMiddleware {
   private readonly logger = new Logger(AnalyticsIngestionMiddleware.name);
@@ -43,6 +49,8 @@ export class AnalyticsIngestionMiddleware implements NestMiddleware {
 
       const queryPath = typeof req.query.path === 'string' ? req.query.path : undefined;
       if (!queryPath) return;
+      // Render per l'export statico (ADR-67): è il worker, non un visitatore.
+      if (req.headers[EXPORT_RENDER_MARKER_HEADER] !== undefined) return;
 
       const path = canonicalizePublicPath(queryPath);
       const clientIp = req.ip ?? '';

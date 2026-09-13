@@ -53,6 +53,7 @@ import { FormsCorsMiddleware } from './forms/forms-cors.middleware';
         // honeypot a nome derivato + firma HMAC del form, dedicato e distinto
         // da ANALYTICS_SALT_SECRET.
         FORM_ANTISPAM_SECRET: Joi.string().default('change_me_form_antispam'),
+        EXPORT_RENDER_SECRET: Joi.string().allow('').default(''),
         COOKIE_SECRET: Joi.string().default('change_me_cookie_secret'),
         COOKIE_DOMAIN: Joi.string().default('localhost'),
         // Allineato ad AppConstants.jwtExpiration (fix: entrambi i default devono coincidere).
@@ -107,11 +108,12 @@ import { FormsCorsMiddleware } from './forms/forms-cors.middleware';
     ThrottlerModule.forRoot({
       throttlers: [
         { name: 'auth', ttl: 60_000, limit: 20 },
-        // Throttler dedicato alla superficie pubblica (F03/T2, CLAUDE.md §
-        // Security "endpoint pubblici: rate limiting proprio"). 300/60s è un
-        // default ragionevole dichiarato in attesa di
-        // SPEC-F03-superficie-pubblica.md (non ancora scritta, PLAN-F03 T1
-        // residuo) — non un valore derivato da un documento approvato.
+        // Throttler dedicato alla superficie pubblica (CLAUDE.md § Security
+        // "endpoint pubblici: rate limiting proprio"). Con ADR-63 il traffico
+        // anonimo è servito da nginx-static: qui arrivano solo le chiamate che
+        // il sito statico fa dal browser (form, media) più export e anteprima.
+        // RFC-61 è stata rifiutata come superata; gli handler che ne hanno
+        // bisogno dichiarano il proprio limite con @Throttle.
         { name: 'public', ttl: 60_000, limit: 300 },
       ],
     }),

@@ -25,7 +25,7 @@ import { TreeSanitizerService } from '../common/sanitizer/tree-sanitizer.service
 import { BlockPropSanitizerService } from '../common/sanitizer/block-prop-sanitizer.service';
 import { BLOCK_REGISTRY_TOKEN, BlockRegistry } from '../blocks/block-registry';
 import { BlockTreeValidatorService } from '../blocks/validator/block-tree-validator.service';
-import { PublicPageCacheService } from './public-page-cache.service';
+import { PageExportTarget, PublicPageLocationService } from './public-page-location.service';
 import { ExportService } from '../export/export.service';
 import { ValidatableBlockNode } from '../blocks/validator/validatable-node.types';
 import { migrateEnvelope, ENVELOPE_VERSION } from '../blocks/migration/envelope-migration.engine';
@@ -144,7 +144,7 @@ export class PagesService {
     private readonly blockTreeValidator: BlockTreeValidatorService,
     private readonly blockPropSanitizer: BlockPropSanitizerService,
     @Inject(BLOCK_REGISTRY_TOKEN) private readonly blockRegistry: BlockRegistry,
-    private readonly publicPageCache: PublicPageCacheService,
+    private readonly pageLocations: PublicPageLocationService,
     private readonly settingsService: SettingsService,
     private readonly exportService: ExportService,
     private readonly blockDiffEngine: BlockDiffEngineService,
@@ -376,13 +376,13 @@ export class PagesService {
       setValues.draftSeo = this.toPlainSeo(dto.draftSeo);
     }
 
-    // Percorso pubblico calcolato **prima** dell'UPDATE (ADR-23 § 4/§ 5): dopo
-    // il commit lo slug/genitore in database è già il nuovo, quindi non è più
-    // la chiave davvero cacheata. Solo `slug`/`parentGuid` toccano il
-    // percorso — un cambio di solo `title`/`draftContent` non muove nulla.
+    // Percorsi calcolati **prima** dell'UPDATE: dopo il commit slug/genitore
+    // in database sono già i nuovi, e i file da rimuovere stanno ai vecchi.
+    // Solo `slug`/`parentGuid` muovono i percorsi — un cambio di solo
+    // `title`/`draftContent` non tocca alcun file pubblicato.
     const pathMayChange = setValues.slug !== undefined || setValues.parentId !== undefined;
-    const staleLocations = pathMayChange
-      ? await this.publicPageCache.computeSubtreeLocationsBeforeWrite(row.id)
+    const staleTargets = pathMayChange
+      ? await this.pageLocations.computeSubtreeTargets(row.id)
       : [];
 
     const updatedRow = await this.updateOrMapConflict(row.id, dto.version, setValues);
@@ -393,28 +393,12 @@ export class PagesService {
       });
     }
 
-    if (staleLocations.length > 0) {
-      await this.publicPageCache.invalidateLocations(staleLocations, authInfo.userId);
-
-      // RFC-44 Decisione 5: la Pagina resta pubblicata ma cambia percorso —
-      // il vecchio file statico va rimosso e il nuovo generato, non solo la
-      // cache invalidata.
-      if (row.status === 'published') {
-        await Promise.all(
-          staleLocations.map((stale) =>
-            this.exportService.enqueuePageTombstone(row.guid, stale.locale, stale.path),
-          ),
-        );
-        const newLocation = await this.publicPageCache.resolveLocation(updatedRow.id);
-        if (newLocation) {
-          await this.exportService.enqueuePageExport(
-            row.guid,
-            newLocation.locale,
-            newLocation.path,
-          );
-        }
-      }
-    }
+    // ADR-67: una Pagina pubblicata che cambia percorso lascia un file
+    // orfano per sé e per ogni discendente pubblicato, e rende stantio ogni
+    // link che la raggiunge (menu di navigazione, `hreflang` delle
+    // traduzioni). Tombstone dei vecchi percorsi più rebuild completo, che
+    // riscrive i percorsi nuovi e i riferimenti.
+    await this.retirePublishedTargets(staleTargets);
 
     return this.toDtoWithContentIssues(updatedRow, parentGuid);
   }
@@ -478,6 +462,34 @@ export class PagesService {
     return { token, expiresAt };
   }
 
+  /**
+   * Accoda il tombstone di ogni percorso pubblicato fra quelli indicati e, se
+   * almeno uno lo era, un rebuild completo del sito (ADR-67). Nessun job se
+   * nessuna Pagina del sottoalbero era pubblicata: niente file da togliere,
+   * niente link da riscrivere.
+   */
+  private async retirePublishedTargets(targets: PageExportTarget[]): Promise<void> {
+    const published = targets.filter((target) => target.published);
+    if (published.length === 0) return;
+
+    await Promise.all(
+      published.map((target) =>
+        this.exportService.enqueuePageTombstone(target.pageGuid, target.locale, target.path),
+      ),
+    );
+    await this.exportService.enqueueFullSiteExport();
+  }
+
+  /** Riesporta le traduzioni pubblicate della Pagina: il loro `hreflang` dipende dal suo stato. */
+  private async reexportTranslationSiblings(pageId: number): Promise<void> {
+    const siblings = await this.pageLocations.publishedTranslationSiblings(pageId);
+    await Promise.all(
+      siblings.map((sibling) =>
+        this.exportService.enqueuePageExport(sibling.pageGuid, sibling.locale, sibling.path),
+      ),
+    );
+  }
+
   /** Soft delete (Admin+, `GuardAdmin` sul controller). Traccia in audit log. */
   async remove(guid: string, authInfo: AuthInfo, ip?: string): Promise<void> {
     const row = await this.loadActiveByGuid(guid);
@@ -488,30 +500,20 @@ export class PagesService {
       'Permessi insufficienti per eliminare questa pagina.',
     );
 
-    // Sottoalbero calcolato prima del soft delete (ADR-23 § 4): `isActive`
-    // rompe la risoluzione di un intero ramo (ogni antenato inattivo blocca
-    // la discesa a segmenti di T2), quindi anche il pubblico dei discendenti
-    // diventa stantio, non solo quello della riga eliminata.
-    const staleLocations = await this.publicPageCache.computeSubtreeLocationsBeforeWrite(row.id);
+    // Sottoalbero calcolato prima del soft delete: `isActive` rompe la
+    // risoluzione di un intero ramo, quindi anche i file dei discendenti
+    // pubblicati vanno rimossi, non solo quello della riga eliminata.
+    const staleTargets = await this.pageLocations.computeSubtreeTargets(row.id);
 
     await this.db.db
       .update(pageEntity)
       .set({ isActive: false, updatedAt: new Date(), updatedBy: authInfo.userId })
       .where(eq(pageEntity.id, row.id));
 
-    if (staleLocations.length > 0) {
-      await this.publicPageCache.invalidateLocations(staleLocations, authInfo.userId);
-
-      // RFC-44 Decisione 5: il soft delete su Postgres non deve mai lasciare
-      // raggiungibile da Nginx il file statico di una Pagina (ex-)pubblicata.
-      if (row.status === 'published') {
-        await Promise.all(
-          staleLocations.map((stale) =>
-            this.exportService.enqueuePageTombstone(row.guid, stale.locale, stale.path),
-          ),
-        );
-      }
-    }
+    // ADR-67 (RFC-44 Decisione 5): il soft delete non deve mai lasciare
+    // raggiungibile da Nginx il file di una Pagina (ex-)pubblicata; il rebuild
+    // toglie i link che la raggiungevano.
+    await this.retirePublishedTargets(staleTargets);
 
     this.logger.log(`Pagina eliminata (guid=${guid}).`);
     await this.auditLogService.log(
@@ -587,28 +589,19 @@ export class PagesService {
       });
     }
 
-    // Sola chiave della Pagina (ADR-23 § 4): nessuna transizione di stato
-    // tocca `slug`/`parentId`, quindi il percorso dei discendenti non è
-    // toccato. Invalidazione incondizionata: su una Pagina mai pubblicata è
-    // un `DEL` a vuoto, innocuo.
-    await this.publicPageCache.invalidatePage(row.id, authInfo.userId);
-    // PLAN-F05 T5: il payload pubblico delle traduzioni contiene l'elenco
-    // delle altre traduzioni pubblicate, quindi questa transizione sporca
-    // anche le loro chiavi, non solo la propria.
-    await this.publicPageCache.invalidateTranslationGroup(row.id, authInfo.userId);
-
-    // RFC-44 Decisione 5: `toStatus === 'published'` è già intercettato sopra
-    // (delegato a `publishTransactionally`), quindi qui si arriva solo per
-    // transizioni che lasciano `published` (tombstone) o che restano fuori
-    // da `published` (nessun file statico esisteva, no-op innocuo se accodato
-    // comunque — ma si evita per non generare rumore su transizioni che non
-    // hanno mai avuto un export).
+    // ADR-67: una transizione che lascia `published` rimuove il file della
+    // Pagina (nessun `slug`/`parentId` cambia, i discendenti restano dove
+    // sono). `toStatus === 'published'` è già delegato a
+    // `publishTransactionally` sopra.
     if (fromStatus === 'published') {
-      const location = await this.publicPageCache.resolveLocation(row.id);
+      const location = await this.pageLocations.resolveLocation(row.id);
       if (location) {
         await this.exportService.enqueuePageTombstone(row.guid, location.locale, location.path);
       }
     }
+    // PLAN-F05 T5: il file delle traduzioni pubblicate elenca le altre
+    // traduzioni (`hreflang`), quindi va riscritto anche il loro.
+    await this.reexportTranslationSiblings(row.id);
 
     this.logger.log(`Pagina guid=${guid}: transizione di stato ${fromStatus} -> ${toStatus}.`);
     await this.auditLogService.log(
@@ -740,19 +733,14 @@ export class PagesService {
       return publishedPage;
     });
 
-    // Dopo il commit (ADR-23 § 4): una lettura concorrente prima di questo
-    // punto ripopolerebbe la chiave con lo stato pre-pubblicazione.
-    await this.publicPageCache.invalidatePage(finalRow.id, authInfo.userId);
-    // PLAN-F05 T5: vedi `changeStatus` — una pubblicazione entra negli elenchi
-    // di traduzioni delle Pagine sorelle, che vanno rilette dal database.
-    await this.publicPageCache.invalidateTranslationGroup(finalRow.id, authInfo.userId);
-
-    // RFC-44 Decisione 1/4: job di export a singola pagina, stesso percorso
-    // appena invalidato in cache, priorità alta/SLA 5s (ExportService).
-    const location = await this.publicPageCache.resolveLocation(finalRow.id);
+    // Dopo il commit (RFC-44 Decisione 1/4): export della Pagina a priorità
+    // alta, più le traduzioni pubblicate il cui elenco `hreflang` ora la
+    // include (PLAN-F05 T5, ADR-67).
+    const location = await this.pageLocations.resolveLocation(finalRow.id);
     if (location) {
       await this.exportService.enqueuePageExport(row.guid, location.locale, location.path);
     }
+    await this.reexportTranslationSiblings(finalRow.id);
 
     this.logger.log(`Pagina pubblicata (guid=${row.guid}).`);
     return this.toDtoWithContentIssues(finalRow, row.parent?.guid ?? null);

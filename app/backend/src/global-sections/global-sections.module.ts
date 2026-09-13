@@ -14,9 +14,7 @@ import { GlobalSectionsService } from './global-sections.service';
  * `BlockTreeValidatorService`/`BLOCK_REGISTRY_TOKEN` in DI, riuso integrale
  * della pipeline blocchi di ADR-21. `ExportModule` porta `ExportService`
  * (`enqueueFullSiteExport`), che sostituisce integralmente la cache Redis
- * pubblica orfana (ADR-53, ADR-55): nessuna dipendenza da
- * `CacheInvalidationQueueModule` resta in questo modulo, il suo unico
- * consumer locale (`PublicGlobalSectionsCacheService`) è stato eliminato.
+ * pubblica orfana (ADR-53, ADR-55).
  */
 @Module({
   imports: [DbModule, BlocksModule, ExportModule],

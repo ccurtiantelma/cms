@@ -7,7 +7,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PublicSiteConfig } from './config';
-import { ingestPageview, resolvePublicPage } from './public-api-client';
+import { timingSafeEqual } from 'node:crypto';
+import { resolvePublicPage } from './public-api-client';
 import { resolvePreviewPage } from './preview-api-client';
 import { renderErrorDocument, renderPageDocument, renderPreviewDocument } from './entry-server';
 import { createNonce, securityHeaders } from './security-headers';
@@ -98,6 +99,18 @@ function loadFormSubmitScript(): { href: string; content: string } {
   };
 }
 
+/** Header con cui il worker di export si fa riconoscere (ADR-67), in minuscolo come lo espone `node:http`. */
+const EXPORT_RENDER_TOKEN_HEADER = 'x-export-render-token';
+
+/** Confronto a tempo costante del segreto di export: nessuna informazione dal tempo di risposta. */
+function hasValidExportRenderToken(req: IncomingMessage): boolean {
+  const presented = req.headers[EXPORT_RENDER_TOKEN_HEADER];
+  if (typeof presented !== 'string') return false;
+  const expected = Buffer.from(PublicSiteConfig.exportRenderSecret);
+  const actual = Buffer.from(presented);
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
 const css = loadCss();
 const formSubmitScript = loadFormSubmitScript();
 
@@ -140,7 +153,17 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse, nonce: s
     return;
   }
 
-  const resolution = await resolvePublicPage(url.pathname);
+  // ADR-67 (ADR-53 § 5): con il segreto di export configurato le Pagine si
+  // rendono solo per il worker; ogni altra richiesta riceve lo stesso `404`
+  // di una Pagina inesistente, senza consultare il backend.
+  const isExportRender = req.headers[EXPORT_RENDER_TOKEN_HEADER] !== undefined;
+  if (PublicSiteConfig.exportRenderSecret !== '' && !hasValidExportRenderToken(req)) {
+    writeHead(res, 404, nonce, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(isHead ? undefined : await renderErrorDocument(404, 'Pagina non trovata', css.href, nonce));
+    return;
+  }
+
+  const resolution = await resolvePublicPage(url.pathname, isExportRender);
 
   switch (resolution.kind) {
     case 'ok': {
@@ -152,7 +175,6 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse, nonce: s
         : await renderPageDocument(resolution.page, css.href, formSubmitScript.href, url.pathname, nonce);
       writeHead(res, 200, nonce, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(html);
-      if (!isHead) ingestPageview(url.pathname);
       return;
     }
     case 'redirect': {
@@ -272,5 +294,7 @@ const server = createServer((req, res) => {
 });
 
 server.listen(PublicSiteConfig.port, () => {
-  console.log(`public-site in ascolto sulla porta ${PublicSiteConfig.port}`);
+  // Riga di avvio per l'orchestratore dei container: `public-site` non ha un
+  // logger applicativo e `console.log` è vietato in produzione (CLAUDE.md).
+  process.stdout.write(`public-site in ascolto sulla porta ${PublicSiteConfig.port}\n`);
 });

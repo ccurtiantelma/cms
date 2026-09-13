@@ -19,8 +19,14 @@ export const PublicSiteConfig = {
   port: port('PORT', 55000),
   /** Origine dell'API backend (`api/v1/public/pages`), senza path finale. */
   apiBaseUrl: str('PUBLIC_API_BASE_URL', 'http://localhost:53000'),
-  /** Secret server-to-server per l'ingest delle pageview del consumer SSR. */
-  analyticsIngestSecret: str('ANALYTICS_INGEST_SECRET', ''),
+  /**
+   * Segreto condiviso col worker di export (ADR-67, stesso valore di
+   * `AppConstants.exportRenderSecret`). Se valorizzato, le Pagine pubblicate si
+   * rendono solo a chi presenta `X-Export-Render-Token`: in produzione il
+   * traffico anonimo riceve `404` e resta solo l'anteprima con token
+   * (ADR-53 § 5). Vuoto in sviluppo, per navigare il sito in locale.
+   */
+  exportRenderSecret: str('EXPORT_RENDER_SECRET', ''),
   /**
    * Origine backend **rivolta al browser** per il submit dei Form (F10-04,
    * RFC-46 D4/D5): `apiBaseUrl` è rivolta al server (in produzione un host di

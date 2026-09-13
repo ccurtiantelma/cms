@@ -16,7 +16,6 @@ import {
   MAX_PUBLIC_PATH_SEGMENTS,
   splitPathSegments,
 } from './public-path.util';
-import { PublicPageCacheService } from './public-page-cache.service';
 import { SettingsService } from '../settings/settings.service';
 
 type PageRow = typeof pageEntity.$inferSelect;
@@ -46,7 +45,6 @@ export class PublicPagesService {
     private readonly db: DbService,
     private readonly blockTreeValidator: BlockTreeValidatorService,
     @Inject(BLOCK_REGISTRY_TOKEN) private readonly blockRegistry: BlockRegistry,
-    private readonly publicPageCache: PublicPageCacheService,
     private readonly settingsService: SettingsService,
   ) {}
 
@@ -57,11 +55,9 @@ export class PublicPagesService {
    * (inesistente, non pubblicata, riga incoerente, albero non migrabile o non
    * valido) — mai `403`, mai un `code` che distingua i casi (ADR-24 § 3).
    *
-   * Strato di cache (T3, ADR-23): letta prima di consultare il database,
-   * scritta solo sull'esito positivo — mai su un `404` (ADR-23 § 8, nessun
-   * negative caching). Un errore Redis in lettura è assorbito da
-   * {@link PublicPageCacheService} e non altera questo percorso: la lettura
-   * cade sul database (ADR-23 § 7).
+   * Nessuna cache (ADR-53, ADR-67): questa lettura serve solo il job di
+   * export e la pipeline di anteprima, mai il traffico anonimo, che legge i
+   * file statici.
    */
   async resolveByPath(canonicalPath: string): Promise<PublicPageDto> {
     const multilingualConfig = await this.settingsService.getMultilingualConfig();
@@ -70,11 +66,6 @@ export class PublicPagesService {
       multilingualConfig.active,
       multilingualConfig.default,
     );
-
-    const cached = await this.publicPageCache.getCached(locale, residualPath);
-    if (cached) {
-      return cached;
-    }
 
     const page = await this.resolvePageRow(locale, residualPath);
 
@@ -111,7 +102,6 @@ export class PublicPagesService {
       translations: await this.collectPublishedTranslations(page, multilingualConfig.default),
     };
 
-    await this.publicPageCache.setCached(locale, residualPath, dto);
     return dto;
   }
 

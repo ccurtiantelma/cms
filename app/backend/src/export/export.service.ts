@@ -27,11 +27,9 @@ const FULL_SITE_JOB_OPTS: JobsOptions = {
 };
 
 /**
- * Produttore dei job della coda BullMQ `static-export` (RFC-44). Stesso
- * pattern di `CacheInvalidationQueueService`: nessun calcolo qui, solo
- * accodamento — path/locale sono già risolti dal chiamante
- * (`PagesService`, sugli stessi punti che invalidano `PublicPageCacheService`
- * di ADR-23).
+ * Produttore dei job della coda BullMQ `static-export` (RFC-44). Nessun
+ * calcolo qui, solo accodamento — path/locale sono già risolti dal chiamante
+ * (`PagesService` con `PublicPageLocationService`, ADR-67).
  */
 @Injectable()
 export class ExportService {

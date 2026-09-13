@@ -34,6 +34,9 @@ interface SharpMetadataOnly {
  * dimensioni sono note staticamente da `PRESET_DIMENSIONS`, senza invocare
  * `sharp` (SPEC-F03 § 3.3, "esposte, non ricalcolate").
  */
+/** Header con cui il worker si fa riconoscere da `app/public-site` (ADR-67). */
+const EXPORT_RENDER_TOKEN_HEADER = 'X-Export-Render-Token';
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const sharp: (input: Buffer) => SharpMetadataOnly = require('sharp');
 
@@ -470,7 +473,11 @@ export class ExportProcessor extends WorkerHost {
     const url = `${AppConstants.publicSiteUrl}${publicPath}`;
     let response: Response;
     try {
-      response = await fetch(url);
+      // ADR-67: `public-site` rende Pagine solo a chi presenta il segreto di
+      // export, e non registra mai questi render come visite.
+      response = await fetch(url, {
+        headers: { [EXPORT_RENDER_TOKEN_HEADER]: AppConstants.exportRenderSecret },
+      });
     } catch (err) {
       throw new Error(
         `Chiamata a public-site fallita per ${publicPath}: ${(err as Error).message}`,
@@ -668,7 +675,7 @@ export class ExportProcessor extends WorkerHost {
   /**
    * Cammina l'intero albero delle Pagine attive/pubblicate calcolando il
    * percorso canonico di ognuna (stesso algoritmo di
-   * `PublicPageCacheService.collectSubtreeLocations`, duplicato qui — vive
+   * `PublicPageLocationService.computeSubtreeTargets`, duplicato qui — vive
    * in un modulo diverso e importarlo introdurrebbe un ciclo
    * `ExportModule` ↔ `PagesModule`, dato che `PagesModule` importa già
    * `ExportModule` per accodare i job di export/tombstone).
