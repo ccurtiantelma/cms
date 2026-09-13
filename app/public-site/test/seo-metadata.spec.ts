@@ -57,6 +57,41 @@ afterEach(() => {
 });
 
 describe('assemblaggio SEO nel documento HTML (SPEC-F03 § 4.1, PLAN-F03 T4)', () => {
+  it('usa metaTitle come <title> ed emette la meta description (business-rules § SEO)', async () => {
+    const html = await renderPageDocument(
+      pageWithSeo({ metaTitle: 'Titolo SEO', metaDescription: 'Descrizione per i motori' }),
+      '/assets/style.css',
+    );
+
+    expect(html).toContain('<title>Titolo SEO</title>');
+    expect(html).toContain('<meta name="description" content="Descrizione per i motori"/>');
+  });
+
+  it('senza metaTitle il <title> ricade sul titolo della Pagina, senza meta description vuota', async () => {
+    const html = await renderPageDocument(pageWithSeo({}), '/assets/style.css');
+
+    expect(html).toContain('<title>Pagina di test</title>');
+    expect(html).not.toContain('name="description"');
+  });
+
+  it('meta robots: solo le direttive diverse da index/follow, più noai se la Pagina nega l\'uso AI', async () => {
+    const html = await renderPageDocument(
+      pageWithSeo({ robotsIndex: 'noindex', robotsFollow: 'nofollow', aiPolicyAllowed: false }),
+      '/assets/style.css',
+    );
+
+    expect(html).toContain('<meta name="robots" content="noindex, nofollow, noai, noimageai"/>');
+  });
+
+  it('meta robots assente con i default (index, follow, uso AI consentito)', async () => {
+    const html = await renderPageDocument(
+      pageWithSeo({ robotsIndex: 'index', robotsFollow: 'follow', aiPolicyAllowed: true }),
+      '/assets/style.css',
+    );
+
+    expect(html).not.toContain('name="robots"');
+  });
+
   it('emette un <meta property="og:..."> solo per le chiavi OpenGraph presenti in page.seo', async () => {
     const html = await renderPageDocument(
       pageWithSeo({ ogTitle: 'Titolo OG', ogDescription: 'Descrizione OG' }),

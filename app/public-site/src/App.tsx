@@ -18,6 +18,11 @@ type PublicActiveGlobalSectionsDto = components['schemas']['PublicActiveGlobalSe
  * JSON-LD combinato di ADR-48).
  */
 interface PageSeoData {
+  metaTitle?: string;
+  metaDescription?: string;
+  robotsIndex?: string;
+  robotsFollow?: string;
+  aiPolicyAllowed?: boolean;
   ogTitle?: string;
   ogDescription?: string;
   ogImage?: string;
@@ -37,6 +42,20 @@ interface PageSeoData {
  */
 function serializeStructuredData(data: Record<string, unknown>): string {
   return JSON.stringify(data).replace(/<\//g, '<\\/');
+}
+
+/**
+ * Direttive del meta `robots` (business-rules.md § SEO e § GEO regola 2): solo
+ * quelle diverse dal default `index, follow`, più `noai, noimageai` quando la
+ * Pagina nega l'uso ai crawler AI. `null` se non c'è nulla da dire.
+ */
+function robotsDirectives(seo: PageSeoData): string | null {
+  const directives = [
+    ...(seo.robotsIndex === 'noindex' ? ['noindex'] : []),
+    ...(seo.robotsFollow === 'nofollow' ? ['nofollow'] : []),
+    ...(seo.aiPolicyAllowed === false ? ['noai', 'noimageai'] : []),
+  ];
+  return directives.length > 0 ? directives.join(', ') : null;
 }
 
 interface AppProps {
@@ -101,12 +120,15 @@ export default function App({
   // `fetchThemeConfig`/`fetchActiveGlobalSections`): niente meta OpenGraph,
   // niente canonico, niente JSON-LD, mai un `TypeError` a runtime.
   const seo = (page.seo ?? {}) as PageSeoData;
+  const robots = robotsDirectives(seo);
   return (
     <html lang={page.locale}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>{page.title}</title>
+        <title>{seo.metaTitle || page.title}</title>
+        {seo.metaDescription ? <meta name="description" content={seo.metaDescription} /> : null}
+        {robots ? <meta name="robots" content={robots} /> : null}
         {seo.ogTitle ? <meta property="og:title" content={seo.ogTitle} /> : null}
         {seo.ogDescription ? <meta property="og:description" content={seo.ogDescription} /> : null}
         {seo.ogImage ? <meta property="og:image" content={seo.ogImage} /> : null}

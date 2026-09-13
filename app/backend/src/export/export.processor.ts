@@ -34,6 +34,37 @@ interface SharpMetadataOnly {
  * dimensioni sono note staticamente da `PRESET_DIMENSIONS`, senza invocare
  * `sharp` (SPEC-F03 § 3.3, "esposte, non ricalcolate").
  */
+/** Campi di `revision.seo` letti per sitemap, `robots.txt` e `llms.txt`. */
+interface PublishedSeo {
+  robotsIndex?: string;
+  aiPolicyAllowed?: boolean;
+  metaTitle?: string;
+  aiSummary?: string;
+}
+
+/**
+ * Crawler che raccolgono contenuti per modelli AI (ADR-69), destinatari delle
+ * esclusioni di `aiPolicy` in `robots.txt`. Elenco dichiarato, da aggiornare
+ * quando un operatore pubblica un nuovo user-agent.
+ */
+const AI_CRAWLER_AGENTS = [
+  'GPTBot',
+  'OAI-SearchBot',
+  'ChatGPT-User',
+  'ClaudeBot',
+  'Claude-User',
+  'Claude-SearchBot',
+  'anthropic-ai',
+  'Google-Extended',
+  'PerplexityBot',
+  'Perplexity-User',
+  'CCBot',
+  'Applebot-Extended',
+  'Bytespider',
+  'meta-externalagent',
+  'Amazonbot',
+];
+
 /** Header con cui il worker si fa riconoscere da `app/public-site` (ADR-67). */
 const EXPORT_RENDER_TOKEN_HEADER = 'X-Export-Render-Token';
 
@@ -617,29 +648,49 @@ export class ExportProcessor extends WorkerHost {
       revisionIds.length > 0
         ? await this.db.db.query.pageRevisionEntity.findMany({
             where: inArray(pageRevisionEntity.id, revisionIds),
-            columns: { id: true, seo: true },
+            columns: { id: true, title: true, seo: true },
           })
         : [];
-    const robotsIndexByRevisionId = new Map(
-      revisionRows.map((row) => [
-        row.id,
-        (row.seo as { robotsIndex?: string } | null)?.robotsIndex,
-      ]),
-    );
+    const revisionById = new Map(revisionRows.map((row) => [row.id, row]));
+    const seoOf = (location: PublishedPageLocation): PublishedSeo =>
+      (revisionById.get(location.publishedRevisionId ?? -1)?.seo as PublishedSeo | null) ?? {};
 
     const indexableLocations = locations.filter(
-      (location) => robotsIndexByRevisionId.get(location.publishedRevisionId ?? -1) !== 'noindex',
+      (location) => seoOf(location).robotsIndex !== 'noindex',
     );
 
     const { default: defaultLocale } = await loadMultilingualConfig(this.db);
+    const publicPathOf = (location: PublishedPageLocation): string =>
+      composePublicPath(location.locale, location.path, defaultLocale);
+
     await this.deployer.write(
       'sitemap.xml',
       this.buildSitemapXml(indexableLocations, defaultLocale),
     );
-    await this.deployer.write('robots.txt', this.buildRobotsTxt());
+
+    // business-rules.md § GEO: una Pagina che nega l'uso AI non compare in
+    // `llms.txt` ed è esclusa per i crawler AI in `robots.txt`. Una Pagina
+    // `noindex` resta fuori anche da `llms.txt` (ADR-69): chi la nasconde ai
+    // motori di ricerca non la vuole elencata altrove.
+    const aiDeniedPaths = locations
+      .filter((location) => seoOf(location).aiPolicyAllowed === false)
+      .map(publicPathOf);
+    const llmsEntries = indexableLocations
+      .filter((location) => seoOf(location).aiPolicyAllowed !== false)
+      .map((location) => ({
+        title:
+          seoOf(location).metaTitle ||
+          revisionById.get(location.publishedRevisionId ?? -1)?.title ||
+          publicPathOf(location),
+        url: this.resolveAbsolutePublicUrl(publicPathOf(location)),
+        summary: seoOf(location).aiSummary,
+      }));
+
+    await this.deployer.write('robots.txt', this.buildRobotsTxt(aiDeniedPaths));
+    await this.deployer.write('llms.txt', this.buildLlmsTxt(llmsEntries));
 
     this.logger.log(
-      `sitemap.xml/robots.txt rigenerati (${indexableLocations.length} pagina/e indicizzabili su ${locations.length} pubblicate).`,
+      `sitemap.xml/robots.txt/llms.txt rigenerati (${indexableLocations.length} pagina/e indicizzabili, ${llmsEntries.length} in llms.txt, ${aiDeniedPaths.length} negate ai crawler AI, su ${locations.length} pubblicate).`,
     );
   }
 
@@ -660,9 +711,29 @@ export class ExportProcessor extends WorkerHost {
   }
 
   /** Default conservativo dichiarato in SPEC-F03 § 4.2: nessun campo di `app_settings` da cui derivare direttive di disabilitazione globale oggi. */
-  private buildRobotsTxt(): string {
+  private buildRobotsTxt(aiDeniedPaths: string[]): string {
     const sitemapUrl = this.resolveAbsolutePublicUrl('/sitemap.xml');
-    return `User-agent: *\nAllow: /\nSitemap: ${sitemapUrl}\n`;
+    const aiGroup =
+      aiDeniedPaths.length > 0
+        ? `\n${AI_CRAWLER_AGENTS.map((agent) => `User-agent: ${agent}`).join('\n')}\n` +
+          `${aiDeniedPaths.map((path) => `Disallow: ${path}`).join('\n')}\n`
+        : '';
+    return `User-agent: *\nAllow: /\n${aiGroup}\nSitemap: ${sitemapUrl}\n`;
+  }
+
+  /**
+   * `llms.txt` (business-rules.md § GEO regola 1, formato llmstxt.org): titolo
+   * del sito, poi una voce per Pagina con titolo, URL assoluta e `aiSummary`
+   * quando c'è. Il nome del sito è l'host pubblico: nessuna impostazione
+   * globale lo definisce oggi.
+   */
+  private buildLlmsTxt(entries: { title: string; url: string; summary?: string }[]): string {
+    const siteName = new URL(AppConstants.staticSiteBaseUrl).host;
+    const lines = entries.map(
+      (entry) =>
+        `- [${entry.title}](${entry.url})${entry.summary ? `: ${entry.summary.replace(/\s+/g, ' ').trim()}` : ''}`,
+    );
+    return `# ${siteName}\n\n## Pagine\n\n${lines.join('\n')}${lines.length > 0 ? '\n' : ''}`;
   }
 
   /** Combina `AppConstants.staticSiteBaseUrl` con un percorso pubblico relativo, senza doppio `/`. */

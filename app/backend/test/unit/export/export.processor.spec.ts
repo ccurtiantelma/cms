@@ -892,6 +892,108 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
       expect(sitemap).not.toContain('<loc>https://www.example.test/about-us</loc>');
     });
 
+    it("llms.txt: Pagine consentite con titolo, URL e aiSummary; escluse quelle che negano l'uso AI o sono noindex (business-rules § GEO)", async () => {
+      db.db.query.pageEntity.findMany.mockResolvedValue([
+        {
+          id: 1,
+          guid: 'g-ok',
+          slug: 'servizi',
+          parentId: null,
+          locale: 'it-IT',
+          publishedRevisionId: 401,
+        },
+        {
+          id: 2,
+          guid: 'g-no-ai',
+          slug: 'riservata',
+          parentId: null,
+          locale: 'it-IT',
+          publishedRevisionId: 402,
+        },
+        {
+          id: 3,
+          guid: 'g-noindex',
+          slug: 'nascosta',
+          parentId: null,
+          locale: 'it-IT',
+          publishedRevisionId: 403,
+        },
+      ]);
+      db.db.query.pageRevisionEntity.findMany.mockResolvedValueOnce([
+        {
+          id: 401,
+          title: 'Servizi',
+          seo: { metaTitle: 'I nostri servizi', aiSummary: 'Consulenza e sviluppo.' },
+        },
+        { id: 402, title: 'Riservata', seo: { aiPolicyAllowed: false } },
+        { id: 403, title: 'Nascosta', seo: { robotsIndex: 'noindex' } },
+      ]);
+
+      await processor.process(buildJob({ kind: 'full-site' }));
+
+      const llms = writtenContent('llms.txt') as string;
+      expect(llms).toContain('# www.example.test');
+      expect(llms).toContain(
+        '- [I nostri servizi](https://www.example.test/servizi): Consulenza e sviluppo.',
+      );
+      expect(llms).not.toContain('riservata');
+      expect(llms).not.toContain('nascosta');
+    });
+
+    it("robots.txt: le Pagine che negano l'uso AI sono escluse per i crawler AI, non per gli altri", async () => {
+      db.db.query.pageEntity.findMany.mockResolvedValue([
+        {
+          id: 1,
+          guid: 'g-ok',
+          slug: 'servizi',
+          parentId: null,
+          locale: 'it-IT',
+          publishedRevisionId: 501,
+        },
+        {
+          id: 2,
+          guid: 'g-no-ai',
+          slug: 'riservata',
+          parentId: null,
+          locale: 'it-IT',
+          publishedRevisionId: 502,
+        },
+      ]);
+      db.db.query.pageRevisionEntity.findMany.mockResolvedValueOnce([
+        { id: 501, title: 'Servizi', seo: {} },
+        { id: 502, title: 'Riservata', seo: { aiPolicyAllowed: false } },
+      ]);
+
+      await processor.process(buildJob({ kind: 'full-site' }));
+
+      const robots = writtenContent('robots.txt') as string;
+      expect(robots).toMatch(/^User-agent: \*\nAllow: \//);
+      expect(robots).toContain('User-agent: GPTBot');
+      expect(robots).toContain('User-agent: ClaudeBot');
+      expect(robots).toContain('Disallow: /riservata');
+      expect(robots).not.toContain('Disallow: /servizi');
+    });
+
+    it("robots.txt senza gruppo AI quando nessuna Pagina nega l'uso AI", async () => {
+      db.db.query.pageEntity.findMany.mockResolvedValue([
+        {
+          id: 1,
+          guid: 'g-ok',
+          slug: 'servizi',
+          parentId: null,
+          locale: 'it-IT',
+          publishedRevisionId: 601,
+        },
+      ]);
+      db.db.query.pageRevisionEntity.findMany.mockResolvedValueOnce([
+        { id: 601, title: 'Servizi', seo: {} },
+      ]);
+
+      await processor.process(buildJob({ kind: 'full-site' }));
+
+      expect(writtenContent('robots.txt')).not.toContain('GPTBot');
+    });
+
     it('esclude dalla sitemap le Pagine la cui Revisione pubblicata porta seo.robotsIndex "noindex"', async () => {
       db.db.query.pageEntity.findMany.mockResolvedValue([
         {

@@ -17,7 +17,6 @@ import { MigratableBlockNode } from '../../blocks/migration/block-migration.type
 import { BlockTreeValidatorService } from '../../blocks/validator/block-tree-validator.service';
 import { ValidatableBlockNode } from '../../blocks/validator/validatable-node.types';
 import { BlockPropSanitizerService } from '../../common/sanitizer/block-prop-sanitizer.service';
-import { TreeSanitizerService } from '../../common/sanitizer/tree-sanitizer.service';
 
 /** Slug pubblico della pagina, root (`parentId` null), unico per `locale` (F17-01, "v1.0 Demo Showcase"). */
 const PAGE_SLUG = 'chi-siamo';
@@ -248,12 +247,13 @@ export async function antelmaChiSiamoPageSeed(
   }
 
   const content = buildPersistableContentTree();
-  const seoSanitizer = new TreeSanitizerService();
-  const seo = seoSanitizer.sanitizeTree({
+  // Testo semplice, salvato verbatim come fa `PagesService` (CLAUDE.md § Security):
+  // il sanitizzatore HTML trasformava `&` in `&amp;`, visibile nel titolo.
+  const seo: Record<string, string> = {
     metaTitle: PAGE_TITLE,
     metaDescription:
       'Antelma: chi siamo e i nostri servizi enterprise — connettività, cloud e security.',
-  });
+  };
 
   const existing = await db.query.pageEntity.findFirst({
     where: and(

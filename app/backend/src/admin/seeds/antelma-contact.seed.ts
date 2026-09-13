@@ -20,7 +20,6 @@ import { MigratableBlockNode } from '../../blocks/migration/block-migration.type
 import { BlockTreeValidatorService } from '../../blocks/validator/block-tree-validator.service';
 import { ValidatableBlockNode } from '../../blocks/validator/validatable-node.types';
 import { BlockPropSanitizerService } from '../../common/sanitizer/block-prop-sanitizer.service';
-import { TreeSanitizerService } from '../../common/sanitizer/tree-sanitizer.service';
 import {
   detectRasterMimeType,
   readRasterDimensions,
@@ -617,13 +616,14 @@ export async function antelmaContactSeed(dbService: DbService): Promise<AntelmaC
   await ensureAntelmaHeroImageFile(dbService, author.id);
 
   const content = buildPersistableContentTree();
-  const seoSanitizer = new TreeSanitizerService();
-  const seo = seoSanitizer.sanitizeTree({
+  // Testo semplice, salvato verbatim come fa `PagesService` (CLAUDE.md § Security):
+  // il sanitizzatore HTML trasformava `&` in `&amp;`, visibile nel titolo.
+  const seo: Record<string, string> = {
     metaTitle: PAGE_TITLE,
     metaDescription:
       'Richiedi un contatto con Antelma: compila il modulo per ricevere assistenza e ' +
       'informazioni sui servizi offerti dal gruppo.',
-  });
+  };
 
   const existing = await db.query.pageEntity.findFirst({
     where: and(
