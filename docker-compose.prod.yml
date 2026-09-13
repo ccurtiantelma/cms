@@ -81,8 +81,12 @@ services:
       STATIC_EXPORT_PATH: /srv/static-site
       PUBLIC_SITE_URL: http://public-site:4000
       EXPORT_RENDER_SECRET: ${EXPORT_RENDER_SECRET:?Imposta EXPORT_RENDER_SECRET in .env}
+      # Log delle visite scritti da nginx-static (ADR-68): letti, trasformati in
+      # eventi anonimi e cancellati dal job `edge-log-ingestion-queue`.
+      EDGE_ACCESS_LOG_DIR: /srv/edge-logs
     volumes:
       - static_site:/srv/static-site
+      - edge_logs:/srv/edge-logs
     depends_on:
       postgres:
         condition: service_healthy
@@ -140,8 +144,12 @@ services:
   nginx-static:
     image: nginx:1.27-alpine
     restart: unless-stopped
+    # La directory dei log va resa scrivibile dal worker Nginx (file per giorno,
+    # aperti con i suoi permessi) e cancellabile dal backend (utente node).
+    command: ['/bin/sh', '-c', "mkdir -p /var/log/edge && chmod 0777 /var/log/edge && exec nginx -g 'daemon off;'"]
     volumes:
       - static_site:/usr/share/nginx/html:ro
+      - edge_logs:/var/log/edge
       - ./nginx/static-site.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - edge_net
@@ -156,3 +164,4 @@ volumes:
   pgdata_prod:
   redisdata_prod:
   static_site:
+  edge_logs:

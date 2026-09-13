@@ -221,6 +221,18 @@ export class AppConstants {
    * un'azione distruttiva.
    */
   static readonly analyticsRollupCronPattern = str('ANALYTICS_ROLLUP_CRON_PATTERN', '*/5 * * * *');
+  /**
+   * Directory dei log delle visite scritti da `nginx-static` (ADR-68), letti
+   * dal job `edge-log-ingestion-queue`. Relativa alla cwd in sviluppo
+   * (`app/backend/storage/edge-logs`, montata dal compose di sviluppo), volume
+   * `edge_logs` in produzione.
+   */
+  static readonly edgeAccessLogDir = str('EDGE_ACCESS_LOG_DIR', 'storage/edge-logs');
+  /** Frequenza del job che legge i log delle visite (ADR-68). */
+  static readonly edgeLogIngestionCronPattern = str(
+    'EDGE_LOG_INGESTION_CRON_PATTERN',
+    '*/5 * * * *',
+  );
 
   /**
    * Osservabilità opzionale (ADR-15), entrambe disattivate di default (opt-in
@@ -243,7 +255,7 @@ export class AppConstants {
    * deployer implementato). Contiene sia l'HTML esportato per `locale`/
    * `path` sia `manifest.json`.
    */
-  static readonly staticExportPath = str('STATIC_EXPORT_PATH', 'dist/static-site');
+  static readonly staticExportPath = str('STATIC_EXPORT_PATH', 'storage/static-site');
   /** Dimensione dei batch di fan-out del full-site rebuild (RFC-44 § Decisione 4): backpressure, mai tutto in un solo giro. */
   static readonly staticExportFullSiteBatchSize = num('STATIC_EXPORT_FULL_SITE_BATCH_SIZE', 50);
 

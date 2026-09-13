@@ -494,13 +494,13 @@ export const siteTemplateEntity = pgTable(
 );
 
 // ─── ANALYTICS EVENTS ─────────────────────────────────────────────────────────
-// Tabella APPEND-ONLY (una riga per pageview, scritta una sola volta dal
-// middleware di ingestion `AnalyticsIngestionMiddleware` e mai più toccata),
+// Tabella APPEND-ONLY (una riga per pageview, scritta una sola volta dal job
+// che legge i log di `nginx-static`, ADR-68, e mai più toccata),
 // con UNA deviazione dichiarata dall'archetipo append-only di CLAUDE.md §
 // Database: `createdBy` è nullable invece di assente. Le righe append-only
 // "vere" (`audit_log`, `page_revisions`) sono scritte da un'azione autenticata
 // e non hanno bisogno di `createdBy` nullable; qui invece lo scrivente è
-// traffico pubblico anonimo (nessun `authInfo`), quindi non esiste un utente
+// un job che registra traffico pubblico anonimo (nessun `authInfo`), quindi non esiste un utente
 // da attribuire — stessa motivazione già usata dalla `publicPageviewDailyEntity`
 // ora rimossa per i suoi `createdBy`/`updatedBy` nullable. Nessun IP grezzo:
 // `visitorHash` è uno SHA-256 esadecimale di IP+user-agent salato con un salt

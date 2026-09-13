@@ -11,9 +11,8 @@ import { AnalyticsDeviceStatsDto } from './dto/analytics-device-stats.dto';
 
 /**
  * Reportistica analytics interna, privacy-first (GDPR, zero cookie).
- * Nessun endpoint di ingest qui: la raccolta è a carico di
- * `AnalyticsIngestionMiddleware`, montato su `public/*path` in
- * `AppModule.configure()`. Lettura riservata a Manager+ (CLAUDE.md § RBAC:
+ * Nessun endpoint di ingest qui: le visite arrivano dai log di
+ * `nginx-static` (`EdgeLogIngestionService`, ADR-68). Lettura riservata a Manager+ (CLAUDE.md § RBAC:
  * reportistica editoriale/operativa, non una funzione Admin-only).
  */
 @ApiTags('Analytics')

@@ -45,7 +45,8 @@ COPY app/backend/package.json ./app/backend/package.json
 # un volume nominato vuoto eredita proprietario e permessi dalla directory
 # dell'immagine, quindi va creata qui e assegnata a `node`, altrimenti il
 # worker di export non può scriverci.
-RUN mkdir -p /app/logs /srv/static-site && chown -R node:node /app/logs /srv/static-site
+# /srv/edge-logs: punto di mount del volume dei log delle visite (ADR-68).
+RUN mkdir -p /app/logs /srv/static-site /srv/edge-logs && chown -R node:node /app/logs /srv/static-site /srv/edge-logs
 
 # Utente non-root (immagine node:alpine include già "node", uid/gid 1000).
 USER node

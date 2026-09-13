@@ -31,5 +31,20 @@ services:
       - '51025:1025'   # SMTP
       - '58025:8025'   # Web UI → http://localhost:58025
 
+  # Sito statico in locale (ADR-63, ADR-68): stessa conf di produzione, servita
+  # su http://localhost:58080. Legge i file che il backend in sviluppo scrive in
+  # app/backend/storage/static-site e scrive i log delle visite in
+  # app/backend/storage/edge-logs, che il job del backend legge ogni 5 minuti.
+  # Non in dist/: `nest start --watch` la svuota a ogni ricompilazione.
+  nginx-static:
+    image: nginx:1.27-alpine
+    command: ['/bin/sh', '-c', "mkdir -p /var/log/edge && chmod 0777 /var/log/edge && exec nginx -g 'daemon off;'"]
+    volumes:
+      - ./app/backend/storage/static-site:/usr/share/nginx/html:ro
+      - ./app/backend/storage/edge-logs:/var/log/edge
+      - ./nginx/static-site.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - '58080:80'
+
 volumes:
   pgdata:

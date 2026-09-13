@@ -156,14 +156,13 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse, nonce: s
   // ADR-67 (ADR-53 § 5): con il segreto di export configurato le Pagine si
   // rendono solo per il worker; ogni altra richiesta riceve lo stesso `404`
   // di una Pagina inesistente, senza consultare il backend.
-  const isExportRender = req.headers[EXPORT_RENDER_TOKEN_HEADER] !== undefined;
   if (PublicSiteConfig.exportRenderSecret !== '' && !hasValidExportRenderToken(req)) {
     writeHead(res, 404, nonce, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(isHead ? undefined : await renderErrorDocument(404, 'Pagina non trovata', css.href, nonce));
     return;
   }
 
-  const resolution = await resolvePublicPage(url.pathname, isExportRender);
+  const resolution = await resolvePublicPage(url.pathname);
 
   switch (resolution.kind) {
     case 'ok': {

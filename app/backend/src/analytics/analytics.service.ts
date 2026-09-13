@@ -2,7 +2,6 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { and, asc, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { DbService } from '../db/db.service';
 import { analyticsDailyRollupEntity, analyticsEventEntity } from '../db/schema';
-import { AnalyticsDevice } from './user-agent-parser.util';
 import { AnalyticsOverviewDto } from './dto/analytics-overview.dto';
 import {
   AnalyticsTimeseriesDto,
@@ -15,30 +14,14 @@ import {
   AnalyticsDistributionRowDto,
 } from './dto/analytics-device-stats.dto';
 
-/** Payload di un evento anonimo, prodotto da `AnalyticsIngestionMiddleware`. */
-export interface RecordEventInput {
-  path: string;
-  visitorHash: string;
-  device: AnalyticsDevice;
-  browser?: string;
-  os?: string;
-  referrer?: string;
-  country?: string;
-}
-
-/** Lunghezza massima delle colonne `varchar` corrispondenti in `analytics_events` — troncamento difensivo. */
-const PATH_MAX_LENGTH = 500;
-const REFERRER_MAX_LENGTH = 500;
-
 const DEFAULT_RANGE_DAYS = 30;
 const DEFAULT_TOP_LIMIT = 10;
 const MS_PER_DAY = 86_400_000;
 
 /**
  * Analytics interno, privacy-first e GDPR-compliant: nessun cookie, nessun IP
- * grezzo persistito (`visitor-hash.util.ts`). `recordEvent` è l'unico punto
- * di scrittura (chiamato dal middleware di ingestion, mai atteso nel path
- * della richiesta pubblica); i restanti metodi leggono KPI/serie per la
+ * grezzo persistito (`visitor-hash.util.ts`). le visite sono scritte dal job
+ * che legge i log di `nginx-static` (ADR-68); i metodi di questo servizio leggono KPI/serie per la
  * dashboard amministrativa (`GuardManager`+).
  *
  * Le query "leggere" (top-pages) leggono da `analytics_daily_rollups`
@@ -52,24 +35,6 @@ const MS_PER_DAY = 86_400_000;
 export class AnalyticsService {
   /** Inietta l'accesso al DB. */
   constructor(private readonly db: DbService) {}
-
-  /**
-   * Inserisce un evento di pageview anonimo. Chiamata dal middleware di
-   * ingestion senza essere attesa nel path della richiesta pubblica: un
-   * eventuale errore qui non deve mai raggiungere il client (gestito dal
-   * `.catch()` del chiamante).
-   */
-  async recordEvent(input: RecordEventInput): Promise<void> {
-    await this.db.db.insert(analyticsEventEntity).values({
-      path: input.path.slice(0, PATH_MAX_LENGTH),
-      visitorHash: input.visitorHash,
-      device: input.device,
-      browser: input.browser,
-      os: input.os,
-      referrer: input.referrer?.slice(0, REFERRER_MAX_LENGTH),
-      country: input.country,
-    });
-  }
 
   /**
    * KPI aggregati dell'intervallo richiesto: totale view, visitatori unici

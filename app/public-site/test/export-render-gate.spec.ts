@@ -21,8 +21,7 @@ const distServerPath = join(publicSiteDir, 'dist', 'server.js');
  * `public-site` rende una Pagina pubblicata solo al worker di export che
  * presenta `X-Export-Render-Token`. Il traffico anonimo riceve `404` senza che
  * il backend venga interrogato; l'anteprima con token e gli asset restano
- * raggiungibili; un render di export porta al backend il marcatore che lo
- * esclude dalle analytics.
+ * raggiungibili.
  *
  * Server reale (`dist/server.js` via `spawn`), stesso impianto di
  * `preview-cache-control.spec.ts`.
@@ -55,8 +54,8 @@ const PREVIEW_PAGE: PagePreviewContentDto = {
   seo: {},
 };
 
-/** Letture di `public/pages` ricevute dal backend finto, con il marcatore di export se presente. */
-const pageLookups: { path: string | null; exportMarker: string | undefined }[] = [];
+/** Letture di `public/pages` ricevute dal backend finto. */
+const pageLookups: (string | null)[] = [];
 
 function ensureBuild(): void {
   if (existsSync(distServerPath)) {
@@ -92,11 +91,7 @@ function startMockApi(): Promise<{ server: HttpServer; port: number }> {
       };
 
       if (url.pathname === '/api/v1/public/pages') {
-        const header = req.headers['x-export-render'];
-        pageLookups.push({
-          path: url.searchParams.get('path'),
-          exportMarker: typeof header === 'string' ? header : undefined,
-        });
+        pageLookups.push(url.searchParams.get('path'));
         if (url.searchParams.get('path') === PUBLISHED_PATH) {
           json(PUBLISHED_PAGE);
           return;
@@ -207,7 +202,7 @@ describe('render di Pagine riservato al worker di export (ADR-67, ADR-53 § 5)',
     expect(pageLookups).toEqual([]);
   });
 
-  it('worker di export: 200, e il backend riceve il marcatore che esclude il render dalle analytics', async () => {
+  it('worker di export: 200, la Pagina viene risolta sul backend', async () => {
     const response = await fetch(`${siteBaseUrl}${PUBLISHED_PATH}`, {
       headers: { 'X-Export-Render-Token': SECRET },
     });
@@ -215,7 +210,7 @@ describe('render di Pagine riservato al worker di export (ADR-67, ADR-53 § 5)',
 
     expect(response.status).toBe(200);
     expect(body).toContain('Contenuto');
-    expect(pageLookups).toEqual([{ path: PUBLISHED_PATH, exportMarker: '1' }]);
+    expect(pageLookups).toEqual([PUBLISHED_PATH]);
   });
 
   it("l'anteprima con token resta raggiungibile senza segreto di export", async () => {

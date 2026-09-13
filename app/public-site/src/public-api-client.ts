@@ -30,20 +30,12 @@ function extractCanonicalPath(location: string): string | null {
  * F03/T2). `redirect: 'manual'` per poter leggere la `Location` del `308` di
  * canonicalizzazione e propagarla, non reimplementarla (ADR-24 § 4).
  */
-export async function resolvePublicPage(
-  pathname: string,
-  isExportRender: boolean,
-): Promise<PublicPageResolution> {
+export async function resolvePublicPage(pathname: string): Promise<PublicPageResolution> {
   const url = `${PublicSiteConfig.apiBaseUrl}/api/v1/public/pages?path=${encodeURIComponent(pathname)}`;
 
   let res: Response;
   try {
-    res = await fetch(url, {
-      redirect: 'manual',
-      // ADR-67: una lettura per l'export statico non è una visita, il backend
-      // non la registra nelle analytics.
-      headers: isExportRender ? { 'X-Export-Render': '1' } : undefined,
-    });
+    res = await fetch(url, { redirect: 'manual' });
   } catch {
     return { kind: 'error' };
   }

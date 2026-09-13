@@ -10,7 +10,6 @@ import { DbModule } from './db/db.module';
 import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
 import { AuthMiddleware } from './auth/auth.middleware';
-import { AnalyticsIngestionMiddleware } from './analytics/analytics-ingestion.middleware';
 import { RedisModule } from './redis/redis.module';
 import { AdminModule } from './admin/admin.module';
 import { SettingsModule } from './settings/settings.module';
@@ -95,6 +94,8 @@ import { FormsCorsMiddleware } from './forms/forms-cors.middleware';
         // Pattern cron del repeatable job di rollup analytics (sempre attivo),
         // mirror di FILES_CLEANUP_CRON_PATTERN.
         ANALYTICS_ROLLUP_CRON_PATTERN: Joi.string().default('*/5 * * * *'),
+        EDGE_ACCESS_LOG_DIR: Joi.string().default('storage/edge-logs'),
+        EDGE_LOG_INGESTION_CRON_PATTERN: Joi.string().default('*/5 * * * *'),
         SENTRY_ENABLED: Joi.boolean().default(false),
         SENTRY_DSN: Joi.string().allow('').optional(),
         SENTRY_ENVIRONMENT: Joi.string().optional(),
@@ -184,13 +185,6 @@ export class AppModule {
         { path: 'auth/reset-password', method: RequestMethod.ALL },
       )
       .forRoutes({ path: '*path', method: RequestMethod.ALL });
-
-    // Ingestion analytics privacy-first: middleware separato (non sostituisce
-    // AuthMiddleware, che sopra esclude comunque `public/*path`), montato solo
-    // sulle GET pubbliche. Non blocca mai la risposta (vedi JSDoc della classe).
-    consumer
-      .apply(AnalyticsIngestionMiddleware)
-      .forRoutes({ path: 'public/*path', method: RequestMethod.GET });
 
     // CORS scoped alla sola rotta di submit dei Form (ADR-46 § 5, RFC-46 D5):
     // la policy globale di `main.ts` resta l'allowlist fissa, mai un

@@ -1,24 +1,19 @@
 import { Module } from '@nestjs/common';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
-import { AnalyticsIngestionMiddleware } from './analytics-ingestion.middleware';
 import { AnalyticsRollupQueueModule } from '../queues/analytics-rollup-queue/analytics-rollup-queue.module';
+import { EdgeLogIngestionQueueModule } from '../queues/edge-log-ingestion-queue/edge-log-ingestion-queue.module';
 
 /**
- * Analytics interno privacy-first (GDPR, zero cookie), sostituisce l'ex
- * sistema di aggregato SSR con secret. `AnalyticsIngestionMiddleware` è
- * dichiarato provider di questo modulo (non esportato: `AppModule` lo referenzia
- * per classe in `consumer.apply()`, Nest lo risolve dal grafo dei moduli
- * importati — stesso meccanismo di `AuthMiddleware`/`AuthModule`). Importa
- * `AnalyticsRollupQueueModule` per il repeatable job BullMQ che ricalcola
- * `analytics_daily_rollups`. Nessun bisogno di `PagesModule`:
- * `canonicalizePublicPath` è una pura funzione di `pages/public-path.util.ts`,
- * non un provider.
+ * Analytics interno privacy-first (GDPR, zero cookie). Le visite arrivano dai
+ * log di `nginx-static` (`EdgeLogIngestionQueueModule`, ADR-68) e sono
+ * aggregate in `analytics_daily_rollups` da `AnalyticsRollupQueueModule`; il
+ * controller legge KPI e serie per la dashboard.
  */
 @Module({
-  imports: [AnalyticsRollupQueueModule],
+  imports: [AnalyticsRollupQueueModule, EdgeLogIngestionQueueModule],
   controllers: [AnalyticsController],
-  providers: [AnalyticsService, AnalyticsIngestionMiddleware],
-  exports: [AnalyticsService, AnalyticsIngestionMiddleware],
+  providers: [AnalyticsService],
+  exports: [AnalyticsService],
 })
 export class AnalyticsModule {}

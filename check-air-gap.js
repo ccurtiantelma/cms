@@ -18,6 +18,7 @@
  *    - ogni pagina esportata è servita byte per byte all'URL che ADR-65 fissa,
  *      con `Cache-Control: no-cache`; il CSS con fingerprint è `immutable`;
  *      `manifest.json` non è pubblico;
+ *    - la visita a una Pagina finisce nel log delle visite, un asset no (ADR-68);
  *    - il tombstone (file rimosso dal volume) rende quel percorso `404`.
  *
  * Uso: node check-air-gap.js <directory-artefatti-export>
@@ -40,6 +41,7 @@ const COMPOSE_FILE = path.join(__dirname, 'docker-compose.prod.yml');
 const COMPOSE = ['compose', '-p', PROJECT, '-f', COMPOSE_FILE];
 const MGMT_NET = `${PROJECT}_mgmt_net`;
 const STATIC_VOLUME = `${PROJECT}_static_site`;
+const LOG_VOLUME = `${PROJECT}_edge_logs`;
 const HELPER_IMAGE = 'nginx:1.27-alpine';
 const BACKEND_STUB = `${PROJECT}-backend-stub`;
 const EDGE_URL = 'http://127.0.0.1:58080';
@@ -130,6 +132,14 @@ function checkStructure() {
     pass(`il backend scrive static_site su STATIC_EXPORT_PATH (${exportPath})`);
   } else {
     fail('il backend deve montare static_site in scrittura esattamente su STATIC_EXPORT_PATH');
+  }
+
+  const backendLogs = (services.backend.volumes ?? []).find((v) => v.source === 'edge_logs');
+  const edgeLogs = (edge.volumes ?? []).find((v) => v.source === 'edge_logs');
+  if (backendLogs && edgeLogs && backendLogs.target === services.backend.environment?.EDGE_ACCESS_LOG_DIR) {
+    pass('il volume dei log delle visite è condiviso fra nginx-static e il backend (ADR-68)');
+  } else {
+    fail('edge_logs deve essere montato da nginx-static e dal backend su EDGE_ACCESS_LOG_DIR');
   }
 
   if (!edge.depends_on && !edge.env_file && !edge.environment) {
@@ -237,6 +247,34 @@ async function checkLive(artifactDir, htmlFiles) {
     pass('manifest.json non è pubblico');
   } else {
     fail(`manifest.json esposto sul piano pubblico (status ${manifest.status})`);
+  }
+
+  // ADR-68: la visita a una Pagina finisce nel log JSON che il backend legge;
+  // gli asset no. Letto dal volume con un container di servizio, come farebbe il job.
+  const logDump = spawnSync(
+    'docker',
+    ['run', '--rm', '-v', `${LOG_VOLUME}:/logs:ro`, HELPER_IMAGE, 'sh', '-c', 'cat /logs/access-*.log 2>/dev/null'],
+    { encoding: 'utf-8' },
+  ).stdout;
+  const loggedUris = logDump
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      try {
+        return JSON.parse(line).uri;
+      } catch {
+        return null;
+      }
+    });
+  if (loggedUris.includes(publicUrlOf(htmlFiles[0]))) {
+    pass(`la visita a ${publicUrlOf(htmlFiles[0])} è nel log delle visite`);
+  } else {
+    fail(`la visita a ${publicUrlOf(htmlFiles[0])} non compare nel log delle visite`);
+  }
+  if (!loggedUris.some((uri) => typeof uri === 'string' && uri.startsWith('/assets/'))) {
+    pass('gli asset non finiscono nel log delle visite');
+  } else {
+    fail('un asset è finito nel log delle visite');
   }
 
   const tombstoned = htmlFiles[0];
