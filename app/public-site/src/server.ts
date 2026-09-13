@@ -13,15 +13,33 @@ import { renderErrorDocument, renderPageDocument, renderPreviewDocument } from '
 import { createNonce, securityHeaders } from './security-headers';
 
 /**
- * Header imposto su **ogni** risposta della rotta di anteprima, successo o
- * `404` che sia — senza eccezioni configurabili (ADR-25 § 4).
+ * Header imposti su **ogni** risposta della rotta di anteprima — `404` per
+ * token vuoto, `200`, `404`, `500` e `500` di ultima istanza — senza eccezioni
+ * configurabili. Un solo oggetto invece di due costanti separate perché un ramo
+ * non possa ricordarne uno e dimenticare l'altro: stesso principio di
+ * `writeHead` qui sotto, unico punto che scrive gli header di sicurezza.
+ *
+ * - `X-Robots-Tag` (ADR-25 § 4): l'anteprima non è indicizzabile per
+ *   costruzione, non per convenzione.
+ * - `Cache-Control` (ADR-25 § 3, «nessuna cache Redis: ogni lettura è fresca»):
+ *   la freschezza lato server non serve a nulla se un proxy o il browser
+ *   trattengono l'HTML di una bozza. `no-store` è la direttiva che vieta la
+ *   memorizzazione (RFC 9111); `private` è difesa in profondità per le cache
+ *   condivise legacy che onorano l'ambito di cacheabilità ma non `no-store`.
+ *   Sta qui e non in `securityHeaders()` perché quest'ultima vale per ogni
+ *   risposta del processo, comprese le Pagine pubblicate e il CSS con
+ *   fingerprint che porta `immutable`: un `no-store` centralizzato
+ *   contraddirebbe ADR-53 § 2 sulla cacheabilità del contenuto pubblicato.
  */
-const PREVIEW_ROBOTS_HEADER = 'noindex, nofollow, noarchive';
+const PREVIEW_RESPONSE_HEADERS = {
+  'X-Robots-Tag': 'noindex, nofollow, noarchive',
+  'Cache-Control': 'no-store, private',
+} as const;
 
 /**
  * Scrive gli header di sicurezza (`securityHeaders`, mai omessi — successo,
- * `404`, `405`, `308`, `500`, stesso principio di `PREVIEW_ROBOTS_HEADER` qui
- * esteso a ogni risposta) più quelli specifici della singola rotta, in
+ * `404`, `405`, `308`, `500`, stesso principio di `PREVIEW_RESPONSE_HEADERS`
+ * qui esteso a ogni risposta) più quelli specifici della singola rotta, in
  * un'unica chiamata a `writeHead`. Unico punto che chiama `writeHead` in
  * questo file: nessuna rotta può dimenticare gli header di sicurezza perché
  * nessuna rotta chiama `writeHead` direttamente.
@@ -160,9 +178,9 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse, nonce: s
  * dalla risoluzione per slug di ADR-24: mai fuso col routing pubblico, per
  * costruzione qui non c'è iterazione per segmenti, solo un token opaco.
  *
- * Ogni risposta — successo o `404` — porta sempre `X-Robots-Tag`, senza
- * eccezioni: l'anteprima non è indicizzabile per costruzione, non per
- * convenzione.
+ * Ogni risposta — successo, `404` o `500` — porta sempre
+ * `PREVIEW_RESPONSE_HEADERS`, senza eccezioni: l'anteprima non è indicizzabile
+ * né memorizzabile per costruzione, non per convenzione.
  */
 async function handlePreviewRequest(
   pathname: string,
@@ -176,7 +194,7 @@ async function handlePreviewRequest(
     if (!token) {
       writeHead(res, 404, nonce, {
         'Content-Type': 'text/html; charset=utf-8',
-        'X-Robots-Tag': PREVIEW_ROBOTS_HEADER,
+        ...PREVIEW_RESPONSE_HEADERS,
       });
       res.end(isHead ? undefined : await renderErrorDocument(404, 'Pagina non trovata', css.href, nonce));
       return;
@@ -191,7 +209,7 @@ async function handlePreviewRequest(
           : await renderPreviewDocument(resolution.page, css.href, formSubmitScript.href, nonce);
         writeHead(res, 200, nonce, {
           'Content-Type': 'text/html; charset=utf-8',
-          'X-Robots-Tag': PREVIEW_ROBOTS_HEADER,
+          ...PREVIEW_RESPONSE_HEADERS,
         });
         res.end(html);
         return;
@@ -199,7 +217,7 @@ async function handlePreviewRequest(
       case 'not-found': {
         writeHead(res, 404, nonce, {
           'Content-Type': 'text/html; charset=utf-8',
-          'X-Robots-Tag': PREVIEW_ROBOTS_HEADER,
+          ...PREVIEW_RESPONSE_HEADERS,
         });
         res.end(isHead ? undefined : await renderErrorDocument(404, 'Pagina non trovata', css.href, nonce));
         return;
@@ -207,20 +225,20 @@ async function handlePreviewRequest(
       case 'error': {
         writeHead(res, 500, nonce, {
           'Content-Type': 'text/html; charset=utf-8',
-          'X-Robots-Tag': PREVIEW_ROBOTS_HEADER,
+          ...PREVIEW_RESPONSE_HEADERS,
         });
         res.end(isHead ? undefined : await renderErrorDocument(500, 'Errore interno', css.href, nonce));
         return;
       }
     }
   } catch (error: unknown) {
-    // Un blocco/render inatteso non deve mai far perdere l'header
-    // X-Robots-Tag (ADR-25 § 4: nessuna eccezione, mai).
+    // Un blocco/render inatteso non deve mai far perdere X-Robots-Tag né
+    // Cache-Control (ADR-25 § 3-4: nessuna eccezione, mai).
     console.error('public-site: errore non gestito nell\'anteprima', error);
     if (!res.headersSent) {
       writeHead(res, 500, nonce, {
         'Content-Type': 'text/html; charset=utf-8',
-        'X-Robots-Tag': PREVIEW_ROBOTS_HEADER,
+        ...PREVIEW_RESPONSE_HEADERS,
       });
       res.end(await renderErrorDocument(500, 'Errore interno', css.href, nonce));
     } else {
