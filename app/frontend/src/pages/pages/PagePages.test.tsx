@@ -6,10 +6,12 @@
  * direttamente `fetchPages` mockato.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { renderWithProviders } from '../../test/utils';
 import type { PageRecord } from '../../types/pages.types';
+import { useAuthStore } from '../../hooks/useAuth';
+import { AppUserRoles, type AuthUser } from '../../types/common.types';
 
 const fetchPages = vi.fn();
 
@@ -20,6 +22,12 @@ vi.mock('../../services/pages.service', () => ({
   createPage: vi.fn(),
   deletePage: vi.fn(),
   issuePagePreviewToken: vi.fn(),
+}));
+
+const rebuildStaticSite = vi.fn();
+
+vi.mock('../../services/admin.service', () => ({
+  rebuildStaticSite: () => rebuildStaticSite(),
 }));
 
 vi.mock('@mantine/notifications', () => ({
@@ -106,5 +114,50 @@ describe('PagePages — badge HOME sulla colonna Titolo', () => {
     await screen.findByText('Chi siamo');
     expect(screen.queryByRole('textbox', { name: 'Filtra per lingua' })).not.toBeInTheDocument();
     expect(screen.queryByText('Lingua')).not.toBeInTheDocument();
+  });
+});
+
+describe('PagePages — rigenerazione del sito pubblico (funzione di sistema)', () => {
+  function signInAs(role: AppUserRoles): void {
+    useAuthStore.setState({
+      user: {
+        id: 1,
+        guid: 'u000000000000001',
+        name: 'Test',
+        email: 'test@cms.test',
+        role,
+        scopeId: null,
+      } satisfies AuthUser,
+    });
+  }
+
+  beforeEach(() => {
+    fetchPages.mockResolvedValue({
+      items: [],
+      totalItems: 0,
+      totalPages: 0,
+      currentPage: 1,
+      itemsPerPage: 20,
+    });
+  });
+
+  it('il SuperAdmin vede il pulsante e avvia la rigenerazione', async () => {
+    signInAs(AppUserRoles.SuperAdmin);
+    rebuildStaticSite.mockResolvedValue(undefined);
+    renderPagePages();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Rigenera sito pubblico' }));
+
+    await waitFor(() => expect(rebuildStaticSite).toHaveBeenCalledTimes(1));
+  });
+
+  it('un Admin non vede il pulsante', async () => {
+    signInAs(AppUserRoles.Admin);
+    renderPagePages();
+
+    await screen.findByText('Nessuna Pagina trovata');
+    expect(
+      screen.queryByRole('button', { name: 'Rigenera sito pubblico' }),
+    ).not.toBeInTheDocument();
   });
 });

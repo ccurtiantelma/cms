@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { GuardAdmin, GuardSuperAdmin } from '../auth/guard';
@@ -26,6 +37,20 @@ export class AdminController {
   async seedDemo(@Req() req: Request): Promise<Record<string, number>> {
     const authInfo = req['authInfo'] as AuthInfo;
     return this.adminService.seedDemo(authInfo, req.ip);
+  }
+
+  /** Accoda la rigenerazione completa del sito statico (SuperAdmin only, registrata su audit log). */
+  @Post('system/rebuild-static-site')
+  @UseGuards(GuardSuperAdmin)
+  @HttpCode(202)
+  @ApiOperation({
+    summary: 'Rigenera tutte le Pagine pubblicate del sito statico (SuperAdmin only)',
+  })
+  @ApiResponse({ status: 202, description: 'Rigenerazione accodata' })
+  @ApiResponse({ status: 403, description: 'Ruolo inferiore a SuperAdmin' })
+  async rebuildStaticSite(@Req() req: Request): Promise<void> {
+    const authInfo = req['authInfo'] as AuthInfo;
+    await this.adminService.rebuildStaticSite(authInfo, req.ip);
   }
 
   /** Cancella tutti i dati tranne il SuperAdmin (SuperAdmin only, irreversibile). */

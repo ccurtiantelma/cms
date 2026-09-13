@@ -313,6 +313,20 @@ paths:
       summary: Carica i dati demo (SuperAdmin only)
       tags:
         - Admin
+  /api/v1/app/admin/system/rebuild-static-site:
+    post:
+      operationId: AdminController_rebuildStaticSite
+      parameters: []
+      responses:
+        '202':
+          description: Rigenerazione accodata
+        '403':
+          description: Ruolo inferiore a SuperAdmin
+      security:
+        - access-token: []
+      summary: Rigenera tutte le Pagine pubblicate del sito statico (SuperAdmin only)
+      tags:
+        - Admin
   /api/v1/app/admin/system/reset-demo:
     post:
       operationId: AdminController_resetDemo
@@ -525,174 +539,6 @@ paths:
       summary: Lista paginata degli eventi di audit log (Admin+)
       tags:
         - Admin
-  /api/v1/app/settings/theme:
-    get:
-      operationId: SettingsController_getTheme
-      parameters: []
-      responses:
-        '200':
-          description: Configurazione tema corrente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ThemeConfigDto'
-      security:
-        - access-token: []
-      summary: Tema globale dell'installazione (default di fabbrica se mai salvato)
-      tags:
-        - Settings
-    put:
-      operationId: SettingsController_updateTheme
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ThemeConfigDto'
-      responses:
-        '200':
-          description: Tema salvato
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ThemeConfigDto'
-        '400':
-          description: Payload non valido (hex, palette o versione)
-        '403':
-          description: Ruolo inferiore a SuperAdmin
-      security:
-        - access-token: []
-      summary: Salva il tema globale (SuperAdmin only, registrato su audit log)
-      tags:
-        - Settings
-  /api/v1/app/settings/multilingual:
-    get:
-      operationId: SettingsController_getMultilingual
-      parameters: []
-      responses:
-        '200':
-          description: Registro Locale corrente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MultilingualConfigDto'
-      security:
-        - access-token: []
-      summary: Registro Locale attivi (default di fabbrica se mai salvato)
-      tags:
-        - Settings
-    put:
-      operationId: SettingsController_updateMultilingual
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MultilingualConfigDto'
-      responses:
-        '200':
-          description: Registro Locale salvato
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MultilingualConfigDto'
-        '400':
-          description: Il Locale di default non compare fra i Locale attivi
-        '403':
-          description: Ruolo inferiore ad Admin
-      security:
-        - access-token: []
-      summary: Salva il registro Locale attivi (Admin+ only, registrato su audit log)
-      tags:
-        - Settings
-  /api/v1/app/settings/revisions-retention:
-    get:
-      operationId: SettingsController_getRevisionsRetention
-      parameters: []
-      responses:
-        '200':
-          description: Politica di retention corrente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RevisionsRetentionDto'
-      security:
-        - access-token: []
-      summary: 'Retention delle Revisioni (default di fabbrica: potatura disattivata)'
-      tags:
-        - Settings
-    put:
-      operationId: SettingsController_updateRevisionsRetention
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RevisionsRetentionDto'
-      responses:
-        '200':
-          description: Politica di retention salvata
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RevisionsRetentionDto'
-        '400':
-          description: retentionCount fuori dal range 0-1000
-        '403':
-          description: Ruolo inferiore ad Admin
-      security:
-        - access-token: []
-      summary: >-
-        Salva la retention delle Revisioni (Admin+ only, registrato su audit
-        log)
-      tags:
-        - Settings
-  /api/v1/app/settings/global-tokens:
-    get:
-      operationId: SettingsController_getGlobalTokens
-      parameters: []
-      responses:
-        '200':
-          description: Global Design Tokens correnti
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GlobalTokensDto'
-      security:
-        - access-token: []
-      summary: Global Design Tokens del sito (default di fabbrica se mai salvati)
-      tags:
-        - Settings
-    put:
-      operationId: SettingsController_updateGlobalTokens
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GlobalTokensDto'
-      responses:
-        '200':
-          description: Global Design Tokens salvati
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GlobalTokensDto'
-        '400':
-          description: Payload non valido (hex, font, unità o versione)
-        '403':
-          description: Ruolo inferiore ad Admin
-      security:
-        - access-token: []
-      summary: >-
-        Salva i Global Design Tokens del sito (Admin+ only, registrato su audit
-        log)
-      tags:
-        - Settings
   /api/v1/app/files:
     post:
       operationId: FilesController_upload
@@ -897,6 +743,174 @@ paths:
       summary: Serve il blob di un media editoriale pubblicato (immagine)
       tags:
         - Public Media
+  /api/v1/app/settings/theme:
+    get:
+      operationId: SettingsController_getTheme
+      parameters: []
+      responses:
+        '200':
+          description: Configurazione tema corrente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThemeConfigDto'
+      security:
+        - access-token: []
+      summary: Tema globale dell'installazione (default di fabbrica se mai salvato)
+      tags:
+        - Settings
+    put:
+      operationId: SettingsController_updateTheme
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThemeConfigDto'
+      responses:
+        '200':
+          description: Tema salvato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThemeConfigDto'
+        '400':
+          description: Payload non valido (hex, palette o versione)
+        '403':
+          description: Ruolo inferiore a SuperAdmin
+      security:
+        - access-token: []
+      summary: Salva il tema globale (SuperAdmin only, registrato su audit log)
+      tags:
+        - Settings
+  /api/v1/app/settings/multilingual:
+    get:
+      operationId: SettingsController_getMultilingual
+      parameters: []
+      responses:
+        '200':
+          description: Registro Locale corrente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultilingualConfigDto'
+      security:
+        - access-token: []
+      summary: Registro Locale attivi (default di fabbrica se mai salvato)
+      tags:
+        - Settings
+    put:
+      operationId: SettingsController_updateMultilingual
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MultilingualConfigDto'
+      responses:
+        '200':
+          description: Registro Locale salvato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultilingualConfigDto'
+        '400':
+          description: Il Locale di default non compare fra i Locale attivi
+        '403':
+          description: Ruolo inferiore ad Admin
+      security:
+        - access-token: []
+      summary: Salva il registro Locale attivi (Admin+ only, registrato su audit log)
+      tags:
+        - Settings
+  /api/v1/app/settings/revisions-retention:
+    get:
+      operationId: SettingsController_getRevisionsRetention
+      parameters: []
+      responses:
+        '200':
+          description: Politica di retention corrente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevisionsRetentionDto'
+      security:
+        - access-token: []
+      summary: 'Retention delle Revisioni (default di fabbrica: potatura disattivata)'
+      tags:
+        - Settings
+    put:
+      operationId: SettingsController_updateRevisionsRetention
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevisionsRetentionDto'
+      responses:
+        '200':
+          description: Politica di retention salvata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevisionsRetentionDto'
+        '400':
+          description: retentionCount fuori dal range 0-1000
+        '403':
+          description: Ruolo inferiore ad Admin
+      security:
+        - access-token: []
+      summary: >-
+        Salva la retention delle Revisioni (Admin+ only, registrato su audit
+        log)
+      tags:
+        - Settings
+  /api/v1/app/settings/global-tokens:
+    get:
+      operationId: SettingsController_getGlobalTokens
+      parameters: []
+      responses:
+        '200':
+          description: Global Design Tokens correnti
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalTokensDto'
+      security:
+        - access-token: []
+      summary: Global Design Tokens del sito (default di fabbrica se mai salvati)
+      tags:
+        - Settings
+    put:
+      operationId: SettingsController_updateGlobalTokens
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GlobalTokensDto'
+      responses:
+        '200':
+          description: Global Design Tokens salvati
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalTokensDto'
+        '400':
+          description: Payload non valido (hex, font, unità o versione)
+        '403':
+          description: Ruolo inferiore ad Admin
+      security:
+        - access-token: []
+      summary: >-
+        Salva i Global Design Tokens del sito (Admin+ only, registrato su audit
+        log)
+      tags:
+        - Settings
   /api/v1/health:
     get:
       operationId: HealthController_check
@@ -2452,6 +2466,182 @@ components:
         scopeId:
           type: string
           description: Identificatore di scope multi-tenant/multi-sede
+    UploadFileDto:
+      type: object
+      properties:
+        entity:
+          type: string
+          description: Nome tabella/dominio a cui associare il file
+          example: invoice
+          maxLength: 100
+        entityId:
+          type: string
+          description: Id/guid dell'entità di dominio da associare
+          example: a1b2c3d4e5f6a7b8
+          maxLength: 100
+    FileMetadataDto:
+      type: object
+      properties:
+        guid:
+          type: string
+          description: Identificatore pubblico del file, usato nelle URL
+          example: a1b2c3d4e5f6a7b8
+        originalName:
+          type: string
+          description: Nome file originale (solo display)
+          example: fattura-2026-001.pdf
+        mimeType:
+          type: string
+          description: MIME type dichiarato dal client
+          example: application/pdf
+        sizeBytes:
+          type: number
+          description: Dimensione del file in byte
+          example: 348213
+        entity:
+          type: object
+          description: Nome tabella/dominio a cui il file è associato, se presente
+          example: invoice
+          nullable: true
+        entityId:
+          type: object
+          description: Id/guid dell'entità di dominio associata, se presente
+          example: a1b2c3d4e5f6a7b8
+          nullable: true
+        width:
+          type: number
+          description: >-
+            Larghezza in pixel, letta dai soli header raster all'upload (RFC-F09
+            N2). `null` per i non-raster e per le righe caricate prima della
+            migrazione `0014_add_files_dimensions`: `null` significa "non
+            misurato", mai "zero".
+          example: 1920
+          nullable: true
+        height:
+          type: number
+          description: >-
+            Altezza in pixel, stessa provenienza e stesse condizioni di `width`
+            (RFC-F09 N2).
+          example: 1080
+          nullable: true
+        url:
+          type: object
+          description: >-
+            URL pubblico derivato server-side (`api/v1/public/media/:guid`),
+            valorizzato solo se `entity` è `page-media` (ADR-27 § 2/§ 6). `null`
+            altrimenti — non implica che il blob sia effettivamente servibile:
+            la verifica del formato raster reale avviene in lettura su quella
+            rotta (ADR-27 § 3, § 4).
+          example: api/v1/public/media/a1b2c3d4e5f6a7b8
+          nullable: true
+        focalX:
+          type: number
+          description: >-
+            Percentuale orizzontale (0-100) del soggetto, usata come centro del
+            ritaglio quando una trasformazione non fornisce un crop esplicito.
+            Default: centro immagine.
+          example: 50
+          minimum: 0
+          maximum: 100
+        focalY:
+          type: number
+          description: >-
+            Percentuale verticale (0-100) del soggetto, stessa semantica di
+            focalX.
+          example: 50
+          minimum: 0
+          maximum: 100
+        createdAt:
+          format: date-time
+          type: string
+          description: Data di caricamento
+          example: '2026-07-23T10:00:00.000Z'
+      required:
+        - guid
+        - originalName
+        - mimeType
+        - sizeBytes
+        - focalX
+        - focalY
+        - createdAt
+    UpdateFocalPointDto:
+      type: object
+      properties:
+        focalX:
+          type: number
+          description: >-
+            Percentuale orizzontale (0-100) del soggetto, usata come centro del
+            ritaglio quando non è fornito un crop esplicito. Default: centro
+            immagine.
+          minimum: 0
+          maximum: 100
+          example: 50
+        focalY:
+          type: number
+          description: >-
+            Percentuale verticale (0-100) del soggetto, stessa semantica di
+            focalX.
+          minimum: 0
+          maximum: 100
+          example: 50
+      required:
+        - focalX
+        - focalY
+    MediaTransformDto:
+      type: object
+      properties:
+        cropX:
+          type: number
+          description: Coordinata X (px) dell'angolo del ritaglio
+          minimum: 0
+        cropY:
+          type: number
+          description: Coordinata Y (px) dell'angolo del ritaglio
+          minimum: 0
+        cropW:
+          type: number
+          description: Larghezza (px) del ritaglio
+          minimum: 1
+        cropH:
+          type: number
+          description: Altezza (px) del ritaglio
+          minimum: 1
+        focalX:
+          type: number
+          description: >-
+            Percentuale orizzontale (0-100) del soggetto, usata come centro del
+            ritaglio quando non è fornito un crop esplicito. Default: centro
+            immagine.
+          minimum: 0
+          maximum: 100
+          default: 50
+        focalY:
+          type: number
+          description: >-
+            Percentuale verticale (0-100) del soggetto, stessa semantica di
+            focalX.
+          minimum: 0
+          maximum: 100
+          default: 50
+        preset:
+          type: string
+          description: >-
+            Preset nominato di destinazione (ADR-49 § M6). Ignorato se è fornito
+            un crop esplicito.
+          enum:
+            - thumbnail
+            - card
+            - hero
+            - og
+    MediaTransformResultDto:
+      type: object
+      properties:
+        jobId:
+          type: string
+          description: Id del job BullMQ accodato per la generazione della variante
+          example: '42'
+      required:
+        - jobId
     ThemeColorsDto:
       type: object
       properties:
@@ -3710,182 +3900,6 @@ components:
         - palette
         - typography
         - spacing
-    UploadFileDto:
-      type: object
-      properties:
-        entity:
-          type: string
-          description: Nome tabella/dominio a cui associare il file
-          example: invoice
-          maxLength: 100
-        entityId:
-          type: string
-          description: Id/guid dell'entità di dominio da associare
-          example: a1b2c3d4e5f6a7b8
-          maxLength: 100
-    FileMetadataDto:
-      type: object
-      properties:
-        guid:
-          type: string
-          description: Identificatore pubblico del file, usato nelle URL
-          example: a1b2c3d4e5f6a7b8
-        originalName:
-          type: string
-          description: Nome file originale (solo display)
-          example: fattura-2026-001.pdf
-        mimeType:
-          type: string
-          description: MIME type dichiarato dal client
-          example: application/pdf
-        sizeBytes:
-          type: number
-          description: Dimensione del file in byte
-          example: 348213
-        entity:
-          type: object
-          description: Nome tabella/dominio a cui il file è associato, se presente
-          example: invoice
-          nullable: true
-        entityId:
-          type: object
-          description: Id/guid dell'entità di dominio associata, se presente
-          example: a1b2c3d4e5f6a7b8
-          nullable: true
-        width:
-          type: number
-          description: >-
-            Larghezza in pixel, letta dai soli header raster all'upload (RFC-F09
-            N2). `null` per i non-raster e per le righe caricate prima della
-            migrazione `0014_add_files_dimensions`: `null` significa "non
-            misurato", mai "zero".
-          example: 1920
-          nullable: true
-        height:
-          type: number
-          description: >-
-            Altezza in pixel, stessa provenienza e stesse condizioni di `width`
-            (RFC-F09 N2).
-          example: 1080
-          nullable: true
-        url:
-          type: object
-          description: >-
-            URL pubblico derivato server-side (`api/v1/public/media/:guid`),
-            valorizzato solo se `entity` è `page-media` (ADR-27 § 2/§ 6). `null`
-            altrimenti — non implica che il blob sia effettivamente servibile:
-            la verifica del formato raster reale avviene in lettura su quella
-            rotta (ADR-27 § 3, § 4).
-          example: api/v1/public/media/a1b2c3d4e5f6a7b8
-          nullable: true
-        focalX:
-          type: number
-          description: >-
-            Percentuale orizzontale (0-100) del soggetto, usata come centro del
-            ritaglio quando una trasformazione non fornisce un crop esplicito.
-            Default: centro immagine.
-          example: 50
-          minimum: 0
-          maximum: 100
-        focalY:
-          type: number
-          description: >-
-            Percentuale verticale (0-100) del soggetto, stessa semantica di
-            focalX.
-          example: 50
-          minimum: 0
-          maximum: 100
-        createdAt:
-          format: date-time
-          type: string
-          description: Data di caricamento
-          example: '2026-07-23T10:00:00.000Z'
-      required:
-        - guid
-        - originalName
-        - mimeType
-        - sizeBytes
-        - focalX
-        - focalY
-        - createdAt
-    UpdateFocalPointDto:
-      type: object
-      properties:
-        focalX:
-          type: number
-          description: >-
-            Percentuale orizzontale (0-100) del soggetto, usata come centro del
-            ritaglio quando non è fornito un crop esplicito. Default: centro
-            immagine.
-          minimum: 0
-          maximum: 100
-          example: 50
-        focalY:
-          type: number
-          description: >-
-            Percentuale verticale (0-100) del soggetto, stessa semantica di
-            focalX.
-          minimum: 0
-          maximum: 100
-          example: 50
-      required:
-        - focalX
-        - focalY
-    MediaTransformDto:
-      type: object
-      properties:
-        cropX:
-          type: number
-          description: Coordinata X (px) dell'angolo del ritaglio
-          minimum: 0
-        cropY:
-          type: number
-          description: Coordinata Y (px) dell'angolo del ritaglio
-          minimum: 0
-        cropW:
-          type: number
-          description: Larghezza (px) del ritaglio
-          minimum: 1
-        cropH:
-          type: number
-          description: Altezza (px) del ritaglio
-          minimum: 1
-        focalX:
-          type: number
-          description: >-
-            Percentuale orizzontale (0-100) del soggetto, usata come centro del
-            ritaglio quando non è fornito un crop esplicito. Default: centro
-            immagine.
-          minimum: 0
-          maximum: 100
-          default: 50
-        focalY:
-          type: number
-          description: >-
-            Percentuale verticale (0-100) del soggetto, stessa semantica di
-            focalX.
-          minimum: 0
-          maximum: 100
-          default: 50
-        preset:
-          type: string
-          description: >-
-            Preset nominato di destinazione (ADR-49 § M6). Ignorato se è fornito
-            un crop esplicito.
-          enum:
-            - thumbnail
-            - card
-            - hero
-            - og
-    MediaTransformResultDto:
-      type: object
-      properties:
-        jobId:
-          type: string
-          description: Id del job BullMQ accodato per la generazione della variante
-          example: '42'
-      required:
-        - jobId
     UnreadCountDto:
       type: object
       properties:

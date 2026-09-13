@@ -10,12 +10,15 @@
  * proprie Pagine, nessun filtro di ruolo è reimplementato qui lato client.
  */
 import { useState } from 'react';
-import { Badge, Group, ScrollArea, Select, Stack, Text, TextInput } from '@mantine/core';
+import { Badge, Button, Group, ScrollArea, Select, Stack, Text, TextInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-import { IconEye, IconFileText, IconPencil, IconTrash } from '@tabler/icons-react';
+import { IconEye, IconFileText, IconPencil, IconRefresh, IconTrash } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
+import { useAuthStore } from '../../hooks/useAuth';
+import { rebuildStaticSite } from '../../services/admin.service';
+import { AppUserRoles } from '../../types/common.types';
 import { useColumnVisibility } from '../../hooks/useColumnVisibility';
 import { PUBLIC_SITE_URL } from '../../hooks/usePublicPageUrl';
 import { getErrorMessage } from '../../utils/api.utils';
@@ -102,6 +105,28 @@ async function resolvePublicPagePath(row: PageRecord): Promise<string | null> {
 /** Pagina elenco Pagine (chrome amministrativa, F01/T7). */
 export default function PagePages(): JSX.Element {
   const navigate = useNavigate();
+  const isSuperAdmin = useAuthStore((state) => state.user?.role === AppUserRoles.SuperAdmin);
+  const [rebuilding, setRebuilding] = useState(false);
+
+  /** Funzione di sistema (SuperAdmin): rigenera tutte le Pagine pubblicate del sito statico. */
+  async function handleRebuildSite(): Promise<void> {
+    setRebuilding(true);
+    try {
+      await rebuildStaticSite();
+      notifications.show({
+        color: 'green',
+        message:
+          'Rigenerazione del sito avviata: le pagine pubblicate si aggiornano entro pochi minuti.',
+      });
+    } catch (err) {
+      notifications.show({
+        color: 'red',
+        message: getErrorMessage(err, 'Rigenerazione del sito non avviata'),
+      });
+    } finally {
+      setRebuilding(false);
+    }
+  }
 
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [createOpened, setCreateOpened] = useState(false);
@@ -301,6 +326,16 @@ export default function PagePages(): JSX.Element {
                 w={180}
                 allowDeselect={false}
               />
+              {isSuperAdmin && (
+                <Button
+                  variant="light"
+                  leftSection={<IconRefresh size={16} />}
+                  loading={rebuilding}
+                  onClick={handleRebuildSite}
+                >
+                  Rigenera sito pubblico
+                </Button>
+              )}
             </Group>
           }
           columnSelector={

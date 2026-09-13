@@ -16,6 +16,7 @@ import { Pagination } from '../common/pagination';
 import { Utils } from '../common/utils';
 import { AuditLogService } from '../common/audit-log.service';
 import { EmailQueueService } from '../queues/email-queue/email.queue.service';
+import { ExportService } from '../export/export.service';
 import { buildActivationEmailHtml } from '../mailer/templates';
 import { AppConstants } from '../common/app-constants';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -52,20 +53,43 @@ const ACTIVATION_TOKEN_HOURS = 48;
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
 
-  /** Inietta i servizi per accesso al DB, seed dati demo, invio email e audit log. */
+  /** Inietta i servizi per accesso al DB, seed dati demo, invio email, audit log ed export statico. */
   constructor(
     private readonly db: DbService,
     private readonly seedService: SeedService,
     private readonly emailQueue: EmailQueueService,
     private readonly auditLogService: AuditLogService,
+    private readonly exportService: ExportService,
   ) {}
 
   // ─── Sistema (SuperAdmin only) ───────────────────────────────────────────
+
+  /**
+   * Accoda la rigenerazione completa del sito statico (ADR-53, ADR-67): serve
+   * al primo deploy, quando il volume è vuoto, e dopo un ripristino. Le Pagine
+   * si aggiornano man mano che il job le esporta.
+   */
+  async rebuildStaticSite(authInfo: AuthInfo, ip?: string): Promise<void> {
+    await this.exportService.enqueueFullSiteExport();
+    this.logger.log('Rigenerazione completa del sito statico accodata da endpoint admin.');
+    await this.auditLogService.log(
+      authInfo.userId,
+      'system.rebuild-static-site',
+      'system',
+      undefined,
+      undefined,
+      authInfo.impersonatedBy,
+      ip,
+    );
+  }
 
   /** Carica i dati demo richiamando la stessa logica usata da `npm run seed`. */
   async seedDemo(authInfo: AuthInfo, ip?: string): Promise<Record<string, number>> {
     this.logger.log('Avvio caricamento dati demo da endpoint admin.');
     const summary = await this.seedService.run();
+    // Il seed scrive Pagine e Sezioni globali direttamente a database, senza
+    // passare dagli eventi di export: il sito statico va rigenerato (ADR-67).
+    await this.exportService.enqueueFullSiteExport();
     await this.auditLogService.log(
       authInfo.userId,
       'system.seed-demo',

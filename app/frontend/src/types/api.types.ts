@@ -311,6 +311,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/app/admin/system/rebuild-static-site': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Rigenera tutte le Pagine pubblicate del sito statico (SuperAdmin only) */
+    post: operations['AdminController_rebuildStaticSite'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/app/admin/system/reset-demo': {
     parameters: {
       query?: never;
@@ -415,78 +432,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/app/settings/theme': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Tema globale dell'installazione (default di fabbrica se mai salvato) */
-    get: operations['SettingsController_getTheme'];
-    /** Salva il tema globale (SuperAdmin only, registrato su audit log) */
-    put: operations['SettingsController_updateTheme'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/app/settings/multilingual': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Registro Locale attivi (default di fabbrica se mai salvato) */
-    get: operations['SettingsController_getMultilingual'];
-    /** Salva il registro Locale attivi (Admin+ only, registrato su audit log) */
-    put: operations['SettingsController_updateMultilingual'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/app/settings/revisions-retention': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Retention delle Revisioni (default di fabbrica: potatura disattivata) */
-    get: operations['SettingsController_getRevisionsRetention'];
-    /** Salva la retention delle Revisioni (Admin+ only, registrato su audit log) */
-    put: operations['SettingsController_updateRevisionsRetention'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/app/settings/global-tokens': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Global Design Tokens del sito (default di fabbrica se mai salvati) */
-    get: operations['SettingsController_getGlobalTokens'];
-    /** Salva i Global Design Tokens del sito (Admin+ only, registrato su audit log) */
-    put: operations['SettingsController_updateGlobalTokens'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/v1/app/files': {
     parameters: {
       query?: never;
@@ -584,6 +529,78 @@ export interface paths {
     /** Serve il blob di un media editoriale pubblicato (immagine) */
     get: operations['PublicMediaController_getMedia'];
     put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/settings/theme': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Tema globale dell'installazione (default di fabbrica se mai salvato) */
+    get: operations['SettingsController_getTheme'];
+    /** Salva il tema globale (SuperAdmin only, registrato su audit log) */
+    put: operations['SettingsController_updateTheme'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/settings/multilingual': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Registro Locale attivi (default di fabbrica se mai salvato) */
+    get: operations['SettingsController_getMultilingual'];
+    /** Salva il registro Locale attivi (Admin+ only, registrato su audit log) */
+    put: operations['SettingsController_updateMultilingual'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/settings/revisions-retention': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Retention delle Revisioni (default di fabbrica: potatura disattivata) */
+    get: operations['SettingsController_getRevisionsRetention'];
+    /** Salva la retention delle Revisioni (Admin+ only, registrato su audit log) */
+    put: operations['SettingsController_updateRevisionsRetention'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/settings/global-tokens': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Global Design Tokens del sito (default di fabbrica se mai salvati) */
+    get: operations['SettingsController_getGlobalTokens'];
+    /** Salva i Global Design Tokens del sito (Admin+ only, registrato su audit log) */
+    put: operations['SettingsController_updateGlobalTokens'];
     post?: never;
     delete?: never;
     options?: never;
@@ -1281,6 +1298,125 @@ export interface components {
       role?: 5 | 10 | 20 | 30;
       /** @description Identificatore di scope multi-tenant/multi-sede */
       scopeId?: string;
+    };
+    UploadFileDto: {
+      /**
+       * @description Nome tabella/dominio a cui associare il file
+       * @example invoice
+       */
+      entity?: string;
+      /**
+       * @description Id/guid dell'entità di dominio da associare
+       * @example a1b2c3d4e5f6a7b8
+       */
+      entityId?: string;
+    };
+    FileMetadataDto: {
+      /**
+       * @description Identificatore pubblico del file, usato nelle URL
+       * @example a1b2c3d4e5f6a7b8
+       */
+      guid: string;
+      /**
+       * @description Nome file originale (solo display)
+       * @example fattura-2026-001.pdf
+       */
+      originalName: string;
+      /**
+       * @description MIME type dichiarato dal client
+       * @example application/pdf
+       */
+      mimeType: string;
+      /**
+       * @description Dimensione del file in byte
+       * @example 348213
+       */
+      sizeBytes: number;
+      /**
+       * @description Nome tabella/dominio a cui il file è associato, se presente
+       * @example invoice
+       */
+      entity?: Record<string, never> | null;
+      /**
+       * @description Id/guid dell'entità di dominio associata, se presente
+       * @example a1b2c3d4e5f6a7b8
+       */
+      entityId?: Record<string, never> | null;
+      /**
+       * @description Larghezza in pixel, letta dai soli header raster all'upload (RFC-F09 N2). `null` per i non-raster e per le righe caricate prima della migrazione `0014_add_files_dimensions`: `null` significa "non misurato", mai "zero".
+       * @example 1920
+       */
+      width?: number | null;
+      /**
+       * @description Altezza in pixel, stessa provenienza e stesse condizioni di `width` (RFC-F09 N2).
+       * @example 1080
+       */
+      height?: number | null;
+      /**
+       * @description URL pubblico derivato server-side (`api/v1/public/media/:guid`), valorizzato solo se `entity` è `page-media` (ADR-27 § 2/§ 6). `null` altrimenti — non implica che il blob sia effettivamente servibile: la verifica del formato raster reale avviene in lettura su quella rotta (ADR-27 § 3, § 4).
+       * @example api/v1/public/media/a1b2c3d4e5f6a7b8
+       */
+      url?: Record<string, never> | null;
+      /**
+       * @description Percentuale orizzontale (0-100) del soggetto, usata come centro del ritaglio quando una trasformazione non fornisce un crop esplicito. Default: centro immagine.
+       * @example 50
+       */
+      focalX: number;
+      /**
+       * @description Percentuale verticale (0-100) del soggetto, stessa semantica di focalX.
+       * @example 50
+       */
+      focalY: number;
+      /**
+       * Format: date-time
+       * @description Data di caricamento
+       * @example 2026-07-23T10:00:00.000Z
+       */
+      createdAt: string;
+    };
+    UpdateFocalPointDto: {
+      /**
+       * @description Percentuale orizzontale (0-100) del soggetto, usata come centro del ritaglio quando non è fornito un crop esplicito. Default: centro immagine.
+       * @example 50
+       */
+      focalX: number;
+      /**
+       * @description Percentuale verticale (0-100) del soggetto, stessa semantica di focalX.
+       * @example 50
+       */
+      focalY: number;
+    };
+    MediaTransformDto: {
+      /** @description Coordinata X (px) dell'angolo del ritaglio */
+      cropX?: number;
+      /** @description Coordinata Y (px) dell'angolo del ritaglio */
+      cropY?: number;
+      /** @description Larghezza (px) del ritaglio */
+      cropW?: number;
+      /** @description Altezza (px) del ritaglio */
+      cropH?: number;
+      /**
+       * @description Percentuale orizzontale (0-100) del soggetto, usata come centro del ritaglio quando non è fornito un crop esplicito. Default: centro immagine.
+       * @default 50
+       */
+      focalX: number;
+      /**
+       * @description Percentuale verticale (0-100) del soggetto, stessa semantica di focalX.
+       * @default 50
+       */
+      focalY: number;
+      /**
+       * @description Preset nominato di destinazione (ADR-49 § M6). Ignorato se è fornito un crop esplicito.
+       * @enum {string}
+       */
+      preset?: 'thumbnail' | 'card' | 'hero' | 'og';
+    };
+    MediaTransformResultDto: {
+      /**
+       * @description Id del job BullMQ accodato per la generazione della variante
+       * @example 42
+       */
+      jobId: string;
     };
     ThemeColorsDto: {
       /**
@@ -2129,125 +2265,6 @@ export interface components {
       typography: components['schemas']['GlobalTokensTypographyDto'];
       /** @description Spaziatura base di sito */
       spacing: components['schemas']['GlobalTokensSpacingDto'];
-    };
-    UploadFileDto: {
-      /**
-       * @description Nome tabella/dominio a cui associare il file
-       * @example invoice
-       */
-      entity?: string;
-      /**
-       * @description Id/guid dell'entità di dominio da associare
-       * @example a1b2c3d4e5f6a7b8
-       */
-      entityId?: string;
-    };
-    FileMetadataDto: {
-      /**
-       * @description Identificatore pubblico del file, usato nelle URL
-       * @example a1b2c3d4e5f6a7b8
-       */
-      guid: string;
-      /**
-       * @description Nome file originale (solo display)
-       * @example fattura-2026-001.pdf
-       */
-      originalName: string;
-      /**
-       * @description MIME type dichiarato dal client
-       * @example application/pdf
-       */
-      mimeType: string;
-      /**
-       * @description Dimensione del file in byte
-       * @example 348213
-       */
-      sizeBytes: number;
-      /**
-       * @description Nome tabella/dominio a cui il file è associato, se presente
-       * @example invoice
-       */
-      entity?: Record<string, never> | null;
-      /**
-       * @description Id/guid dell'entità di dominio associata, se presente
-       * @example a1b2c3d4e5f6a7b8
-       */
-      entityId?: Record<string, never> | null;
-      /**
-       * @description Larghezza in pixel, letta dai soli header raster all'upload (RFC-F09 N2). `null` per i non-raster e per le righe caricate prima della migrazione `0014_add_files_dimensions`: `null` significa "non misurato", mai "zero".
-       * @example 1920
-       */
-      width?: number | null;
-      /**
-       * @description Altezza in pixel, stessa provenienza e stesse condizioni di `width` (RFC-F09 N2).
-       * @example 1080
-       */
-      height?: number | null;
-      /**
-       * @description URL pubblico derivato server-side (`api/v1/public/media/:guid`), valorizzato solo se `entity` è `page-media` (ADR-27 § 2/§ 6). `null` altrimenti — non implica che il blob sia effettivamente servibile: la verifica del formato raster reale avviene in lettura su quella rotta (ADR-27 § 3, § 4).
-       * @example api/v1/public/media/a1b2c3d4e5f6a7b8
-       */
-      url?: Record<string, never> | null;
-      /**
-       * @description Percentuale orizzontale (0-100) del soggetto, usata come centro del ritaglio quando una trasformazione non fornisce un crop esplicito. Default: centro immagine.
-       * @example 50
-       */
-      focalX: number;
-      /**
-       * @description Percentuale verticale (0-100) del soggetto, stessa semantica di focalX.
-       * @example 50
-       */
-      focalY: number;
-      /**
-       * Format: date-time
-       * @description Data di caricamento
-       * @example 2026-07-23T10:00:00.000Z
-       */
-      createdAt: string;
-    };
-    UpdateFocalPointDto: {
-      /**
-       * @description Percentuale orizzontale (0-100) del soggetto, usata come centro del ritaglio quando non è fornito un crop esplicito. Default: centro immagine.
-       * @example 50
-       */
-      focalX: number;
-      /**
-       * @description Percentuale verticale (0-100) del soggetto, stessa semantica di focalX.
-       * @example 50
-       */
-      focalY: number;
-    };
-    MediaTransformDto: {
-      /** @description Coordinata X (px) dell'angolo del ritaglio */
-      cropX?: number;
-      /** @description Coordinata Y (px) dell'angolo del ritaglio */
-      cropY?: number;
-      /** @description Larghezza (px) del ritaglio */
-      cropW?: number;
-      /** @description Altezza (px) del ritaglio */
-      cropH?: number;
-      /**
-       * @description Percentuale orizzontale (0-100) del soggetto, usata come centro del ritaglio quando non è fornito un crop esplicito. Default: centro immagine.
-       * @default 50
-       */
-      focalX: number;
-      /**
-       * @description Percentuale verticale (0-100) del soggetto, stessa semantica di focalX.
-       * @default 50
-       */
-      focalY: number;
-      /**
-       * @description Preset nominato di destinazione (ADR-49 § M6). Ignorato se è fornito un crop esplicito.
-       * @enum {string}
-       */
-      preset?: 'thumbnail' | 'card' | 'hero' | 'og';
-    };
-    MediaTransformResultDto: {
-      /**
-       * @description Id del job BullMQ accodato per la generazione della variante
-       * @example 42
-       */
-      jobId: string;
     };
     UnreadCountDto: {
       /**
@@ -3613,6 +3630,31 @@ export interface operations {
       };
     };
   };
+  AdminController_rebuildStaticSite: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Rigenerazione accodata */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Ruolo inferiore a SuperAdmin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   AdminController_resetDemo: {
     parameters: {
       query?: never;
@@ -3853,238 +3895,6 @@ export interface operations {
     responses: {
       /** @description Lista audit log paginata */
       200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  SettingsController_getTheme: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Configurazione tema corrente */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ThemeConfigDto'];
-        };
-      };
-    };
-  };
-  SettingsController_updateTheme: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ThemeConfigDto'];
-      };
-    };
-    responses: {
-      /** @description Tema salvato */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ThemeConfigDto'];
-        };
-      };
-      /** @description Payload non valido (hex, palette o versione) */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Ruolo inferiore a SuperAdmin */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  SettingsController_getMultilingual: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Registro Locale corrente */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['MultilingualConfigDto'];
-        };
-      };
-    };
-  };
-  SettingsController_updateMultilingual: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['MultilingualConfigDto'];
-      };
-    };
-    responses: {
-      /** @description Registro Locale salvato */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['MultilingualConfigDto'];
-        };
-      };
-      /** @description Il Locale di default non compare fra i Locale attivi */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Ruolo inferiore ad Admin */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  SettingsController_getRevisionsRetention: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Politica di retention corrente */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RevisionsRetentionDto'];
-        };
-      };
-    };
-  };
-  SettingsController_updateRevisionsRetention: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['RevisionsRetentionDto'];
-      };
-    };
-    responses: {
-      /** @description Politica di retention salvata */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RevisionsRetentionDto'];
-        };
-      };
-      /** @description retentionCount fuori dal range 0-1000 */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Ruolo inferiore ad Admin */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  SettingsController_getGlobalTokens: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Global Design Tokens correnti */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['GlobalTokensDto'];
-        };
-      };
-    };
-  };
-  SettingsController_updateGlobalTokens: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['GlobalTokensDto'];
-      };
-    };
-    responses: {
-      /** @description Global Design Tokens salvati */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['GlobalTokensDto'];
-        };
-      };
-      /** @description Payload non valido (hex, font, unità o versione) */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Ruolo inferiore ad Admin */
-      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -4334,6 +4144,238 @@ export interface operations {
       };
       /** @description Media inesistente, non editoriale (entity <> "page-media"), soft-eliminato, o formato non riconosciuto come raster (SVG compreso) */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SettingsController_getTheme: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Configurazione tema corrente */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ThemeConfigDto'];
+        };
+      };
+    };
+  };
+  SettingsController_updateTheme: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ThemeConfigDto'];
+      };
+    };
+    responses: {
+      /** @description Tema salvato */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ThemeConfigDto'];
+        };
+      };
+      /** @description Payload non valido (hex, palette o versione) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Ruolo inferiore a SuperAdmin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SettingsController_getMultilingual: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Registro Locale corrente */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MultilingualConfigDto'];
+        };
+      };
+    };
+  };
+  SettingsController_updateMultilingual: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MultilingualConfigDto'];
+      };
+    };
+    responses: {
+      /** @description Registro Locale salvato */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MultilingualConfigDto'];
+        };
+      };
+      /** @description Il Locale di default non compare fra i Locale attivi */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Ruolo inferiore ad Admin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SettingsController_getRevisionsRetention: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Politica di retention corrente */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RevisionsRetentionDto'];
+        };
+      };
+    };
+  };
+  SettingsController_updateRevisionsRetention: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RevisionsRetentionDto'];
+      };
+    };
+    responses: {
+      /** @description Politica di retention salvata */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RevisionsRetentionDto'];
+        };
+      };
+      /** @description retentionCount fuori dal range 0-1000 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Ruolo inferiore ad Admin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SettingsController_getGlobalTokens: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Global Design Tokens correnti */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GlobalTokensDto'];
+        };
+      };
+    };
+  };
+  SettingsController_updateGlobalTokens: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['GlobalTokensDto'];
+      };
+    };
+    responses: {
+      /** @description Global Design Tokens salvati */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GlobalTokensDto'];
+        };
+      };
+      /** @description Payload non valido (hex, font, unità o versione) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Ruolo inferiore ad Admin */
+      403: {
         headers: {
           [name: string]: unknown;
         };

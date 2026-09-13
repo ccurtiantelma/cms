@@ -119,6 +119,14 @@ export async function seedDemo(): Promise<void> {
   await api.post(`${ADMIN_PREFIX}/system/seed-demo`);
 }
 
+/**
+ * `POST /app/admin/system/rebuild-static-site` — accoda la rigenerazione di
+ * tutte le Pagine pubblicate del sito statico (ADR-67). GuardSuperAdmin.
+ */
+export async function rebuildStaticSite(): Promise<void> {
+  await api.post(`${ADMIN_PREFIX}/system/rebuild-static-site`);
+}
+
 /** `POST /app/admin/system/reset-demo` — wipe transazionale FK-safe, mantiene il SuperAdmin. GuardSuperAdmin. */
 export async function resetDemo(): Promise<void> {
   await api.post(`${ADMIN_PREFIX}/system/reset-demo`);
