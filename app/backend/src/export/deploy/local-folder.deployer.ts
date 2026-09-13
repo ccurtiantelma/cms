@@ -7,8 +7,8 @@ import { StaticSiteDeployer } from './static-site-deployer.interface';
 /**
  * Adapter di deployment su cartella locale (RFC-44, Decisione 8) — unica
  * implementazione attiva di `StaticSiteDeployer`, scrive sotto
- * `AppConstants.staticExportPath`, servita da Nginx via bind mount (stesso
- * pattern già in uso per `LocalDiskDriver`, ADR-8). Ogni scrittura passa da
+ * `AppConstants.staticExportPath`, il volume `static_site` che `nginx-static`
+ * monta in sola lettura su una rete separata (ADR-63). Ogni scrittura passa da
  * un file temporaneo + `rename` (atomico sullo stesso filesystem): mai un
  * file troncato a metà se il processo muore durante la scrittura.
  */

@@ -21,7 +21,14 @@
 # - TLS/dominio/reverse proxy sono intenzionalmente fuori scope: da mettere
 #   davanti (Traefik/nginx/load balancer del provider) nell'ambiente di hosting.
 # - postgres/redis non pubblicano porte sull'host: raggiungibili solo dagli
-#   altri servizi sulla rete Docker interna del progetto.
+#   altri servizi sulla rete `mgmt_net`.
+# - Air-gap (ADR-53 § 4, ADR-63): due reti esplicite. `mgmt_net` è il Piano di
+#   Gestione (postgres, redis, backend con il worker di export, frontend admin,
+#   public-site come solo motore di anteprima). `edge_net` è il Piano di
+#   Erogazione Pubblica e contiene **solo** `nginx-static`, che legge il volume
+#   `static_site` in sola lettura. Il backend lo scrive (push, mai pull).
+#   Verificato in CI da `check-air-gap.js`. Ciò che la CI non vede (firewall
+#   dell'hosting, porte pubblicate sull'host) va nella checklist di go-live.
 
 name: cms
 
@@ -40,6 +47,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - mgmt_net
 
   redis:
     image: redis:7-alpine
@@ -52,6 +61,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - mgmt_net
 
   backend:
     build:
@@ -65,6 +76,12 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-cms}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cms_db}
       REDIS_URL: redis://redis:6379
+      # Radice dell'export statico: il volume condiviso con `nginx-static`,
+      # scritto solo da qui (ADR-63). Il worker chiede l'HTML a public-site.
+      STATIC_EXPORT_PATH: /srv/static-site
+      PUBLIC_SITE_URL: http://public-site:4000
+    volumes:
+      - static_site:/srv/static-site
     depends_on:
       postgres:
         condition: service_healthy
@@ -76,6 +93,8 @@ services:
     # EXPOSE/HEALTHCHECK del Dockerfile.
     ports:
       - '53000:3000'
+    networks:
+      - mgmt_net
 
   frontend:
     build:
@@ -89,6 +108,8 @@ services:
       - backend
     ports:
       - '5080:80'
+    networks:
+      - mgmt_net
 
   public-site:
     build:
@@ -107,7 +128,28 @@ services:
     # su 4000 (PORT sopra, invariata).
     ports:
       - '55000:4000'
+    networks:
+      - mgmt_net
+
+  # Piano di Erogazione Pubblica (ADR-63): solo su `edge_net`, volume in sola
+  # lettura, nessuna variabile d'ambiente e nessuna dipendenza da servizi del
+  # Piano di Gestione. Serve il sito anche a backend spento.
+  nginx-static:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - static_site:/usr/share/nginx/html:ro
+      - ./nginx/static-site.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - edge_net
+    ports:
+      - '58080:80'
+
+networks:
+  mgmt_net:
+  edge_net:
 
 volumes:
   pgdata_prod:
   redisdata_prod:
+  static_site:

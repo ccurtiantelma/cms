@@ -55,6 +55,16 @@ jobs:
       - name: Gate immagini esportate (ADR-53, CLS = 0)
         run: node check-exported-images.js "${{ runner.temp }}/export-artifacts"
 
+      # Gate di ADR-63 § 3 (PLAN-F03 T6): la topologia air-gap di
+      # docker-compose.prod.yml verificata con container reali. nginx-static
+      # non raggiunge postgres/redis/backend, non scrive sul volume, e serve
+      # esattamente i file prodotti dalla suite di export sopra. `.env` serve
+      # solo perché il compose di produzione lo dichiara: valori d'esempio.
+      - name: Gate air-gap (ADR-63)
+        run: |
+          cp .env.example .env
+          node check-air-gap.js "${{ runner.temp }}/export-artifacts"
+
       - name: Build
         run: npm run build:backend
 

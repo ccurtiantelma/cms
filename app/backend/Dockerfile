@@ -41,7 +41,11 @@ COPY app/backend/package.json ./app/backend/package.json
 # processo: WinstonLoggerService (winston-daily-rotate-file) lo crea al primo
 # avvio. Va predisposto qui e assegnato all'utente non-root, altrimenti il
 # mkdir fallisce con EACCES (working dir /app di proprietà di root).
-RUN mkdir -p /app/logs && chown -R node:node /app/logs
+# /srv/static-site è il punto di mount del volume `static_site` (ADR-63):
+# un volume nominato vuoto eredita proprietario e permessi dalla directory
+# dell'immagine, quindi va creata qui e assegnata a `node`, altrimenti il
+# worker di export non può scriverci.
+RUN mkdir -p /app/logs /srv/static-site && chown -R node:node /app/logs /srv/static-site
 
 # Utente non-root (immagine node:alpine include già "node", uid/gid 1000).
 USER node
