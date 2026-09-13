@@ -6,7 +6,8 @@ import { join } from 'node:path';
 import { and, eq, inArray, or } from 'drizzle-orm';
 import { DbService } from '../db/db.service';
 import { fileEntity, pageEntity, pageRevisionEntity } from '../db/schema';
-import { canonicalizePublicPath } from '../pages/public-path.util';
+import { canonicalizePublicPath, composePublicPath } from '../pages/public-path.util';
+import { loadMultilingualConfig } from '../settings/settings.service';
 import { PublicMediaService } from '../files/public-media/public-media.service';
 import {
   CROP_VARIANT_LABEL,
@@ -25,9 +26,11 @@ interface SharpMetadataOnly {
 
 /**
  * Stesso require CJS isolato di `media.processor.ts` (i `.d.mts` di `sharp`
- * non riflettono il build a runtime). Usato qui **solo** per leggere le
- * dimensioni intrinseche di un'immagine priva di preset nominato (originale
- * o variante da crop esplicito): per le varianti a preset nominato le
+ * non riflettono il build a runtime). Ammesso fuori da `media-queue/` solo in
+ * questo worker e solo in lettura di metadati (ADR-66): legge le dimensioni
+ * intrinseche di un'immagine priva di preset nominato e priva di
+ * `width`/`height` persistiti (file caricati prima di RFC-F09 N2/N4). Per le
+ * varianti a preset nominato le
  * dimensioni sono note staticamente da `PRESET_DIMENSIONS`, senza invocare
  * `sharp` (SPEC-F03 § 3.3, "esposte, non ricalcolate").
  */
@@ -148,10 +151,16 @@ export class ExportProcessor extends WorkerHost {
     }
   }
 
-  /** Percorso relativo del file statico per `locale`+`path` (RFC-44, Decisione 2: `<locale>/<segmenti>/index.html`), affidato all'adapter di deployment per la radice effettiva (Decisione 8). */
-  private resolveRelativePagePath(locale: string, path: string): string {
-    const segments = path.split('/').filter((segment) => segment.length > 0);
-    return join(locale, ...segments, 'index.html');
+  /**
+   * Percorso relativo del file statico: l'URL pubblico canonico più
+   * `index.html` (ADR-65, supera RFC-44 Decisione 2). Il file vive dove il
+   * sito lo espone — `/` → `index.html`, `/en-gb/about` →
+   * `en-gb/about/index.html` — così il piano pubblico lo serve senza
+   * conoscere la lingua di default, che sta nel database (ADR-63).
+   */
+  private resolveRelativePagePath(publicPath: string): string {
+    const segments = publicPath.split('/').filter((segment) => segment.length > 0);
+    return join(...segments, 'index.html');
   }
 
   /** Percorso relativo stabile del media esportato (RFC-44, Decisione 6: `assets/media/<guid>.<ext>`). */
@@ -310,7 +319,12 @@ export class ExportProcessor extends WorkerHost {
     const baseDimensions =
       referenceLabel && referenceLabel !== CROP_VARIANT_LABEL
         ? PRESET_DIMENSIONS[referenceLabel]
-        : await this.readIntrinsicDimensions(base.buffer);
+        : referenceRow.width && referenceRow.height
+          ? // Dimensioni persistite in scrittura (RFC-F09 N2/N4): nessuna lettura
+            // dei byte. `sharp` resta il ripiego per i file caricati prima delle
+            // colonne, senza backfill (ADR-66).
+            { width: referenceRow.width, height: referenceRow.height }
+          : await this.readIntrinsicDimensions(base.buffer);
 
     const familyRootId = referenceRow.parentFileId ?? referenceRow.id;
     const familyRows = await this.db.db.query.fileEntity.findMany({
@@ -451,15 +465,19 @@ export class ExportProcessor extends WorkerHost {
     path: string,
     skipSitemapRegeneration = false,
   ): Promise<void> {
-    const url = `${AppConstants.publicSiteUrl}${path}`;
+    const { default: defaultLocale } = await loadMultilingualConfig(this.db);
+    const publicPath = composePublicPath(locale, path, defaultLocale);
+    const url = `${AppConstants.publicSiteUrl}${publicPath}`;
     let response: Response;
     try {
       response = await fetch(url);
     } catch (err) {
-      throw new Error(`Chiamata a public-site fallita per ${path}: ${(err as Error).message}`);
+      throw new Error(
+        `Chiamata a public-site fallita per ${publicPath}: ${(err as Error).message}`,
+      );
     }
     if (!response.ok) {
-      throw new Error(`public-site ha risposto ${response.status} per ${path}`);
+      throw new Error(`public-site ha risposto ${response.status} per ${publicPath}`);
     }
     const rawHtml = await response.text();
     // Il bundle CSS non dipende dal contenuto della singola pagina (è
@@ -469,7 +487,7 @@ export class ExportProcessor extends WorkerHost {
     await this.syncCssBundle(rawHtml);
     const html = await this.syncMediaAndRewriteHtml(rawHtml);
 
-    const relativePath = this.resolveRelativePagePath(locale, path);
+    const relativePath = this.resolveRelativePagePath(publicPath);
     await this.deployer.write(relativePath, html);
 
     await this.manifestService.upsertEntry({
@@ -500,7 +518,10 @@ export class ExportProcessor extends WorkerHost {
    * `exportPage`.
    */
   private async tombstonePage(pageId: string, locale: string, path: string): Promise<void> {
-    const relativePath = this.resolveRelativePagePath(locale, path);
+    const { default: defaultLocale } = await loadMultilingualConfig(this.db);
+    const relativePath = this.resolveRelativePagePath(
+      composePublicPath(locale, path, defaultLocale),
+    );
     try {
       await this.deployer.remove(relativePath);
     } catch (err) {
@@ -603,7 +624,11 @@ export class ExportProcessor extends WorkerHost {
       (location) => robotsIndexByRevisionId.get(location.publishedRevisionId ?? -1) !== 'noindex',
     );
 
-    await this.deployer.write('sitemap.xml', this.buildSitemapXml(indexableLocations));
+    const { default: defaultLocale } = await loadMultilingualConfig(this.db);
+    await this.deployer.write(
+      'sitemap.xml',
+      this.buildSitemapXml(indexableLocations, defaultLocale),
+    );
     await this.deployer.write('robots.txt', this.buildRobotsTxt());
 
     this.logger.log(
@@ -611,12 +636,12 @@ export class ExportProcessor extends WorkerHost {
     );
   }
 
-  /** Compone `sitemap.xml` (protocollo sitemaps.org), una `<url>` per Pagina indicizzabile, URL assolute su `AppConstants.staticSiteBaseUrl`. */
-  private buildSitemapXml(locations: PublishedPageLocation[]): string {
+  /** Compone `sitemap.xml` (protocollo sitemaps.org), una `<url>` per Pagina indicizzabile all'URL pubblico reale (prefisso di lingua e home radice, ADR-65), assoluto su `AppConstants.staticSiteBaseUrl`. */
+  private buildSitemapXml(locations: PublishedPageLocation[], defaultLocale: string): string {
     const urlEntries = locations
       .map(
         (location) =>
-          `  <url><loc>${escapeXmlText(this.resolveAbsolutePublicUrl(location.path))}</loc></url>`,
+          `  <url><loc>${escapeXmlText(this.resolveAbsolutePublicUrl(composePublicPath(location.locale, location.path, defaultLocale)))}</loc></url>`,
       )
       .join('\n');
     return (

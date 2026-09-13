@@ -75,3 +75,23 @@ export function extractLocalePrefix(
   const residualPath = residualSegments.length > 0 ? `/${residualSegments.join('/')}` : '/';
   return { locale: matchedLocale, residualPath };
 }
+
+/**
+ * Percorso pubblico canonico a partire da `locale` e dal percorso di slug
+ * senza prefisso (quello di `PublicPageCacheService.resolveLocation`):
+ * inverso di {@link extractLocalePrefix}. La home radice perde il proprio
+ * segmento (`/home` → `/`, ADR-24 § 7) e una lingua diversa dalla default
+ * guadagna il prefisso (ADR-24 § 5), minuscolo come ogni percorso servito.
+ * Unico calcolo condiviso da `PublicPagesService` e dall'export statico
+ * (ADR-65): un file esportato vive esattamente all'URL che il sito espone.
+ */
+export function composePublicPath(locale: string, slugPath: string, defaultLocale: string): string {
+  const segments = splitPathSegments(canonicalizePublicPath(slugPath));
+  if (segments.length === 1 && segments[0] === HOME_SLUG) {
+    segments.pop();
+  }
+  if (locale !== defaultLocale) {
+    segments.unshift(locale);
+  }
+  return canonicalizePublicPath(segments.length > 0 ? `/${segments.join('/')}` : '/');
+}

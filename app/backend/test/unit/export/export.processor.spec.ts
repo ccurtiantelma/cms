@@ -41,6 +41,7 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
         pageEntity: { findMany: jest.Mock; findFirst: jest.Mock };
         fileEntity: { findFirst: jest.Mock; findMany: jest.Mock };
         pageRevisionEntity: { findMany: jest.Mock };
+        appSettingEntity: { findFirst: jest.Mock };
       };
     };
   };
@@ -77,6 +78,13 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
           },
           fileEntity: { findFirst: fileEntityFindFirst, findMany: fileEntityFindMany },
           pageRevisionEntity: { findMany: jest.fn().mockResolvedValue([]) },
+          // Registro Locale esplicito (non il default da env): `it-IT` senza
+          // prefisso, `en-GB` con prefisso (ADR-24 § 5, ADR-65).
+          appSettingEntity: {
+            findFirst: jest
+              .fn()
+              .mockResolvedValue({ value: { active: ['it-IT', 'en-GB'], default: 'it-IT' } }),
+          },
         },
       },
     };
@@ -135,7 +143,7 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
         'http://public-site.internal:4000/assets/style.abc123.css',
       );
       expect(deployer.write).toHaveBeenCalledWith('assets/style.abc123.css', '.body{margin:0}');
-      expect(deployer.write).toHaveBeenCalledWith('it-IT/chi-siamo/index.html', html);
+      expect(deployer.write).toHaveBeenCalledWith('chi-siamo/index.html', html);
 
       expect(manifestService.upsertEntry).toHaveBeenCalledWith({
         pageId: 'guid-1',
@@ -146,7 +154,7 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
       });
     });
 
-    it('risolve la home (/) sotto <locale>/index.html', async () => {
+    it("risolve la home (/) nell'index.html della radice (ADR-65)", async () => {
       const html = '<link rel="stylesheet" href="/assets/style.abc123.css"/>home';
       fetchMock.mockResolvedValueOnce({ ok: true, status: 200, text: () => Promise.resolve(html) });
       mockCssFetchOk();
@@ -155,7 +163,39 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
         buildJob({ kind: 'page', pageId: 'guid-home', locale: 'it-IT', path: '/' }),
       );
 
-      expect(deployer.write).toHaveBeenCalledWith('it-IT/index.html', html);
+      expect(deployer.write).toHaveBeenCalledWith('index.html', html);
+    });
+
+    it('lingua non di default: chiede e scrive il percorso col prefisso di lingua, non quello nudo (ADR-65)', async () => {
+      const html = '<link rel="stylesheet" href="/assets/style.abc123.css"/>about';
+      fetchMock.mockResolvedValueOnce({ ok: true, status: 200, text: () => Promise.resolve(html) });
+      mockCssFetchOk();
+
+      await processor.process(
+        buildJob({ kind: 'page', pageId: 'guid-en', locale: 'en-GB', path: '/about-us' }),
+      );
+
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        1,
+        'http://public-site.internal:4000/en-gb/about-us',
+      );
+      expect(deployer.write).toHaveBeenCalledWith('en-gb/about-us/index.html', html);
+      expect(manifestService.upsertEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ locale: 'en-GB', path: '/about-us' }),
+      );
+    });
+
+    it('home radice (/home): URL e file sono quelli di "/", mai "/home" (ADR-24 § 7, ADR-65)', async () => {
+      const html = '<link rel="stylesheet" href="/assets/style.abc123.css"/>home';
+      fetchMock.mockResolvedValueOnce({ ok: true, status: 200, text: () => Promise.resolve(html) });
+      mockCssFetchOk();
+
+      await processor.process(
+        buildJob({ kind: 'page', pageId: 'guid-home', locale: 'en-GB', path: '/home' }),
+      );
+
+      expect(fetchMock).toHaveBeenNthCalledWith(1, 'http://public-site.internal:4000/en-gb');
+      expect(deployer.write).toHaveBeenCalledWith('en-gb/index.html', html);
     });
 
     it('rilancia se public-site risponde con uno status non-ok (fa fallire il job, BullMQ ritenta)', async () => {
@@ -290,12 +330,35 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
         `<html><head><link rel="stylesheet" href="/assets/style.test.css"/></head><body><img src="/assets/media/${guid}.png" alt="x" ` +
         `data-media-ref="${guid}" width="640" height="480" style="aspect-ratio:640/480">` +
         `</body></html>`;
-      expect(writtenContent('it-IT/pagina/index.html')).toBe(rewrittenHtml);
+      expect(writtenContent('pagina/index.html')).toBe(rewrittenHtml);
       expect(writtenContent('assets/style.test.css')).toBe(html);
       expect(manifestService.upsertEntry).toHaveBeenCalledWith(
         expect.objectContaining({
           contentHash: createHash('sha256').update(rewrittenHtml).digest('hex'),
         }),
+      );
+    });
+
+    it('usa width/height persistiti sulla riga e non legge i byte con sharp (ADR-66)', async () => {
+      const measuredRow = { ...originalRow, width: 1200, height: 800 };
+      const html =
+        `<html><head><link rel="stylesheet" href="/assets/style.test.css"/></head><body><img src="http://cdn/x" alt="x" ` +
+        `data-media-ref="${guid}"></body></html>`;
+      fetchMock.mockResolvedValue({ ok: true, status: 200, text: () => Promise.resolve(html) });
+      fileEntityFindFirst.mockResolvedValueOnce(measuredRow);
+      fileEntityFindMany.mockResolvedValueOnce([measuredRow]);
+      publicMediaService.serve.mockResolvedValueOnce({
+        buffer: Buffer.from('finto-blob-png'),
+        mimeType: 'image/png',
+      });
+
+      await processor.process(
+        buildJob({ kind: 'page', pageId: 'guid-1m', locale: 'it-IT', path: '/pagina-misurata' }),
+      );
+
+      expect(sharp).not.toHaveBeenCalled();
+      expect(writtenContent('pagina-misurata/index.html')).toContain(
+        'width="1200" height="800" style="aspect-ratio:1200/800"',
       );
     });
 
@@ -309,7 +372,7 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
       );
 
       expect(publicMediaService.serve).not.toHaveBeenCalled();
-      expect(writtenContent('it-IT/pagina-2/index.html')).toBe(html);
+      expect(writtenContent('pagina-2/index.html')).toBe(html);
     });
 
     it('lascia il tag invariato se il blob non è servibile (soft-eliminato/non raster)', async () => {
@@ -322,7 +385,7 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
         buildJob({ kind: 'page', pageId: 'guid-2b', locale: 'it-IT', path: '/pagina-2b' }),
       );
 
-      expect(writtenContent('it-IT/pagina-2b/index.html')).toBe(html);
+      expect(writtenContent('pagina-2b/index.html')).toBe(html);
     });
 
     it('risolve un guid ripetuto una sola volta (dedupe per pagina)', async () => {
@@ -348,7 +411,7 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
       const expectedImg =
         `<img src="/assets/media/${guid}.png" alt="__ALT__" ` +
         `data-media-ref="${guid}" width="640" height="480" style="aspect-ratio:640/480">`;
-      expect(writtenContent('it-IT/pagina-3/index.html')).toBe(
+      expect(writtenContent('pagina-3/index.html')).toBe(
         `<html><head><link rel="stylesheet" href="/assets/style.test.css"/></head><body>` +
           `${expectedImg.replace('__ALT__', 'a')}` +
           `${expectedImg.replace('__ALT__', 'b')}` +
@@ -455,7 +518,7 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
         `<picture><source type="image/avif" srcset="${expectedAvifSrcset}">` +
         `<source type="image/webp" srcset="${expectedWebpSrcset}">${expectedImg}</picture>`;
 
-      expect(writtenContent('it-IT/pagina-4/index.html')).toBe(
+      expect(writtenContent('pagina-4/index.html')).toBe(
         `<html><head><link rel="stylesheet" href="/assets/style.test.css"/></head><body>${expectedPicture}</body></html>`,
       );
     });
@@ -553,7 +616,7 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
       expect(publicMediaService.serve).not.toHaveBeenCalledWith(heroWebpGuid);
       expect(publicMediaService.serve).not.toHaveBeenCalledWith(heroAvifGuid);
 
-      const writtenHtml = writtenContent('it-IT/pagina-4b/index.html');
+      const writtenHtml = writtenContent('pagina-4b/index.html');
       expect(writtenHtml).toContain(`/assets/media/${cardAvifGuid}.avif 800w`);
       expect(writtenHtml).toContain(`/assets/media/${cardWebpGuid}.webp 800w`);
       expect(writtenHtml).not.toContain('1600w');
@@ -648,7 +711,7 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
         buildJob({ kind: 'page', pageId: 'guid-4c', locale: 'it-IT', path: '/pagina-4c' }),
       );
 
-      const writtenHtml = writtenContent('it-IT/pagina-4c/index.html') as string;
+      const writtenHtml = writtenContent('pagina-4c/index.html') as string;
       const cardImgIndex = writtenHtml.indexOf('data-media-preset="card"');
       const heroImgIndex = writtenHtml.indexOf('data-media-preset="hero"');
       const cardPictureStart = writtenHtml.lastIndexOf('<picture>', cardImgIndex);
@@ -679,8 +742,17 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
         buildJob({ kind: 'tombstone', pageId: 'guid-1', locale: 'it-IT', path: '/chi-siamo' }),
       );
 
-      expect(deployer.remove).toHaveBeenCalledWith('it-IT/chi-siamo/index.html');
+      expect(deployer.remove).toHaveBeenCalledWith('chi-siamo/index.html');
       expect(manifestService.removeEntry).toHaveBeenCalledWith('it-IT', '/chi-siamo');
+    });
+
+    it('lingua non di default: rimuove il file sotto il prefisso di lingua (ADR-65)', async () => {
+      await processor.process(
+        buildJob({ kind: 'tombstone', pageId: 'guid-en', locale: 'en-GB', path: '/about-us' }),
+      );
+
+      expect(deployer.remove).toHaveBeenCalledWith('en-gb/about-us/index.html');
+      expect(manifestService.removeEntry).toHaveBeenCalledWith('en-GB', '/about-us');
     });
 
     it('è innocuo (no-op) se il file non era mai stato esportato: il deployer non lancia mai qui', async () => {
@@ -772,6 +844,39 @@ describe('ExportProcessor (unit, HTTP e StaticSiteDeployer mockati)', () => {
       const robots = writtenContent('robots.txt') as string;
       expect(robots).toContain('Allow: /');
       expect(robots).toContain('Sitemap: https://www.example.test/sitemap.xml');
+    });
+
+    it('usa l\'URL pubblico reale: prefisso per le lingue non di default, "/" per la home (ADR-65)', async () => {
+      db.db.query.pageEntity.findMany.mockResolvedValue([
+        {
+          id: 1,
+          guid: 'g-home',
+          slug: 'home',
+          parentId: null,
+          locale: 'it-IT',
+          publishedRevisionId: 301,
+        },
+        {
+          id: 2,
+          guid: 'g-en',
+          slug: 'about-us',
+          parentId: null,
+          locale: 'en-GB',
+          publishedRevisionId: 302,
+        },
+      ]);
+      db.db.query.pageRevisionEntity.findMany.mockResolvedValueOnce([
+        { id: 301, seo: {} },
+        { id: 302, seo: {} },
+      ]);
+
+      await processor.process(buildJob({ kind: 'full-site' }));
+
+      const sitemap = writtenContent('sitemap.xml') as string;
+      expect(sitemap).toContain('<loc>https://www.example.test/</loc>');
+      expect(sitemap).toContain('<loc>https://www.example.test/en-gb/about-us</loc>');
+      expect(sitemap).not.toContain('/home<');
+      expect(sitemap).not.toContain('<loc>https://www.example.test/about-us</loc>');
     });
 
     it('esclude dalla sitemap le Pagine la cui Revisione pubblicata porta seo.robotsIndex "noindex"', async () => {

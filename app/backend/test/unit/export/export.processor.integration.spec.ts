@@ -100,6 +100,7 @@ describe('ExportProcessor (integration — LocalFolderDeployer reale su filesyst
         pageEntity: { findMany: jest.Mock; findFirst: jest.Mock };
         fileEntity: { findFirst: jest.Mock; findMany: jest.Mock };
         pageRevisionEntity: { findMany: jest.Mock };
+        appSettingEntity: { findFirst: jest.Mock };
       };
     };
   };
@@ -132,6 +133,11 @@ describe('ExportProcessor (integration — LocalFolderDeployer reale su filesyst
           pageEntity: { findMany: pageEntityFindMany, findFirst: jest.fn() },
           fileEntity: { findFirst: fileEntityFindFirst, findMany: fileEntityFindMany },
           pageRevisionEntity: { findMany: jest.fn().mockResolvedValue([]) },
+          appSettingEntity: {
+            findFirst: jest
+              .fn()
+              .mockResolvedValue({ value: { active: ['it-IT'], default: 'it-IT' } }),
+          },
         },
       },
     };
@@ -287,7 +293,7 @@ describe('ExportProcessor (integration — LocalFolderDeployer reale su filesyst
         }),
       );
 
-      const pageFilePath = join(tmpDir, 'it-IT', 'chi-siamo', 'index.html');
+      const pageFilePath = join(tmpDir, 'chi-siamo', 'index.html');
       const cssFilePath = join(tmpDir, 'assets', 'style.integration.css');
       const sitemapPath = join(tmpDir, 'sitemap.xml');
       const robotsPath = join(tmpDir, 'robots.txt');
@@ -295,7 +301,7 @@ describe('ExportProcessor (integration — LocalFolderDeployer reale su filesyst
       // Il file è realmente su disco (non un argomento di mock).
       expect(existsSync(pageFilePath)).toBe(true);
       const writtenHtml = readFileSync(pageFilePath, 'utf-8');
-      persistCiArtifact('it-IT/chi-siamo/index.html', writtenHtml);
+      persistCiArtifact('chi-siamo/index.html', writtenHtml);
 
       // Requisito 1 — Output statico/zero-JS: <style data-critical-css> presente
       // PRIMA del <link rel="stylesheet"> esterno; nessuno script di

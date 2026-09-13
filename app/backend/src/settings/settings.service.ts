@@ -191,6 +191,25 @@ export const DEFAULT_MULTILINGUAL_CONFIG: MultilingualConfigDto = {
 };
 
 /**
+ * Registro Locale attivi corrente, letto senza passare da `SettingsService`:
+ * `ExportModule` non può importare `SettingsModule` (che dipende già da lui),
+ * ma l'export statico deve conoscere la lingua di default per comporre l'URL
+ * pubblico (ADR-65). Unica lettura della riga, condivisa dai due chiamanti.
+ */
+export async function loadMultilingualConfig(db: DbService): Promise<MultilingualConfigDto> {
+  const row = await db.db.query.appSettingEntity.findFirst({
+    where: and(
+      eq(appSettingEntity.key, MULTILINGUAL_SETTING_KEY),
+      eq(appSettingEntity.isActive, true),
+    ),
+  });
+  if (!row) {
+    return DEFAULT_MULTILINGUAL_CONFIG;
+  }
+  return row.value as MultilingualConfigDto;
+}
+
+/**
  * Default di fabbrica dei Global Design Tokens: restituito da
  * `GET /app/settings/global-tokens` finché nessun Admin ha mai salvato la
  * riga. Risorsa a sé, non derivata dal tema Mantine di ADR-4.
@@ -593,16 +612,7 @@ export class SettingsService {
    * (installazione mai personalizzata, RFC-F05 § 1).
    */
   async getMultilingualConfig(): Promise<MultilingualConfigDto> {
-    const row = await this.db.db.query.appSettingEntity.findFirst({
-      where: and(
-        eq(appSettingEntity.key, MULTILINGUAL_SETTING_KEY),
-        eq(appSettingEntity.isActive, true),
-      ),
-    });
-    if (!row) {
-      return DEFAULT_MULTILINGUAL_CONFIG;
-    }
-    return row.value as MultilingualConfigDto;
+    return loadMultilingualConfig(this.db);
   }
 
   /**

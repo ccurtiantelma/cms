@@ -10,9 +10,9 @@ import { migrateBlockTree } from '../blocks/migration/block-tree-migration.engin
 import { MigratableBlockNode } from '../blocks/migration/block-migration.types';
 import { PublicPageDto, PublicPageTranslationDto } from './dto/public-page.dto';
 import {
-  canonicalizePublicPath,
   extractLocalePrefix,
   HOME_SLUG,
+  composePublicPath,
   MAX_PUBLIC_PATH_SEGMENTS,
   splitPathSegments,
 } from './public-path.util';
@@ -155,10 +155,7 @@ export class PublicPagesService {
    * `resolvePageRow` sul lato discesa.
    */
   private async buildPublicPath(page: PageRow, defaultLocale: string): Promise<string> {
-    // Caso radice (ADR-52 § 4): nessun antenato e slug = home → segmento
-    // proprio omesso, la home resta raggiungibile da "/" (o dal proprio
-    // prefisso di lingua, sotto).
-    const segments: string[] = page.slug === HOME_SLUG && page.parentId === null ? [] : [page.slug];
+    const segments: string[] = [page.slug];
 
     let parentId = page.parentId;
     let lookups = 0;
@@ -172,17 +169,11 @@ export class PublicPagesService {
       lookups += 1;
     }
 
-    if (page.locale !== defaultLocale) {
-      segments.unshift(page.locale);
-    }
-
-    // Forma canonica obbligatoria (ADR-24 § 4): un Locale BCP-47 porta il
-    // sottotag di regione in maiuscolo (`en-GB`) e comporlo grezzo produrrebbe
-    // un percorso che `GET public/pages?path=` fa `308` verso la propria forma
-    // minuscola. Un `hreflang` o un `href` di menu che punta a un redirect è un
-    // difetto, non un dettaglio: `extractLocalePrefix` riconosce il prefisso
-    // case-insensitive proprio perché la forma servita è quella minuscola.
-    return canonicalizePublicPath(segments.length > 0 ? `/${segments.join('/')}` : '/');
+    // Home radice senza segmento proprio (ADR-52 § 4), prefisso di lingua e
+    // forma canonica minuscola (ADR-24 § 4-5): `composePublicPath`, lo stesso
+    // calcolo dell'export statico (ADR-65). Un `hreflang` che punta a un
+    // redirect `308` sarebbe un difetto, non un dettaglio.
+    return composePublicPath(page.locale, `/${segments.join('/')}`, defaultLocale);
   }
 
   /**
