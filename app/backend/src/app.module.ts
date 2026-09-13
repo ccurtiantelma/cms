@@ -69,11 +69,11 @@ import { FormsCorsMiddleware } from './forms/forms-cors.middleware';
         // Lingua di default per la risoluzione pubblica degli slug (ADR-24 § 5/§ 7):
         // assunzione dichiarata in attesa di F05/app_settings, non una regola approvata.
         DEFAULT_LOCALE: Joi.string().default('it-IT'),
-        SMTP_HOST: Joi.string().optional(),
+        SMTP_HOST: Joi.string().allow('').optional(),
         SMTP_PORT: Joi.number().default(51025),
         SMTP_USER: Joi.string().allow('').optional(),
         SMTP_PASS: Joi.string().allow('').optional(),
-        SMTP_FROM: Joi.string().optional(),
+        SMTP_FROM: Joi.string().allow('').optional(),
         SUPERADMIN_EMAIL: Joi.string().allow('').optional(),
         SUPERADMIN_PASSWORD: Joi.string().allow('').optional(),
         LOG_LEVEL: Joi.string().default('info'),
@@ -98,7 +98,7 @@ import { FormsCorsMiddleware } from './forms/forms-cors.middleware';
         EDGE_LOG_INGESTION_CRON_PATTERN: Joi.string().default('*/5 * * * *'),
         SENTRY_ENABLED: Joi.boolean().default(false),
         SENTRY_DSN: Joi.string().allow('').optional(),
-        SENTRY_ENVIRONMENT: Joi.string().optional(),
+        SENTRY_ENVIRONMENT: Joi.string().allow('').optional(),
         SENTRY_TRACES_SAMPLE_RATE: Joi.number().min(0).max(1).default(0),
         METRICS_ENABLED: Joi.boolean().default(false),
       }),

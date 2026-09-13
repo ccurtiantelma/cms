@@ -23,6 +23,10 @@
   },
   "scripts": {
     "dev": "concurrently -n \"BACKEND,FRONTEND,PUBLIC\" -c \"cyan,magenta,green\" \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:public-site\"",
+    "predev": "bash scripts/stack.sh dev-infra",
+    "docker:prod:up": "bash scripts/stack.sh prod-up",
+    "docker:down": "bash scripts/stack.sh down",
+    "docker:status": "bash scripts/stack.sh status",
     "dev:backend": "npm run start:dev --workspace=app/backend",
     "dev:frontend": "npm run dev --workspace=app/frontend",
     "dev:public-site": "npm run build --workspace=app/public-site && npm run start --workspace=app/public-site",
