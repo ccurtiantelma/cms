@@ -29,7 +29,7 @@
     "docker:status": "bash scripts/stack.sh status",
     "dev:backend": "npm run start:dev --workspace=app/backend",
     "dev:frontend": "npm run dev --workspace=app/frontend",
-    "dev:public-site": "npm run build --workspace=app/public-site && npm run start --workspace=app/public-site",
+    "dev:public-site": "npm run build --workspace=app/public-site && bash scripts/wait-for-backend.sh && npm run start --workspace=app/public-site",
     "build:backend": "npm run build --workspace=app/backend",
     "build:frontend": "npm run build --workspace=app/frontend",
     "build:public-site": "npm run build --workspace=app/public-site",

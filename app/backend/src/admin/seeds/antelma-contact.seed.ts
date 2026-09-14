@@ -369,9 +369,7 @@ function buildAntelmaContactBlocks(): BlockNode[] {
               // globale (`antelma-global-sections.seed.ts`, `antelma-gs-footer-legal-text`) —
               // stesso dato reale, nessuna credenziale inventata per questa colonna.
               html:
-                '<p>© 2026 All Rights Reserved Antelma S.r.l. | Sede Legale: Via Gavinana, 3 – 21052 ' +
-                'Busto Arsizio (VA) | Partita Iva e Codice Fiscale N. 01814180129 | Società iscritta al ' +
-                'Registro delle Imprese di Varese al n. 01814180129 | Tel.: 0331 651.811 – Fax: 0331 651.888 ' +
+                '<p>© 2026 All Rights Reserved ' +
                 '| email: info@antelma.it</p>',
               styleFontSize: { default: 'sm' },
             },
