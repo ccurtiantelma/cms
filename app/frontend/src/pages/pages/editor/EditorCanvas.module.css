@@ -14,12 +14,14 @@
 /*
   Wrapper "Layout" del tema (v8, `theme.ts` § `ThemeLayoutConfig`) — stesso markup/stesse
   variabili `--theme-layout-*` di `.pageOuter`/`.pageBoxed` in `app/public-site/src/PageView.css`,
-  qui duplicate perché il Canvas gira in un bundle separato e non può importare CSS
-  dall'altro package. `useCanvasTheme` (EditorCanvas.tsx) scopa già queste custom
-  property su `.${GLOBAL_TOKENS_CANVAS_SCOPE_CLASS}` (= `.canvasRoot`), quindi sono
-  disponibili qui senza altro aggancio. Senza questo wrapper il Canvas non rifletteva mai
-  "Pagina boxed"/Margine/Rientro: solo il sito pubblico li applicava, così l'editor
-  mostrava sempre il contenuto a piena larghezza indipendentemente dal tema.
+  qui duplicate perché il Canvas gira in un documento isolato (l'iframe montato da
+  `IframeCanvas.tsx`, ADR-72) e non può importare CSS dall'altro package. `IframeCanvas.tsx`
+  scrive queste custom property su `:root` di quel documento (`generateThemeCss`, selettore
+  dedicato — non serve più scopare su `.${GLOBAL_TOKENS_CANVAS_SCOPE_CLASS}` quando il
+  documento è esclusivo del canvas), quindi sono disponibili qui senza altro aggancio. Senza
+  questo wrapper il Canvas non rifletteva mai "Pagina boxed"/Margine/Rientro: solo il sito
+  pubblico li applicava, così l'editor mostrava sempre il contenuto a piena larghezza
+  indipendentemente dal tema.
 */
 .pageOuter {
   padding-top: var(--theme-layout-margin-top, 0px);
@@ -35,6 +37,21 @@
   padding-right: var(--theme-layout-padding-right, 0px);
   padding-bottom: var(--theme-layout-padding-bottom, 0px);
   padding-left: var(--theme-layout-padding-left, 0px);
+}
+
+/*
+  Equivalente non-Mantine di `<Stack gap="sm">` (EditorCanvas.tsx): questo albero vive nel
+  documento isolato dell'iframe (`IframeCanvas.tsx`, ADR-72), dove il foglio di stile di
+  Mantine — caricato solo nel `document` padre — non è disponibile (CLAUDE.md § Regola
+  Mantine: i componenti dei blocchi non importano Mantine). `gap` legge `--cms-space-sm`,
+  la stessa variabile già scritta da `generateThemeCss`/`compileTokensToCss` in quel
+  documento — coerente col resto del vocabolario dei token dei blocchi
+  (`style-tokens.module.css`), nessun valore hardcoded duplicato.
+*/
+.blockStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cms-space-sm, 12px);
 }
 
 /*

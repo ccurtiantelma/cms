@@ -1,0 +1,34 @@
+/* Guscio dell'iframe del Canvas (IframeCanvas.tsx, ADR-72/SPEC-F04 §1). */
+
+/*
+  Occupa l'intera area lasciata da `.viewportContainer` di `FullScreenEditorLayout.module.css`
+  (stesso contenitore che prima ospitava `EditorCanvas` direttamente) — `position: relative`
+  per ospitare lo stato di errore sovrapposto senza spostare il layout dei fratelli.
+*/
+.frameWrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/*
+  Nessun bordo/ombra propri (stile "Full-Screen nativo" già in uso da `.canvasRoot` di
+  `EditorCanvas.module.css`): l'iframe deve risultare visivamente indistinguibile da un
+  canvas montato direttamente nel documento padre.
+*/
+.frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/*
+  Stato di errore esplicito (SPEC-F04-super-elementor.md §1.2 punto 4): mai un canvas vuoto
+  silenzioso se `#canvas-root` non è raggiungibile al `load` dell'iframe.
+*/
+.errorState {
+  position: absolute;
+  inset: 16px;
+  z-index: 1;
+}

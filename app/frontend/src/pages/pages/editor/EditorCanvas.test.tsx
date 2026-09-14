@@ -1,79 +1,46 @@
 /**
- * Regression test dello scope isolation dei Global Design Tokens sul Canvas
- * (`EditorCanvas.tsx` + `useBlockEditorStore.hydrateGlobalTokens`/`setGlobalTokens`).
+ * Test di `EditorCanvas.tsx` — il `canvasTree` proiettato nell'iframe da `IframeCanvas.tsx`
+ * (`ADR-72-canvas-iframe-portal-bridge.md`). **Aggiornato per ADR-72**: fino a questa ADR il
+ * canvas montava direttamente nel `document` principale e questo file asseriva che il tag
+ * `<style id="eaidos-global-tokens">` vivesse lì — premessa ormai falsa (oggi esiste un canvas
+ * in iframe, `IframeCanvas.tsx`), quindi quelle assertion sono state spostate in
+ * `IframeCanvas.test.tsx` § "isolamento CSS", dove il documento giusto da verificare è
+ * `iframe.contentDocument`, non più il `document` di questo test (che qui renderizza
+ * `EditorCanvas` da solo, senza alcun iframe attorno — comportamento comunque legittimo da
+ * testare in isolamento, ma non più rappresentativo di dove il tag dei token finisce in
+ * produzione).
  *
- * Il tag `<style id="eaidos-global-tokens">` vive comunque nello `head` del documento
- * principale (nessun canvas in iframe oggi), ma il CSS che contiene deve scopare le
- * variabili su `.eaidos-canvas-theme-scope` — la classe che `EditorCanvas` porta sulla
- * propria radice — e mai su `:root`, altrimenti le variabili del contenuto
- * governerebbero anche la chrome amministrativa (sidebar, toolbar) che circonda il
- * canvas.
+ * Ciò che resta di competenza di `EditorCanvas.tsx` in sé, testato qui:
+ * - porta la classe di scope (`GLOBAL_TOKENS_CANVAS_SCOPE_CLASS`) su cui `IframeCanvas.tsx`
+ *   scopa il CSS dei Global Design Tokens nel documento dell'iframe;
+ * - non subisce un remount distruttivo dell'albero di blocchi quando lo stato dei token
+ *   cambia altrove (questo componente non sottoscrive `globalTokens`, quindi un cambiamento
+ *   di quello stato non deve mai far perdere l'identità dei nodi DOM già montati).
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { renderWithProviders } from '../../../test/utils';
 import {
   GLOBAL_TOKENS_CANVAS_SCOPE_CLASS,
-  GLOBAL_TOKENS_STYLE_TAG_ID,
   DEFAULT_GLOBAL_TOKENS,
 } from '../../../libs/globalTokensCompiler';
 
 const { useBlockEditorStore } = await import('../../../hooks/useBlockEditorStore');
 const { default: EditorCanvas } = await import('./EditorCanvas');
 
-function globalTokensStyleTag(): HTMLStyleElement | null {
-  return document.getElementById(GLOBAL_TOKENS_STYLE_TAG_ID) as HTMLStyleElement | null;
-}
-
 beforeEach(() => {
   useBlockEditorStore.getState().initTree([]);
   useBlockEditorStore.setState({ globalTokens: null });
-  globalTokensStyleTag()?.remove();
 });
 
-afterEach(() => {
-  globalTokensStyleTag()?.remove();
-});
-
-describe('EditorCanvas — scope isolation dei Global Design Tokens', () => {
-  it('porta la classe di scope su cui lo store scopa il CSS dei token', () => {
+describe('EditorCanvas — canvasTree proiettato da IframeCanvas.tsx', () => {
+  it('porta la classe di scope su cui IframeCanvas.tsx scopa, nel documento dell’iframe, il CSS dei Global Design Tokens', () => {
     const { container } = renderWithProviders(<EditorCanvas />);
 
     const root = container.querySelector(`.${GLOBAL_TOKENS_CANVAS_SCOPE_CLASS}`);
     expect(root).not.toBeNull();
   });
 
-  it('setGlobalTokens scopa il CSS su .eaidos-canvas-theme-scope, mai su :root', () => {
-    renderWithProviders(<EditorCanvas />);
-
-    useBlockEditorStore.getState().setGlobalTokens(DEFAULT_GLOBAL_TOKENS);
-
-    const styleTag = globalTokensStyleTag();
-    expect(styleTag).not.toBeNull();
-    const css = styleTag?.textContent ?? '';
-    expect(css).toContain(`.${GLOBAL_TOKENS_CANVAS_SCOPE_CLASS} {`);
-    expect(css).not.toMatch(/(^|\s):root\b/);
-  });
-
-  it('hydrateGlobalTokens (idratazione non annullabile) scopa lo stesso modo di setGlobalTokens', () => {
-    renderWithProviders(<EditorCanvas />);
-
-    useBlockEditorStore.getState().hydrateGlobalTokens(DEFAULT_GLOBAL_TOKENS);
-
-    const css = globalTokensStyleTag()?.textContent ?? '';
-    expect(css).toContain(`.${GLOBAL_TOKENS_CANVAS_SCOPE_CLASS} {`);
-    expect(css).not.toMatch(/(^|\s):root\b/);
-  });
-
-  it('le variabili compilate non toccano :root del documento (nessuna propagazione alla chrome outer)', () => {
-    renderWithProviders(<EditorCanvas />);
-
-    useBlockEditorStore.getState().setGlobalTokens(DEFAULT_GLOBAL_TOKENS);
-
-    const rootStyles = getComputedStyle(document.documentElement);
-    expect(rootStyles.getPropertyValue('--eaidos-global-color-primary').trim()).toBe('');
-  });
-
-  it("un aggiornamento dei token non ri-monta l'albero di blocchi esistente", () => {
+  it("un aggiornamento dei Global Design Tokens altrove non ri-monta l'albero di blocchi esistente", () => {
     useBlockEditorStore
       .getState()
       .initTree([
@@ -85,8 +52,9 @@ describe('EditorCanvas — scope isolation dei Global Design Tokens', () => {
     useBlockEditorStore.getState().setGlobalTokens(DEFAULT_GLOBAL_TOKENS);
 
     const blockNodeAfter = container.querySelector('[data-block-id="h-1"]');
-    // Applicazione imperativa al tag <style>, non passata come prop/stato del wrapper:
-    // lo stesso nodo DOM del blocco resta montato, nessun remount distruttivo.
+    // `EditorCanvas.tsx` non sottoscrive `globalTokens` (l'applicazione CSS è responsabilità
+    // di `IframeCanvas.tsx`/dello store, non di questo componente): lo stesso nodo DOM del
+    // blocco resta montato, nessun remount distruttivo.
     expect(blockNodeAfter).toBe(blockNodeBefore);
   });
 });

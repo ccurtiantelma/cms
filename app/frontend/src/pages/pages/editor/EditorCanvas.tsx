@@ -11,6 +11,16 @@
  * sidebar e canvas è `FullScreenEditorLayout`, che ora lo ospita — vedi il commento di testa
  * di quel file.
  *
+ * **Questo componente è il `canvasTree` proiettato nell'iframe da `IframeCanvas.tsx`**
+ * (`ADR-72-canvas-iframe-portal-bridge.md`): resta lo stesso codice sorgente già in uso prima
+ * di quella ADR, non duplicato — il montaggio nell'iframe via `ReactDOM.createPortal` è
+ * interamente responsabilità del chiamante (`IframeCanvas.tsx`, `FullScreenEditorLayout.tsx`),
+ * questo file resta agnostico di dove il proprio DOM finisce fisicamente montato. Per lo
+ * stesso motivo **non importa Mantine**: essendo montato nel `document` isolato dell'iframe
+ * (CSS Modules propri + markup semantico, mai una classe Mantine il cui foglio di stile vive
+ * solo nel `document` padre — CLAUDE.md § Regola Mantine, isolamento CSS di ADR-72 § "Decisione"
+ * punto 1/ADR-70 § "Decisione" punto 5).
+ *
  * Lo stato vuoto ("nessun blocco") è anche una drop-zone (`useDroppable`, id
  * `root-empty-dropzone`, stesso schema dati `{ parentId, index }` letto da
  * `FullScreenEditorLayout.handleDragEnd`): senza un nodo già in radice non c'è nessuna
@@ -28,61 +38,25 @@
  * sopra/sotto" di ogni Section (`BlockPalette`, toolbar di `EditorBlockWrapper.tsx`).
  *
  * Porta anche `GLOBAL_TOKENS_CANVAS_SCOPE_CLASS` (`libs/globalTokensCompiler.ts`): è il
- * selettore su cui questo componente scopa il CSS compilato dal `ThemeConfig` dell'Editor
- * tema — la **stessa** fonte che veste il sito pubblicato (`app/public-site`), compilata
- * dalla stessa funzione (`generateThemeCss`). Il Canvas mostra quindi ciò che il visitatore
- * vedrà, non l'aspetto della chrome amministrativa attorno, che resta sui default di
- * fabbrica di Mantine.
- *
- * L'applicazione è imperativa, su un `<style>` di `document` scopato a questa radice: le
- * custom property cambiano a cascata sui discendenti senza ri-renderizzare né questo
- * componente né l'albero dei blocchi.
+ * selettore su cui `IframeCanvas.tsx` scopa, nel documento dell'iframe, sia il CSS compilato
+ * dei Global Design Tokens sia (storicamente, quando il canvas viveva nel documento padre) il
+ * `ThemeConfig` dell'Editor tema — quest'ultimo ora scopato su `:root` di quel documento
+ * dedicato (`IframeCanvas.tsx`, non serve più una classe di scope quando il documento è
+ * esclusivo del canvas). Il Canvas mostra quindi ciò che il visitatore vedrà, non l'aspetto
+ * della chrome amministrativa attorno, che resta sui default di fabbrica di Mantine.
  */
-import { useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { Stack } from '@mantine/core';
 import { useDroppable } from '@dnd-kit/core';
 import { useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
-import { useThemeColorStore } from '../../../hooks/useThemeColor';
 import { GLOBAL_TOKENS_CANVAS_SCOPE_CLASS } from '../../../libs/globalTokensCompiler';
-import { generateThemeCss, THEME_STYLE_TAG_ID } from '../../../utils/theme-css.utils';
 import CanvasAddSectionZone from './CanvasAddSectionZone';
 import CanvasContextMenu from './CanvasContextMenu';
 import CanvasSectionInserter from './CanvasSectionInserter';
 import EditorBlockWrapper from './EditorBlockWrapper';
 import styles from './EditorCanvas.module.css';
 
-/**
- * Tiene aggiornato il `<style>` del documento con il tema compilato, scopato alla radice
- * del Canvas. Un solo tag riusato (per id) invece di uno per render: montare/smontare un
- * foglio di stile ad ogni modifica del tema farebbe lampeggiare il Canvas.
- *
- * `scheme: 'light'` — non `'auto'`: il Canvas è una superficie di editing, e il suo aspetto
- * non deve dipendere dalla preferenza chiaro/scuro del sistema operativo di chi sta
- * lavorando. Lo scheme scuro del tema si verifica dove conta, cioè in anteprima
- * (`/__preview/`) e sul sito, dove segue la preferenza del visitatore.
- */
-function useCanvasTheme(): void {
-  const themeConfig = useThemeColorStore((state) => state.themeConfig);
-
-  useEffect(() => {
-    const css = generateThemeCss(themeConfig, {
-      selector: `.${GLOBAL_TOKENS_CANVAS_SCOPE_CLASS}`,
-      scheme: 'light',
-    });
-    let styleTag = document.getElementById(THEME_STYLE_TAG_ID) as HTMLStyleElement | null;
-    if (!styleTag) {
-      styleTag = document.createElement('style');
-      styleTag.id = THEME_STYLE_TAG_ID;
-      document.head.appendChild(styleTag);
-    }
-    styleTag.textContent = css;
-  }, [themeConfig]);
-}
-
 /** Superficie di editing dell'albero di blocchi della bozza corrente. */
 export default function EditorCanvas(): JSX.Element {
-  useCanvasTheme();
   const rootIds = useBlockEditorStore(useShallow((state) => state.tree.map((node) => node.id)));
   const selectNode = useBlockEditorStore((state) => state.selectNode);
   const { setNodeRef: setEmptyDropRef, isOver: isOverEmpty } = useDroppable({
@@ -93,9 +67,10 @@ export default function EditorCanvas(): JSX.Element {
   return (
     <CanvasContextMenu>
       <div
-        // `GLOBAL_TOKENS_CANVAS_SCOPE_CLASS` è il selettore su cui `useCanvasTheme` scopa
-        // il CSS del tema: mai `:root`, per non far trapelare le variabili del sito nella
-        // chrome amministrativa (sidebar, toolbar) che circonda questo canvas.
+        // `GLOBAL_TOKENS_CANVAS_SCOPE_CLASS` è il selettore su cui `IframeCanvas.tsx` scopa,
+        // nel documento dell'iframe, il CSS dei Global Design Tokens: mai `:root`, per non
+        // far trapelare le variabili del sito nella chrome amministrativa (sidebar, toolbar)
+        // — che comunque vive in un documento distinto (quello padre), non in questo.
         className={`${styles.canvasRoot} ${GLOBAL_TOKENS_CANVAS_SCOPE_CLASS}`}
         // Un click sullo sfondo deseleziona: senza, non ci sarebbe modo di tornare
         // a "nessun blocco selezionato" una volta scelto un nodo.
@@ -109,7 +84,15 @@ export default function EditorCanvas(): JSX.Element {
         */}
         <div className={styles.pageOuter}>
           <div className={styles.pageBoxed}>
-            <Stack gap="sm">
+            {/*
+              `.blockStack` (EditorCanvas.module.css): equivalente non-Mantine di
+              `<Stack gap="sm">` — questo albero vive nel documento isolato dell'iframe
+              (`IframeCanvas.tsx`), dove il foglio di stile di Mantine (caricato solo nel
+              `document` padre) non è disponibile. `gap` legge la stessa variabile
+              `--cms-space-sm` già scritta da `generateThemeCss`/`compileTokensToCss` in quel
+              documento, coerente col resto del vocabolario dei token dei blocchi.
+            */}
+            <div className={styles.blockStack}>
               {rootIds.length === 0 ? (
                 // Nessun contenuto visivo proprio (scelta di giudizio, vedi il commento di testa):
                 // la resa "Aggiungi sezione" è interamente di `CanvasAddSectionZone`, montata
@@ -135,7 +118,7 @@ export default function EditorCanvas(): JSX.Element {
                   <CanvasAddSectionZone parentId={null} index={rootIds.length} />
                 </>
               )}
-            </Stack>
+            </div>
           </div>
         </div>
       </div>

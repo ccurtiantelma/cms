@@ -32,8 +32,27 @@
  * `.canvasArea`) sono fratelli, non l'una discendente dell'altra — `useDraggable`/`useDroppable`
  * funzionano solo condividendo la stessa istanza di `DndContext`, e questo componente è il
  * primo antenato comune fra i due.
+ *
+ * **Ponte di misura cross-frame (`ADR-72-canvas-iframe-portal-bridge.md` § "Decisione" punto
+ * 3, `SPEC-F04-super-elementor.md` § 3.3)**: da quando il canvas centrale vive in un `<iframe>`
+ * same-origin (`IframeCanvas.tsx`, montato al posto del vecchio `<EditorCanvas/>` diretto nei
+ * children), il `DndContext` unico qui ospitato riceve una prop `measuring` non di default
+ * (`iframe-canvas-measuring.utils.ts`, algoritmo portato invariato dal PoC T3,
+ * `PageSpikePortalBridgeParent.tsx`): traduce il rettangolo dei nodi misurati dentro l'iframe
+ * nel sistema di riferimento del documento la cui coordinata di puntatore è attiva per il drag
+ * corrente. Nessun `Sensor` custom (`IframeBridgeSensor`, previsto da `ADR-70` § "Decisione"
+ * punto 3, superato da ADR-72): il `PointerSensor` nativo già montato sotto riceve da solo
+ * tutti gli eventi necessari, grazie alla cattura implicita del puntatore di Chromium.
  */
-import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+} from 'react';
 import { ActionIcon, Paper, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
@@ -53,8 +72,10 @@ import {
   pointerWithin,
   useSensor,
   useSensors,
+  type ClientRect,
   type DragEndEvent,
   type DragStartEvent,
+  type MeasuringConfiguration,
 } from '@dnd-kit/core';
 import {
   useActiveViewport,
@@ -71,6 +92,13 @@ import type { PageRecord, PageStatus } from '../../../types/pages.types';
 import { blockIcon, defaultPropsFor } from './BlockPalette';
 import { findNode } from './block-tree.utils';
 import EditorSidebar from './sidebar/EditorSidebar';
+import IframeCanvas from './IframeCanvas';
+import {
+  isPaletteOrigin,
+  shiftRect,
+  toPlainRect,
+  type DragOrigin,
+} from './iframe-canvas-measuring.utils';
 import Toolbar from './Toolbar';
 import HistoryDrawer from './HistoryDrawer';
 import TemplateLibraryModal from './TemplateLibraryModal';
@@ -316,8 +344,10 @@ export default function FullScreenEditorLayout({
   /*
    * Nessuna idratazione dei Global Design Tokens qui: l'aspetto del Canvas — colori,
    * tipografia, spaziature — deriva ora dal `ThemeConfig` dell'Editor tema, applicato da
-   * `EditorCanvas.tsx`. È la stessa fonte che veste il sito pubblicato, quindi il Canvas
-   * mostra ciò che il visitatore vedrà invece di un secondo sistema di stile parallelo.
+   * `IframeCanvas.tsx` sul documento dell'iframe (ADR-72; prima di quell'ADR era
+   * `EditorCanvas.tsx` ad applicarlo sul documento padre). È la stessa fonte che veste il
+   * sito pubblicato, quindi il Canvas mostra ciò che il visitatore vedrà invece di un
+   * secondo sistema di stile parallelo.
    */
 
   /** Contenitore che scrolla davvero durante il drag (punto 3 del task): `.canvasArea`, non
@@ -327,6 +357,60 @@ export default function FullScreenEditorLayout({
   const autoScrollFrameRef = useRef<number | null>(null);
   /** Ultima posizione verticale nota del puntatore durante il drag, letta dal loop `rAF`. */
   const pointerYRef = useRef<number | null>(null);
+
+  /**
+   * Riferimento sincrono all'elemento `<iframe>` del canvas, sollevato da `IframeCanvas.tsx`
+   * tramite il ref forwardato (`ADR-72` § "Decisione" punto 3): la funzione di misura
+   * cross-frame ne legge `getBoundingClientRect()`/`contentDocument` ad ogni misura, senza
+   * passare da uno stato React (che introdurrebbe un giro di render fra il montaggio
+   * dell'iframe e la disponibilità della misura corretta).
+   */
+  const iframeElRef = useRef<HTMLIFrameElement | null>(null);
+  /**
+   * Documento di riferimento del drag corrente (`'parent'`/`'iframe'`/`null`), impostato in
+   * `handleDragStart` dall'origine del nodo trascinato (convenzione `new-block:` di
+   * `WidgetPalette.tsx`, stessa di `isPaletteOrigin`) e azzerato in `handleDragEnd`/
+   * `onDragCancel` — mai uno stato globale mutabile fuori dal ciclo di vita del drag (ADR-72
+   * § "Decisione" punto 3, ultimo capoverso).
+   */
+  const dragOriginRef = useRef<DragOrigin>(null);
+
+  /**
+   * Funzione di misura cross-frame per `measuring.droppable/draggable.measure` del
+   * `DndContext` sotto (ADR-72 § "Decisione" punto 3): algoritmo portato invariato da
+   * `PageSpikePortalBridgeParent.tsx` (PoC T3), verificato con mouse reale 10/10 run
+   * deterministici. La lettura di `iframeElRef.current`/`dragOriginRef.current` resta dentro
+   * questo `useCallback` locale (mai passata come argomento a una fabbrica esterna: il rule
+   * `react-hooks/refs` segnala la lettura di un ref fuori dal componente che lo possiede
+   * durante il render) — `[]` di dipendenze: entrambi i ref sono stabili per l'intera vita del
+   * componente, letti in modo imperativo solo quando `dnd-kit` invoca la funzione, mai durante
+   * il render di questo componente.
+   */
+  const measureCrossFrame = useCallback((element: Element): ClientRect => {
+    const rect = element.getBoundingClientRect();
+    const iframe = iframeElRef.current;
+    const origin = dragOriginRef.current;
+    if (!iframe || !origin) return toPlainRect(rect);
+
+    const elementIsInIframe = element.ownerDocument === iframe.contentDocument;
+    const frameRect = iframe.getBoundingClientRect();
+
+    if (origin === 'parent' && elementIsInIframe) {
+      return shiftRect(rect, frameRect.left, frameRect.top);
+    }
+    if (origin === 'iframe' && !elementIsInIframe) {
+      return shiftRect(rect, -frameRect.left, -frameRect.top);
+    }
+    return toPlainRect(rect);
+  }, []);
+
+  const measuring: MeasuringConfiguration = useMemo(
+    () => ({
+      droppable: { measure: measureCrossFrame },
+      draggable: { measure: measureCrossFrame },
+    }),
+    [measureCrossFrame],
+  );
 
   // Puntatore + tastiera (dnd-kit T7): la tastiera è anche la via deterministica per i test
   // E2E futuri. `distance` evita che un click sulla maniglia (selezione, tooltip), o un
@@ -338,10 +422,16 @@ export default function FullScreenEditorLayout({
   );
 
   function handleDragStart(event: DragStartEvent): void {
+    // Origine del drag corrente (ADR-72 § "Decisione" punto 3): una tessera di
+    // `WidgetPalette` (id `new-block:<type>`, documento padre) contro il riordino di un nodo
+    // già esistente nell'albero (DOM portato nell'iframe da `IframeCanvas.tsx`). Letto dalla
+    // funzione di misura cross-frame ad ogni `getBoundingClientRect()`.
+    dragOriginRef.current = isPaletteOrigin(String(event.active.id)) ? 'parent' : 'iframe';
     setDraggedBlock(draggedBlockInfo(event));
   }
 
   function handleDragEnd(event: DragEndEvent): void {
+    dragOriginRef.current = null;
     setDraggedBlock(null);
     const { active, over } = event;
     if (!over) return;
@@ -517,9 +607,18 @@ export default function FullScreenEditorLayout({
         // sceglie solo fra le zone che contengono davvero il puntatore, coerente col
         // comportamento atteso di un editor stile Elementor.
         collisionDetection={pointerWithin}
+        // Ponte di misura cross-frame (ADR-72 § "Decisione" punto 3, commento di testa del
+        // file): senza questo, un drag che attraversa il confine iframe↔padre risolve sempre
+        // `over: null`, perché il rettangolo dei nodi portati nell'iframe verrebbe misurato
+        // nel sistema di riferimento locale dell'iframe, mai tradotto nell'offset del suo
+        // riquadro nella pagina padre.
+        measuring={measuring}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
-        onDragCancel={() => setDraggedBlock(null)}
+        onDragCancel={() => {
+          dragOriginRef.current = null;
+          setDraggedBlock(null);
+        }}
       >
         <div className={styles.canvasShell}>
           <div className={styles.workArea}>
@@ -596,7 +695,15 @@ export default function FullScreenEditorLayout({
                 className={`${styles.viewportContainer} ${viewportClass[activeViewport]}`}
                 data-viewport={activeViewport}
               >
-                {children}
+                {/*
+                  Canvas incapsulato in iframe same-origin (ADR-72): `IframeCanvas` proietta
+                  `children` (il `canvasTree`, oggi `InvalidBlockProvider > EditorCanvas`, non
+                  toccato dal chiamante) dentro `iframe.contentDocument` via `createPortal`,
+                  restando nello stesso albero React di questo `DndContext`. Il ref sollevato è
+                  l'elemento `<iframe>` stesso: unico wiring richiesto da `measuring` sopra per
+                  leggere sincronicamente `getBoundingClientRect()`/`contentDocument`.
+                */}
+                <IframeCanvas ref={iframeElRef}>{children}</IframeCanvas>
               </div>
             </div>
 
