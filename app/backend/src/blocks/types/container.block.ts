@@ -125,6 +125,20 @@ export const containerBlock: BlockDefinition = {
       values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
       default: { default: '0' },
     },
+    styleWidth: {
+      kind: 'unitValue',
+      required: false,
+      units: ['px', '%'],
+      min: 0,
+      max: 4000,
+    },
+    styleHeight: {
+      kind: 'unitValue',
+      required: false,
+      units: ['px', '%'],
+      min: 0,
+      max: 4000,
+    },
     customCssClass: {
       kind: 'cssClassName',
       required: false,
@@ -161,6 +175,8 @@ export const containerBlock: BlockDefinition = {
       styleMarginRight: { label: 'Margine destro', tab: 'style', order: 13 },
       styleMarginBottom: { label: 'Margine inferiore', tab: 'style', order: 14 },
       styleMarginLeft: { label: 'Margine sinistro', tab: 'style', order: 15 },
+      styleWidth: { label: 'Larghezza personalizzata', tab: 'style', order: 18 },
+      styleHeight: { label: 'Altezza personalizzata', tab: 'style', order: 19 },
       customCssClass: {
         label: 'Classe CSS personalizzata',
         tab: 'advanced',

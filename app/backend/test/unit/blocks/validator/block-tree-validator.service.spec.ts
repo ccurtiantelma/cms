@@ -333,6 +333,10 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
             'customCssClass',
             'customElementId',
             'styleTextAlign',
+            'styleMarginTop',
+            'styleMarginRight',
+            'styleMarginBottom',
+            'styleMarginLeft',
           ],
         },
       });

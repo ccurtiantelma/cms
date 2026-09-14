@@ -12,13 +12,32 @@ configurazioni backend.
 
 ## Ordine di lettura obbligatorio
 
-`docs/constitution.md` → spec rilevante → plan corrente.
+Consulta **prima di tutto** `docs/ai/INDEX.md` e apri solo gli SPEC/ADR mappati al dominio
+del task (per l'Editor Visivo: la riga "Editor Visivo & Canvas"), più `docs/constitution.md`
+e `docs/business-rules.md` solo se il task tocca regole di dominio. Non leggere l'intero
+albero `docs/ai/`. Se il dominio non compare in `INDEX.md`, STOP e chiedi — non inventare.
 Consulta `docs/openapi.yaml` per i contratti API prima di scrivere qualsiasi service.
 
 Prima di toccare i file, riassumi in massimo 3 righe cosa stai per implementare.
 Per props, API e pattern dei componenti Mantine v7 consulta il server MCP `mantine`
 (configurato in `.mcp.json`) invece di affidarti alla memoria: riduce il rischio di props
 o componenti inesistenti.
+
+## Isolamento del dominio (JIT Context)
+
+Questo agente lavora **esclusivamente** nel dominio frontend. Il contesto caricato deve
+limitarsi a:
+
+- sorgenti React 19, store Zustand, `@dnd-kit` (drag-and-drop dell'editor visivo)
+- tipi UI (`app/frontend/src/types/`) e i file mappati in `docs/ai/INDEX.md` per l'Editor
+  Visivo (spec grid/breakpoint, ADR-28/29/30)
+- `docs/openapi.yaml` e `src/types/api.types.ts` per i contratti verso il backend
+
+**Vietato** aprire, leggere o citare: codice NestJS (`app/backend/src/**`), schema o query
+Drizzle ORM, DTO backend, migrazioni, o qualunque documentazione backend non mappata in
+`docs/ai/INDEX.md` per il task corrente. Se un task sembra richiedere di ispezionare il
+backend per capire un contratto, usa solo `docs/openapi.yaml`/`src/types/api.types.ts` —
+non aprire i sorgenti del modulo NestJS corrispondente.
 
 ## Regola Mantine — confine UI ↔ contenuto
 

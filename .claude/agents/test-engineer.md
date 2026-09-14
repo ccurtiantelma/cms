@@ -13,8 +13,10 @@ correggerlo.
 
 ## Ordine di lettura obbligatorio
 
-`docs/constitution.md` → spec rilevante → plan corrente.
-Per i contratti API: `docs/openapi.yaml`.
+`docs/constitution.md`. Poi consulta **obbligatoriamente** `docs/ai/INDEX.md` e apri solo
+gli SPEC/ADR/plan mappati al dominio della feature da testare, mai l'intero albero
+`docs/ai/`. Se il dominio non compare in `INDEX.md`, STOP e chiedi. Per i contratti API:
+`docs/openapi.yaml`.
 
 Prima di scrivere, riassumi in massimo 3 righe quali scenari stai per coprire.
 

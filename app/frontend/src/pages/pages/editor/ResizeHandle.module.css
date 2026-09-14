@@ -1,0 +1,151 @@
+/*
+  Maniglia generica di ridimensionamento (ADR-71, SPEC-F04-super-elementor.md § 4.2).
+  Stesso idioma della maniglia esistente di `container.styleFlexBasis`
+  (`components/ContainerResizeHandle.module.css`, non toccata da questo file):
+  `position: absolute` per restare fuori dal posizionamento automatico del contenitore
+  genitore, striscia larga per l'afferrabilità e linea sottile per la resa visiva. Il
+  colore distingue le due famiglie di prop pilotate (`--resize-handle-color`, impostata
+  inline da `ResizeHandle.tsx` per ogni istanza): verde per dimensione (`styleWidth`/
+  `styleHeight`), ambra per spaziatura (i quattro margini per lato) — mai lo stesso viola
+  della maniglia di `container.styleFlexBasis`, con cui questa può coesistere sullo stesso
+  nodo (`container` selezionato, "accanto, non al posto", SPEC-F04-super-elementor.md § 4.2).
+*/
+.handle {
+  position: absolute;
+  z-index: 5;
+  touch-action: none;
+}
+
+/* Asse orizzontale (larghezza/margini laterali): striscia verticale, cursore ridimensiona-colonna. */
+.axisHorizontal {
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: col-resize;
+}
+
+/* Asse verticale (altezza/margini verticali): striscia orizzontale, cursore ridimensiona-riga. */
+.axisVertical {
+  left: 0;
+  right: 0;
+  height: 10px;
+  cursor: row-resize;
+}
+
+/*
+  Offset per singola prop (`data-prop`, `ResizeHandle.tsx`): ogni maniglia occupa un bordo
+  distinto, "accanto" — mai sovrapposta — alle altre maniglie che possono comparire sullo
+  stesso nodo selezionato (es. `container`: questa `styleWidth` a -18px, la maniglia
+  esistente di `styleFlexBasis` a -5px, `components/ContainerResizeHandle.module.css`, non
+  toccata da questo file). Dimensione (`styleWidth`/`styleHeight`) più vicina al bordo,
+  spaziatura (i quattro margini) più esterna.
+*/
+.axisHorizontal[data-prop='styleWidth'] {
+  right: -18px;
+}
+
+.axisHorizontal[data-prop='styleMarginLeft'] {
+  left: -30px;
+}
+
+.axisHorizontal[data-prop='styleMarginRight'] {
+  right: -30px;
+}
+
+.axisVertical[data-prop='styleHeight'] {
+  bottom: -18px;
+}
+
+.axisVertical[data-prop='styleMarginTop'] {
+  top: -30px;
+}
+
+.axisVertical[data-prop='styleMarginBottom'] {
+  bottom: -30px;
+}
+
+.handle::before {
+  content: '';
+  position: absolute;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--resize-handle-color) 35%, transparent);
+  transition: background-color 100ms ease;
+}
+
+.axisHorizontal::before {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+}
+
+.axisVertical::before {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+.handle:hover::before,
+.handleActive::before {
+  background: var(--resize-handle-color);
+}
+
+/* Presa centrale: rende afferrabile a colpo d'occhio una striscia che altrimenti si
+   leggerebbe come un semplice bordo — stesso idioma di `.grip` in `ContainerResizeHandle`. */
+.grip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 3px;
+  background: var(--resize-handle-color);
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+
+.axisHorizontal .grip {
+  width: 6px;
+  height: 28px;
+}
+
+.axisVertical .grip {
+  width: 28px;
+  height: 6px;
+}
+
+.handle:hover .grip,
+.handleActive .grip {
+  opacity: 1;
+}
+
+/*
+  Badge del valore in tempo reale: appare solo durante il trascinamento
+  (`ResizeHandle.tsx` lo monta solo mentre il gesto è attivo), ancorato alla maniglia.
+  `pointer-events: none` — non deve mai rubare la cattura del puntatore alla maniglia che lo
+  ospita.
+*/
+.badge {
+  position: absolute;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--resize-handle-color);
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.axisHorizontal .badge {
+  top: 50%;
+  right: calc(100% + 6px);
+  transform: translateY(-50%);
+}
+
+.axisVertical .badge {
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+}

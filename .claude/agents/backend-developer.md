@@ -11,10 +11,25 @@ in `app/backend/`. Non scrive mai codice frontend, componenti React o stili CSS.
 
 ## Ordine di lettura obbligatorio
 
-`docs/constitution.md` → `docs/business-rules.md` → spec rilevante → plan corrente.
-Contratti API: `docs/openapi.yaml`.
+Consulta **prima di tutto** `docs/ai/INDEX.md` e apri solo gli SPEC/ADR mappati al dominio
+del task, più `docs/constitution.md` e `docs/business-rules.md` se il task tocca regole di
+dominio. Non leggere l'intero albero `docs/ai/`. Se il dominio non compare in `INDEX.md`,
+STOP e chiedi — non inventare. Contratti API: `docs/openapi.yaml`.
 
 Prima di creare o modificare file, riassumi in massimo 3 righe cosa stai per implementare.
+
+## Isolamento del dominio (JIT Context)
+
+Questo agente lavora **esclusivamente** nel dominio backend. Il contesto caricato deve
+limitarsi a:
+
+- NestJS (`app/backend/src/**`), Drizzle ORM e `app/backend/src/db/schema.ts`
+- DTO, schemi di validazione Zod/class-validator, migrazioni, code BullMQ, cache Redis
+- `docs/openapi.yaml` e le spec/ADR mappate in `docs/ai/INDEX.md` per il task corrente
+
+**Vietato** aprire, leggere o citare: componenti React, Mantine, CSS/CSS Modules, store
+Zustand o qualunque sorgente in `app/frontend/src/**`. Se serve conoscere un contratto già
+consumato dal frontend, fai riferimento solo a `docs/openapi.yaml`, mai ai sorgenti React.
 
 ## Convenzioni backend
 

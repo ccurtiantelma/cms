@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spike canvas iframe</title>
+  </head>
+  <body style="margin: 0">
+    <!--
+      Entry point dedicato per la Spike di ADR-70 § 4 (gate di FASE 3, SPEC-F04-super-elementor.md
+      § 3.5): un secondo documento HTML, stessa origin/build dell'admin (servito dallo stesso
+      dev server Vite), che monta un albero React SEPARATO (proprio ReactDOM.createRoot,
+      NESSUN DndContext qui dentro — vedi PageSpikeParent.tsx) per verificare empiricamente se
+      `useDraggable`/`useDroppable` chiamati in questo secondo root possano registrarsi con il
+      DndContext del documento padre attraverso un IframeBridgeSensor custom.
+
+      Isolato deliberatamente da `index.html`/`App.tsx`: raggiungibile solo navigando
+      `/spike-dnd-iframe.html` direttamente (mai referenziato da `src`/link nel flusso di
+      produzione se non dalla pagina spike stessa). Vite lo serve automaticamente in `npm run
+      dev` senza bisogno di dichiararlo in `build.rollupOptions.input` (necessario solo per
+      `vite build`, fuori scope: questo file non deve finire nella build di produzione).
+    -->
+    <div id="spike-canvas-root"></div>
+    <script type="module" src="/src/spikes/dnd-iframe-bridge/spike-canvas-entry.tsx"></script>
+  </body>
+</html>

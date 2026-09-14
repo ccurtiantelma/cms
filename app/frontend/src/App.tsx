@@ -48,6 +48,16 @@ const PageSiteTemplates = lazy(() => import('./pages/site-templates/PageSiteTemp
 const PageSiteTemplateBuilder = lazy(
   () => import('./pages/site-templates/PageSiteTemplateBuilder'),
 );
+/** Solo per la Spike di ADR-70 § 4 (gate FASE 3, SPEC-F04-super-elementor.md § 3.5): PoC
+ * isolato, mai linkato dalla navigazione, da rimuovere insieme al resto della cartella
+ * `spikes/` una volta che l'esito scritto è stato prodotto e recepito. */
+const PageSpikeParent = lazy(() => import('./spikes/dnd-iframe-bridge/PageSpikeParent'));
+
+/** Solo per la Spike T2 (Opzione A, `RFC-F04e-bis-esito-spike-iframe.md` § "Decisione umana",
+ * `PLAN-F04-dnd-iframe-portal-spike.md`): PoC isolato, mai linkato dalla navigazione. */
+const PageSpikePortalParent = lazy(
+  () => import('./spikes/dnd-iframe-portal/PageSpikePortalParent'),
+);
 
 /** Fallback mostrato durante il caricamento dei chunk delle pagine lazy. */
 function PageLoadingFallback(): JSX.Element {
@@ -197,6 +207,13 @@ export default function App(): JSX.Element {
           >
             <Route index element={<PageStudio />} />
           </Route>
+
+          {/* Dev-only, nessun guard: PoC della Spike ADR-70 § 4, non un flusso applicativo. */}
+          <Route path="/dev/dnd-iframe-spike" element={<PageSpikeParent />} />
+
+          {/* Dev-only, nessun guard: PoC della Spike T2 (Portale React), non un flusso
+              applicativo. */}
+          <Route path="/dev/dnd-iframe-portal-spike" element={<PageSpikePortalParent />} />
 
           <Route path="*" element={<PageNotFound />} />
         </Routes>

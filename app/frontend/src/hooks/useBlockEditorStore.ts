@@ -45,6 +45,7 @@ import {
   resolveColumnRatio,
   type ColumnRatioValue,
 } from '../pages/pages/editor/column-resize.utils';
+import type { ResizeHandleUnit } from '../pages/pages/editor/resize-handle.utils';
 import { BLOCK_TYPES, CONTENT_TREE_LIMITS, ENVELOPE_VERSION } from '../types/blocks.types';
 import {
   compileTokensToCss,
@@ -209,6 +210,22 @@ export interface ColumnResizeState {
   ratio: ColumnRatioValue;
 }
 
+/**
+ * Valore che una prop `unitValue` pilotata da `ResizeHandle.tsx` (ADR-71) sta assumendo
+ * **mentre** il puntatore trascina la maniglia, oppure `null` a riposo. Slot generico,
+ * parallelo — non sostitutivo — di {@link ContainerResizeState}/{@link ColumnResizeState}:
+ * copre qualunque combinazione `(blockId, propName)` invece di un solo campo dedicato
+ * (`percent`/`ratio`), perché più props (`styleWidth`, `styleHeight`, i quattro margini per
+ * lato) condividono la stessa forma di anteprima. Un solo nodo/prop per volta: il gesto è
+ * esclusivo per costruzione (`setPointerCapture`), stesso principio delle altre due anteprime.
+ */
+export interface PropResizeState {
+  blockId: string;
+  propName: string;
+  value: number;
+  unit: ResizeHandleUnit;
+}
+
 /** Prop di stile copiate temporaneamente durante la sessione dell'editor. */
 export type StyleClipboard = Record<string, unknown>;
 
@@ -322,6 +339,17 @@ interface BlockEditorState {
    * delle altre.
    */
   columnResize: ColumnResizeState | null;
+  /**
+   * Anteprima di trascinamento di `ResizeHandle.tsx` (ADR-71) su una prop `unitValue`
+   * generica, oppure `null` a riposo. Stato **visivo ed effimero**, stesso principio di
+   * {@link containerResize}/{@link columnResize}: nessun comando sulla history mentre il
+   * puntatore si muove — il commit al rilascio passa direttamente da
+   * `updateBlockPropsAction` (nessuna azione di commit dedicata, a differenza delle due
+   * anteprime sopra: ADR-71 § "Decisione" punto 5, ultimo capoverso). Il selettore
+   * {@link usePropResizePreview} lo sottoscrive per `(blockId, propName)`, così il
+   * trascinamento di una maniglia non ri-renderizza le altre.
+   */
+  propResizePreview: PropResizeState | null;
   styleClipboard: StyleClipboard | null;
   /**
    * "Anteprima Pura" della topbar full-screen (E01): nasconde la sidebar sinistra e
@@ -492,6 +520,22 @@ interface BlockEditorState {
    * l'anteprima, anche quando non c'è nulla da scrivere (valore invariato, nodo sparito).
    */
   commitColumnRatioAction: (id: string, ratio: ColumnRatioValue) => void;
+  /**
+   * Aggiorna il valore che la prop `propName` del nodo `blockId` sta assumendo durante il
+   * trascinamento di una `ResizeHandle.tsx` (ADR-71). Non tocca l'albero e non tocca la
+   * history — stesso principio di {@link setContainerResizePreview}/
+   * {@link setColumnResizePreview}. Nessun commit dedicato: al rilascio il chiamante invoca
+   * direttamente {@link updateBlockPropsAction} (ADR-71 § "Decisione" punto 5, ultimo
+   * capoverso) e poi {@link clearPropResizePreview}.
+   */
+  setPropResizePreview: (
+    blockId: string,
+    propName: string,
+    value: number,
+    unit: ResizeHandleUnit,
+  ) => void;
+  /** Abbandona l'anteprima senza scrivere nulla (`pointercancel`/rilascio, gesto concluso). */
+  clearPropResizePreview: () => void;
 }
 
 /**
@@ -577,6 +621,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   globalTokens: null,
   containerResize: null,
   columnResize: null,
+  propResizePreview: null,
   styleClipboard: null,
   isPreviewMode: false,
 
@@ -602,6 +647,9 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       // sotto di lui non esiste più.
       containerResize: null,
       columnResize: null,
+      // Stesso principio per un'anteprima di `ResizeHandle.tsx` eventualmente rimasta
+      // aperta: l'albero sotto di lei non esiste più.
+      propResizePreview: null,
       styleClipboard: null,
     }));
   },
@@ -1119,6 +1167,26 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       };
     });
   },
+
+  setPropResizePreview: (blockId, propName, value, unit) =>
+    set((state) => {
+      // Nessun `set` a valore identico: un `pointermove` che non sposta abbastanza da
+      // cambiare il decimo di unità non deve ri-renderizzare nulla (stesso principio di
+      // `setContainerResizePreview`/`setColumnResizePreview`).
+      const current = state.propResizePreview;
+      if (
+        current &&
+        current.blockId === blockId &&
+        current.propName === propName &&
+        current.value === value &&
+        current.unit === unit
+      ) {
+        return {};
+      }
+      return { propResizePreview: { blockId, propName, value, unit } };
+    }),
+
+  clearPropResizePreview: () => set({ propResizePreview: null }),
 }));
 
 /**
@@ -1285,7 +1353,29 @@ export function useContainerResizePercent(id: string): number | null {
 }
 
 /**
- * Selettore granulare: lo stop di `columnRatio` in corso di trascinamento **per questo
+ * Selettore granulare: il valore in corso di trascinamento di una `ResizeHandle.tsx`
+ * (ADR-71) per **questa** combinazione `(blockId, propName)`, o `null` se il gesto riguarda
+ * un'altra maniglia (o nessuna). `useShallow` (stesso idioma di `useSelectedNode`): l'oggetto
+ * `{value, unit}` restituito è ricostruito a ogni chiamata, ma un cambio di stato non
+ * legato a questa combinazione non deve comunque ri-renderizzare — solo un confronto per
+ * riferimento di default farebbe altrimenti ri-renderizzare a ogni notifica dello store.
+ */
+export function usePropResizePreview(
+  blockId: string,
+  propName: string,
+): { value: number; unit: ResizeHandleUnit } | null {
+  return useBlockEditorStore(
+    useShallow((state) =>
+      state.propResizePreview &&
+      state.propResizePreview.blockId === blockId &&
+      state.propResizePreview.propName === propName
+        ? { value: state.propResizePreview.value, unit: state.propResizePreview.unit }
+        : null,
+    ),
+  );
+}
+
+/** Selettore granulare: lo stop di `columnRatio` in corso di trascinamento **per questo
  * nodo**, o `null` se il gesto riguarda un'altra section (o nessuno). Sottoscrive solo il
  * proprio id: il ridimensionamento di una section non ri-renderizza i wrapper delle
  * sorelle.

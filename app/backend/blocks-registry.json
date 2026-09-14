@@ -706,6 +706,38 @@
           "kind": "enum",
           "required": false,
           "values": ["left", "center", "right", "justify"]
+        },
+        {
+          "name": "styleMarginTop",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 500
+        },
+        {
+          "name": "styleMarginRight",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 500
+        },
+        {
+          "name": "styleMarginBottom",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 500
+        },
+        {
+          "name": "styleMarginLeft",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 500
         }
       ],
       "meta": {
@@ -809,6 +841,26 @@
             "label": "Allineamento testo",
             "tab": "style",
             "order": 19
+          },
+          "styleMarginTop": {
+            "label": "Margine superiore",
+            "tab": "style",
+            "order": 20
+          },
+          "styleMarginRight": {
+            "label": "Margine destro",
+            "tab": "style",
+            "order": 21
+          },
+          "styleMarginBottom": {
+            "label": "Margine inferiore",
+            "tab": "style",
+            "order": 22
+          },
+          "styleMarginLeft": {
+            "label": "Margine sinistro",
+            "tab": "style",
+            "order": 23
           }
         }
       }
@@ -963,6 +1015,38 @@
           "name": "customElementId",
           "kind": "htmlId",
           "required": false
+        },
+        {
+          "name": "styleMarginTop",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 500
+        },
+        {
+          "name": "styleMarginRight",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 500
+        },
+        {
+          "name": "styleMarginBottom",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 500
+        },
+        {
+          "name": "styleMarginLeft",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 500
         }
       ],
       "meta": {
@@ -1077,6 +1161,26 @@
             "tab": "advanced",
             "order": 18,
             "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
+          },
+          "styleMarginTop": {
+            "label": "Margine superiore",
+            "tab": "style",
+            "order": 19
+          },
+          "styleMarginRight": {
+            "label": "Margine destro",
+            "tab": "style",
+            "order": 20
+          },
+          "styleMarginBottom": {
+            "label": "Margine inferiore",
+            "tab": "style",
+            "order": 21
+          },
+          "styleMarginLeft": {
+            "label": "Margine sinistro",
+            "tab": "style",
+            "order": 22
           }
         }
       }
@@ -1200,6 +1304,38 @@
           "name": "customElementId",
           "kind": "htmlId",
           "required": false
+        },
+        {
+          "name": "styleMarginTop",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 500
+        },
+        {
+          "name": "styleMarginRight",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 500
+        },
+        {
+          "name": "styleMarginBottom",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 500
+        },
+        {
+          "name": "styleMarginLeft",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 500
         }
       ],
       "meta": {
@@ -1291,6 +1427,26 @@
             "tab": "advanced",
             "order": 17,
             "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
+          },
+          "styleMarginTop": {
+            "label": "Margine superiore",
+            "tab": "style",
+            "order": 18
+          },
+          "styleMarginRight": {
+            "label": "Margine destro",
+            "tab": "style",
+            "order": 19
+          },
+          "styleMarginBottom": {
+            "label": "Margine inferiore",
+            "tab": "style",
+            "order": 20
+          },
+          "styleMarginLeft": {
+            "label": "Margine sinistro",
+            "tab": "style",
+            "order": 21
           }
         }
       }
@@ -1419,6 +1575,38 @@
           "default": false
         },
         {
+          "name": "styleMarginTop",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 500
+        },
+        {
+          "name": "styleMarginRight",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 500
+        },
+        {
+          "name": "styleMarginBottom",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 500
+        },
+        {
+          "name": "styleMarginLeft",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 500
+        },
+        {
           "name": "customCssClass",
           "kind": "cssClassName",
           "required": false
@@ -1523,6 +1711,26 @@
             "tab": "advanced",
             "order": 14,
             "help": "Solo lettere, numeri, trattino, underscore — nessuno spazio."
+          },
+          "styleMarginTop": {
+            "label": "Margine superiore",
+            "tab": "style",
+            "order": 15
+          },
+          "styleMarginRight": {
+            "label": "Margine destro",
+            "tab": "style",
+            "order": 16
+          },
+          "styleMarginBottom": {
+            "label": "Margine inferiore",
+            "tab": "style",
+            "order": 17
+          },
+          "styleMarginLeft": {
+            "label": "Margine sinistro",
+            "tab": "style",
+            "order": 18
           }
         }
       }
@@ -1706,6 +1914,22 @@
           "responsive": true
         },
         {
+          "name": "styleWidth",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 4000
+        },
+        {
+          "name": "styleHeight",
+          "kind": "unitValue",
+          "required": false,
+          "units": ["px", "%"],
+          "min": 0,
+          "max": 4000
+        },
+        {
           "name": "customCssClass",
           "kind": "cssClassName",
           "required": false
@@ -1815,6 +2039,16 @@
             "label": "Margine sinistro",
             "tab": "style",
             "order": 15
+          },
+          "styleWidth": {
+            "label": "Larghezza personalizzata",
+            "tab": "style",
+            "order": 18
+          },
+          "styleHeight": {
+            "label": "Altezza personalizzata",
+            "tab": "style",
+            "order": 19
           },
           "customCssClass": {
             "label": "Classe CSS personalizzata",

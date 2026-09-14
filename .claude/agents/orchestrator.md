@@ -16,8 +16,12 @@ L'unica scrittura ammessa è il proprio output documentale su richiesta esplicit
 
 ## Ordine di lettura obbligatorio
 
-`docs/constitution.md` → `docs/business-rules.md` → `docs/glossary.md` →
-`docs/roadmap.md` → spec/feature rilevante → `docs/TODO.md` (decisioni aperte)
+`docs/constitution.md` → `docs/business-rules.md` → `docs/glossary.md` → `docs/roadmap.md`.
+Poi consulta **obbligatoriamente** `docs/ai/INDEX.md` prima di aprire qualsiasi
+SPEC/ADR/plan: apri solo i file mappati al dominio della feature in analisi, mai l'intero
+albero `docs/ai/` a tappeto. Se il dominio non compare in `INDEX.md`, o un file mappato
+manca, STOP e dichiara il dubbio invece di leggere a campione l'intera directory. Infine
+`docs/TODO.md` (decisioni aperte).
 
 ## Regole operative
 

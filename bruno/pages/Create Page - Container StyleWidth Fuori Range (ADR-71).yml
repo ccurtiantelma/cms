@@ -1,0 +1,54 @@
+info:
+  name: Create Page - Container StyleWidth Fuori Range (ADR-71)
+  type: http
+  seq: 22
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/pages"
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Pagina con container styleWidth fuori range (ADR-71)",
+        "locale": "it-IT",
+        "draftContent": {
+          "version": 1,
+          "blocks": [
+            {
+              "id": "b1",
+              "type": "container",
+              "v": 1,
+              "props": { "styleWidth": { "value": 5000, "unit": "px" } },
+              "children": []
+            }
+          ]
+        }
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 400 (container.styleWidth unitValue px, max dichiarato 4000, ADR-71 § 3 — l'autorità finale resta il validator server-side, ADR-21)", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+
+  test("code e path del sotto-campo colpevole in details (CLAUDE.md § Error handling)", function() {
+    const body = res.getBody();
+    expect(body.code).to.equal("BLOCK_PROP_INVALID");
+    expect(body.details).to.have.property("path", "blocks[0].props.styleWidth.value");
+    expect(body.details).to.have.property("reason", "range");
+    expect(body.details.constraint).to.deep.equal([0, 4000]);
+  });
+
+  test("nessuna Pagina viene creata: l'albero non valido respinge l'intero salvataggio", function() {
+    const body = res.getBody();
+    expect(body).to.not.have.property("guid");
+  });

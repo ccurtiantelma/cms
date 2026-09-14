@@ -1,0 +1,16 @@
+# INDEX.md — JIT Context Map
+
+Istruzione vincolante per ogni agente AI: per il task corrente, apri **solo** gli SPEC/ADR/tipi mappati al dominio pertinente in questa tabella (più `docs/constitution.md` e `docs/business-rules.md` se il task tocca regole di dominio). Non leggere l'intero albero `docs/ai/`. Se il dominio del task non compare qui, o un file mappato manca, STOP e chiedi — non inventare.
+
+| Dominio | File |
+|---|---|
+| Editor Visivo & Canvas | `docs/ai/plans/PLAN-F04-editor-visivo.md` · `docs/ai/specs/SPEC-F04-grid-responsive-engine.md` · `docs/ai/specs/SPEC-F04-super-elementor.md` · `docs/ai/rfc/RFC-F04e-super-elementor.md` · `docs/ai/rfc/RFC-F04e-bis-esito-spike-iframe.md` · `docs/ai/plans/PLAN-F04-dnd-iframe-spike.md` · `docs/ai/adr/ADR-70-canvas-iframe-isolation-zustand-sync.md` · `docs/ai/adr/ADR-71-resize-handles-unita-dinamiche.md` · `docs/ai/adr/ADR-28-libreria-drag-and-drop.md` · `docs/ai/adr/ADR-29-proprieta-di-stile-per-breakpoint.md` · `docs/ai/adr/ADR-30-metadati-editor-registro.md` |
+| Schema & Migrazione Blocchi JSON | `docs/ai/specs/SPEC-F02-blocchi.md` · `docs/ai/adr/ADR-21-schema-blocchi-versionamento.md` · `app/frontend/src/types/blocks.types.ts` |
+| Rendering & Caching Pubblico | `docs/ai/specs/SPEC-F03-superficie-pubblica.md` · `docs/ai/adr/ADR-53-air-gapped-ssg-zero-db.md` · `docs/ai/adr/ADR-63-consegna-statica-volume-nginx-isolato.md` · `docs/ai/adr/ADR-65-layout-export-su-url-pubblico.md` · `docs/ai/adr/ADR-67-eventi-di-export-e-render-riservato.md` |
+| Gestione Pagine | `docs/ai/specs/SPEC-F01-gestione-pagine.md` · `docs/ai/adr/ADR-19-revisioni-immutabili.md` · `docs/ai/adr/ADR-53-air-gapped-ssg-zero-db.md` (routing/slug, succede ad ADR-24) · `docs/ai/adr/ADR-61-retention-revisioni.md` |
+
+## Nota di allineamento
+
+- ADR-22 (consumer HTML pubblico) e ADR-23 (caching/invalidazione pubblica) sono **superseded** da ADR-45/ADR-53 (vedi CLAUDE.md § Decisioni aperte); ADR-24 (routing/slug) è chiusa a livello di record ma la forma URL è ereditata in ADR-53/ADR-65. Per questi tre domini la riga sopra punta direttamente alle ADR correnti, non a quelle superate.
+- Attenzione alla numerazione ADR duplicata per nome simile ma dominio diverso: `ADR-31-layout-colonne-section.md`/`ADR-32-navigator-editor-fullscreen.md` (approvate, 2026-08-23/08-24) non hanno relazione con `ADR-70`/`ADR-71` (2026-09-14, canvas iframe e resize handle) — i numeri 31/32 erano già occupati al momento della firma di RFC-F04e, da cui la numerazione 70/71 per le ADR di quel round.
+- `RFC-F04e-bis-esito-spike-iframe.md` (2026-09-14) è un addendum a `RFC-F04e-super-elementor.md`: riporta l'esito negativo della spike imposta da `ADR-70` § "Decisione" punto 4 (`PLAN-F04-dnd-iframe-spike.md`) e riapre solo la Decisione 1/2 di quella RFC per una nuova firma umana. `ADR-70`/`ADR-71` restano storiche e non modificate: l'esito eventuale di questo addendum produrrà, se del caso, una nuova ADR di superamento (non ancora esistente al momento di questa nota).

@@ -105,6 +105,8 @@ import {
 } from './column-resize.utils';
 import ContainerResizeHandle from './components/ContainerResizeHandle';
 import ColumnResizer from './components/ColumnResizer';
+import ResizeHandle from './ResizeHandle';
+import { resolveResizePropSpec } from './resize-handle.utils';
 import BlockRenderer from '../../../components/blocks/BlockRenderer';
 import BlockErrorBoundary from '../../../components/blocks/BlockErrorBoundary';
 import Section from '../../../components/blocks/blocks/Section';
@@ -1430,6 +1432,40 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
       : { width: `${effectiveWidthPercent}%`, flexGrow: 0, flexShrink: 0 };
 
   /**
+   * Maniglie generiche di resize (ADR-71, SPEC-F04-super-elementor.md § 4.2/4.3): risolte
+   * per il tipo di **questo** nodo tramite il registro (`resolveResizePropSpec`, mai un
+   * numero duplicato a mano qui — stesso principio di {@link CONTAINER_WIDTH_SPEC}), e
+   * montate solo su un blocco **selezionato** — stesso gate di
+   * {@link showContainerResizeHandle}. `null` per un tipo/prop non dichiarata dal registro
+   * spegne la maniglia corrispondente: nessun elemento renderizzato, nessun commit
+   * possibile (stesso principio di `CONTAINER_WIDTH_SPEC !== null`).
+   *
+   * `styleWidth`/`styleHeight`: oggi dichiarate su `container`/`image` (ADR-71 § "Decisione"
+   * punto 3) — coesistono col resizer esistente di `container.styleFlexBasis`, mai al suo
+   * posto (SPEC-F04-super-elementor.md § 4.2, "accanto, non al posto").
+   * `styleMargin{Top,Bottom,Left,Right}`: dichiarate sui tipi che già hanno
+   * `styleSpaceBefore/After` (`button`/`heading`/`richText`/`image`).
+   */
+  const widthResizeSpec = isSelected
+    ? resolveResizePropSpec(currentNode.type, 'styleWidth')
+    : null;
+  const heightResizeSpec = isSelected
+    ? resolveResizePropSpec(currentNode.type, 'styleHeight')
+    : null;
+  const marginTopResizeSpec = isSelected
+    ? resolveResizePropSpec(currentNode.type, 'styleMarginTop')
+    : null;
+  const marginBottomResizeSpec = isSelected
+    ? resolveResizePropSpec(currentNode.type, 'styleMarginBottom')
+    : null;
+  const marginLeftResizeSpec = isSelected
+    ? resolveResizePropSpec(currentNode.type, 'styleMarginLeft')
+    : null;
+  const marginRightResizeSpec = isSelected
+    ? resolveResizePropSpec(currentNode.type, 'styleMarginRight')
+    : null;
+
+  /**
    * Avvio del gesto: si misurano **una volta sola** il bordo sinistro del nodo e la
    * larghezza del contenitore padre, e si cattura il puntatore sulla maniglia — da qui in
    * poi ogni `pointermove`/`pointerup` arriva alla maniglia anche se il puntatore esce dal
@@ -1696,6 +1732,74 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
             onPointerMove={handleWidthResizePointerMove}
             onPointerUp={handleWidthResizePointerUp}
             onPointerCancel={handleWidthResizePointerCancel}
+          />
+        )}
+
+        {/*
+          Maniglie generiche di resize (ADR-71, SPEC-F04-super-elementor.md § 4.2/4.3):
+          `styleWidth`/`styleHeight` accanto alla maniglia esistente sopra (mai al suo
+          posto), più i quattro margini per lato sui tipi che li dichiarano. Ognuna possiede
+          il proprio gesto (`ResizeHandle.tsx`), a differenza della maniglia sopra — qui non
+          servono handler locali.
+        */}
+        {widthResizeSpec && (
+          <ResizeHandle
+            blockId={id}
+            propName="styleWidth"
+            axis="horizontal"
+            min={widthResizeSpec.min}
+            max={widthResizeSpec.max}
+            units={['px', '%']}
+          />
+        )}
+        {heightResizeSpec && (
+          <ResizeHandle
+            blockId={id}
+            propName="styleHeight"
+            axis="vertical"
+            min={heightResizeSpec.min}
+            max={heightResizeSpec.max}
+            units={['px', '%']}
+          />
+        )}
+        {marginTopResizeSpec && (
+          <ResizeHandle
+            blockId={id}
+            propName="styleMarginTop"
+            axis="vertical"
+            min={marginTopResizeSpec.min}
+            max={marginTopResizeSpec.max}
+            units={['px', '%']}
+          />
+        )}
+        {marginBottomResizeSpec && (
+          <ResizeHandle
+            blockId={id}
+            propName="styleMarginBottom"
+            axis="vertical"
+            min={marginBottomResizeSpec.min}
+            max={marginBottomResizeSpec.max}
+            units={['px', '%']}
+          />
+        )}
+        {marginLeftResizeSpec && (
+          <ResizeHandle
+            blockId={id}
+            propName="styleMarginLeft"
+            axis="horizontal"
+            min={marginLeftResizeSpec.min}
+            max={marginLeftResizeSpec.max}
+            units={['px', '%']}
+          />
+        )}
+        {marginRightResizeSpec && (
+          <ResizeHandle
+            blockId={id}
+            propName="styleMarginRight"
+            axis="horizontal"
+            min={marginRightResizeSpec.min}
+            max={marginRightResizeSpec.max}
+            units={['px', '%']}
           />
         )}
 
