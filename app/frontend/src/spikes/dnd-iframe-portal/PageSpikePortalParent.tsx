@@ -182,8 +182,8 @@ function PortalCanvasRoot(): JSX.Element {
       }}
     >
       <p style={{ margin: '0 0 10px', fontSize: 12, color: '#495057' }}>
-        Canvas (portato via <code>createPortal</code> dentro l&apos;iframe) —
-        isOver=<b>{String(isOver)}</b>
+        Canvas (portato via <code>createPortal</code> dentro l&apos;iframe) — isOver=
+        <b>{String(isOver)}</b>
       </p>
       <PortalBlock id="portal-block-1" label="Blocco A (container)" />
       <PortalBlock id="portal-block-2" label="Blocco B (widget)" />
@@ -251,11 +251,11 @@ export default function PageSpikePortalParent(): JSX.Element {
         Spike T2 — Portale React (Opzione A, RFC-F04e-bis § Decisione umana)
       </h2>
       <p style={{ fontSize: 12, color: '#495057', maxWidth: 720 }}>
-        Scenario (a): trascina la tessera qui sotto dentro il riquadro nell&apos;iframe.
-        Scenario (b): trascina uno dei &quot;Blocco A/B/C&quot; dentro l&apos;iframe (riordino
-        interno). Nessun <code>IframeBridgeSensor</code> qui: se gli eventi nativi generati
-        fisicamente dentro l&apos;iframe raggiungono comunque il punto di ascolto di React nel
-        documento padre, dnd-kit dovrebbe funzionare senza alcun ponte custom.
+        Scenario (a): trascina la tessera qui sotto dentro il riquadro nell&apos;iframe. Scenario
+        (b): trascina uno dei &quot;Blocco A/B/C&quot; dentro l&apos;iframe (riordino interno).
+        Nessun <code>IframeBridgeSensor</code> qui: se gli eventi nativi generati fisicamente dentro
+        l&apos;iframe raggiungono comunque il punto di ascolto di React nel documento padre, dnd-kit
+        dovrebbe funzionare senza alcun ponte custom.
       </p>
       <p style={{ fontSize: 11, color: '#868e96', maxWidth: 720 }}>{ownerDocInfo}</p>
 
