@@ -169,17 +169,22 @@
 }
 
 /*
- * Larghezza reattiva al viewport simulato (Viewport Switcher), con transizione fluida.
- * `container-type: inline-size` stabilisce qui il containment che i blocchi dentro il
- * canvas interrogano con `@container` (style-tokens.module.css): senza, `@media
- * max-width` risponderebbe alla finestra del browser, non alla larghezza simulata, e
- * l'anteprima responsive dell'editor non mostrerebbe mai le classi tablet/mobile finché
- * la finestra reale non fosse altrettanto stretta.
+ * Larghezza reattiva al viewport simulato (Viewport Switcher), con transizione fluida —
+ * governa la dimensione fisica dell'`<iframe>` del canvas (`IframeCanvas.tsx`, ADR-72),
+ * unico figlio di questo contenitore da quando il canvas vive in un documento isolato.
+ *
+ * Nessun `container-type` qui (FASE 6, corretto rispetto alla dichiarazione precedente):
+ * il containment per `@container` di `style-tokens.module.css` non può attraversare il
+ * confine dell'iframe — questo contenitore non è più un antenato DOM dei blocchi nello
+ * stesso documento. Il containment che l'anteprima responsive richiede è ridichiarato
+ * dentro il documento dell'iframe stesso (`.canvasRoot`, `EditorCanvas.module.css`), la
+ * cui larghezza risolta eredita comunque questa stessa larghezza simulata, perché è
+ * l'elemento `<iframe>` qui dentro a essere ridimensionato da `.viewportTablet`/
+ * `.viewportMobile`/`.viewportDesktop` sotto.
  */
 .viewportContainer {
   width: 100%;
   max-width: 100%;
-  container-type: inline-size;
   transition:
     width 0.3s ease-in-out,
     max-width 0.3s ease-in-out,

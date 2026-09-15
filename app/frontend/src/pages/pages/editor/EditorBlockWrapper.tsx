@@ -924,11 +924,17 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
    */
   const [formattingToolbarDismissed, setFormattingToolbarDismissed] = useState(false);
 
-  /** Rilegge grassetto/corsivo/allineamento dallo stile calcolato del `contentEditable` (vedi commento sopra). */
+  /**
+   * Rilegge grassetto/corsivo/allineamento dallo stile calcolato del `contentEditable` (vedi
+   * commento sopra). `target.ownerDocument.defaultView` (mai `window` nudo, FASE 6): `target`
+   * vive nel documento dell'iframe del canvas da quando l'albero è portato lì (`IframeCanvas.tsx`,
+   * ADR-72), mentre il codice di questo componente gira comunque nell'unico realm JS del
+   * padre — stesso principio di `InlineFloatingToolbar.tsx` (vedi il suo commento di testa).
+   */
   function refreshFormattingIndicators(): void {
     const target = getRichTextTarget();
     if (!target) return;
-    const computed = window.getComputedStyle(target);
+    const computed = (target.ownerDocument.defaultView ?? window).getComputedStyle(target);
     const weight = Number.parseInt(computed.fontWeight, 10);
     const align: ToolbarAlign =
       computed.textAlign === 'center'
@@ -957,14 +963,19 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
     const target = getRichTextTarget();
     if (!target) return;
     target.focus();
-    const selection = window.getSelection();
+    // `target.ownerDocument` (mai `document` nudo, FASE 6): stesso motivo di
+    // `refreshFormattingIndicators` sopra — la selezione/il range/`execCommand` operano sul
+    // documento in cui `target` vive realmente (l'iframe del canvas), non sul `document` del
+    // padre in cui gira questo codice.
+    const targetDocument = target.ownerDocument;
+    const selection = targetDocument.getSelection();
     if (selection) {
       selection.removeAllRanges();
-      const range = document.createRange();
+      const range = targetDocument.createRange();
       range.selectNodeContents(target);
       selection.addRange(range);
     }
-    document.execCommand(command, false, value);
+    targetDocument.execCommand(command, false, value);
     commitHtml(target.innerHTML);
     refreshFormattingIndicators();
   }

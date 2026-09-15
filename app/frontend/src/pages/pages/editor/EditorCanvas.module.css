@@ -4,11 +4,25 @@
   Contenitore radice del canvas: nessun bordo/padding/radius (Full-Screen nativo, stile
   Elementor) — occupa l'intera area lasciata da `.canvasArea` di
   `FullScreenEditorLayout.module.css`. `min-height: 100%` mantiene un'area cliccabile per
-  la deselezione (`onClick` sullo sfondo) anche quando l'albero ha pochi blocchi.
+  la deselezione (`onClick` sullo sfondo) anche quando l'albero ha pochi blocchi — risolve
+  contro `html,body{height:100%}` del `srcDoc` dell'iframe (`IframeCanvas.tsx`).
+
+  `container-type: inline-size` (FASE 6, gap scoperto dalla migrazione ADR-72): l'anteprima
+  responsive dei blocchi (`@container` in `style-tokens.module.css`, soglie 768px/480px,
+  ADR-29 § 2) ha bisogno di un antenato con containment dichiarato **nello stesso documento**
+  dei blocchi misurati. Prima di ADR-72 quell'antenato era `.viewportContainer` di
+  `FullScreenEditorLayout.module.css`, un vero antenato DOM del canvas nel documento padre.
+  Da quando il canvas è portato dentro `iframe.contentDocument` (`IframeCanvas.tsx`),
+  `.viewportContainer` non è più un antenato raggiungibile per il containment CSS — vive in un
+  altro documento — quindi il containment va ridichiarato qui, sull'elemento più esterno
+  dell'albero portato: la sua larghezza risolta è comunque quella simulata dal Viewport
+  Switcher (768px/375px/fluida), perché è l'elemento `<iframe>` stesso, nel documento padre, a
+  essere ridimensionato da `.viewportTablet`/`.viewportMobile`/`.viewportDesktop`.
 */
 .canvasRoot {
   width: 100%;
   min-height: 100%;
+  container-type: inline-size;
 }
 
 /*

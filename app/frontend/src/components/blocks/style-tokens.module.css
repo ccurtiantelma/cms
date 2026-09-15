@@ -1642,8 +1642,15 @@
  * dove nessun antenato dichiara mai "container-type" — questi blocchi sono un
  * no-op puro e il rendering pubblico resta quello di ADR-29/ADR-31, invariato.
  * Chiudono il gap che ADR-29 Conseguenza segnalava esplicitamente come accettato e
- * da tracciare: "anteprima responsive non esiste". FullScreenEditorLayout dichiara
- * "container-type" su .viewportContainer, la sola ancestor coinvolta.
+ * da tracciare: "anteprima responsive non esiste".
+ *
+ * L'ancestor che dichiara "container-type" è `.canvasRoot` di `EditorCanvas.module.css`,
+ * dentro il documento dell'iframe del canvas (`IframeCanvas.tsx`, ADR-72) — non più
+ * `.viewportContainer` di `FullScreenEditorLayout.module.css` (documento padre): da quando
+ * il canvas è portato in `iframe.contentDocument`, `.viewportContainer` non è più un
+ * antenato DOM raggiungibile dal containment CSS di questi blocchi (containment non
+ * attraversa il confine di un `document`), anche se resta l'elemento che dimensiona
+ * fisicamente l'`<iframe>` da cui `.canvasRoot` eredita la larghezza simulata.
  */
 @container (max-width: 768px) {
   .spaceBefore_tablet_none {

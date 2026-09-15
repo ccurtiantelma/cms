@@ -22,6 +22,20 @@
  * corrente o, se non c'è nulla di selezionato (solo un cursore), a quello dell'intero blocco
  * `contentEditable` — clampato al viewport in un secondo passaggio (`useLayoutEffect`), una
  * volta nota la dimensione reale della barra dopo il primo render.
+ *
+ * **Documento di riferimento (FASE 6, gap scoperto dalla migrazione ADR-72):** questo
+ * componente monta come discendente del blocco `richText` che decora — dentro il documento
+ * dell'iframe del canvas da quando quell'albero è portato lì (`IframeCanvas.tsx`), ma il
+ * proprio codice React gira comunque nell'unico realm JS dell'app (nessun secondo bundle,
+ * ADR-72 § "Decisione" punto 1). Un riferimento nudo a `window`/`document` in questo file
+ * risolverebbe quindi sempre al documento/finestra del **padre**, mai a quello dell'iframe in
+ * cui il proprio DOM vive realmente — sbagliato sia per `Selection`/`execCommand` (la
+ * selezione testuale vive nel documento in cui l'utente sta scrivendo, quello dell'iframe) sia
+ * per il clamping al viewport (deve restare dentro il riquadro del canvas simulato, non dentro
+ * l'intera finestra del browser admin). Ogni chiamata sotto usa perciò `target.ownerDocument`/
+ * `target.ownerDocument.defaultView` (mai `window`/`document` nudi) — stesso principio già
+ * dichiarato in `SPEC-F04-super-elementor.md` § 4.1 per gli overlay fluttuanti ("un overlay
+ * che vive in un documento... può semplicemente vivere accanto al contenuto che misura").
  */
 import {
   useCallback,
@@ -85,7 +99,7 @@ function findEnclosingLink(target: HTMLElement, node: Node | null): HTMLAnchorEl
 
 /** Bounding box della selezione non collassata, o del blocco intero come fallback (vedi commento di testa). */
 function computeAnchorRect(target: HTMLElement): AnchorRect | null {
-  const selection = window.getSelection();
+  const selection = target.ownerDocument.getSelection();
   if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
@@ -123,25 +137,31 @@ export default function InlineFloatingToolbar({
       setAnchorRect(null);
       return;
     }
-    const selection = window.getSelection();
+    const selection = target.ownerDocument.getSelection();
     const anchorNode = selection?.anchorNode ?? null;
     if (!isSelectionInside(target, anchorNode)) {
       setAnchorRect(null);
       return;
     }
     setAnchorRect(computeAnchorRect(target));
-    setIsBold(document.queryCommandState('bold'));
-    setIsItalic(document.queryCommandState('italic'));
-    setIsUnderline(document.queryCommandState('underline'));
-    setIsStrikethrough(document.queryCommandState('strikethrough'));
+    setIsBold(target.ownerDocument.queryCommandState('bold'));
+    setIsItalic(target.ownerDocument.queryCommandState('italic'));
+    setIsUnderline(target.ownerDocument.queryCommandState('underline'));
+    setIsStrikethrough(target.ownerDocument.queryCommandState('strikethrough'));
     setIsLink(!!findEnclosingLink(target, anchorNode));
   }, [getTarget]);
 
   useLayoutEffect(() => {
     refreshFromSelection();
-    document.addEventListener('selectionchange', refreshFromSelection);
-    return () => document.removeEventListener('selectionchange', refreshFromSelection);
-  }, [refreshFromSelection]);
+    // `getTarget()` risolve solo dopo il montaggio del blocco `richText` che questo
+    // componente decora: la sua `ownerDocument` è quella dell'iframe (commento di testa),
+    // mai il `document` nudo del padre — senza questo, `selectionchange` non scatterebbe mai
+    // per una selezione fatta dentro il canvas.
+    const target = getTarget();
+    const targetDocument = target?.ownerDocument ?? document;
+    targetDocument.addEventListener('selectionchange', refreshFromSelection);
+    return () => targetDocument.removeEventListener('selectionchange', refreshFromSelection);
+  }, [refreshFromSelection, getTarget]);
 
   // Secondo passaggio: la dimensione reale della barra è nota solo dopo il primo render,
   // qui si clampa la posizione al viewport (mai fuori, requisito del task).
@@ -157,16 +177,23 @@ export default function InlineFloatingToolbar({
       top = anchorRect.top + anchorRect.height + GAP_PX;
     }
     const left = anchorRect.left + anchorRect.width / 2 - toolbarRect.width / 2;
+    // Il viewport di riferimento del clamping è quello del documento in cui la barra vive
+    // realmente (l'iframe del canvas, commento di testa) — `toolbarRef.current.ownerDocument
+    // .defaultView`, mai `window` nudo (la finestra admin del padre, quasi sempre più larga
+    // del canvas simulato in Tablet/Mobile: clampare contro di lei lascerebbe la barra fuori
+    // dal riquadro visibile del canvas). Ripiega su `window` solo nel caso limite (teorico)
+    // di un documento senza `defaultView`.
+    const referenceWindow = toolbarRef.current.ownerDocument.defaultView ?? window;
     setStyle({
       top: clamp(
         top,
         VIEWPORT_MARGIN_PX,
-        window.innerHeight - toolbarRect.height - VIEWPORT_MARGIN_PX,
+        referenceWindow.innerHeight - toolbarRect.height - VIEWPORT_MARGIN_PX,
       ),
       left: clamp(
         left,
         VIEWPORT_MARGIN_PX,
-        window.innerWidth - toolbarRect.width - VIEWPORT_MARGIN_PX,
+        referenceWindow.innerWidth - toolbarRect.width - VIEWPORT_MARGIN_PX,
       ),
     });
   }, [anchorRect]);
@@ -184,7 +211,7 @@ export default function InlineFloatingToolbar({
   function runCommand(command: string, value?: string): void {
     const target = getTarget();
     if (!target) return;
-    document.execCommand(command, false, value);
+    target.ownerDocument.execCommand(command, false, value);
     onApplied(target.innerHTML);
     refreshFromSelection();
   }
@@ -196,7 +223,7 @@ export default function InlineFloatingToolbar({
       runCommand('unlink');
       return;
     }
-    const selection = window.getSelection();
+    const selection = target.ownerDocument.getSelection();
     const existingLink = findEnclosingLink(target, selection?.anchorNode ?? null);
     setLinkUrl(existingLink?.getAttribute('href') ?? '');
     setLinkPopoverOpened(true);

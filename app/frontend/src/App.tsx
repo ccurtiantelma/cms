@@ -59,6 +59,12 @@ const PageSpikePortalParent = lazy(
   () => import('./spikes/dnd-iframe-portal/PageSpikePortalParent'),
 );
 
+/** Solo per la Spike T3 (indagine aggiuntiva su Scenario (a), addendum 2026-09-14 di
+ * `PLAN-F04-dnd-iframe-portal-spike.md`): PoC isolato, mai linkato dalla navigazione. */
+const PageSpikePortalBridgeParent = lazy(
+  () => import('./spikes/dnd-iframe-portal/PageSpikePortalBridgeParent'),
+);
+
 /** Fallback mostrato durante il caricamento dei chunk delle pagine lazy. */
 function PageLoadingFallback(): JSX.Element {
   return (
@@ -214,6 +220,13 @@ export default function App(): JSX.Element {
           {/* Dev-only, nessun guard: PoC della Spike T2 (Portale React), non un flusso
               applicativo. */}
           <Route path="/dev/dnd-iframe-portal-spike" element={<PageSpikePortalParent />} />
+
+          {/* Dev-only, nessun guard: PoC della Spike T3 (relay pointer cross-iframe), non un
+              flusso applicativo. */}
+          <Route
+            path="/dev/dnd-iframe-portal-bridge-spike"
+            element={<PageSpikePortalBridgeParent />}
+          />
 
           <Route path="*" element={<PageNotFound />} />
         </Routes>

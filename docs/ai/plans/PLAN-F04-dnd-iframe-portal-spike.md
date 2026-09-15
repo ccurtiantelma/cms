@@ -26,6 +26,18 @@ richiede un "esito scritto positivo" prima di una ADR di superamento — questo 
 sul punto strutturale che l'Opzione (A) doveva chiarire, ma non ancora una verifica end-to-end
 completa. § "Prossimo passo raccomandato" propone come chiuderlo.
 
+**Aggiornamento 2026-09-14** — il punto 1 di "Prossimo passo raccomandato" è stato eseguito con
+mouse reale (Playwright, non più solo eventi sintetici): vedi § "Addendum — turno di verifica
+supplementare con mouse reale" in fondo a questo file. Risultato: non un "positivo" pieno né un
+negativo — riordino interno al canvas confermato funzionante, inserimento dalla palette esterna
+confermato **non** funzionante (causa isolata, diversa da quella di T1).
+
+**Aggiornamento 2 — 2026-09-14** — su richiesta della firma umana, indagine dedicata sulla causa
+dell'inserimento dalla palette: vedi § "Addendum 2 — causa isolata e fix verificato per lo
+scenario (a)" in fondo a questo file. **Esito: entrambi gli scenari ora verificati funzionanti**
+(fix di misura cross-frame, API pubblica di `dnd-kit`, 10/10 run deterministici con mouse
+reale). Resta comunque riservata alla firma umana la decisione di procedere a una nuova ADR.
+
 Questo piano è generato in esecuzione della firma umana su
 `RFC-F04e-bis-esito-spike-iframe.md` § "Decisione umana" (Decisione 1-bis, Opzione A, approvato
 marketing@antelmagroup.net, 2026-09-14).
@@ -234,3 +246,154 @@ implicita del puntatore del browser reale.
 3. In entrambi i casi, questo PoC (`app/frontend/src/spikes/dnd-iframe-portal/`, rotta
    `/dev/dnd-iframe-portal-spike`) resta isolato e non linkato, da rimuovere solo dopo che
    l'esito qui sopra è stato recepito a valle.
+
+---
+
+## Addendum — turno di verifica supplementare con mouse reale (2026-09-14)
+
+Eseguito il punto 1 di "Prossimo passo raccomandato": verifica con input mouse reale (non
+sintetico) tramite `page.mouse.move/down/up` di Playwright (eventi CDP `isTrusted`, non
+`dispatchEvent`), invece degli strumenti MCP Puppeteer della sessione originale (privi di quel
+primitivo). Test riproducibile in
+`e2e/tests/spike-dnd-iframe-portal.spec.ts`, eseguito con `cd e2e && npx playwright test
+spike-dnd-iframe-portal.spec.ts --project=chromium --no-deps` contro `npm run dev` (porta 55173),
+stesso PoC (`PageSpikePortalParent.tsx`), nessuna modifica al PoC stesso.
+
+**Risultato: misto, non un "positivo" pieno.**
+
+### Scenario (b) — riordino interno al canvas nell'iframe: POSITIVO, confermato con mouse reale
+
+`onDragEnd` viene emesso in modo affidabile e ripetibile, con risoluzione corretta del target:
+`{"phase":"dragEnd","active":"portal-block-1","over":"drop:portal-block-1"}`. Il ciclo si
+completa da capo a fondo (avvio, tracking, rilascio, collisione) per un drag che nasce e finisce
+interamente dentro il document dell'iframe. Chiude in modo conclusivo, per questo scenario, il
+punto lasciato aperto dalla sessione originale.
+
+### Scenario (a) — drag dalla palette (padre) al canvas nell'iframe: `onDragEnd` si completa, ma senza target risolto
+
+Miglioramento reale rispetto a T1: **nessun blocco a tempo indefinito** — `onDragEnd` viene
+sempre emesso, l'`active` non resta mai "fantasma" dopo il rilascio (il difetto che in T1
+produceva un `DragOverlay` bloccato è assente qui). Ma il target non si risolve mai:
+`{"phase":"dragEnd","active":"new-block:spike-portal-demo","over":null}`, e un'ispezione durante
+il trascinamento (prima del rilascio) mostra `isOver=false` sulla drop-zone del canvas per
+l'intera traversata, anche con il puntatore geometricamente al centro del suo rettangolo.
+
+**Causa, coerente con quanto già isolato a livello di codice in questo stesso piano** (§
+"Risultato" punto 1, citazione di `core.esm.js`): `PointerSensor` lega i propri listener di
+movimento al *document proprietario del nodo che ha ricevuto il `pointerdown`* — per uno
+scenario che parte dalla palette (documento padre), quel document è il padre. Una volta che il
+cursore entra fisicamente nel rettangolo dell'iframe, gli eventi nativi di movimento vengono
+recapitati al document dell'iframe (un browsing context separato), non al listener registrato sul
+document padre: la posizione interna che `dnd-kit` usa per il calcolo delle collisioni resta
+quindi ferma all'ultimo punto noto prima dell'attraversamento, e non converge mai sul rettangolo
+reale della drop-zone nell'iframe. Non è lo stesso problema di T1 (propagazione del Context React,
+già escluso qui) né un problema di traduzione di coordinate (già verificato funzionante in questo
+piano) — è un terzo problema, specifico alla consegna degli eventi nativi quando il drag
+*attraversa* il confine invece di restare tutto da un lato.
+
+### Implicazione pratica
+
+Il pattern `createPortal` risolve per intero il caso "riordino dentro il canvas già isolato" (la
+parte quantitativamente più frequente dell'editor). Non risolve, così com'è, il caso "trascina un
+blocco nuovo dalla palette esterna dentro il canvas" — un requisito reale della feature (§
+"Impatto" di questo stesso file la cita come lo scenario (a) previsto da RFC-F04e-bis), non un
+dettaglio di test. **Non equivale né al "turno di verifica supplementare" pienamente risolutivo
+né a un esito negativo pieno**: è un terzo esito, più preciso dei due precedenti, che identifica
+esattamente quale delle due direzioni di drag richiede lavoro aggiuntivo (un ponte per il
+tracking del puntatore quando attraversa il confine, non un nuovo meccanismo di rendering/portal,
+già validato).
+
+Nessuna scelta architetturale presa qui: questo esito va comunque alla firma umana, con
+l'informazione aggiuntiva rispetto alla sessione originale che permette una decisione più
+mirata (es. autorizzare `ADR-72` limitata al riordino interno, lasciando l'inserimento
+palette→canvas su un meccanismo separato o su un piano di lavoro dedicato) invece di una scelta
+binaria tutto/niente.
+
+---
+
+## Addendum 2 — causa isolata e fix verificato per lo scenario (a) (2026-09-14)
+
+Su richiesta esplicita della firma umana ("indagine aggiuntiva sul ponte pointer per lo scenario
+(a), prima di qualunque ADR"), è stato costruito un terzo PoC (T3,
+`app/frontend/src/spikes/dnd-iframe-portal/PageSpikePortalBridgeParent.tsx`, rotta dev
+`/dev/dnd-iframe-portal-bridge-spike`) per isolare e chiudere il punto lasciato aperto
+dall'Addendum 1.
+
+### Prima ipotesi, fatta cadere da un probe empirico dedicato
+
+Si è ipotizzato inizialmente che il problema fosse la **consegna** degli eventi nativi:
+`PointerSensor` lega i propri listener al document che ha ricevuto il `pointerdown` iniziale
+(`getOwnerDocument`, `core.esm.js:1404-1409`) — per un drag partito dalla palette (document
+padre) si pensava che gli eventi generati fisicamente dentro l'iframe non raggiungessero mai
+quel listener. Un primo tentativo di correzione (un "relay" che ridispatcha gli eventi
+dell'iframe sul document padre, analogo nello spirito a `IframeBridgeSensor` di T1 ma senza
+Sensor custom) non ha prodotto alcun effetto: **zero** eventi intercettati dal relay.
+
+Un probe raw dedicato (listener diretti su entrambi i document, nessun dnd-kit di mezzo) ha
+chiarito il motivo e smentito l'ipotesi: durante un trascinamento reale col mouse tenuto premuto
+(CDP `Input.dispatchMouseEvent` via `page.mouse`), **Chromium applica una cattura implicita del
+puntatore per tutta la durata del bottone premuto** — tutti i `pointermove` successivi al
+`pointerdown` iniziale continuano ad arrivare al document PADRE (28/28 nel probe), **zero** al
+document dell'iframe, anche quando il cursore è visivamente dentro il suo rettangolo, con
+coordinate reali e coerenti con la posizione a schermo. Gli eventi arrivavano già, di loro, al
+posto giusto: nessun ponte di consegna serviva.
+
+### Causa reale
+
+`useDroppable`/`useDraggable` misurano il rettangolo dei nodi con
+`element.getBoundingClientRect()` (measuring di default di dnd-kit,
+`defaultMeasuringConfiguration`, `core.esm.js:2478-2490`), che per un nodo il cui
+`ownerDocument` è quello dell'iframe restituisce coordinate relative al **viewport dell'iframe
+stesso**, mai tradotte nell'offset del riquadro nella pagina padre. Il puntatore, invece, arriva
+al `PointerSensor` del padre con coordinate assolute nel viewport della **pagina padre**
+(confermato dal probe sopra). Due sistemi di riferimento diversi confrontati come fossero lo
+stesso: `pointerWithin` non può mai risolvere la collisione, indipendentemente da quanto siano
+corrette le coordinate del puntatore in sé — coerente con `isOver` sempre `false` osservato in
+`Addendum 1`, sia con che senza il tentativo di relay.
+
+Per lo scenario (b) (riordino tutto interno all'iframe) questo problema non esiste: sia il
+puntatore (eventi ascoltati e generati dentro il document dell'iframe, perché lì è iniziato il
+`pointerdown`) sia i rettangoli dei nodi droppable (misurati anch'essi dentro l'iframe) sono
+coerentemente nello stesso sistema di riferimento locale all'iframe.
+
+### Fix verificato
+
+`measuring.droppable.measure` e `measuring.draggable.measure` di `DndContext` sono API
+pubbliche sostituibili (`MeasuringConfiguration`, esportata da `@dnd-kit/core`, non
+un'estensione non documentata). Il PoC T3 fornisce una funzione di misura che somma l'offset di
+`iframe.getBoundingClientRect()` al rettangolo grezzo quando il drag corrente è di origine
+palette (`event.active.id` con prefisso `new-block:`) e il nodo misurato vive nell'iframe —
+portandolo nello stesso sistema di riferimento del puntatore. Nessuna nuova dipendenza npm,
+nessun fork di `dnd-kit`, nessun Sensor custom.
+
+**Verifica con mouse reale** (`e2e/tests/spike-dnd-iframe-portal-bridge.spec.ts`, `page.mouse`,
+non eventi sintetici), 5 run consecutivi, 10/10 passati:
+
+- Scenario (a): `isOver=true` sulla drop-zone **prima** del rilascio (non solo un esito casuale
+  al drop), poi `onDragEnd` con `over: "iframe-bridge-canvas-root"` — risolto, deterministico.
+- Scenario (b): resta funzionante dopo il fix di misura (nessuna regressione), `onDragEnd` con
+  un target di reorder valido in tutti i run.
+
+### Esito
+
+**Entrambi gli scenari richiesti da `RFC-F04e-bis` § Opzione (A) sono ora verificati funzionanti
+con input reale**, con causa e fix isolati a livello di codice (non solo osservazione empirica):
+il pattern `createPortal` (canvas nello stesso albero React del padre) risolve il vincolo
+strutturale che aveva bocciato T1 (propagazione del Context), e la sostituzione di
+`measuring.*.measure` — API pubblica di `dnd-kit`, non un workaround fragile — risolve il
+secondo vincolo isolato da questo addendum (sistemi di riferimento incoerenti tra puntatore e
+rettangoli misurati attraverso il confine del document).
+
+Resta comunque **riservata alla firma umana** la decisione di procedere a una nuova ADR (es.
+`ADR-72`, superamento di `ADR-70` § "Decisione" punti 1 e 3) che formalizzi questo meccanismo —
+nessuna ADR viene scritta o approvata da questo piano. Elementi che la firma dovrebbe
+considerare: (a) l'esito è ora positivo su entrambi gli scenari richiesti, non solo parziale;
+(b) il fix di misura va formalizzato come parte del pattern architetturale (non un dettaglio
+implementativo lasciato all'improvvisazione in fase di codifica), quindi andrebbe esplicitamente
+descritto nel testo della nuova ADR, non solo il meccanismo `createPortal`; (c) restano non
+verificati in questa sessione, perché fuori standard probatorio raggiungibile con gli strumenti
+disponibili: scroll automatico del canvas durante il drag (`FullScreenEditorLayout.tsx:392,412`,
+già segnalato come rischio aggiuntivo in `PLAN-F04-dnd-iframe-spike.md`), il sensore da tastiera
+(già accertato rotto oggi indipendentemente dall'iframe, stesso file), e comportamento sotto
+scroll/zoom del documento padre stesso (solo lo scroll/resize dell'iframe rispetto al padre era
+nello scope di ADR-70 § 4).

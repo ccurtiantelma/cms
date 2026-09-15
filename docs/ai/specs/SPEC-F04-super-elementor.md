@@ -10,6 +10,14 @@
 > dell'implementazione), questa spec è **prescrittiva**: nulla di quanto descritto nei §1-3 è
 > ancora implementato. §4 e §5 documentano invece superficie e modello già esistenti,
 > confermati status quo dalla Decisione 3 e dalla Decisione 5 dell'RFC.
+>
+> **Aggiornamento 2026-09-14 (ADR-72)**: `ADR-72-canvas-iframe-portal-bridge.md`, approvata in
+> pari data, supera `ADR-70` § "Decisione" punti 1 e 3 — il gate di spike imposto da `ADR-70` §
+> 4 è superato con esito positivo (4/4 test Playwright, verificato in sede di firma). §1 e
+> §3.3/3.5 sotto sono stati riscritti di conseguenza per il pattern `ReactDOM.createPortal`
+> (nessun secondo `ReactDOM.createRoot()`, nessun `IframeBridgeSensor`). §2 (ponte di stato
+> Zustand) **non è toccato**: `ADR-72` § "Decisione" punto 4 conferma invariati i punti 2, 5 e 6
+> di `ADR-70` § "Decisione", non riaperti da questa revisione.
 
 ## Feature di riferimento
 `docs/roadmap.md` § F04 (Editor visivo). Nessun `docs/ai/features/F04e-*.md` dedicato: la
@@ -18,9 +26,17 @@ feature discende direttamente da `RFC-F04e-super-elementor.md`, come già avvenu
 
 ## ADR applicabili
 
-- `ADR-70-canvas-iframe-isolation-zustand-sync.md` — **approvata 2026-09-14**: canvas in
-  iframe same-origin, store Zustand esposto per riferimento via `contentWindow`, `dnd-kit`
-  bridgato da un Sensor custom.
+- `ADR-72-canvas-iframe-portal-bridge.md` — **approvata 2026-09-14**: supera `ADR-70` §
+  "Decisione" punti 1 e 3. Canvas montato via `ReactDOM.createPortal` nello stesso albero React
+  del documento padre (nessun secondo `ReactDOM.createRoot()`, nessun secondo entry point),
+  nessun `Sensor` custom — `measuring.droppable/draggable.measure` di `DndContext` traduce il
+  rettangolo dei nodi portati nell'iframe nel sistema di riferimento del documento la cui
+  coordinata di puntatore è attiva.
+- `ADR-70-canvas-iframe-isolation-zustand-sync.md` — **approvata 2026-09-14, storica**: canvas
+  in iframe same-origin, store Zustand esposto per riferimento via `contentWindow`. §
+  "Decisione" punti 1 e 3 (secondo `createRoot`, Sensor custom) sono superati da `ADR-72`; punti
+  2 (store Zustand), 5 (isolamento CSS) e 6 (nessuna nuova dipendenza npm) restano vincolanti
+  identici, non riaperti.
 - `ADR-71-resize-handles-unita-dinamiche.md` — **approvata 2026-09-14**: maniglie di resize su
   props `unitValue` (px/%), nessun `kind` nuovo, `min`/`max` obbligatori per prop.
 - `ADR-54-editor-isolato-rotta-studio.md` — rotta `/studio/:id`, invariata: l'iframe vive
@@ -74,8 +90,8 @@ esistente (nuove props opzionali, nessun incremento di `v`).
   ADR-39 § 3, non riaperto da ADR-71.
 - Unità `em`/`rem`/`vw`/`vh` pilotabili da maniglia: solo `px`/`%` (ADR-71 § 2).
 - Iframe cross-origin, Shadow DOM: entrambe le alternative non selezionate nella firma umana.
-- Qualunque implementazione prima che la spike di ADR-70 § "Decisione" punto 4 produca esito
-  scritto — è un gate, non un dettaglio di sequenza.
+- Un secondo `ReactDOM.createRoot()` per il canvas e un `IframeBridgeSensor` custom: previsti da
+  `ADR-70` § "Decisione" punti 1 e 3, superati da `ADR-72` — non vengono scritti.
 
 ## Vincoli e assunzioni
 
@@ -91,52 +107,59 @@ esistente (nuove props opzionali, nessun incremento di `v`).
 5. **`unitValue` resta con `min`/`max`/`units` obbligatori per prop** (ADR-38 § 2, confermato
    da ADR-71 § 2): "valore libero" nel titolo di quest'area copre la libertà dal token
    discreto, mai dal range dichiarato.
-6. **La spike di verifica di ADR-70 § 4 è un prerequisito**, non un task fra gli altri: nessun
-   task del breakdown (§ Task breakdown) può iniziare prima del suo esito scritto.
+6. **Il gate di spike di `ADR-70` § 4 è superato con esito positivo** (`ADR-72`, 4/4 test
+   Playwright verificati in sede di firma, 2026-09-14): i task del breakdown (§ Task breakdown)
+   possono procedere. Resta comunque vincolante, non un dettaglio lasciato al momento della
+   scrittura del codice, l'obbligo architetturale di `ADR-72` § "Decisione" punto 3 (funzione di
+   misura cross-frame per `measuring.droppable/draggable.measure`) — si veda § 3.3.
 
 ---
 
-## 1. Contratto dell'iframe same-origin e caricamento dinamico del Canvas
+## 1. Contratto dell'iframe same-origin e montaggio del Canvas via `createPortal`
+
+> Riscritto per `ADR-72-canvas-iframe-portal-bridge.md` (supera `ADR-70` § "Decisione" punto 1).
+> Nessun secondo `ReactDOM.createRoot()`, nessun secondo entry point/bundle Vite.
 
 ### 1.1 Struttura DOM
 
 `LayoutStudio` (`/studio/:id`, ADR-54) monta, al posto dell'attuale `EditorCanvas` diretto, un
-elemento `<iframe>`:
+elemento `<iframe>` con un documento minimale e vuoto, mai un `src` verso un secondo entry point:
 
 ```html
 <iframe
   id="cms-canvas-frame"
-  src="/studio-canvas.html"
+  srcDoc="<!doctype html><html><body><div id=&quot;canvas-root&quot;></div></body></html>"
   title="Canvas dei blocchi"
 ></iframe>
 ```
 
-- `src` punta a un secondo entry point statico servito dalla **stessa build/origin**
-  dell'admin (`/studio-canvas.html`), mai a un URL con origin diversa.
+- `srcDoc` serve un documento same-origin minimale con un solo contenitore vuoto
+  (`#canvas-root`) — nessun bundle JS proprio caricato dentro l'iframe: il contenuto viene
+  portato dall'albero React del documento padre (§ 1.2).
 - Nessun attributo `sandbox`: un `sandbox` senza `allow-same-origin` esplicito degraderebbe
-  l'iframe a origin opaca, vanificando l'intero meccanismo di ADR-70. Se in futuro serve
-  restringere altre capacità (`allow-scripts` è necessario e resta implicito quando l'attributo
-  è assente), va valutato singolarmente contro questo vincolo, non aggiunto per default.
+  l'iframe a origin opaca. Se in futuro serve restringere altre capacità, va valutato
+  singolarmente contro questo vincolo, non aggiunto per default.
 - Dimensioni: `width: 100%; height: 100%` dentro il contenitore canvas esistente di
   `FullScreenEditorLayout`; lo switcher `activeViewport` (ADR-32 § 2 vecchia numerazione)
   continua a governare solo la larghezza del contenitore che ospita l'iframe, mai l'iframe
   stesso a piena area.
 
-### 1.2 Ciclo di caricamento
+### 1.2 Ciclo di montaggio
 
-1. `LayoutStudio` monta l'`<iframe>` con `src` statico. Il browser carica
-   `/studio-canvas.html`, un documento HTML minimale che importa un bundle JS dedicato
-   (`studio-canvas.entry.tsx`), separato dal bundle principale dell'admin ma dalla stessa
-   build Vite (stesso `base`, stessa origin di serving).
-2. Sull'evento `load` dell'`<iframe>` (mai prima: `contentWindow`/`contentDocument` non sono
-   affidabili prima di questo evento), il documento padre esegue lo scambio del punto 2.1.
-3. Solo dopo lo scambio riuscito, `studio-canvas.entry.tsx` monta l'albero React del canvas
-   (`EditorBlockWrapper` e discendenti, stesso codice sorgente dell'admin, importato dallo
-   stesso `app/frontend/src`, non duplicato).
-4. Se lo scambio fallisce (store non ancora pronto, `contentWindow` inaccessibile per un
-   motivo di origin): il canvas mostra uno stato di errore esplicito, mai un canvas vuoto
-   silenzioso — coerente con la regola generale "mai overwrite/stato silenzioso" già in vigore
-   per l'editor (ADR-54 § "Alternative scartate").
+1. `LayoutStudio` monta l'`<iframe>` con `srcDoc` statico.
+2. Sull'evento `load` dell'`<iframe>` (mai prima: `contentDocument` non è affidabile prima di
+   questo evento), il documento padre ottiene
+   `iframe.contentDocument.getElementById('canvas-root')`.
+3. Quel nodo diventa il container di
+   `ReactDOM.createPortal(canvasTree, container)`, **dentro lo stesso albero React** già montato
+   nel documento padre (figlio di `LayoutStudio`/`FullScreenEditorLayout`) — un solo
+   `ReactDOM.createRoot()` per l'intera app, nessun secondo root, nessun bundle separato.
+   `canvasTree` è lo stesso componente `EditorBlockWrapper` e discendenti già usati oggi, stesso
+   codice sorgente, non duplicato.
+4. Se il container non è raggiungibile al `load` (caso limite, stesso documento `srcDoc` sempre
+   same-origin per costruzione): il canvas mostra uno stato di errore esplicito, mai un canvas
+   vuoto silenzioso — coerente con la regola generale "mai overwrite/stato silenzioso" già in
+   vigore per l'editor (ADR-54 § "Alternative scartate").
 
 ### 1.3 Isolamento CSS ereditato
 
@@ -242,24 +265,45 @@ regola — resta l'unica, importata dallo stesso modulo sia dal bundle admin sia
 
 ### 3.3 Bridging di `@dnd-kit` attraverso il confine iframe
 
-Il `DndContext` resta unico, montato in `FullScreenEditorLayout` nel documento padre
-(vincolo invariato di ADR-32 § 5 vecchia numerazione per la parte "un solo `DndContext`").
-Sorgente (`WidgetPalette`, nel documento padre) e alcune destinazioni (`EditorBlockWrapper`,
-ora nel documento dell'iframe) non condividono più un `document`: ADR-70 § "Decisione" punto 3
-autorizza un `IframeBridgeSensor` che:
+> Riscritto per `ADR-72-canvas-iframe-portal-bridge.md` (supera `ADR-70` § "Decisione" punto 3).
+> Nessun `Sensor` custom.
 
-1. Al montaggio, si registra come listener nativo su
-   `frame.contentWindow.document` (`pointerdown`/`pointermove`/`pointerup`) — accesso diretto
-   perché same-origin (§ 1/2 di questa spec).
-2. Traduce le coordinate di ogni evento catturato sommando l'offset di
-   `frame.getBoundingClientRect()`, producendo coordinate coerenti col sistema di riferimento
-   del documento padre.
-3. Inoltra l'evento tradotto al protocollo di attivazione che `dnd-kit` espone per un
-   `Sensor` custom (`Sensor.activators`, stessa interfaccia usata da `PointerSensor`), senza
-   toccare `moveNodeToAction` né `canDropInto` (§ 3.2).
-4. Coesiste con il sensore da tastiera esistente (ADR-28 § 4) e col sensore puntatore nativo
-   per gli elementi che restano nel documento padre (es. `WidgetPalette` stesso, se in futuro
-   diventasse anch'esso trascinabile da tastiera dentro l'iframe — fuori scope oggi).
+Il `DndContext` resta unico, montato in `FullScreenEditorLayout` nel documento padre (vincolo
+invariato di ADR-32 § 5 vecchia numerazione per la parte "un solo `DndContext`"). Sorgente
+(`WidgetPalette`, nel documento padre) e alcune destinazioni (`EditorBlockWrapper`, portato nel
+documento dell'iframe via `createPortal`, § 1.2) non condividono più un `document` fisico, ma
+`useDraggable`/`useDroppable` sui nodi portati si registrano comunque con lo stesso
+`DndContext`/`InternalContext` del padre per costruzione: il Context React attraversa il confine
+del `document` perché la propagazione segue l'albero Fiber, non il documento fisico in cui il
+DOM portato finisce (verificato in `PLAN-F04-dnd-iframe-portal-spike.md` § "Risultato" punto 1).
+Nessun `IframeBridgeSensor` da scrivere: Chromium recapita nativamente tutti gli eventi
+`pointermove`/`pointerup` successivi a un `pointerdown` con bottone premuto al document che ha
+ricevuto il `pointerdown` iniziale (cattura implicita del puntatore), indipendentemente da dove
+il cursore si trovi visivamente — il `PointerSensor` nativo già montato dal `DndContext` del
+padre riceve quindi da solo tutti gli eventi necessari.
+
+**Obbligo architetturale (non un dettaglio implementativo, `ADR-72` § "Decisione" punto 3):** la
+prop `measuring` di `DndContext` (`MeasuringConfiguration`, API pubblica di `@dnd-kit/core`, non
+un'estensione non documentata) deve sostituire `measuring.droppable.measure` e
+`measuring.draggable.measure` con una funzione che:
+
+1. usa `element.getBoundingClientRect()` come base (nessuna reimplementazione della geometria
+   nativa);
+2. quando l'`ownerDocument` dell'elemento misurato differisce dal documento di riferimento del
+   drag attivo, somma (o sottrae, per la direzione opposta) l'offset di
+   `iframe.getBoundingClientRect()` prima di restituire il rettangolo;
+3. determina il documento di riferimento del drag attivo dall'origine del nodo trascinato (es.
+   convenzione `new-block:` già in uso da `WidgetPalette` per i nuovi blocchi), non da uno stato
+   globale mutabile fuori dal ciclo di vita del drag.
+
+Senza questa traduzione ogni drag che attraversa il confine iframe↔padre risolve sempre `over:
+null` (collisione mai rilevata): il rettangolo dei nodi droppable dentro l'iframe viene misurato
+di default nel sistema di riferimento locale dell'iframe, mai tradotto nell'offset del suo
+riquadro nella pagina padre, mentre il puntatore arriva con coordinate assolute nel viewport
+della pagina padre — due sistemi di riferimento incompatibili confrontati come fossero lo stesso
+(causa isolata in `PLAN-F04-dnd-iframe-portal-spike.md` § "Addendum 2", fix verificato con mouse
+reale, 4/4 test Playwright, `e2e/tests/spike-dnd-iframe-portal-bridge.spec.ts`). Nessuna nuova
+azione né modifica a `moveNodeToAction`/`canDropInto` (§ 3.2).
 
 ### 3.4 Linea di inserimento e stato di rifiuto
 
@@ -267,11 +311,23 @@ Invariato da ADR-28 § 6: la linea di inserimento resta uno pseudo-elemento sull
 rilascio, mai un nodo nel DOM dell'albero — vale identico nel documento dell'iframe, nessuna
 eccezione introdotta da questa spec.
 
-### 3.5 Prerequisito di verifica
+### 3.5 Gate di spike — superato
 
-Nessuna riga di `IframeBridgeSensor` va scritta in un task di feature prima che la spike
-richiesta da ADR-70 § 4 (scroll interno del canvas, resize finestra, zoom browser, sensore da
-tastiera) produca esito scritto. Questa spec non sostituisce quella spike — la presuppone.
+Il gate imposto da `ADR-70` § 4 è **superato con esito positivo**: `ADR-72`, firmata 2026-09-14,
+formalizza l'esito scritto di `PLAN-F04-dnd-iframe-portal-spike.md` (createPortal + funzione di
+misura cross-frame, § 3.3), verificato in sede di firma con 4/4 test Playwright reali (mouse via
+CDP). I task di implementazione di § 3.3 possono procedere.
+
+**Rischi residui non coperti da questo gate**, da chiudere nel round di implementazione o con
+una spike dedicata separata (`ADR-72` § "Conseguenze"):
+- Scroll automatico del canvas durante un drag (`FullScreenEditorLayout.tsx:392,412` ascolta
+  `pointermove` su `window`, che non attraversa il confine dell'iframe verso il padre).
+- Il sensore da tastiera per il riordino nel canvas è già rotto oggi in produzione,
+  indipendentemente da questa spec (`FullScreenEditorLayout.tsx` righe 335-338/513,
+  `collisionDetection={pointerWithin}` senza `coordinateGetter` custom) — debito preesistente,
+  non introdotto né risolto qui, da registrare in `docs/TODO.md`.
+- Scroll/zoom del documento padre durante un drag attivo: solo l'offset statico dell'iframe è
+  stato validato con mouse reale.
 
 ---
 
@@ -367,19 +423,28 @@ non toccata da questa spec.
 
 ## Task breakdown
 
-- [ ] **T0 — Spike di verifica (gate, non un task di feature)**: `IframeBridgeSensor` contro
-      scroll interno del canvas, resize finestra, zoom browser, sensore da tastiera esistente.
-      Esito scritto obbligatorio prima di T1-T6 (ADR-70 § 4).
-- [ ] T1 — Frontend: entry point `/studio-canvas.html` + `studio-canvas.entry.tsx`, bundle
-      Vite dedicato, stessa origin.
+- [x] **T0 — Spike di verifica (gate, non un task di feature)**: superato con esito positivo,
+      formalizzato in `ADR-72` (2026-09-14, 4/4 test Playwright verificati in sede di firma).
+      Rischi residui non coperti (scroll automatico, sensore da tastiera, scroll/zoom del padre)
+      restano aperti, vedi § 3.5.
+- [ ] T1 — Frontend: montaggio del canvas nell'iframe via `ReactDOM.createPortal` (§ 1.2),
+      nessun secondo entry point/bundle Vite.
 - [ ] T2 — Frontend: scambio store al `load` dell'iframe (§ 2.1/2.2), tipi
       `studio-canvas-bridge.types.ts`.
-- [ ] T3 — Frontend: `IframeBridgeSensor` (§ 3.3), integrazione nel `DndContext` esistente di
-      `FullScreenEditorLayout`.
-- [ ] T4 — Frontend: `ResizeHandle.tsx` (§ 4.2) sulle props esistenti (`container.styleFlexBasis`).
-- [ ] T5 — Backend: nuove props `unitValue` su `container`/`image` e margini per lato (§ 4.3),
-      `meta.props` per ciascuna, rigenerazione `blocks:export`/`blocks:types`.
-- [ ] T6 — Frontend: collegare `ResizeHandle.tsx` alle nuove props di T5.
+- [ ] T3 — Frontend: funzione di misura cross-frame per `measuring.droppable/draggable.measure`
+      di `DndContext` (§ 3.3), integrazione nel `DndContext` esistente di
+      `FullScreenEditorLayout` — nessun `Sensor` custom.
+- [x] T4 — Frontend: `ResizeHandle.tsx` (§ 4.2), generalizzato accanto alla maniglia esistente
+      di `container.styleFlexBasis` (`components/ContainerResizeHandle.tsx`, invariata).
+      Verificato già implementato e committato (`160ddd7`, 2026-09-14), firma di registrazione
+      in `RFC-63-fase4-sidebar-widget-pannello-proprieta.md` § "Decisione umana" Decisione 3
+      (2026-09-14).
+- [x] T5 — Backend: nuove props `unitValue` su `container`/`image` e margini per lato (§ 4.3),
+      `meta.props` per ciascuna. Verificate presenti in `app/backend/src/blocks/types/*.block.ts`
+      (`button`/`container`/`heading`/`section`/`image`/`rich-text`), stesso commit di T4.
+- [x] T6 — Frontend: collegare `ResizeHandle.tsx` alle nuove props di T5, via
+      `resolveResizePropSpec`/`updateBlockPropsAction` in `EditorBlockWrapper.tsx`. Stesso
+      commit di T4/T5.
 - [ ] T7 — Test Engineer: copertura Jest/Playwright per bridging cross-iframe (drag da palette
       a canvas, riordino dentro canvas, resize handle), contract test Bruno per le nuove props.
 

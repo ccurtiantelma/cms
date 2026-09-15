@@ -35,6 +35,11 @@ import {
   DEFAULT_GLOBAL_TOKENS,
 } from '../../../libs/globalTokensCompiler';
 import { THEME_STYLE_TAG_ID } from '../../../utils/theme-css.utils';
+// `?inline`: stesso meccanismo usato da `IframeCanvas.tsx` (import.meta.glob) per verificare,
+// senza duplicare la stringa a mano, che l'aggregatore copra anche un CSS Module diverso da
+// `style-tokens.module.css` (regressione della migrazione ADR-72: solo i token venivano
+// iniettati, il resto — incluso questo file — restava solo nel document padre).
+import editorBlockWrapperCss from './EditorBlockWrapper.module.css?inline';
 
 const { useBlockEditorStore } = await import('../../../hooks/useBlockEditorStore');
 const { default: IframeCanvas } = await import('./IframeCanvas');
@@ -188,6 +193,23 @@ describe('IframeCanvas — isolamento CSS (ADR-70 § "Decisione" punto 5, invari
     const styleTag = doc.getElementById('eaidos-block-token-css');
     expect(styleTag).not.toBeNull();
     expect(styleTag?.tagName).toBe('STYLE');
+  });
+
+  it('aggrega nello stesso <style> anche i CSS Module dell’albero portato oltre ai token (es. EditorBlockWrapper.module.css — regressione layout/overlay ADR-72)', () => {
+    const { container } = renderWithProviders(
+      <IframeCanvas>
+        <div />
+      </IframeCanvas>,
+    );
+    const iframe = getFrame(container);
+    const doc = loadIframeDocument(iframe);
+
+    const styleTag = doc.getElementById('eaidos-block-token-css');
+    // Estrae dal CSS Module compilato una dichiarazione nota (non l'intero file, robusto a
+    // riordini dell'aggregatore) e verifica che sia presente nell'iniezione aggregata.
+    const knownRule = editorBlockWrapperCss.match(/\.[\w-]+\s*\{[^}]*position:\s*relative/);
+    expect(knownRule).not.toBeNull();
+    expect(styleTag?.textContent ?? '').toContain(knownRule?.[0] ?? '__not-found__');
   });
 });
 

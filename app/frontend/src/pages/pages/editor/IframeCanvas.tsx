@@ -32,10 +32,18 @@
  *    dello store sul `document` padre (`setGlobalTokens`/`hydrateGlobalTokens`/`undo`/`redo`) —
  *    toccare quegli internals condivisi sarebbe un rischio più alto di un secondo punto di
  *    applicazione qui.
- * 3. CSS Module dei blocchi (`style-tokens.module.css`) — importato con `?inline` (stringa CSS
- *    già compilata da Vite, stesso hashing deterministico dell'import "normale" già usato da
- *    `Button.tsx`/`Container.tsx`/ecc.) e iniettato in un `<style>` proprio dell'head
- *    dell'iframe: nessuna dipendenza npm nuova, nessuna duplicazione di foglio stile.
+ * 3. CSS Module di progetto (tutti i `*.module.css` sotto `src/`, `import.meta.glob` con
+ *    `query: '?inline'`, nessuna dipendenza npm nuova) — non solo `style-tokens.module.css`:
+ *    l'intero albero portato (`EditorCanvas.tsx`, `EditorBlockWrapper.tsx`, `Section.tsx` e
+ *    ogni altro blocco sotto `components/blocks/blocks/`, `InlineFloatingToolbar.tsx`) importa
+ *    normalmente (non `?inline`) i propri CSS Module, e Vite li inietta automaticamente solo
+ *    nel `document` padre al momento dell'esecuzione del modulo — mai nell'`iframe.contentDocument`,
+ *    che non ha un secondo entry point/bundle (ADR-72 § "Decisione" punto 1). Senza questo
+ *    aggregatore, il layout Grid di `Section.module.css`, il `position: absolute` di
+ *    maniglie/overlay/badge di `EditorBlockWrapper.module.css` e l'ancoraggio di
+ *    `InlineFloatingToolbar.module.css` non arriverebbero mai nel documento isolato — stesso
+ *    hashing deterministico dell'import "normale" già usato dai componenti, concatenati in
+ *    ordine di path (deterministico) in un unico `<style>` proprio dell'head dell'iframe.
  *
  * **Non clonato**: nessun altro foglio di stile del documento padre, in particolare nessun CSS
  * di Mantine — l'isolamento richiesto è esplicito (CLAUDE.md § Regola Mantine — i componenti
@@ -59,25 +67,60 @@ import { useThemeColorStore } from '../../../hooks/useThemeColor';
 import { compileTokensToCss } from '../../../libs/globalTokensCompiler';
 import { GLOBAL_TOKENS_CANVAS_SCOPE_CLASS } from '../../../libs/globalTokensCompiler';
 import { generateThemeCss, THEME_STYLE_TAG_ID } from '../../../utils/theme-css.utils';
-// `?inline`: CSS Module compilato come stringa (Vite), non auto-iniettato nel documento padre —
-// vedi il commento di testa sopra, punto 3. Stesso hashing di classe dell'import "normale" già
-// usato dai componenti di blocco: nessuna dipendenza npm nuova, nessuna modifica a
-// `vite.config.ts`.
-import blockTokenCss from '../../../components/blocks/style-tokens.module.css?inline';
 import styles from './IframeCanvas.module.css';
 
 /** Id del contenitore del `srcDoc` — stesso contratto letterale di SPEC-F04-super-elementor.md §1.1. */
 const CANVAS_ROOT_ID = 'canvas-root';
 
-/** Id del tag `<style>` che ospita il CSS Module dei blocchi nell'head dell'iframe. */
+/** Id del tag `<style>` che ospita i CSS Module di progetto nell'head dell'iframe. */
 const BLOCK_TOKEN_STYLE_TAG_ID = 'eaidos-block-token-css';
+
+// `import.meta.glob` (Vite 6, nativo — nessuna dipendenza npm nuova, ADR-70 § "Decisione"
+// punto 6, invariato): raccoglie con `?inline` (stringa CSS già compilata, stesso hashing
+// deterministico dell'import "normale") ogni `*.module.css` di progetto sotto `src/` — quindi
+// automaticamente `style-tokens.module.css`, `EditorCanvas.module.css`,
+// `EditorBlockWrapper.module.css`, ogni `.module.css` di blocco (`Section`, `Button`,
+// `Container`, ecc.) e `InlineFloatingToolbar.module.css`, presenti e futuri — mai il CSS di
+// Mantine, che non è un `.module.css` di progetto ma vive in `node_modules` (commento di testa,
+// "Non clonato"). `eager: true`: valutato al caricamento del modulo, nessun `await` nel
+// componente. Concatenato in ordine di path (`Object.keys(...).sort()`) per un output
+// deterministico, indipendente dall'ordine di scoperta del filesystem.
+const blockModuleCssMap = import.meta.glob('/src/**/*.module.css', {
+  eager: true,
+  query: '?inline',
+  import: 'default',
+}) as Record<string, string>;
+const aggregatedBlockCss = Object.keys(blockModuleCssMap)
+  .sort()
+  .map((path) => blockModuleCssMap[path])
+  .join('\n');
 
 /**
  * Documento `srcDoc` minimale (SPEC §1.1): nessun bundle JS proprio, un solo contenitore
  * vuoto — il contenuto arriva interamente dall'albero React del documento padre via
- * `createPortal`.
+ * `createPortal`. Il reset su `html`/`body` non è decorativo:
+ * - `margin:0`: senza, il margine UA di default (8px) sfalserebbe la larghezza simulata dal
+ *   Viewport Switcher (Tablet 768px/Mobile 375px, `FullScreenEditorLayout.module.css`
+ *   `.viewportTablet`/`.viewportMobile`) di 16px.
+ * - `height:100%` (non `min-height:100%`, invariato — vedi nota sotto): `.canvasRoot`
+ *   (`EditorCanvas.module.css`, commento in testa a `.canvasRoot`) risolve il proprio
+ *   `min-height: 100%` esplicitamente "contro `html,body{height:100%}`" — una percentuale
+ *   (`height` o `min-height`) risolve solo se il containing block ha un'altezza *definita*
+ *   (non `auto`); `min-height` da solo non la fissa mai (il computed `height` resta `auto`
+ *   finché il contenuto non la forza), quindi sostituirlo con `min-height:100%` qui
+ *   azzererebbe la base percentuale a catena e romperebbe esattamente il caso che quel
+ *   commento descrive (l'area cliccabile per la deselezione ad albero vuoto/corto non
+ *   coprirebbe più l'intero canvas). Nessun rischio di clip su un albero più alto della
+ *   viewport dell'iframe: `overflow` resta `visible` (default, mai impostato altrove su
+ *   `html`/`body`/`.canvasRoot`), quindi un contenuto che eccede l'altezza fissata trabocca
+ *   visivamente invece di essere tagliato.
+ * - `padding:0`/`box-sizing:border-box`/`width:100%`: stesso principio del reset UA sopra —
+ *   nessun padding di default su `body`, e un elemento portato che dichiari `width: 100%`
+ *   (es. `.section`/`.canvasRoot`) deve risolvere sul contenuto della cella, non
+ *   aggiungerci un proprio bordo/padding sopra (`content-box` sommerebbe, sfalsando di nuovo
+ *   la larghezza simulata dal Viewport Switcher come per il margine sopra).
  */
-const IFRAME_SRC_DOC = `<!doctype html><html><body><div id="${CANVAS_ROOT_ID}"></div></body></html>`;
+const IFRAME_SRC_DOC = `<!doctype html><html><head><style>html,body{margin:0;padding:0;box-sizing:border-box;width:100%;height:100%}</style></head><body><div id="${CANVAS_ROOT_ID}"></div></body></html>`;
 
 export interface IframeCanvasProps {
   /** Il `canvasTree` da proiettare nell'iframe — oggi `InvalidBlockProvider > EditorCanvas`,
@@ -136,6 +179,17 @@ const IframeCanvas = forwardRef<HTMLIFrameElement, IframeCanvasProps>(function I
       setLoadError(true);
       return;
     }
+    // Marca `<html>` del documento dell'iframe come confine scrollabile reale del canvas
+    // (FASE 6, gap scoperto dalla migrazione ADR-72): `EditorBlockWrapper.tsx` risolve
+    // l'anti-clip della toolbar di selezione con `wrapperEl.closest('[data-canvas-scroll-area]')`
+    // sul proprio nodo, portato in questo stesso documento — `[data-canvas-scroll-area]` su
+    // `.canvasArea` del documento padre (`FullScreenEditorLayout.tsx`) non è più un antenato
+    // raggiungibile da `closest()` una volta attraversato il confine dell'iframe, e resta
+    // comunque il confine sbagliato: l'iframe è un box a dimensione fissa (le regole flex del
+    // padre lo stirano all'altezza di `.canvasArea`, `overflow-y: auto` di
+    // `.canvasArea` non scatta mai), lo scroll reale del contenuto del canvas è quello nativo
+    // del documento dell'iframe stesso.
+    doc.documentElement.setAttribute('data-canvas-scroll-area', 'true');
     setLoadError(false);
     setContentDoc(doc);
     setPortalContainer(container);
@@ -169,7 +223,8 @@ const IframeCanvas = forwardRef<HTMLIFrameElement, IframeCanvasProps>(function I
     );
   }, [contentDoc, globalTokens]);
 
-  // Pipeline 3/3 — CSS Module dei blocchi (commento di testa, punto 3): contenuto statico,
+  // Pipeline 3/3 — CSS Module di progetto (commento di testa, punto 3): contenuto statico
+  // (l'aggregato è calcolato una sola volta al caricamento del modulo, non ad ogni render),
   // iniettato una sola volta per documento montato (un nuovo `load` dell'iframe rimpiazza
   // `contentDoc`, quindi questo effetto rieseguirà sul documento nuovo).
   useEffect(() => {
@@ -180,7 +235,7 @@ const IframeCanvas = forwardRef<HTMLIFrameElement, IframeCanvasProps>(function I
       styleTag.id = BLOCK_TOKEN_STYLE_TAG_ID;
       contentDoc.head.appendChild(styleTag);
     }
-    styleTag.textContent = blockTokenCss;
+    styleTag.textContent = aggregatedBlockCss;
   }, [contentDoc]);
 
   return (
