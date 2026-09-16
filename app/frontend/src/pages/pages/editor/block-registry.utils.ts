@@ -64,12 +64,48 @@ function defaultPropValue(prop: BlockPropDescriptor): unknown {
   }
 }
 
+/**
+ * Default UX-only non ancora dichiarati nel registro backend (T-editor-refinement,
+ * requisito esplicito pixel-perfect del task): `types/blocks.types.ts` è un artefatto
+ * **generato** da `npm run blocks:types` a partire da `app/backend/src/blocks/
+ * block-registry.ts` ("NON MODIFICARE A MANO", verificato dal job CI "blocks-sync", vedi
+ * il commento di testa di quel file) — un agente Frontend Developer non tocca mai codice
+ * NestJS (CLAUDE.md § confine di dominio), quindi il fix corretto e definitivo — un
+ * `default: 'Questo è un titolo'` sul descrittore `text` di `heading` nel registro
+ * backend, seguito da una nuova generazione — resta fuori dal perimetro di questo file.
+ * Questa mappa è lo **stand-in** minimo, isolato e reversibile: `heading.text` è
+ * `required` senza `default` dichiarato, quindi {@link defaultPropValue} risolve sempre
+ * `''` per un blocco appena creato — stato vuoto invisibile nel Canvas più errore di
+ * validazione rosso immediato nel pannello laterale, prima ancora che l'utente digiti
+ * qualcosa. Da rimuovere non appena il registro backend dichiarerà il proprio `default`:
+ * l'unica lettura contro cui questa mappa viene applicata sotto (`descriptorProp.default
+ * === undefined`) smette da sola di scattare a quel punto, nessuna doppia fonte silenziosa.
+ */
+const FRONTEND_ONLY_PROP_DEFAULTS: Readonly<Record<string, Readonly<Record<string, unknown>>>> = {
+  heading: { text: 'Questo è un titolo' },
+};
+
 /** Props iniziali di un blocco nuovo, calcolate interamente dal descrittore del registro. */
 export function defaultPropsFor(descriptor: BlockTypeDescriptor): Record<string, unknown> {
   const props: Record<string, unknown> = {};
   for (const prop of descriptor.props) {
     const value = defaultPropValue(prop);
     if (value !== undefined) props[prop.name] = value;
+  }
+  // Vedi il commento di {@link FRONTEND_ONLY_PROP_DEFAULTS} sopra: applicato solo quando il
+  // registro non ha già un `default` proprio (mai una sovrascrittura silenziosa di un
+  // default futuro dichiarato lato backend) e il valore risolto è ancora il segnaposto
+  // vuoto `''` di una prop stringa obbligatoria senza default (`defaultPropValue`, ramo
+  // `default:` → `required ? '' : undefined`) — mai su una prop che l'utente/preset ha già
+  // valorizzato altrove (questa funzione gira solo alla creazione di un nodo nuovo).
+  const overrides = FRONTEND_ONLY_PROP_DEFAULTS[descriptor.type];
+  if (overrides) {
+    for (const [name, overrideValue] of Object.entries(overrides)) {
+      const descriptorProp = descriptor.props.find((entry) => entry.name === name);
+      if (descriptorProp && descriptorProp.default === undefined && props[name] === '') {
+        props[name] = overrideValue;
+      }
+    }
   }
   return props;
 }

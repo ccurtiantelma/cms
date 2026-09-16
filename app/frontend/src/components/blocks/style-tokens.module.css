@@ -224,7 +224,9 @@
   font-family: var(--cms-font-family-monospace);
 }
 
-/* ─── columns / gap / alignItems (ADR-31) — solo section ────────────────── */
+/* ─── columns / gap / alignItems (ADR-31) — solo section, applicate al
+   wrapper interno `.content` (`Section.module.css`), non al `<section>` che
+   porta solo lo sfondo (Change 3 — correzione "sfondo boxed") ───────────── */
 
 /*
  * `minmax(0, 1fr)`, non `1fr`: senza il minimo esplicito a `0`, il minimo implicito di ogni
@@ -290,16 +292,27 @@
    tracce `fr` occupano sempre il 100% dello spazio disponibile (zero spazio
    libero da ridistribuire per `justify-content`) *e* `justify-items` di
    default è `stretch`, quindi ogni cella riempie comunque la propria traccia
-   a prescindere. Le tre varianti a posizione singola (`flex-start`/
-   `flex-end`/`center`) impostano perciò anche `justify-items` equivalente
-   (`start`/`end`/`center`): su un contenitore Grid questo fa sì che ogni
-   figlio si dimensioni sul proprio contenuto (non più stretch) e si allinei
-   dentro la propria traccia — su un contenitore flex `justify-items` non ha
-   alcun effetto (proprietà ignorata fuori da grid/block), nessuna
-   regressione per `container`. `space-between`/`space-around`/`space-evenly`
-   restano solo `justify-content`: non hanno un `justify-items` equivalente
-   (valori validi solo per `start`/`end`/`center`/`stretch`/`normal`), e la
-   distribuzione di spazio fra più celle ha senso solo con più colonne. */
+   a prescindere. Le due varianti a posizione singola non-default
+   (`flex-end`/`center`) impostano perciò anche `justify-items` equivalente
+   (`end`/`center`): su un contenitore Grid questo fa sì che ogni figlio si
+   dimensioni sul proprio contenuto (non più stretch) e si allinei dentro la
+   propria traccia — su un contenitore flex `justify-items` non ha alcun
+   effetto (proprietà ignorata fuori da grid/block), nessuna regressione per
+   `container`. `space-between`/`space-around`/`space-evenly` restano solo
+   `justify-content`: non hanno un `justify-items` equivalente (valori validi
+   solo per `start`/`end`/`center`/`stretch`/`normal`), e la distribuzione di
+   spazio fra più celle ha senso solo con più colonne.
+   **`flex-start` NON porta `justify-items: start`** (bug verificato live,
+   fix T-editor-refinement): `flex-start` è il default dichiarato di
+   `justifyContent` (`section.block.ts`), quindi la sua classe è quella
+   emessa da **ogni** `section` che non ha mai toccato questa prop (ADR-31
+   § 7, `resolveResponsiveClassNames` risolve sempre il default anche
+   quando il nodo non lo ha mai scritto) — un `justify-items: start` qui
+   romperebbe lo stretch atteso per il caso comune (ogni Section nuova a più
+   colonne, non solo la scelta esplicita "allinea a sinistra"), producendo
+   colonne ridotte al proprio contenuto e ammassate a sinistra invece di
+   saturare la traccia. `justify-content: flex-start` resta (no-op su
+   tracce `fr`, coerente col paragrafo sopra, nessun rischio). */
 
 .flexDirection_default_row {
   flex-direction: row;
@@ -316,7 +329,6 @@
 
 .justifyContent_default_flex-start {
   justify-content: flex-start;
-  justify-items: start;
 }
 .justifyContent_default_flex-end {
   justify-content: flex-end;
@@ -343,7 +355,11 @@
   flex-wrap: wrap;
 }
 
-/* ─── contentWidth / maxWidth (ADR-33 § 1) — solo section, non responsive ── */
+/* ─── contentWidth / maxWidth (ADR-33 § 1) — solo section, non responsive.
+   Applicate al wrapper interno `.content` (`Section.module.css`), mai al
+   `<section>` esterno che porta solo lo sfondo (Change 3 — correzione
+   "sfondo boxed": lo sfondo deve restare a piena larghezza anche quando il
+   contenuto è vincolato da `max-width`) ─────────────────────────────────── */
 
 /* Nessuna larghezza massima propria: la gestisce `maxWidth`, applicato solo
    quando `contentWidth !== 'full-width'` (logica di rendering in Section.tsx). */
@@ -398,7 +414,13 @@
 }
 
 /* ─── stylePaddingTop/Right/Bottom/Left, styleMarginTop/Right/Bottom/Left
-   (ADR-33 § 4) — solo section, responsive, scala chiusa 0-96px ─────────── */
+   (ADR-33 § 4) — solo section, responsive, scala chiusa 0-96px. Dal Change 3
+   (correzione "sfondo boxed") le due famiglie sono applicate a elementi
+   diversi in `Section.tsx`: `padding*` sul wrapper interno `.content`
+   (spaziatura *dentro* il contenuto, coerente col vincolo `maxWidth`
+   applicato allo stesso elemento), `margin*` sul `<section>` esterno che
+   porta lo sfondo (offset del box stesso, non del contenuto — comportamento
+   invariato rispetto a prima dello split) ───────────────────────────────── */
 
 .paddingTop_default_0 {
   padding-top: 0px;
@@ -829,9 +851,11 @@
     flex-direction: column-reverse;
   }
 
+  /* Niente `justify-items: start` qui — stesso motivo di
+     `.justifyContent_default_flex-start`: `flex-start` è il default,
+     romperebbe lo stretch per ogni Section che non ha mai toccato la prop. */
   .justifyContent_tablet_flex-start {
     justify-content: flex-start;
-    justify-items: start;
   }
   .justifyContent_tablet_flex-end {
     justify-content: flex-end;
@@ -1288,9 +1312,11 @@
     flex-direction: column-reverse;
   }
 
+  /* Niente `justify-items: start` qui — stesso motivo di
+     `.justifyContent_default_flex-start`: `flex-start` è il default,
+     romperebbe lo stretch per ogni Section che non ha mai toccato la prop. */
   .justifyContent_mobile_flex-start {
     justify-content: flex-start;
-    justify-items: start;
   }
   .justifyContent_mobile_flex-end {
     justify-content: flex-end;
@@ -1831,9 +1857,11 @@
     flex-direction: column-reverse;
   }
 
+  /* Niente `justify-items: start` qui — stesso motivo di
+     `.justifyContent_default_flex-start`: `flex-start` è il default,
+     romperebbe lo stretch per ogni Section che non ha mai toccato la prop. */
   .justifyContent_tablet_flex-start {
     justify-content: flex-start;
-    justify-items: start;
   }
   .justifyContent_tablet_flex-end {
     justify-content: flex-end;
@@ -2288,9 +2316,11 @@
     flex-direction: column-reverse;
   }
 
+  /* Niente `justify-items: start` qui — stesso motivo di
+     `.justifyContent_default_flex-start`: `flex-start` è il default,
+     romperebbe lo stretch per ogni Section che non ha mai toccato la prop. */
   .justifyContent_mobile_flex-start {
     justify-content: flex-start;
-    justify-items: start;
   }
   .justifyContent_mobile_flex-end {
     justify-content: flex-end;

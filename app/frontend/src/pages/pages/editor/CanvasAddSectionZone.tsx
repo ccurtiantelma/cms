@@ -21,12 +21,14 @@
  * in modalità icona con trigger personalizzato (`triggerIcon`/`triggerClassName`), nessuna
  * copia della logica di filtro/inserimento tipi.
  */
-import { useState } from 'react';
+import { useRef, useState, type ChangeEvent } from 'react';
 import { ActionIcon, Group, Text, Tooltip } from '@mantine/core';
-import { IconFolder, IconPlus, IconSparkles } from '@tabler/icons-react';
-import BlockPalette from './BlockPalette';
+import { notifications } from '@mantine/notifications';
+import { IconFileImport, IconFolder, IconPlus } from '@tabler/icons-react';
+import { useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
 import SectionStructureModal from './SectionStructureModal';
 import TemplateLibraryModal from './TemplateLibraryModal';
+import { importJsonFile } from './utils/template-io.utils';
 import styles from './CanvasAddSectionZone.module.css';
 
 interface CanvasAddSectionZoneProps {
@@ -43,6 +45,25 @@ export default function CanvasAddSectionZone({
 }: CanvasAddSectionZoneProps): JSX.Element {
   const [sectionModalOpened, setSectionModalOpened] = useState(false);
   const [templateLibraryOpened, setTemplateLibraryOpened] = useState(false);
+  const importFileInputRef = useRef<HTMLInputElement | null>(null);
+  const insertSubtreeAction = useBlockEditorStore((state) => state.insertSubtreeAction);
+  const rootBlocksCount = useBlockEditorStore((state) => state.tree.length);
+
+  function handleImportPreset(event: ChangeEvent<HTMLInputElement>): void {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = importJsonFile(typeof reader.result === 'string' ? reader.result : '');
+      if (result.ok) {
+        insertSubtreeAction(parentId, parentId === null ? rootBlocksCount : index, result.subtree);
+      } else {
+        notifications.show({ color: 'red', title: 'Importazione non riuscita', message: result.error });
+      }
+    };
+    reader.readAsText(file);
+  }
 
   return (
     // Un click qui dentro non deve deselezionare via il click-through dello sfondo del
@@ -77,15 +98,17 @@ export default function CanvasAddSectionZone({
               <IconFolder size={20} />
             </ActionIcon>
           </Tooltip>
-          <BlockPalette
-            parentId={parentId}
-            index={index}
-            label="Aggiungi widget"
-            iconOnly
-            variant="filled"
-            triggerIcon={IconSparkles}
-            triggerClassName={styles.widgetButton}
-          />
+          <Tooltip label="Importa preset" withArrow>
+            <ActionIcon
+              variant="filled"
+              radius="xl"
+              className={styles.importButton}
+              aria-label="Importa preset"
+              onClick={() => importFileInputRef.current?.click()}
+            >
+              <IconFileImport size={20} />
+            </ActionIcon>
+          </Tooltip>
         </Group>
         <Text className={styles.helperText}>Trascina il widget qui</Text>
       </div>
@@ -102,6 +125,13 @@ export default function CanvasAddSectionZone({
         onClose={() => setTemplateLibraryOpened(false)}
         parentId={parentId}
         index={index}
+      />
+      <input
+        ref={importFileInputRef}
+        type="file"
+        accept="application/json"
+        hidden
+        onChange={handleImportPreset}
       />
     </div>
   );

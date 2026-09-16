@@ -9,22 +9,43 @@
   `onConvertToGlobalSection`/`onExportJson`), senza bisogno di conoscerla in anticipo.
   `position: absolute` dentro `.wrapper` (già `position: relative`): non sposta mai il
   layout del contenuto, stesso principio di ogni altro overlay di chrome in questo file.
-  Il colore di sfondo legge `var(--block-level-color)`, la custom property impostata da
-  `EditorBlockWrapper.tsx` sul wrapper del nodo selezionato (viola/azzurro/blu per livello
-  di annidamento) — un solo calcolo del colore, mai un secondo valore fisso qui.
+  Il colore di sfondo **non legge più** `var(--block-level-color)`: sezioni e contenitori
+  usano una barra completamente trasparente, mentre i widget foglia ricevono una tinta
+  verde molto chiara (`.componentOverlay`). I singoli tasti restano sempre trasparenti e
+  senza bordo; la custom property resta impostata sul wrapper per il solo bordo di
+  hover/selezione dei widget foglia (vedi `EditorBlockWrapper.module.css`).
 */
 .overlay {
   position: absolute;
-  top: -14px;
+  top: 0;
   left: 50%;
-  transform: translateX(-50%);
+  /* Ancorata esattamente al centro del bordo superiore del blocco, appoggiata sopra senza
+     sporgere dentro (T-editor-refinement, pixel-perfect Elementor): `translate(-50%,-100%)`
+     al posto del precedente `top:-14px` + `translateX(-50%)`, stesso centraggio orizzontale
+     indipendente dalla larghezza reale della barra, solo l'offset verticale cambia forma
+     (percentuale sulla propria altezza invece di un px fisso) per restare sempre a filo del
+     bordo qualunque sia l'altezza risultante da `padding`/`gap` sotto. */
+  transform: translate(-50%, -100%);
   z-index: 20;
   display: inline-flex;
   align-items: center;
-  border-radius: 6px;
-  background: var(--block-level-color, #2271b1);
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+  gap: 6px;
+  padding: 2px 6px;
+  /* Solo gli angoli superiori arrotondati: la barra è a filo del bordo superiore del
+     blocco, deve leggersi come una linguetta attaccata ad esso, non un pillole fluttuante. */
+  border-radius: 3px 3px 0 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
   pointer-events: auto;
+}
+
+.sectionOverlay {
+  background: rgba(191, 219, 254, 0.7);
+}
+
+.componentOverlay {
+  background: rgba(167, 224, 183, 0.42);
 }
 
 /*
@@ -36,7 +57,7 @@
   centrata, solo il `top` cambia, stesso principio di `.overlay` sopra).
 */
 .overlayInside {
-  top: 4px;
+  transform: translate(-50%, 4px);
 }
 
 /*
@@ -45,11 +66,25 @@
   lo garantisce (il numero è convertito in rem, applicato a `width`/`height`/`min-width`/
   `min-height`), `min-width`/`min-height` qui sono solo una rete di sicurezza — non un
   secondo meccanismo di dimensionamento indipendente.
+  Icone nere (T-editor-refinement, requisito esplicito pixel-perfect del task: "TUTTE le
+  icone interne (+, drag/riordina, X, ecc.) a colore nero #000000"): sostituisce il bianco
+  fisso di RE-2, che presupponeva lo sfondo colorato pieno ora rimosso (`.overlay` sopra) —
+  nero su un fondo azzurro chiaro traslucido resta leggibile, bianco non lo sarebbe più.
+  `!important` (invariato da RE-2): `ActionIcon` di Mantine imposta il proprio colore via
+  variabile CSS interna (`--ai-color`) con una specificità che una classe locale da sola
+  non batte in modo affidabile su ogni variante — mantenuto qui, non introdotto ora.
+  I tre stati restano elencati esplicitamente (non solo `.overlayButton`): l'icona di
+  `BlockPalette` (trigger del primo controllo "+", riceve la stessa classe via
+  `triggerClassName`) usa un proprio elemento interno che potrebbe altrimenti riesporre un
+  colore diverso su `:hover`/`:focus` — nessuno stato lasciato bianco per dimenticanza.
 */
 .overlayButton,
 .overlayButton:hover,
 .overlayButton:focus {
   min-width: 28px;
   min-height: 28px;
-  color: var(--mantine-color-white) !important;
+  color: #000000 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }

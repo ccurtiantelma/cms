@@ -51,8 +51,21 @@ function originOf(url: string): string | null {
  *     (`dangerouslySetInnerHTML` di CSS critico in `App.tsx`/
  *     `PreviewDocument.tsx` e tema in `ThemeStyleTag.tsx`, uniche eccezioni
  *     note — vedi `escaping.spec.ts`) portano lo stesso nonce di questa
- *     risposta. Mai `'unsafe-inline'`, che vanificherebbe la direttiva per
- *     qualunque `<style>` iniettato in futuro.
+ *     risposta. Mai `'unsafe-inline'` su questa direttiva, che vanificherebbe
+ *     il nonce per qualunque `<style>` iniettato in futuro.
+ *   - `style-src-attr 'unsafe-inline'`: direttiva separata (CSP Level 3),
+ *     governa solo l'attributo `style="..."` sugli elementi — a differenza di
+ *     `<style>`, non esiste un meccanismo di nonce/hash per gli attributi
+ *     inline, quindi senza questa direttiva ogni `style` scritto per
+ *     proprietà da `Section.tsx`/`Container.tsx`/ecc. (colore di sfondo,
+ *     gradiente, overlay — mai stringhe concatenate, vedi quei file) viene
+ *     scartato in silenzio dal browser sul sito pubblico, pur passando la
+ *     validazione server-side e pur essendo visibile nell'editor (che non ha
+ *     questa CSP). Direttiva indipendente da `style-src` sopra: l'assenza di
+ *     un nonce qui non "riattiva" `'unsafe-inline'` su `style-src` (la regola
+ *     CSP che lo ignorerebbe in presenza di un nonce si applica per singola
+ *     direttiva, non fra direttive), quindi i tre `<style>` inline restano
+ *     protetti dal nonce esattamente come prima.
  *   - `img-src 'self' <origine media> data:`: ogni `<img>` dei blocchi punta
  *     a `VITE_PUBLIC_MEDIA_BASE_URL` (baked a build time, `media-url.ts`),
  *     mai same-origin — `data:` per eventuali placeholder inline dei blocchi.
@@ -82,6 +95,7 @@ export function securityHeaders(nonce: string): Record<string, string> {
     "object-src 'none'",
     "script-src 'self'",
     `style-src 'self' 'nonce-${nonce}'`,
+    "style-src-attr 'unsafe-inline'",
     `img-src ${imgSrc.join(' ')}`,
     "font-src 'self'",
     `connect-src ${connectSrc.join(' ')}`,

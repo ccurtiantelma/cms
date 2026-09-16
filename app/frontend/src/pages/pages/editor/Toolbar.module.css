@@ -37,6 +37,7 @@
 .centerActions {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   min-width: 0;
 }
@@ -135,6 +136,16 @@
 
 .publishChevron:hover {
   background-color: var(--mantine-primary-color-filled-hover) !important;
+}
+
+.statusDropdown {
+  background-color: var(--mantine-primary-color-light) !important;
+  color: #000000 !important;
+  font-family: inherit;
+}
+
+.statusDropdown :global(.mantine-Menu-item) {
+  color: #000000;
 }
 
 .publishButton:disabled,

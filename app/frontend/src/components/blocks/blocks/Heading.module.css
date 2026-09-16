@@ -13,22 +13,29 @@
   Editing in-place (editor, blocco selezionato — mai sul sito pubblico): colore fisso, non
   una variabile CSS di Mantine — questo file non dipende da Mantine essere caricato
   (CLAUDE.md § confine Mantine/blocchi, il sito pubblico non la importa).
+  Bounding box sottile (T-editor-refinement, requisito esplicito del task: "il bounding
+  box di selezione attorno al titolo deve essere sottile e ben delimitato, senza
+  spazi/padding sovradimensionati"): questa classe si applica non appena `heading` è
+  **selezionato** (`editable: isSelected`, `EditorBlockWrapper.tsx`), non solo quando
+  l'utente sta davvero digitando — un bordo/padding/radius/sfondo persistenti qui
+  disegnavano un secondo riquadro tratteggiato arrotondato sopra quello già disegnato dal
+  wrapper (`.selectedChrome`/`.selectedSectionChrome`, `EditorBlockWrapper.module.css`),
+  visivamente "doppio" e più largo del contenuto reale. Allineato a `RichText.module.css`
+  (`.editable`, stesso pattern preesistente per l'altro widget di testo in-place): nessun
+  bordo/padding a riposo, solo un outline sottile su `:focus` reale — `outline` (non
+  `border`) perché non partecipa al box model, quindi non sposta/ingrandisce mai il
+  bounding box percepito rispetto al contenuto.
 */
 .editable {
   display: block;
   cursor: text;
   outline: none;
   min-height: 1.5em;
-  padding: 0.2em 0;
-  border: 1px dashed rgba(120, 128, 138, 0.6);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
 }
 
 .editable:focus {
-  outline: none;
-  border-color: #93003c;
-  box-shadow: 0 0 0 2px rgba(147, 0, 60, 0.08);
+  outline: 1px dashed #93003c;
+  outline-offset: 2px;
 }
 
 .editable:empty::before {

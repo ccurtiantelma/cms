@@ -57,16 +57,34 @@ export interface ResizePropSpec {
 }
 
 /**
+ * Widget foglia esclusi da qualunque maniglia di resize trascinabile sul canvas, parità
+ * Elementor Pro (ADR-73-rimozione-maniglie-resize-widget-foglia.md § "Decisione" punto 1):
+ * il ridimensionamento di questi quattro tipi avviene sempre tramite l'ispettore, mai per
+ * trascinamento diretto. `container` non è incluso — non è un widget foglia (ha figli), le
+ * sue maniglie (`styleFlexBasis` via `ContainerResizeHandle`, `styleWidth`/`styleHeight` via
+ * questa stessa funzione) restano invariate (ADR-73 § "Decisione" punto 2). Unico punto di
+ * verità: nessuna seconda lista duplicata in `EditorBlockWrapper.tsx` o `ResizeHandle.tsx`.
+ */
+const LEAF_BLOCK_TYPES_WITHOUT_RESIZE_HANDLE: readonly string[] = [
+  'heading',
+  'richText',
+  'image',
+  'button',
+];
+
+/**
  * Risolve `{min, max, units}` dal registro generato per `(blockType, propName)`, o `null` se
- * la prop non è dichiarata, non è `kind: 'unitValue'`, non dichiara `min`/`max` numerici, o
- * non ammette nessuna delle due unità pilotabili da una maniglia — in ognuno di questi casi
- * la maniglia corrispondente non si monta (stesso principio di
- * `CONTAINER_WIDTH_SPEC !== null`/`showContainerResizeHandle` in `EditorBlockWrapper.tsx`).
+ * `blockType` è un widget foglia escluso dalla maniglia (ADR-73), se la prop non è dichiarata,
+ * non è `kind: 'unitValue'`, non dichiara `min`/`max` numerici, o non ammette nessuna delle due
+ * unità pilotabili da una maniglia — in ognuno di questi casi la maniglia corrispondente non si
+ * monta (stesso principio di `CONTAINER_WIDTH_SPEC !== null`/`showContainerResizeHandle` in
+ * `EditorBlockWrapper.tsx`).
  */
 export function resolveResizePropSpec(
   blockType: string,
   propName: ResizeHandlePropName,
 ): ResizePropSpec | null {
+  if (LEAF_BLOCK_TYPES_WITHOUT_RESIZE_HANDLE.includes(blockType)) return null;
   const descriptor = BLOCK_TYPES.find((entry) => entry.type === blockType);
   const prop = descriptor?.props.find((entry) => entry.name === propName);
   if (!prop || prop.kind !== 'unitValue') return null;

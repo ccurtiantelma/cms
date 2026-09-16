@@ -9,6 +9,22 @@
   transition: border-color 120ms ease;
 }
 
+/*
+  Pavimento di altezza per una Colonna (`container`, `data-block-type` impostato da
+  `EditorBlockWrapper.tsx`): questo `.wrapper` è il grid item reale nella griglia della
+  Section madre (`.childrenArea` sopra è `display: contents`, quindi non genera un box
+  proprio — questo `div` sì). Da vuota una Colonna mostra `.emptyContainer` sotto, sempre
+  alto almeno 80px; senza questo pavimento, appena vi si trascina dentro un primo blocco
+  più basso di 80px l'intera riga collassa a quell'altezza inferiore — un salto visivo non
+  voluto, perché nulla nel contenuto ha chiesto di essere più basso di prima, solo il
+  segnaposto è scomparso. Stesso valore di `.emptyContainer` sotto, non un numero nuovo:
+  la Colonna riempita occupa sempre almeno lo spazio che occupava da vuota. Editor-only:
+  questo modulo CSS non è mai importato dal sito pubblico.
+*/
+.wrapper[data-block-type='container'] {
+  min-height: 80px;
+}
+
 /* Selezione da tastiera (T-canvas-cleanup): il wrapper è il bersaglio `tabIndex`, vedi
    EditorBlockWrapper.tsx. Solo `:focus-visible`, mai su focus da mouse/click. */
 .wrapper:focus-visible {
@@ -18,19 +34,20 @@
 
 /*
   Bordo di hover/selezione — restyle Elementor Pro (RE-2, requisito esplicito del task:
-  "maniglie... poco contrasto", "manca gerarchia visiva"). Il colore non è più fisso
-  (`#2271b1` di un round precedente): viene da `var(--block-level-color)`, la custom
-  property impostata da `EditorBlockWrapper.tsx` sullo `style` inline del wrapper
-  (`blockLevelColor` — viola per Sezioni di primo livello/Sezioni Globali, azzurro per
-  Section annidate/`container`, blu per i widget foglia), la stessa letta dalla maniglia
-  contestuale (`BlockHoverOverlay.module.css`, `.overlay`) — un solo calcolo del colore,
-  mai due fonti indipendenti dello stesso segnale.
-  - `.hoveredChrome`: hover senza selezione (solo Sezioni/`container`, mai sui widget
-    foglia) — bordo tratteggiato, distinto dalla guida statica sopra solo dal colore
-    (quella è sempre `#cbd5e1`, questa è il colore di livello).
-  - `.selectedChrome`: selezione attiva, qualunque categoria — bordo pieno marcato più
+  "maniglie... poco contrasto", "manca gerarchia visiva"). Solo i **widget foglia** usano
+  ancora questo colore a due stati derivato da `var(--block-level-color)` (custom property
+  impostata da `EditorBlockWrapper.tsx`, `blockLevelColor` — qui sempre il blu dei widget
+  foglia, `#2563eb`): Sezioni/Container hanno un trattamento diverso, vedi
+  `.hoveredSectionChrome`/`.selectedSectionChrome` sotto (T-editor-refinement).
+  - `.hoveredChrome`: hover senza selezione (mai selezionato) — bordo tratteggiato,
+    distinto dalla guida statica sopra solo dal colore (quella è sempre `#cbd5e1`, questa
+    è il colore di livello). Su un widget foglia questa classe non viene mai applicata
+    oggi (`overlayBorderClassName`, `EditorBlockWrapper.tsx`: l'hover-senza-selezione è
+    riservato a `isContainerOrSection`), resta qui solo per non rompere l'API di stile
+    per un'eventuale futura estensione ai widget foglia.
+  - `.selectedChrome`: selezione attiva di un widget foglia — bordo pieno marcato più
     ombreggiatura, "distinto chiaramente dall'hover/dashed" (richiesta esplicita del
-    task).
+    task originale RE-2).
   Hover promosso a stato esplicito (`isHovered`, EditorBlockWrapper.tsx), niente `:hover`
   CSS nativo sul wrapper (rimosso: cadrebbe su ogni antenato del nodo puntato, il DOM di un
   figlio è geometricamente dentro quello del padre) — la classe è applicata via JS solo al
@@ -47,7 +64,32 @@
 .selectedChrome {
   border-width: 1px;
   border-style: solid;
-  border-color: var(--block-level-color, #2271b1);
+  border-color: #86efac;
+  box-shadow:
+    0 0 0 3px rgba(15, 23, 42, 0.1),
+    0 8px 20px rgba(15, 23, 42, 0.12);
+}
+
+/*
+  Bordo di hover/selezione di Sezioni/Container (T-editor-refinement, pixel-perfect
+  Elementor, requisito esplicito del task — supera per queste due categorie lo schema
+  "colore di livello" di RE-2 sopra, vedi il commento di {@link overlayBorderClassName} in
+  `EditorBlockWrapper.tsx`): magenta Elementor fisso `#e0007b`, **stesso stile 1px solid**
+  sia in hover sia in selezione — non più un tratteggiato per l'hover e un pieno per la
+  selezione come per `.hoveredChrome`/`.selectedChrome` sopra (che restano invariate per i
+  soli widget foglia). La sola differenza fra i due stati qui è l'ombreggiatura di enfasi
+  sulla selezione (`.selectedSectionChrome`), non lo stile del bordo.
+*/
+.hoveredSectionChrome {
+  border-width: 1px;
+  border-style: solid;
+  border-color: #60a5fa;
+}
+
+.selectedSectionChrome {
+  border-width: 1px;
+  border-style: solid;
+  border-color: #60a5fa;
   box-shadow:
     0 0 0 3px rgba(15, 23, 42, 0.1),
     0 8px 20px rgba(15, 23, 42, 0.12);
@@ -88,7 +130,9 @@
 */
 [data-preview-mode='true'] .wrapper:focus-visible,
 [data-preview-mode='true'] .hoveredChrome,
-[data-preview-mode='true'] .selectedChrome {
+[data-preview-mode='true'] .selectedChrome,
+[data-preview-mode='true'] .hoveredSectionChrome,
+[data-preview-mode='true'] .selectedSectionChrome {
   border-color: transparent;
   outline: none;
   box-shadow: none;
@@ -103,14 +147,22 @@
   BlockHoverOverlay.module.css`), un selettore di classe locale a *questo* modulo non
   potrebbe mai fare match sul suo hash — l'attributo, portato dal componente apposta per
   questo aggancio, resta invece leggibile da qualunque foglio di stile. Entrambi i bordi
-  di stato (`.hoveredChrome`/`.selectedChrome`) contano come "figlio sotto il cursore":
-  l'overlay è unico e nella stessa posizione per ogni tipo di blocco, il rischio di
-  sovrapposizione riguarda ogni categoria, non più la sola Sezione.
+  di stato (`.hoveredChrome`/`.selectedChrome`, più `.hoveredSectionChrome`/
+  `.selectedSectionChrome` di Sezioni/Container, T-editor-refinement) contano come "figlio
+  sotto il cursore": l'overlay è unico e nella stessa posizione per ogni tipo di blocco, il
+  rischio di sovrapposizione riguarda ogni categoria, non più la sola Sezione. `:is(...)`
+  raggruppa le quattro classi di stato (due coppie, foglia/Sezione-Container) sia sul lato
+  antenato selezionato sia sul lato discendente in hover/selezione, invece di elencare le
+  otto combinazioni per esteso — stesso esito, meno ripetizione.
 */
-.selectedChrome:has(.hoveredChrome) > [data-block-overlay='true'],
-.selectedChrome:has(.selectedChrome) > [data-block-overlay='true'],
-.selectedChrome:has(.hoveredChrome) > .hoverBadge,
-.selectedChrome:has(.selectedChrome) > .hoverBadge {
+:is(.selectedChrome, .selectedSectionChrome):has(
+    :is(.hoveredChrome, .selectedChrome, .hoveredSectionChrome, .selectedSectionChrome)
+  )
+  > [data-block-overlay='true'],
+:is(.selectedChrome, .selectedSectionChrome):has(
+    :is(.hoveredChrome, .selectedChrome, .hoveredSectionChrome, .selectedSectionChrome)
+  )
+  > .hoverBadge {
   opacity: 0;
   visibility: hidden;
 }
@@ -132,8 +184,9 @@
   align-items: center;
   justify-content: center;
   min-height: 80px;
-  border: 1px dashed #d5d8dc;
-  border-radius: 6px;
+  /* Pixel-perfect Elementor (T-editor-refinement): #c2cbd2/3px, era #d5d8dc/6px. */
+  border: 1px dashed #c2cbd2;
+  border-radius: 3px;
   background: transparent;
   cursor: pointer;
   transition: border-color 120ms ease;
@@ -143,8 +196,9 @@
   border-color: var(--mantine-color-blue-4);
 }
 
+/* Icona "+" grigia (T-editor-refinement, pixel-perfect Elementor: #a4afb7). */
 .emptyContainerTrigger {
-  color: var(--mantine-color-gray-6);
+  color: #a4afb7;
 }
 
 [data-mantine-color-scheme='dark'] .emptyContainerTrigger {
@@ -226,23 +280,6 @@
 }
 
 /*
-  Ancoraggio di `InlineFormattingToolbar` (T-integrazione-toolbar): overlay fluttuante
-  sopra il blocco, mostrato solo mentre il testo è effettivamente in editing/selezionato
-  (`showRichTextFormattingToolbar`/`showHeadingLevelToolbar`, EditorBlockWrapper.tsx) —
-  solo su foglie (`richText`/`heading`), montato sopra il bordo superiore del blocco come
-  l'overlay unico (`BlockHoverOverlay.tsx`, `top: -12px`), ma più in alto (`-54px`): le
-  due non si sovrappongono mai, indipendentemente da quale delle due sia visibile in un
-  dato momento.
-*/
-.formattingToolbarAnchor {
-  position: absolute;
-  top: -54px;
-  left: 0;
-  z-index: 4;
-  pointer-events: auto;
-}
-
-/*
   Badge nome del blocco (qualunque tipo — Sezioni, Colonne, widget foglia): icona + nome
   del tipo, nessun pulsante — le azioni (aggiungi sopra/drag/genitore/duplica/modifica/
   elimina) vivono tutte nella toolbar di selezione (`BlockHoverOverlay.tsx`, ancorata in
@@ -277,6 +314,39 @@
   font-size: 11px;
   white-space: nowrap;
   line-height: 1;
+}
+
+/*
+  Maniglia di selezione del `container` (RE-3, parità Elementor Pro "column/container
+  handle"): un piccolo quadrato grigio piatto, angolo superiore sinistro del wrapper —
+  stesso angolo di `.hoverBadge` sopra, ma un elemento *separato*, mai lo stesso badge
+  riusato (quel badge resta generico per ogni tipo di blocco, icona+nome). Montato solo su
+  `container` (`isContainerBlockType`, `EditorBlockWrapper.tsx`) mentre il nodo è in hover
+  o selezionato — mai su una foglia o su `section`, che hanno le proprie chrome dedicate
+  (toolbar di selezione centrale, RE-2). `z-index` sopra `.hoverBadge` (che può essere
+  montato in contemporanea durante il solo hover senza selezione): un controllo cliccabile
+  non deve mai restare sotto un elemento puramente informativo (`pointer-events: none`).
+  Nessuna nuova azione nello store: il click richiama lo stesso `selectNode` già usato per
+  "Seleziona genitore"/il click-to-select del wrapper.
+*/
+.containerSelectHandle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 0 0 3px 0;
+  background: var(--mantine-color-gray-5);
+  cursor: pointer;
+}
+
+.containerSelectHandle:hover,
+.containerSelectHandle:focus-visible {
+  background: var(--mantine-color-gray-6);
+  outline: none;
 }
 
 /*

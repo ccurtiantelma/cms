@@ -99,11 +99,11 @@ describe('BlockEditorPanel — E01', () => {
     expect(screen.getByLabelText('Slug', { exact: false })).toHaveValue('chi-siamo');
   });
 
-  it('separa "Salva Bozza" da "Cambia Stato" nella topbar', () => {
+  it('mostra Pubblica nella topbar e non mostra Salva Bozza come pulsante', () => {
     renderPanel();
 
-    expect(screen.getByRole('button', { name: 'Salva Bozza' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cambia Stato' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pubblica' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Salva Bozza' })).not.toBeInTheDocument();
   });
 
   it('"Cambia Stato" invoca onRequestStatusChange, mai un salvataggio bozza', async () => {
@@ -122,7 +122,7 @@ describe('BlockEditorPanel — E01', () => {
       </MemoryRouter>,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Cambia Stato' }));
+    await user.click(screen.getByRole('button', { name: 'Altre opzioni di pubblicazione' }));
     await user.click(await screen.findByRole('menuitem', { name: 'Invia in revisione' }));
 
     expect(onRequestStatusChange).toHaveBeenCalledTimes(1);

@@ -185,7 +185,7 @@ function isDirty(state: BlockEditorState): boolean {
 export type EditorViewport = 'desktop' | 'tablet' | 'mobile';
 
 /** Scheda attiva della sidebar sinistra dell'editor full-screen (`EditorSidebar`). */
-export type EditorSidebarTab = 'widgets' | 'structure' | 'properties' | 'page';
+export type EditorSidebarTab = 'widgets' | 'structure' | 'properties' | 'page' | 'history';
 
 /**
  * Ampiezza che un nodo `container` sta assumendo **mentre** il puntatore trascina la sua

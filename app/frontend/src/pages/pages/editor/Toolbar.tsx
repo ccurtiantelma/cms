@@ -16,7 +16,6 @@ import {
   type PageStatus,
 } from '../../../types/pages.types';
 import ViewportSelector from './ViewportSelector';
-import NotificationBell from '../../../components/NotificationBell';
 import styles from './Toolbar.module.css';
 
 export interface ToolbarProps {
@@ -32,6 +31,8 @@ export interface ToolbarProps {
   saving: boolean;
   /** Salva la bozza corrente (`PATCH`, lock ottimistico) — mai una transizione di stato. */
   onSaveDraft: () => void;
+  onSaveAsTemplate?: () => void;
+  templateSaving?: boolean;
   /**
    * Stato corrente della Pagina, per il badge cromatico accanto al titolo e per il menu
    * "Cambia Stato" a destra — assente quando questo layout ospita il Builder delle Sezioni
@@ -75,6 +76,8 @@ export default function Toolbar({
   hasUnsavedChanges,
   saving,
   onSaveDraft,
+  onSaveAsTemplate,
+  templateSaving,
   pageStatus,
   onPreview,
   previewLoading,
@@ -92,7 +95,6 @@ export default function Toolbar({
   return (
     <header className={styles.root} aria-label={pageTitle}>
       <div className={styles.section}>
-        <NotificationBell />
         <Tooltip label="Torna alla Dashboard" withArrow>
           <ActionIcon
             component="a"
@@ -104,11 +106,6 @@ export default function Toolbar({
             <IconArrowLeft size={18} />
           </ActionIcon>
         </Tooltip>
-        {pageStatus && (
-          <Badge color={PAGE_STATUS_COLORS[pageStatus]} variant="filled" size="sm">
-            {PAGE_STATUS_LABELS[pageStatus]}
-          </Badge>
-        )}
         <Tooltip label="Annulla (Ctrl+Z)" withArrow>
           <ActionIcon
             variant="subtle"
@@ -136,6 +133,11 @@ export default function Toolbar({
 
       <div className={styles.centerActions}>
         {centerActions}
+        {pageStatus && (
+          <Badge color={PAGE_STATUS_COLORS[pageStatus]} variant="filled" size="sm">
+            {PAGE_STATUS_LABELS[pageStatus]}
+          </Badge>
+        )}
         <ViewportSelector
           value={viewport}
           onViewportChange={(width) => {
@@ -144,23 +146,6 @@ export default function Toolbar({
             onViewportChange(nextViewport);
           }}
         />
-      </div>
-
-      <div className={`${styles.section} ${styles.actions}`}>
-        {trailingActions}
-        {onPreview && (
-          <Tooltip label="Anteprima" withArrow>
-            <ActionIcon
-              variant="subtle"
-              size="lg"
-              aria-label="Anteprima"
-              loading={previewLoading}
-              onClick={onPreview}
-            >
-              <IconEye size={18} />
-            </ActionIcon>
-          </Tooltip>
-        )}
         {hasUnsavedChanges ? (
           <Badge color="orange" variant="light">
             Modifiche non salvate
@@ -170,14 +155,27 @@ export default function Toolbar({
             Salvato
           </Text>
         )}
-        <Button
-          variant="default"
-          leftSection={<IconDeviceFloppy size={16} />}
-          onClick={onSaveDraft}
-          loading={saving}
-        >
-          Salva Bozza
-        </Button>
+      </div>
+
+      <div className={`${styles.section} ${styles.actions}`}>
+        {trailingActions}
+        {pageStatus !== undefined && (
+          <Tooltip
+            label={onPreview ? 'Anteprima' : 'Anteprima disponibile solo per le bozze'}
+            withArrow
+          >
+            <ActionIcon
+              variant="subtle"
+              size="lg"
+              aria-label="Anteprima"
+              loading={previewLoading}
+              disabled={!onPreview}
+              onClick={onPreview}
+            >
+              <IconEye size={18} />
+            </ActionIcon>
+          </Tooltip>
+        )}
         {/*
           Menu "Cambia Stato" (restyle Elementor): stesso pulsante di stato/pubblicazione già
           in uso, spostato qui in alto a destra (richiesta esplicita del task — non più in
@@ -197,10 +195,11 @@ export default function Toolbar({
             <Button.Group className={styles.statusGroup}>
               <Button
                 className={styles.publishButton}
-                disabled={!canChangeStatus || transitions.length === 0}
+                disabled={!canChangeStatus || !transitions.includes('published')}
                 loading={statusSubmitting}
+                onClick={() => onRequestStatusChange?.('published')}
               >
-                Cambia Stato
+                Pubblica
               </Button>
               <ActionIcon
                 variant="filled"
@@ -213,16 +212,31 @@ export default function Toolbar({
               </ActionIcon>
             </Button.Group>
           </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Label>Transizioni ammesse</Menu.Label>
-            {transitions.map((target) => (
-              <Menu.Item
-                key={target}
-                color={PAGE_STATUS_COLORS[target]}
-                onClick={() => onRequestStatusChange?.(target)}
-              >
-                {statusActionLabel(target, pageStatus as PageStatus)}
+          <Menu.Dropdown className={styles.statusDropdown}>
+            <Menu.Item
+              leftSection={<IconDeviceFloppy size={16} />}
+              onClick={onSaveDraft}
+              disabled={saving}
+            >
+              Salva bozza
+            </Menu.Item>
+            {onSaveAsTemplate && (
+              <Menu.Item onClick={onSaveAsTemplate} disabled={templateSaving}>
+                Salva come template
               </Menu.Item>
+            )}
+            {transitions.map((target) => (
+              target === 'published' ? null : (
+                <Menu.Item
+                  key={target}
+                  color={PAGE_STATUS_COLORS[target]}
+                  onClick={() => onRequestStatusChange?.(target)}
+                >
+                  {target === 'scheduled'
+                    ? 'Programma'
+                    : statusActionLabel(target, pageStatus as PageStatus)}
+                </Menu.Item>
+              )
             ))}
           </Menu.Dropdown>
         </Menu>

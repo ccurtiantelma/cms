@@ -1,21 +1,15 @@
 /*
- * CSS Grid (ADR-31 § 7): `grid-template-columns`/`gap`/`align-items` derivano dalle classi
- * generate in `../style-tokens.module.css` (mai `style` inline), scelte da `Section.tsx` in
- * base a `columns`/`gap`/`alignItems` del nodo. Nessuna dichiarazione qui: un nodo senza
- * queste tre props (contenuto salvato prima di ADR-31) non riceve nessuna classe token, e
- * `display: grid` senza `grid-template-columns` esplicito produce una singola colonna
- * implicita — un figlio per riga, a piena larghezza — visivamente identico al precedente
- * `display: flex; flex-direction: column` (zero regressione, ADR-31 § 3 "Alternative
- * scartate" via RFC-31 § 3).
+ * `<section>` esterno (Change 3, correzione "sfondo boxed"): porta SOLO lo sfondo — mai
+ * `display: grid` né un vincolo di `max-width` — così resta sempre a piena larghezza anche
+ * quando il contenuto è `contentWidth: 'boxed'` (quel vincolo vive ora sul wrapper interno
+ * `.content` più sotto, unico figlio reale oltre a `.overlay`). Nessuna regressione per il
+ * caso `full-width`: nessun elemento aveva mai un `max-width` in quel caso, prima o dopo
+ * questo split.
  *
- * `position: relative`: nessun effetto sul layout (nessun `top`/`left`/`right`/`bottom`
- * dichiarato), serve solo da contesto di posizionamento per l'overlay di evidenziazione
- * "dentro questo contenitore" che l'editor sovrappone in `EditorBlockWrapper.module.css`
- * (`.containerDropZone`, `position: absolute; inset: 0`) — il sito pubblico non monta mai
- * quell'overlay, quindi questa riga non produce alcuna differenza visiva lì.
+ * `position: relative`: nessun effetto sul layout proprio (nessun `top`/`left`/`right`/
+ * `bottom` dichiarato qui), serve solo da contesto di stacking per `.overlay` sotto.
  */
 .section {
-  display: grid;
   position: relative;
   /*
    * Difesa allo scroll orizzontale della pagina: un figlio con una stringa lunga non
@@ -25,7 +19,11 @@
    * spingere oltre il proprio contenitore. `overflow-wrap: anywhere` spezza dove serve
    * (a differenza di `break-word`, riduce anche il min-content riportato al layout, non
    * solo la resa visiva); `word-break` resta come fallback per i motori che non lo
-   * supportano ancora.
+   * supportano ancora. Dichiarate qui (non su `.content` sotto) perché sono proprietà
+   * ereditate (CSS `inherited: yes`): cascano comunque su ogni discendente testuale, incluso
+   * quanto renderizzato dentro `.content` — e `.section` resta comunque l'elemento che, come
+   * item del layout della Pagina che lo ospita, deve poter azzerare il proprio `min-width`
+   * per non forzare lo scroll orizzontale dell'intera pagina.
    */
   min-width: 0;
   overflow-wrap: anywhere;
@@ -33,12 +31,38 @@
 }
 
 /*
- * Overlay su immagine di sfondo (ADR-47 § 1): `.overlay` è un `<div>` assoluto, escluso
- * per costruzione dal flusso Grid (un elemento `position: absolute` non partecipa al
- * posizionamento delle celle). `.withOverlay > *:not(.overlay)` solleva lo z-index dei
- * figli reali sopra l'overlay entro lo stesso contesto di stacking creato da
- * `.section { position: relative }` — senza questa regola i figli "statici" verrebbero
- * comunque dipinti sotto un elemento posizionato, indipendentemente dall'ordine nel DOM.
+ * Wrapper interno del contenuto (Change 3, correzione "sfondo boxed"): unico figlio reale
+ * del `<section>` esterno oltre a `.overlay` — porta `display: grid` e le classi di
+ * griglia/larghezza/padding scelte da `Section.tsx` (`columns_*`/`gap_*`/`alignItems_*`/
+ * `justifyContent_*`/`columnRatio_*`/`contentWidth_*`/`maxWidth_*`/`padding*_*`,
+ * `style-tokens.module.css`), mai lo sfondo (resta sul `<section>` esterno sopra). Prima di
+ * questo split l'intero `<section>` era sia lo sfondo sia il box vincolato da `max-width`
+ * quando `contentWidth === 'boxed'`: lo sfondo si restringeva insieme al contenuto invece di
+ * restare a piena larghezza dietro di esso (il bug corretto da questo file).
+ *
+ * `position: relative`: stesso ruolo del precedente `.section { position: relative }` per
+ * l'overlay "dentro questo contenitore" che l'editor sovrappone in
+ * `EditorBlockWrapper.module.css` (`.containerDropZone`, `position: absolute; inset: 0`,
+ * reso come uno dei `children` di questo componente — quindi ora dentro `.content`, non più
+ * dentro `.section`) — il sito pubblico non monta mai quell'overlay, quindi questa riga non
+ * produce alcuna differenza visiva lì. Sempre presente (non condizionata a `.withOverlay`),
+ * a differenza dello z-index sotto.
+ */
+.content {
+  display: grid;
+  position: relative;
+}
+
+/*
+ * Overlay su immagine di sfondo (ADR-47 § 1): `.overlay` è un `<div>` assoluto, escluso per
+ * costruzione dal flusso Grid di `.content` (un elemento `position: absolute` non partecipa
+ * al posizionamento delle celle) — resta comunque figlio del `<section>` esterno, non di
+ * `.content`, perché copre lo sfondo a piena larghezza, non solo l'area del contenuto
+ * vincolato. `.withOverlay > .content` solleva lo z-index del wrapper di contenuto (l'unico
+ * altro figlio reale del `<section>` esterno) sopra l'overlay entro lo stesso contesto di
+ * stacking creato da `.section { position: relative }` — senza questa regola `.content`
+ * verrebbe comunque dipinto sotto un elemento posizionato (`.overlay`), indipendentemente
+ * dall'ordine nel DOM (CSS 2.1 Appendix E, painting order).
  */
 .overlay {
   position: absolute;
@@ -47,8 +71,7 @@
   pointer-events: none;
 }
 
-.withOverlay > *:not(.overlay) {
-  position: relative;
+.withOverlay > .content {
   z-index: 1;
 }
 
@@ -57,8 +80,9 @@
  * Section slot "footer" — ADR-40, reso da `GlobalSectionSlot` in
  * `app/public-site/src/PageView.tsx`). Ciò che il brief chiama "blocco Columns" non
  * esiste come tipo a sé: è questa stessa `section` con `columns`/`gap` (ADR-31) — il
- * registro non ha un sesto tipo "colonne". Un `container` figlio diretto di una `section`
- * a griglia occupa per costruzione una singola cella (una "colonna": nel contenuto reale,
+ * registro non ha un sesto tipo "colonne". Un `container` figlio diretto del wrapper di
+ * contenuto (`.content`, Change 3 — prima di questo split, figlio diretto di `.section`
+ * stesso) occupa per costruzione una singola cella (una "colonna": nel contenuto reale,
  * `antelma-global-sections.seed.ts`, ogni colonna del footer è sempre incapsulata in un
  * `container` proprio); la riga dei dati legali e quella dei link Privacy/Cookie sono gli
  * ultimi due figli di quella stessa griglia e restano invece incapsulate in una sola
@@ -81,7 +105,7 @@
  * futuro dalla forma diversa (es. quattro colonne "vere" senza righe finali). La
  * correzione definitiva è una prop dedicata sul registro `container` (fuori scope qui).
  */
-:global(footer) .section > :global(div):nth-last-child(-n + 2) {
+:global(footer) .section > .content > :global(div):nth-last-child(-n + 2) {
   grid-column: 1 / -1;
   width: 100%;
   text-align: center;
@@ -91,7 +115,7 @@
    * `justifyContent: 'flex-start'` (classe `.justifyContent_default_flex-start`,
    * `style-tokens.module.css`, stessa specificità di ogni altra `.justifyContent_*` scalare) —
    * l'allineamento di un figlio flex segue `justify-content`, non `text-align` dell'antenato.
-   * Specificità di questo selettore (due classi/pseudo-classi + due elementi) sopra la singola
+   * Specificità di questo selettore (tre classi/pseudo-classi + due elementi) sopra la singola
    * classe `.justifyContent_*` fa vincere questa regola, indipendentemente da quale valore
    * l'autore ha scelto per quella prop: le ultime due righe del footer restano sempre bande
    * centrate a piena larghezza (stesso principio di `text-align` qui sopra, non un secondo

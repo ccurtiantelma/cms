@@ -163,29 +163,21 @@ export default function Section({
   const hasOverlayOpacity = typeof styleOverlayOpacity === 'number';
   const hasOverlay = hasOverlayColor || hasOverlayOpacity;
 
-  const className = [
+  // Split sfondo/contenuto (correzione bug "sfondo boxed" — Change 3): il `<section>`
+  // esterno porta SOLO ciò che riguarda lo sfondo a piena larghezza — token/inline style di
+  // sfondo, spaziatura verticale fra Section (`spaceBefore`/`spaceAfter`), il proprio
+  // margine (`styleMarginTop/Right/Bottom/Left` — un offset del box stesso, non del
+  // contenuto interno), `styleLayer`, le classi di visibilità responsive — e non riceve mai
+  // `display: grid` né una classe `maxWidth_*`/`contentWidth_boxed`: prima di questo split
+  // quelle classi vivevano sullo stesso elemento dello sfondo, restringendo anche
+  // quest'ultimo quando `contentWidth === 'boxed'` invece di lasciarlo a piena larghezza
+  // dietro un contenuto centrato (il bug corretto qui).
+  const outerClassName = [
     styles.section,
     hasOverlay ? styles.withOverlay : '',
     resolveResponsiveClassNames(tokenStyles, 'spaceBefore', styleSpaceBefore),
     resolveResponsiveClassNames(tokenStyles, 'spaceAfter', styleSpaceAfter),
-    resolveResponsiveClassNames(tokenStyles, 'padding', stylePadding),
     resolveResponsiveClassNames(tokenStyles, 'background', styleBackground),
-    // ADR-31 § 7 — nessuna classe emessa quando la prop è assente (contenuto pre-ADR-31):
-    // `display: grid` senza `grid-template-columns` esplicito resta una singola colonna
-    // implicita, stesso risultato visivo del precedente `flex-direction: column`.
-    resolveResponsiveClassNames(tokenStyles, 'columns', columns),
-    resolveResponsiveClassNames(tokenStyles, 'gap', gap),
-    resolveResponsiveClassNames(tokenStyles, 'alignItems', alignItems),
-    resolveResponsiveClassNames(tokenStyles, 'justifyContent', justifyContent),
-    resolveScalarClassName(tokenStyles, 'contentWidth', contentWidth),
-    // `columnRatio_*` è dichiarata dopo `columns_default_*` nel foglio dei token: stessa
-    // specificità, vince per ordine di dichiarazione quando entrambe si applicano.
-    resolveScalarClassName(tokenStyles, 'columnRatio', columnRatio),
-    isFullWidth ? '' : resolveScalarClassName(tokenStyles, 'maxWidth', maxWidth),
-    resolveResponsiveClassNames(tokenStyles, 'paddingTop', stylePaddingTop),
-    resolveResponsiveClassNames(tokenStyles, 'paddingRight', stylePaddingRight),
-    resolveResponsiveClassNames(tokenStyles, 'paddingBottom', stylePaddingBottom),
-    resolveResponsiveClassNames(tokenStyles, 'paddingLeft', stylePaddingLeft),
     resolveResponsiveClassNames(tokenStyles, 'marginTop', styleMarginTop),
     resolveResponsiveClassNames(tokenStyles, 'marginRight', styleMarginRight),
     resolveResponsiveClassNames(tokenStyles, 'marginBottom', styleMarginBottom),
@@ -198,15 +190,44 @@ export default function Section({
     .filter(Boolean)
     .join(' ');
 
+  // Wrapper interno (`.content`, `styles.content` sotto): porta tutto ciò che riguarda il
+  // *layout dei figli* — `display: grid` e le classi di griglia (ADR-31 § 7), il vincolo di
+  // larghezza (`contentWidth_*`/`maxWidth_*`, ADR-33 § 1 — qui, non più sull'elemento dello
+  // sfondo) e il padding interno (ADR-33 § 4) — mentre lo sfondo del `<section>` esterno
+  // resta sempre a piena larghezza indipendentemente da `contentWidth`.
+  const contentClassName = [
+    styles.content,
+    // ADR-31 § 7 — nessuna classe emessa quando la prop è assente (contenuto pre-ADR-31):
+    // `display: grid` senza `grid-template-columns` esplicito resta una singola colonna
+    // implicita, stesso risultato visivo del precedente `flex-direction: column`.
+    resolveResponsiveClassNames(tokenStyles, 'columns', columns),
+    resolveResponsiveClassNames(tokenStyles, 'gap', gap),
+    resolveResponsiveClassNames(tokenStyles, 'alignItems', alignItems),
+    resolveResponsiveClassNames(tokenStyles, 'justifyContent', justifyContent),
+    resolveScalarClassName(tokenStyles, 'contentWidth', contentWidth),
+    // `columnRatio_*` è dichiarata dopo `columns_default_*` nel foglio dei token: stessa
+    // specificità, vince per ordine di dichiarazione quando entrambe si applicano.
+    resolveScalarClassName(tokenStyles, 'columnRatio', columnRatio),
+    isFullWidth ? '' : resolveScalarClassName(tokenStyles, 'maxWidth', maxWidth),
+    resolveResponsiveClassNames(tokenStyles, 'padding', stylePadding),
+    resolveResponsiveClassNames(tokenStyles, 'paddingTop', stylePaddingTop),
+    resolveResponsiveClassNames(tokenStyles, 'paddingRight', stylePaddingRight),
+    resolveResponsiveClassNames(tokenStyles, 'paddingBottom', stylePaddingBottom),
+    resolveResponsiveClassNames(tokenStyles, 'paddingLeft', stylePaddingLeft),
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   // I colori arrivano dal JSON già validato server-side e vengono applicati al nodo
   // principale, così il renderer SSR del sito pubblico conserva lo stile del blocco.
   // Ogni valore è assegnato per proprietà a `style` — mai concatenato in una stringa
   // HTML/CSS (ADR-47, vincolo permanente verificato anche sul renderer pubblico).
-  const inlineStyle: CSSProperties = {
+  // Sfondo (colore/immagine/gradiente): resta sul `<section>` esterno, mai sul wrapper del
+  // contenuto — stessa ragione dello split di classi sopra.
+  const outerInlineStyle: CSSProperties = {
     ...(typeof styleBackgroundColor === 'string' && styleBackgroundColor
       ? { backgroundColor: styleBackgroundColor }
       : {}),
-    ...(typeof styleColor === 'string' && styleColor ? { color: styleColor } : {}),
     ...(backgroundImageSrc
       ? {
           backgroundImage: `url(${backgroundImageSrc})`,
@@ -217,22 +238,36 @@ export default function Section({
       : {}),
     ...(gradientValue ? { backgroundImage: gradientValue } : {}),
   };
-  const hasInlineStyle = Object.keys(inlineStyle).length > 0;
+  const hasOuterInlineStyle = Object.keys(outerInlineStyle).length > 0;
+
+  // `styleColor` (colore del testo) appartiene al contenuto, non allo sfondo: applicato al
+  // wrapper interno così eredita sui figli esattamente come prima dello split (il colore non
+  // ha mai influenzato lo sfondo, solo il testo dei blocchi annidati).
+  const contentInlineStyle: CSSProperties = {
+    ...(typeof styleColor === 'string' && styleColor ? { color: styleColor } : {}),
+  };
+  const hasContentInlineStyle = Object.keys(contentInlineStyle).length > 0;
 
   // Overlay: `<div>` assoluto sovrapposto all'immagine di sfondo, con colore e opacità
   // assegnati per proprietà separate (mai un `rgba()` composto per interpolazione di
-  // stringa). `.withOverlay` in CSS solleva lo z-index dei figli reali sopra l'overlay.
+  // stringa). `.withOverlay > .content` in CSS solleva lo z-index del wrapper di contenuto
+  // (unico figlio reale del `<section>` esterno oltre all'overlay stesso) sopra l'overlay.
   const overlayStyle: CSSProperties = {
     ...(hasOverlayColor ? { backgroundColor: styleOverlayColor as string } : {}),
     ...(hasOverlayOpacity ? { opacity: styleOverlayOpacity as number } : {}),
   };
 
   return (
-    <section className={className} style={hasInlineStyle ? inlineStyle : undefined}>
+    <section className={outerClassName} style={hasOuterInlineStyle ? outerInlineStyle : undefined}>
       {hasOverlay ? (
         <div className={styles.overlay} style={overlayStyle} aria-hidden="true" />
       ) : null}
-      {children}
+      <div
+        className={contentClassName}
+        style={hasContentInlineStyle ? contentInlineStyle : undefined}
+      >
+        {children}
+      </div>
     </section>
   );
 }

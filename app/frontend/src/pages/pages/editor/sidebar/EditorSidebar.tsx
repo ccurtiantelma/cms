@@ -18,7 +18,7 @@
  * destra — richiesta esplicita del task di riportarli lì dal fondo di questa sidebar.
  */
 import { Tabs, Text, Tooltip } from '@mantine/core';
-import { IconAdjustments, IconListTree, IconSettings, IconStack2 } from '@tabler/icons-react';
+import { IconAdjustments, IconHistory, IconListTree, IconSettings, IconStack2 } from '@tabler/icons-react';
 import {
   useActiveSidebarTab,
   useBlockEditorStore,
@@ -30,6 +30,7 @@ import PropertyInspector from '../PropertyInspector';
 import EditorStructureNavigator from '../EditorStructureNavigator';
 import WidgetSidebar from './WidgetSidebar';
 import PageSettingsTab from './PageSettingsTab';
+import { HistoryPanel } from '../HistoryDrawer';
 import styles from './EditorSidebar.module.css';
 
 export interface EditorSidebarProps {
@@ -78,6 +79,11 @@ export default function EditorSidebar({
               <IconAdjustments size={20} />
             </Tabs.Tab>
           </Tooltip>
+          <Tooltip label="Cronologia" openDelay={300} withinPortal>
+            <Tabs.Tab value="history" aria-label="Cronologia">
+              <IconHistory size={20} />
+            </Tabs.Tab>
+          </Tooltip>
           <Tooltip label="Pagina" openDelay={300} withinPortal>
             <Tabs.Tab value="page" aria-label="Pagina">
               <IconSettings size={20} />
@@ -102,6 +108,10 @@ export default function EditorSidebar({
               onPageUpdated={onPageUpdated}
               onVersionConflict={onVersionConflict}
             />
+          </div>
+        ) : activeTab === 'history' ? (
+          <div className={styles.panel}>
+            <HistoryPanel />
           </div>
         ) : selectedId === null ? (
           <div className={styles.panel}>

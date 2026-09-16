@@ -149,6 +149,21 @@ describe('ColumnResizer — visibilità', () => {
 });
 
 describe('ColumnResizer — calcolo e anteprima', () => {
+  it('premere la maniglia seleziona la section e porta la sidebar sulle proprietà', () => {
+    const section = node('sec-1', 'section', { columns: { default: '2' } }, [
+      node('h-1', 'heading', { level: 'h2', text: 'Colonna 1' }),
+      node('h-2', 'heading', { level: 'h2', text: 'Colonna 2' }),
+    ]);
+    useBlockEditorStore.getState().initTree([section]);
+    useBlockEditorStore.getState().selectNode('h-1');
+    renderWithProviders(<EditorBlockWrapper id="sec-1" />);
+
+    fireEvent.pointerDown(handle() as HTMLElement, { pointerId: 1, clientX: PARENT_WIDTH / 2 });
+
+    expect(useBlockEditorStore.getState().selectedId).toBe('sec-1');
+    expect(useBlockEditorStore.getState().activeSidebarTab).toBe('properties');
+  });
+
   it('il trascinamento a metà del contenitore mostra "50% / 50%" e non tocca l’albero', () => {
     mountSection({ selected: true });
     const grip = handle() as HTMLElement;

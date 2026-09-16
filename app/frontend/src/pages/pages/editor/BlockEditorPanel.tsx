@@ -20,7 +20,9 @@ import { notifications } from '@mantine/notifications';
 import type { AxiosError } from 'axios';
 import { getErrorMessage } from '../../../utils/api.utils';
 import { updatePage } from '../../../services/pages.service';
+import { create as createSiteTemplate } from '../../../services/site-templates.service';
 import type { PageRecord, PagesErrorData, PageStatus } from '../../../types/pages.types';
+import type { ContentBlockNode } from '../../../types/site-templates.types';
 import { ENVELOPE_VERSION } from '../../../types/blocks.types';
 import { useBlockEditorStore, useHasUnsavedChanges } from '../../../hooks/useBlockEditorStore';
 import { useUnsavedChangesGuard } from '../../../hooks/useUnsavedChangesGuard';
@@ -92,6 +94,7 @@ export default function BlockEditorPanel({
   onRequestStatusChange,
 }: BlockEditorPanelProps): JSX.Element {
   const [saving, setSaving] = useState(false);
+  const [templateSaving, setTemplateSaving] = useState(false);
   /** Nodo respinto dall'ultima validazione server-side, evidenziato nel canvas. */
   const [invalidBlockId, setInvalidBlockId] = useState<string | null>(null);
 
@@ -208,6 +211,26 @@ export default function BlockEditorPanel({
     }
   }
 
+  async function handleSaveAsTemplate(): Promise<void> {
+    setTemplateSaving(true);
+    try {
+      await createSiteTemplate({
+        title: page.title,
+        type: 'single_page',
+        language: page.locale,
+        contentTree: useBlockEditorStore.getState().tree as unknown as ContentBlockNode[],
+      });
+      notifications.show({ color: 'green', message: 'Template salvato' });
+    } catch (err) {
+      notifications.show({
+        color: 'red',
+        message: getErrorMessage(err, 'Errore nel salvataggio del template'),
+      });
+    } finally {
+      setTemplateSaving(false);
+    }
+  }
+
   useEffect(() => {
     onSaveDraftReady?.(handleSaveDraft);
     // La funzione viene rinnovata a ogni render; la registrazione deve invece seguire
@@ -230,6 +253,8 @@ export default function BlockEditorPanel({
         hasUnsavedChanges={hasUnsavedChanges}
         saving={saving}
         onSaveDraft={() => void handleSaveDraft()}
+        onSaveAsTemplate={() => void handleSaveAsTemplate()}
+        templateSaving={templateSaving}
         onPreview={onPreview}
         previewLoading={previewLoading}
         structurePanel={<EditorStructureNavigator />}

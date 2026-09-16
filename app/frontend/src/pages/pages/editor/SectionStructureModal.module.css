@@ -99,12 +99,25 @@
 }
 
 .cell {
-  background-color: var(--mantine-color-gray-3);
+  background-color: #e6e9ec;
   border-radius: 2px;
 }
 
 [data-mantine-color-scheme='dark'] .cell {
   background-color: var(--mantine-color-dark-4);
+}
+
+/*
+ * Cella del tab "Riga / Sezione Classica" (T-editor-refinement): nessun riempimento, solo
+ * un bordo tratteggiato — fedele allo "Select Your Structure" di una Sezione classica di
+ * Elementor (distinto per costruzione da `.cell` sopra, che è invece il riempimento grigio
+ * del Flexbox Container/Griglia annidata). Stesso `border-radius` di `.cell` per coerenza
+ * visiva fra le due varianti.
+ */
+.cellDashed {
+  background-color: transparent;
+  border: 1px dashed #a4afb7;
+  border-radius: 2px;
 }
 
 /*

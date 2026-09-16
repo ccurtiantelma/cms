@@ -25,24 +25,16 @@ describe('resolveResizePropSpec — risoluzione dal registro reale', () => {
     });
   });
 
-  it('heading.styleMarginTop: unitValue px/%, min/max dichiarati (ADR-71 § 3)', () => {
-    expect(resolveResizePropSpec('heading', 'styleMarginTop')).toEqual({
-      min: 0,
-      max: 500,
-      units: ['px', '%'],
-    });
+  it('heading.styleMarginTop: dichiarata nel registro come unitValue px/%, ma heading è un widget foglia escluso dalla maniglia trascinabile (ADR-73 § "Decisione" punto 1, supersede parziale di ADR-71 § 3) — resta risolvibile solo dall\'ispettore, mai da resolveResizePropSpec', () => {
+    expect(resolveResizePropSpec('heading', 'styleMarginTop')).toBeNull();
   });
 
-  it('image.styleWidth dichiara anche "vw" nel registro (ADR-58): la maniglia resta ristretta a px/%, mai un\'unità che non sa pilotare (ADR-71 § "Decisione" punto 2)', () => {
-    expect(resolveResizePropSpec('image', 'styleWidth')).toEqual({
-      min: 0,
-      max: 3840,
-      units: ['px', '%'],
-    });
+  it('image.styleWidth dichiara anche "vw" nel registro (ADR-58), ma image è un widget foglia escluso dalla maniglia trascinabile (ADR-73 § "Decisione" punto 1)', () => {
+    expect(resolveResizePropSpec('image', 'styleWidth')).toBeNull();
   });
 
-  it('restituisce null se il tipo non dichiara affatto la prop (heading non ha styleWidth)', () => {
-    expect(resolveResizePropSpec('heading', 'styleWidth')).toBeNull();
+  it('restituisce null se il tipo non dichiara affatto la prop (section non ha styleWidth, e non è un widget foglia escluso a priori)', () => {
+    expect(resolveResizePropSpec('section', 'styleWidth')).toBeNull();
   });
 
   it('restituisce null se la prop esiste col nome giusto ma di kind diverso — container.styleMarginTop resta un enum a token (ADR-33 § 4), non una prop pilotabile da maniglia', () => {
@@ -51,6 +43,33 @@ describe('resolveResizePropSpec — risoluzione dal registro reale', () => {
 
   it('restituisce null per un tipo inesistente nel registro', () => {
     expect(resolveResizePropSpec('non-existent-type', 'styleWidth')).toBeNull();
+  });
+});
+
+describe('resolveResizePropSpec — widget foglia esclusi dalla maniglia (ADR-73 § "Decisione" punto 1)', () => {
+  it.each(['heading', 'richText', 'image', 'button'] as const)(
+    '%s: restituisce sempre null, qualunque propName, anche se la prop è dichiarata nel registro',
+    (blockType) => {
+      expect(resolveResizePropSpec(blockType, 'styleMarginTop')).toBeNull();
+      expect(resolveResizePropSpec(blockType, 'styleMarginBottom')).toBeNull();
+      expect(resolveResizePropSpec(blockType, 'styleMarginLeft')).toBeNull();
+      expect(resolveResizePropSpec(blockType, 'styleMarginRight')).toBeNull();
+      expect(resolveResizePropSpec(blockType, 'styleWidth')).toBeNull();
+      expect(resolveResizePropSpec(blockType, 'styleHeight')).toBeNull();
+    },
+  );
+
+  it('container non è escluso: styleWidth/styleHeight continuano a risolvere dal registro come prima (ADR-73 § "Decisione" punto 2)', () => {
+    expect(resolveResizePropSpec('container', 'styleWidth')).toEqual({
+      min: 0,
+      max: 4000,
+      units: ['px', '%'],
+    });
+    expect(resolveResizePropSpec('container', 'styleHeight')).toEqual({
+      min: 0,
+      max: 4000,
+      units: ['px', '%'],
+    });
   });
 });
 

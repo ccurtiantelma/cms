@@ -35,13 +35,12 @@
  * 3. CSS Module di progetto (tutti i `*.module.css` sotto `src/`, `import.meta.glob` con
  *    `query: '?inline'`, nessuna dipendenza npm nuova) — non solo `style-tokens.module.css`:
  *    l'intero albero portato (`EditorCanvas.tsx`, `EditorBlockWrapper.tsx`, `Section.tsx` e
- *    ogni altro blocco sotto `components/blocks/blocks/`, `InlineFloatingToolbar.tsx`) importa
- *    normalmente (non `?inline`) i propri CSS Module, e Vite li inietta automaticamente solo
- *    nel `document` padre al momento dell'esecuzione del modulo — mai nell'`iframe.contentDocument`,
- *    che non ha un secondo entry point/bundle (ADR-72 § "Decisione" punto 1). Senza questo
- *    aggregatore, il layout Grid di `Section.module.css`, il `position: absolute` di
- *    maniglie/overlay/badge di `EditorBlockWrapper.module.css` e l'ancoraggio di
- *    `InlineFloatingToolbar.module.css` non arriverebbero mai nel documento isolato — stesso
+ *    ogni altro blocco sotto `components/blocks/blocks/`) importa normalmente (non `?inline`)
+ *    i propri CSS Module, e Vite li inietta automaticamente solo nel `document` padre al
+ *    momento dell'esecuzione del modulo — mai nell'`iframe.contentDocument`, che non ha un
+ *    secondo entry point/bundle (ADR-72 § "Decisione" punto 1). Senza questo aggregatore, il
+ *    layout Grid di `Section.module.css` e il `position: absolute` di maniglie/overlay/badge
+ *    di `EditorBlockWrapper.module.css` non arriverebbero mai nel documento isolato — stesso
  *    hashing deterministico dell'import "normale" già usato dai componenti, concatenati in
  *    ordine di path (deterministico) in un unico `<style>` proprio dell'head dell'iframe.
  *
@@ -80,7 +79,7 @@ const BLOCK_TOKEN_STYLE_TAG_ID = 'eaidos-block-token-css';
 // deterministico dell'import "normale") ogni `*.module.css` di progetto sotto `src/` — quindi
 // automaticamente `style-tokens.module.css`, `EditorCanvas.module.css`,
 // `EditorBlockWrapper.module.css`, ogni `.module.css` di blocco (`Section`, `Button`,
-// `Container`, ecc.) e `InlineFloatingToolbar.module.css`, presenti e futuri — mai il CSS di
+// `Container`, ecc.), presenti e futuri — mai il CSS di
 // Mantine, che non è un `.module.css` di progetto ma vive in `node_modules` (commento di testa,
 // "Non clonato"). `eager: true`: valutato al caricamento del modulo, nessun `await` nel
 // componente. Concatenato in ordine di path (`Object.keys(...).sort()`) per un output

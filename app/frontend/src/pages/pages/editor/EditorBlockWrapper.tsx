@@ -13,9 +13,18 @@
  * (`BlockHoverOverlay.tsx`) con quei controlli (più "Seleziona genitore", aggiunto in un
  * round successivo) su **qualunque** blocco attivo — non
  * un'assunzione di questo file, una decisione presa altrove e qui solo implementata. "Sposta
- * su/giù", "Sposta dentro/fuori dal contenitore" e il menu "Cambia livello del titolo"
- * restano comunque raggiungibili solo dal menu contestuale (`CanvasContextMenu.tsx`, tasto
- * destro) — mai una seconda copia della stessa azione nell'overlay.
+ * su/giù" e "Sposta dentro/fuori dal contenitore" restano comunque raggiungibili solo dal
+ * menu contestuale (`CanvasContextMenu.tsx`, tasto destro) — mai una seconda copia della
+ * stessa azione nell'overlay.
+ *
+ * **Nessuna toolbar contestuale galleggiante (T-elementor-parity).** `InlineFormattingToolbar`/
+ * `InlineFloatingToolbar` (barra ancorata H2-H6/Grassetto-Corsivo-Allinea-Link, montate su
+ * `isSelected`/durante l'editing) sono state rimosse su richiesta esplicita del proprietario
+ * del progetto, parità 1:1 con Elementor Pro: il click su un blocco testuale attiva solo il
+ * bounding box di `BlockHoverOverlay` e i controlli completi nel `PropertyInspector`
+ * (incluso `heading.level`, già un campo `enum` del tab Contenuto, `heading.block.ts`
+ * `meta.props.level`) — l'editing nativo `contentEditable` resta l'unico modo di modificare
+ * il testo direttamente sul canvas, senza sottomenù di formattazione.
  *
  * **Split hover/selezione (round successivo, F04d-02).** I due stati ora portano segnali
  * distinti, mai sovrapposti sullo stesso blocco: hover senza selezione mostra solo il
@@ -61,7 +70,6 @@ import {
   createContext,
   createElement,
   memo,
-  useCallback,
   useContext,
   useEffect,
   useLayoutEffect,
@@ -76,7 +84,6 @@ import { Button, Group, Modal, Stack, Text, TextInput } from '@mantine/core';
 import { IconWorld } from '@tabler/icons-react';
 import { useShallow } from 'zustand/react/shallow';
 import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core';
-import { notifications } from '@mantine/notifications';
 import { BLOCK_TYPES } from '../../../types/blocks.types';
 import {
   useActiveViewport,
@@ -133,13 +140,6 @@ import BlockHoverOverlay from './components/BlockHoverOverlay';
 import { usePresetStore } from './usePresetStore';
 import { exportSubtreeToJson } from './utils/template-io.utils';
 import ConvertToGlobalSectionModal from './ConvertToGlobalSectionModal';
-import InlineFloatingToolbar from './InlineFloatingToolbar';
-import InlineFormattingToolbar, {
-  HEADING_LEVELS,
-  type HeadingLevel,
-  type ToolbarAlign,
-  type ToolbarFormat,
-} from './InlineFormattingToolbar';
 import styles from './EditorBlockWrapper.module.css';
 
 const CONTAINER_WIDTH_SPEC = resolveContainerWidthSpec();
@@ -795,11 +795,8 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
 
   /**
    * Nodo DOM del wrapper (punto 2 del task, disaccoppiamento drag/testo): stesso elemento
-   * di `setDragRef` sotto (dnd-kit), letto qui in più per due usi che non gli appartengono
-   * — trovare il `contentEditable` del nodo per `InlineFloatingToolbar` (via
-   * `querySelector`, non un secondo ref forwardato da `RichText.tsx`, che resterebbe così
-   * senza dipendenze di editor) e verificare, in `onFocus`/`onBlur`, se il focus è dentro
-   * un discendente in editing.
+   * di `setDragRef` sotto (dnd-kit), letto qui in più per verificare, in `onFocus`/`onBlur`,
+   * se il focus è dentro un discendente in editing.
    */
   const wrapperRef = useRef<HTMLDivElement | null>(null);
 
@@ -879,190 +876,13 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   }
 
   /**
-   * Risolve il `contentEditable` di `richText` per `InlineFloatingToolbar` (punto 1 del
-   * task): identità stabile fra i render (nessuna dipendenza reattiva, legge `wrapperRef`
-   * solo al momento della chiamata) — evita che l'effetto di ascolto della selezione del
-   * componente si stacchi e riattacchi ad ogni render di questo wrapper.
-   */
-  const getRichTextTarget = useCallback(
-    () => wrapperRef.current?.querySelector<HTMLElement>('[contenteditable="true"]') ?? null,
-    [],
-  );
-
-  /**
-   * Commit immediato di `html` (`richText`): stessa funzione dietro `onHtmlChange` (blur)
-   * e dietro un comando della `InlineFloatingToolbar` (Grassetto/Corsivo/Link/Allineamento/
-   * Cancella formattazione) — un clic sulla barra è già un'azione discreta e deliberata,
-   * come un `blur`, mai un tasto da debounced.
+   * Commit immediato di `html` (`richText`): stessa funzione dietro `onHtmlChange` (blur),
+   * mai un tasto da debounced.
    */
   function commitHtml(nextHtml: string): void {
     cancelDebouncedUpdate();
     updateBlockPropsAction(id, { html: nextHtml });
   }
-
-  /**
-   * Indicatori mostrati da `InlineFormattingToolbar` (T-integrazione-toolbar): a differenza
-   * di `InlineFloatingToolbar` (che legge `document.queryCommandState`, valido solo mentre il
-   * `contentEditable` ha il focus) questa barra è visibile anche **prima** che il blocco
-   * entri in editing (`isSelected && !isEditingText`, vedi il montaggio più sotto) — quando
-   * il nodo non ha il focus `queryCommandState` non è attendibile. Lo stile calcolato del
-   * `contentEditable` resta un'indicazione corretta indipendentemente dal focus: solo un
-   * suggerimento UX (nessuna scrittura, nessun blocco al salvataggio), coerente con
-   * "validazione client solo UX" (CLAUDE.md § dominio CMS) applicato qui allo stato mostrato
-   * invece che a un errore.
-   */
-  const [formattingIndicators, setFormattingIndicators] = useState<{
-    bold: boolean;
-    italic: boolean;
-    align: ToolbarAlign;
-  }>({ bold: false, italic: false, align: 'left' });
-
-  /**
-   * `true` quando l'utente ha chiuso esplicitamente `InlineFormattingToolbar` per questo giro
-   * di selezione (bottone "Chiudi"): resettato ad ogni cambio di nodo/uscita dalla selezione,
-   * mai persistito — riaprire il blocco (nuova selezione) la rimostra sempre.
-   */
-  const [formattingToolbarDismissed, setFormattingToolbarDismissed] = useState(false);
-
-  /**
-   * Rilegge grassetto/corsivo/allineamento dallo stile calcolato del `contentEditable` (vedi
-   * commento sopra). `target.ownerDocument.defaultView` (mai `window` nudo, FASE 6): `target`
-   * vive nel documento dell'iframe del canvas da quando l'albero è portato lì (`IframeCanvas.tsx`,
-   * ADR-72), mentre il codice di questo componente gira comunque nell'unico realm JS del
-   * padre — stesso principio di `InlineFloatingToolbar.tsx` (vedi il suo commento di testa).
-   */
-  function refreshFormattingIndicators(): void {
-    const target = getRichTextTarget();
-    if (!target) return;
-    const computed = (target.ownerDocument.defaultView ?? window).getComputedStyle(target);
-    const weight = Number.parseInt(computed.fontWeight, 10);
-    const align: ToolbarAlign =
-      computed.textAlign === 'center'
-        ? 'center'
-        : computed.textAlign === 'right' || computed.textAlign === 'end'
-          ? 'right'
-          : computed.textAlign === 'justify'
-            ? 'justify'
-            : 'left';
-    setFormattingIndicators({
-      bold: !Number.isNaN(weight) ? weight >= 600 : computed.fontWeight === 'bold',
-      italic: computed.fontStyle === 'italic',
-      align,
-    });
-  }
-
-  /**
-   * Applica un comando a **tutto** il contenuto del blocco (non a una selezione parziale,
-   * che qui non esiste — la barra è visibile prima dell'editing): seleziona l'intero
-   * `contentEditable`, esegue il comando, e affida l'HTML risultante a `commitHtml` — lo
-   * stesso canale di commit di ogni altro comando di formattazione di questo file (undo/redo
-   * incluso). `execCommand`: stessa scelta tecnica di `InlineFloatingToolbar.tsx` (vedi il
-   * suo commento di testa), non un secondo motore di rich text.
-   */
-  function applyFormattingCommand(command: string, value?: string): void {
-    const target = getRichTextTarget();
-    if (!target) return;
-    target.focus();
-    // `target.ownerDocument` (mai `document` nudo, FASE 6): stesso motivo di
-    // `refreshFormattingIndicators` sopra — la selezione/il range/`execCommand` operano sul
-    // documento in cui `target` vive realmente (l'iframe del canvas), non sul `document` del
-    // padre in cui gira questo codice.
-    const targetDocument = target.ownerDocument;
-    const selection = targetDocument.getSelection();
-    if (selection) {
-      selection.removeAllRanges();
-      const range = targetDocument.createRange();
-      range.selectNodeContents(target);
-      selection.addRange(range);
-    }
-    targetDocument.execCommand(command, false, value);
-    commitHtml(target.innerHTML);
-    refreshFormattingIndicators();
-  }
-
-  /**
-   * Grassetto/Corsivo: comando diretto su tutto il blocco. "Link" non ha qui un modo di
-   * raccogliere l'URL (questa barra non ha un campo di testo, a differenza del popover di
-   * `InlineFloatingToolbar`): si avvisa l'utente di passare dall'editing in-place, dove la
-   * barra ancorata alla selezione offre il campo dedicato — nessun secondo modo di inserire
-   * un link inventato qui.
-   */
-  function handleToggleFormat(format: ToolbarFormat): void {
-    if (format === 'bold') {
-      applyFormattingCommand('bold');
-      return;
-    }
-    if (format === 'italic') {
-      applyFormattingCommand('italic');
-      return;
-    }
-    notifications.show({
-      color: 'blue',
-      message: 'Seleziona del testo nel blocco per inserire un link.',
-    });
-  }
-
-  /** Allineamento: stesso comando `justify*` di `InlineFloatingToolbar.tsx`, applicato a tutto il blocco. */
-  function handleAlignChange(align: ToolbarAlign): void {
-    const command =
-      align === 'center'
-        ? 'justifyCenter'
-        : align === 'right'
-          ? 'justifyRight'
-          : align === 'justify'
-            ? 'justifyFull'
-            : 'justifyLeft';
-    applyFormattingCommand(command);
-  }
-
-  /**
-   * Cambio rapido di `heading.level` (gap #4): un click discreto, non una digitazione —
-   * `updateBlockPropsAction` diretto, mai {@link scheduleDebouncedUpdate}, stesso canale già
-   * usato dalla voce equivalente del menu "Cambia livello del titolo" nella toolbar
-   * integrata più sotto (`HEADING_LEVELS.map`), qui solo raggiungibile un passaggio prima
-   * (barra ancorata visibile appena il nodo è selezionato, senza aprire un menu).
-   */
-  function handleHeadingLevelChange(level: HeadingLevel): void {
-    updateBlockPropsAction(id, { level });
-  }
-
-  /**
-   * `true` solo su un `richText` selezionato ma non ancora in editing (`isEditingText`,
-   * definito più sotto — click dentro il `contentEditable`): appena l'editing comincia, la
-   * barra ancorata alla selezione viva (`InlineFloatingToolbar`, montata più in basso) prende
-   * il suo posto — mai le due insieme sullo stesso nodo (vedi commento di testa di
-   * `InlineFormattingToolbar.tsx`).
-   */
-  const showRichTextFormattingToolbar = Boolean(
-    isSelected && !isEditingText && node?.type === 'richText' && !formattingToolbarDismissed,
-  );
-
-  /**
-   * Controllo rapido del livello titolo (gap #4): stesso momento di
-   * {@link showRichTextFormattingToolbar}, ma su `heading` — mutuamente esclusivi per
-   * costruzione (`node.type` non può essere contemporaneamente `'richText'` e `'heading'`),
-   * condividono lo stesso stato di chiusura esplicita (`formattingToolbarDismissed`) perché
-   * rappresentano lo stesso "giro di selezione" del punto di vista dell'utente.
-   */
-  const showHeadingLevelToolbar = Boolean(
-    isSelected && !isEditingText && node?.type === 'heading' && !formattingToolbarDismissed,
-  );
-
-  // Nuova selezione (o nuovo nodo): la chiusura esplicita di un giro precedente non deve
-  // restare appiccicata a un blocco diverso, né sopravvivere a una deselezione/riselezione
-  // dello stesso.
-  useEffect(() => {
-    if (isSelected) setFormattingToolbarDismissed(false);
-  }, [id, isSelected]);
-
-  // Indicatori aggiornati non appena la barra compare (selezione) o rientra da un editing
-  // appena concluso (blur) — mai mentre resta nascosta, per non leggere lo stile calcolato
-  // di un nodo che potrebbe non esistere più. Solo `richText`: la modalità `heading` non ha
-  // indicatori di stile calcolato, solo il livello già letto direttamente dalle props.
-  useEffect(() => {
-    if (showRichTextFormattingToolbar) refreshFormattingIndicators();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refreshFormattingIndicators legge wrapperRef via getRichTextTarget, identità stabile (useCallback senza dipendenze reattive)
-  }, [showRichTextFormattingToolbar]);
 
   // Il timer in sospeso non deve mai sparare contro un nodo deselezionato o smontato: sia
   // il cambio di `id` sia il flip di `isSelected` (l'`editing` passato a `BlockRenderer`
@@ -1278,13 +1098,6 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
    */
   const effectiveColumnRatio = columnResizePreviewRatio ?? persistedColumnRatio;
 
-  /** Livello corrente del titolo per il controllo rapido H2-H6 (gap #4): stesso fallback `'h2'` già usato dal menu "Cambia livello del titolo" della toolbar integrata. */
-  const currentHeadingLevel: HeadingLevel = HEADING_LEVELS.includes(
-    currentNode.props.level as HeadingLevel,
-  )
-    ? (currentNode.props.level as HeadingLevel)
-    : 'h2';
-
   /**
    * Numero di colonne effettivo per il viewport attivo, per il segnaposto dello stato
    * vuoto sotto (bug collasso colonne): una `section` a più colonne senza figli renderizzava
@@ -1310,6 +1123,7 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
    */
   function handleColumnResizerPointerDown(event: ReactPointerEvent<HTMLDivElement>): void {
     event.stopPropagation();
+    selectNode(id);
     const handle = event.currentTarget;
     const containerEl = handle.parentElement?.parentElement;
     if (!containerEl) return;
@@ -1554,13 +1368,19 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
   }
 
   /**
-   * Colore di livello di annidamento (RE-2, restyle chrome Elementor Pro): un solo calcolo
-   * qui, letto sia dalla maniglia contestuale (`BlockHoverOverlay.tsx`, via la custom
-   * property `--block-level-color` impostata più sotto sullo `style` del wrapper — le
-   * property CSS ereditano lungo il DOM, nessun prop-drilling del colore) sia dal bordo di
-   * hover/selezione (`overlayBorderClassName` sotto) — mai due fonti indipendenti dello
-   * stesso segnale visivo.
-   * - Viola: Sezioni di **primo livello** (`isTopLevelSection`) e Sezioni Globali
+   * Colore di livello di annidamento (RE-2, restyle chrome Elementor Pro): resta un solo
+   * calcolo qui, esposto come custom property `--block-level-color` sullo `style` del
+   * wrapper più sotto (le property CSS ereditano lungo il DOM, nessun prop-drilling del
+   * colore) — dopo T-editor-refinement (vedi {@link overlayBorderClassName} sotto) il suo
+   * unico consumatore reale è il bordo di hover/selezione dei **widget foglia**: la
+   * maniglia contestuale (`BlockHoverOverlay.tsx`, `.overlay`) non legge più questa
+   * property (sfondo azzurro unitario, non colorato per livello — requisito esplicito
+   * pixel-perfect del task) e il bordo di Sezioni/Container usa ora il magenta Elementor
+   * fisso `#e0007b` invece del livello calcolato qui (vedi sotto). La costante resta
+   * comunque tre valori distinti — e i test RE-2 pre-esistenti continuano ad asserirla
+   * così — perché resta il segnale usato per i soli widget foglia e per popolare
+   * `--block-level-color` con un valore coerente indipendentemente da chi lo consuma.
+   * - Viola/Magenta: Sezioni di **primo livello** (`isTopLevelSection`) e Sezioni Globali
    *   (`isGlobalRef`, ADR-55) — il confine strutturale più esterno della pagina.
    * - Azzurro: `section` annidata (non di primo livello) e `container` (ADR-39,
    *   "container figli e colonne") — qualunque profondità.
@@ -1568,7 +1388,10 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
    *   categoria propria richiesta dal task: restano nel gruppo "widget", stessa
    *   classificazione già in uso prima di questo restyle per quei due tipi).
    */
-  const LEVEL_COLOR_TOP_SECTION = '#9333ea';
+  // Magenta Elementor (T-editor-refinement, richiesta esplicita pixel-perfect del task):
+  // sostituisce il viola `#9333ea` di RE-2 — stessa custom property, stesso unico calcolo,
+  // nessuna nuova sorgente di colore introdotta.
+  const LEVEL_COLOR_TOP_SECTION = '#e0007b';
   const LEVEL_COLOR_NESTED_CONTAINER = '#0284c7';
   const LEVEL_COLOR_LEAF_WIDGET = '#2563eb';
   const isTopLevelSection = isSection && location.parentId === null;
@@ -1581,29 +1404,43 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
         : LEVEL_COLOR_LEAF_WIDGET;
 
   /**
-   * Bordo di hover/selezione (RE-2, restyle Elementor Pro — sostituisce l'azzurro unico
-   * `#2271b1` di un round precedente): il colore viene ora da {@link blockLevelColor}
-   * (via `var(--block-level-color)`, CSS), qui si decide solo *quale* trattamento di
-   * bordo applicare.
+   * Bordo di hover/selezione (T-editor-refinement, pixel-perfect Elementor Pro — requisito
+   * esplicito del task, supera il precedente schema "colore di livello" di RE-2 *solo* per
+   * Sezioni/Container).
    * - `globalRef` (ADR-55): bordo pieno **sempre** visibile (`.globalRefBorder`), non solo
    *   su hover/selezione — segnala l'impatto trasversale del nodo (modificarlo altrove
    *   aggiorna ogni Pagina che lo referenzia) indipendentemente da un'interazione in
-   *   corso, stesso principio informativo di `.hiddenBadge` più sotto.
-   * - Selezione attiva (`isSelected`, qualunque categoria): bordo pieno marcato più
-   *   ombreggiatura (`.selectedChrome`) — distinto chiaramente dall'hover tratteggiato
-   *   sotto, richiesta esplicita del task ("bordo continuo marcato... distinto
-   *   dall'hover/dashed").
-   * - Hover senza selezione, solo su Sezioni/Container (`isContainerOrSection`): bordo
-   *   tratteggiato (`.hoveredChrome`) — mai sui widget foglia (lettura letterale della
-   *   spec pre-esistente, invariata da questo restyle).
+   *   corso, stesso principio informativo di `.hiddenBadge` più sotto. Invariato da questo
+   *   restyle: resta `#9333ea` (`.globalRefBorder`), non gated da hover/selezione, quindi
+   *   fuori dal perimetro letterale del task ("in hover o selezionato").
+   * - Sezione/Container (`isContainerOrSection`, qualunque profondità — RE-2 distingueva
+   *   primo livello/annidato con due colori diversi, viola/azzurro: il task chiede ora un
+   *   solo bordo magenta fisso `#e0007b` **sia** in hover **sia** in selezione, non più
+   *   derivato da {@link blockLevelColor}) — bordo pieno 1px `#e0007b`
+   *   (`.selectedSectionChrome`/`.hoveredSectionChrome`, `EditorBlockWrapper.module.css`):
+   *   la selezione aggiunge solo l'ombreggiatura di enfasi, non uno stile di bordo diverso
+   *   (a differenza del tratteggiato precedente sull'hover — il task è esplicito: "il
+   *   bordo deve essere 1px solid #e0007b" per entrambi gli stati, non un caso dashed).
+   * - Widget foglia (mai Sezioni/Container): logica invariata da RE-2, non toccata da
+   *   questo restyle — bordo solo su selezione (`.selectedChrome`, colore da
+   *   {@link blockLevelColor}, qui sempre blu `#2563eb`), nessun bordo sul solo hover.
+   *
+   * Contraddizione nota con lo schema "colore per livello di annidamento" di RE-2 (vedi
+   * doc di {@link blockLevelColor} sopra): quello schema restava tre colori distinti per
+   * primo-livello/annidato/foglia usati sia dal bordo sia dalla maniglia; il task attuale
+   * lo richiede esplicitamente solo per Sezioni/Container (fisso, non più a due livelli) e
+   * lo lascia invariato per i soli widget foglia — vedi il report dell'agente per il
+   * dettaglio della scelta.
    */
   const isHoveredEffective = isHovered || isHoveredFromNavigator;
   const overlayBorderClassName = isGlobalRef
     ? styles.globalRefBorder
     : isSelected
-      ? styles.selectedChrome
+      ? isContainerOrSection
+        ? styles.selectedSectionChrome
+        : styles.selectedChrome
       : isHoveredEffective && isContainerOrSection
-        ? styles.hoveredChrome
+        ? styles.hoveredSectionChrome
         : '';
 
   const className = [
@@ -1815,56 +1652,6 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
         )}
 
         {/*
-          `InlineFormattingToolbar` (T-integrazione-toolbar): overlay ancorato al bordo
-          superiore del blocco, non un pannello fisso — `position: absolute` dentro
-          `.wrapper` (già `position: relative`), stesso principio geometrico dell'overlay
-          unico poco sotto (`BlockHoverOverlay.tsx`), non un secondo calcolo via
-          `getBoundingClientRect`:
-          l'ancoraggio "al bordo superiore di *questo* elemento" è esattamente ciò che il
-          layout CSS relativo/assoluto risolve da solo, senza bisogno di rimisurare il DOM
-          ad ogni render (a differenza di `InlineFloatingToolbar`, che insegue una
-          *selezione di testo* — un bersaglio che si sposta dentro il blocco, quello sì
-          calcolato via `getBoundingClientRect`). Sopra la Handle Bar (riga distinta,
-          `.formattingToolbarAnchor`), mai sullo stesso rigo: eviterebbe la sovrapposizione
-          quando entrambe sono visibili (`isSelected` le mostra entrambe).
-        */}
-        {showRichTextFormattingToolbar && (
-          <div className={styles.formattingToolbarAnchor}>
-            <InlineFormattingToolbar
-              mode="text"
-              isBold={formattingIndicators.bold}
-              isItalic={formattingIndicators.italic}
-              activeAlign={formattingIndicators.align}
-              onToggleFormat={handleToggleFormat}
-              onAlignChange={handleAlignChange}
-              onClose={() => setFormattingToolbarDismissed(true)}
-              blockName={label}
-            />
-          </div>
-        )}
-
-        {/*
-          Controllo rapido del livello titolo (gap #4, T-integrazione-toolbar): stessa
-          posizione/stesso anchor CSS di `InlineFormattingToolbar` in modalità testo sopra —
-          le due condizioni (`showRichTextFormattingToolbar`/`showHeadingLevelToolbar`) sono
-          mutuamente esclusive per `node.type`, mai montate insieme. Non sostituisce il menu
-          "Cambia livello del titolo" della toolbar integrata più sotto (visibile solo su
-          hover/selezione, dietro un click aggiuntivo): questo è l'equivalente immediato,
-          senza aprire un menu, dello stesso identico comando.
-        */}
-        {showHeadingLevelToolbar && (
-          <div className={styles.formattingToolbarAnchor}>
-            <InlineFormattingToolbar
-              mode="heading"
-              headingLevel={currentHeadingLevel}
-              onLevelChange={handleHeadingLevelChange}
-              onClose={() => setFormattingToolbarDismissed(true)}
-              blockName={label}
-            />
-          </div>
-        )}
-
-        {/*
           Toolbar di selezione: montata per qualunque tipo di blocco (Sezioni, Colonne,
           widget foglia) solo quando `isSelected` (mai sul solo hover — quello mostra
           invece il badge nome subito sotto, mai i due insieme sullo stesso blocco,
@@ -1876,10 +1663,10 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           sempre), seleziona genitore (`selectNode(location.parentId)`, disabilitato su un
           nodo di radice), duplica (`duplicateNodeAction`), elimina (apre lo stesso
           `ConfirmModal` già montato più sotto, mai un secondo modal), modifica
-          (`selectNode`, già imposta `activeSidebarTab: 'properties'`). "Sposta su/giù",
-          "Sposta dentro/fuori dal contenitore" e il menu "Cambia livello del titolo" restano
-          raggiungibili solo dal menu contestuale (tasto destro, `CanvasContextMenu.tsx`) —
-          mai una seconda copia della stessa azione qui. Gli `aria-label` dei quattro
+          (`selectNode`, già imposta `activeSidebarTab: 'properties'`). "Sposta su/giù" e
+          "Sposta dentro/fuori dal contenitore" restano raggiungibili solo dal menu
+          contestuale (tasto destro, `CanvasContextMenu.tsx`) — mai una seconda copia della
+          stessa azione qui. Gli `aria-label` dei quattro
           pulsanti preesistenti riprendono il formato già cercato dagli helper Playwright
           pre-esistenti in
           `e2e/tests/helpers/page-editor.ts` prima della rimozione della vecchia toolbar
@@ -1917,6 +1704,12 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
             // per la stessa domanda di ammissibilità strutturale di questo file), mai una
             // seconda regola duplicata in `BlockHoverOverlay.tsx`.
             onExportJson={isContainer ? () => exportSubtreeToJson(currentNode) : undefined}
+            // Tooltip della maniglia drag (T-editor-refinement, richiesta esplicita del
+            // task, fedele a Elementor): solo su `section`, "Modifica Contenitore" invece
+            // del generico "Trascina per riordinare" — `undefined` su ogni altro tipo di
+            // blocco, che tiene l'etichetta di default (`BlockHoverOverlay.tsx`).
+            dragTooltipLabel={isSection ? 'Modifica Contenitore' : undefined}
+            tone={isContainerOrSection ? 'section' : 'component'}
           />
         )}
 
@@ -1938,6 +1731,30 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
               {label}
             </Text>
           </span>
+        )}
+
+        {/*
+          Maniglia di selezione del Contenitore (RE-3, parità Elementor Pro): un piccolo
+          quadrato grigio piatto, angolo superiore sinistro — elemento separato da
+          `.hoverBadge` sopra (mai riusato: quel badge resta generico icona+nome per
+          qualunque tipo). Montata solo su `container` (`isContainerBlockType`), mentre il
+          nodo è in hover o già selezionato — un contenitore selezionato non mostra più
+          `.hoverBadge` (`!isSelected` sopra), ma resta comunque utile poter riselezionare
+          lo stesso nodo da qui (es. dopo aver selezionato un figlio). Click: nessuna nuova
+          azione nello store — stesso `selectNode` già usato per "Seleziona genitore" e per
+          il click-to-select del wrapper stesso.
+        */}
+        {isContainerBlockType && (isHovered || isSelected) && (
+          <button
+            type="button"
+            className={styles.containerSelectHandle}
+            aria-label="Seleziona Contenitore"
+            title="Seleziona Contenitore"
+            onClick={(event) => {
+              event.stopPropagation();
+              selectNode(id);
+            }}
+          />
         )}
 
         {/*
@@ -2136,18 +1953,6 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
                 : undefined
             }
           />
-        )}
-
-        {/*
-          Barra di formattazione fluttuante (InlineFloatingToolbar.tsx): solo su `richText`
-          selezionato, mai su `heading` — la sua prop `text` è `plainText` per il registro
-          (SPEC-F02-blocchi.md § 3.3), Grassetto/Corsivo/Link ne cambierebbero il `kind`,
-          modifica di schema fuori scope qui (CLAUDE.md § Ask first). `targetRef` trova il
-          `contentEditable` dentro questo stesso wrapper via `querySelector` — nessun ref
-          forwardato da `RichText.tsx`, che così non acquisisce dipendenze di editor.
-        */}
-        {isSelected && node.type === 'richText' && (
-          <InlineFloatingToolbar getTarget={getRichTextTarget} onApplied={commitHtml} />
         )}
 
         {confirmOpened && (

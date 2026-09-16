@@ -38,8 +38,14 @@ describe('Toolbar — E01', () => {
     expect(screen.queryByText('Bozza')).not.toBeInTheDocument();
   });
 
-  it('non mostra l\'icona "Anteprima" quando onPreview non è fornito', () => {
+  it('mantiene l\'icona "Anteprima" disabilitata quando manca il callback', () => {
     renderWithProviders(<Toolbar {...baseProps} />);
+
+    expect(screen.getByRole('button', { name: 'Anteprima' })).toBeDisabled();
+  });
+
+  it('non mostra l\'icona "Anteprima" nel Builder delle Sezioni Globali', () => {
+    renderWithProviders(<Toolbar {...baseProps} pageStatus={undefined} />);
 
     expect(screen.queryByRole('button', { name: 'Anteprima' })).not.toBeInTheDocument();
   });
@@ -54,27 +60,33 @@ describe('Toolbar — E01', () => {
     expect(onPreview).toHaveBeenCalledTimes(1);
   });
 
-  it('"Salva Bozza" invoca onSaveDraft', async () => {
+  it('"Salva bozza" nel menu invoca onSaveDraft', async () => {
     const user = userEvent.setup();
     const onSaveDraft = vi.fn();
-    renderWithProviders(<Toolbar {...baseProps} onSaveDraft={onSaveDraft} />);
+    renderWithProviders(
+      <Toolbar
+        {...baseProps}
+        onSaveDraft={onSaveDraft}
+        onRequestStatusChange={vi.fn()}
+        visibleTransitions={['review']}
+      />,
+    );
 
-    expect(screen.getByRole('button', { name: 'Salva Bozza' })).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Salva Bozza' }));
+    await user.click(screen.getByRole('button', { name: 'Altre opzioni di pubblicazione' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Salva bozza' }));
 
     expect(onSaveDraft).toHaveBeenCalledTimes(1);
   });
 
-  it('il pulsante "Cambia Stato" resta disabilitato senza transizioni ammesse', () => {
+  it('il pulsante "Pubblica" resta disabilitato senza la transizione published', () => {
     renderWithProviders(
       <Toolbar {...baseProps} onRequestStatusChange={vi.fn()} visibleTransitions={[]} />,
     );
 
-    expect(screen.getByRole('button', { name: 'Cambia Stato' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Pubblica' })).toBeDisabled();
   });
 
-  it('il menu "Cambia Stato" elenca le transizioni ammesse e invoca onRequestStatusChange', async () => {
+  it('il pulsante Pubblica invoca la transizione published', async () => {
     const user = userEvent.setup();
     const onRequestStatusChange = vi.fn();
     renderWithProviders(
@@ -85,9 +97,28 @@ describe('Toolbar — E01', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Altre opzioni di pubblicazione' }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Pubblica' }));
+    await user.click(screen.getByRole('button', { name: 'Pubblica' }));
 
     expect(onRequestStatusChange).toHaveBeenCalledWith('published');
+  });
+
+  it('il menu mostra bozza, template e le transizioni non pubblicative', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Toolbar
+        {...baseProps}
+        onRequestStatusChange={vi.fn()}
+        visibleTransitions={['review', 'scheduled', 'published']}
+        onSaveAsTemplate={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Altre opzioni di pubblicazione' }));
+    expect(await screen.findByRole('menuitem', { name: 'Salva bozza' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Salva come template' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Invia in revisione' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Programma' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Pubblica' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Transizioni ammesse')).not.toBeInTheDocument();
   });
 });

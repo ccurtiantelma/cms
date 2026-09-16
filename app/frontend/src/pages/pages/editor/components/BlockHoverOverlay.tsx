@@ -7,17 +7,21 @@
  * decisione precedente, non la ignora — quella decisione resta leggibile nella history di
  * `EditorBlockWrapper.tsx`.
  *
- * **Maniglia centrale stile Elementor Pro (RE-2).** Ancorata in alto al centro del blocco
- * (`.overlay`, `BlockHoverOverlay.module.css` — `left: 50%; transform: translateX(-50%)`),
- * non più in un angolo: coerente con la richiesta esplicita del task, che cita
- * letteralmente lo standard Elementor Pro. Ogni pulsante è largo/alto almeno 28px
- * (`size={28}` sugli `ActionIcon`/sul trigger di `BlockPalette`, più `min-width`/
- * `min-height` di sicurezza in CSS) — i precedenti `size="xs"` (~20px) erano sotto soglia
- * di contrasto/tocco. Il colore di sfondo non è più un blu fisso: `.overlay` legge
- * `var(--block-level-color)`, la custom property impostata da `EditorBlockWrapper.tsx` sul
- * wrapper del nodo (viola per sezioni di primo livello/Sezioni Globali, azzurro per
- * container/colonne annidate, blu per i widget foglia) — un solo calcolo del colore di
- * livello, condiviso fra maniglia e bordo di hover/selezione, mai due fonti indipendenti.
+ * **Maniglia centrale stile Elementor Pro (RE-2, restyle T-editor-refinement).** Ancorata
+ * in alto al centro del blocco (`.overlay`, `BlockHoverOverlay.module.css` — `left: 50%;
+ * transform: translate(-50%,-100%)`), non più in un angolo: coerente con la richiesta
+ * esplicita del task, che cita letteralmente lo standard Elementor Pro. Ogni pulsante è
+ * largo/alto almeno 28px (`size={28}` sugli `ActionIcon`/sul trigger di `BlockPalette`,
+ * più `min-width`/`min-height` di sicurezza in CSS) — i precedenti `size="xs"` (~20px)
+ * erano sotto soglia di contrasto/tocco. Il colore di sfondo **non è più derivato dal
+ * livello di annidamento** (T-editor-refinement, requisito esplicito pixel-perfect del
+ * task, supera la Decisione originaria di RE-2 riportata sotto): `.overlay` usa ora un
+ * azzurro chiaro traslucido fisso, identico per ogni tipo/livello di blocco — non legge
+ * più `var(--block-level-color)` (custom property impostata da `EditorBlockWrapper.tsx`
+ * sul wrapper del nodo, viola/azzurro/blu per livello — quella resta ma alimenta solo il
+ * bordo di hover/selezione dei widget foglia, vedi `EditorBlockWrapper.module.css`). Le
+ * icone interne sono ora nere (`.overlayButton`), non più bianche: il bianco presupponeva
+ * lo sfondo colorato pieno appena rimosso.
  *
  * Primo controllo, "+" (`BlockPalette`): inserisce un blocco **sopra** questo nodo, stesso
  * menu di selezione tipo già usato per i contenitori vuoti — nessuna seconda UI di scelta
@@ -126,6 +130,15 @@ export interface BlockHoverOverlayProps {
    * `undefined` su ogni altro nodo: il pulsante non compare affatto, mai disabilitato.
    */
   onExportJson?: () => void;
+  /**
+   * Etichetta della maniglia drag (Tooltip + `aria-label`), sovrascrive il default
+   * "Trascina per riordinare" — oggi solo `section` la passa ("Modifica Contenitore",
+   * fedele a Elementor, T-editor-refinement). `undefined`: default invariato per ogni
+   * altro tipo di blocco.
+   */
+  dragTooltipLabel?: string;
+  /** Aspetto della barra: trasparente per sezioni/contenitori, verde chiaro per i widget. */
+  tone?: 'section' | 'component';
 }
 
 /** Overlay hover/selezione con i controlli comuni a ogni tipo di blocco (aggiungi sopra/trascina/genitore/duplica/modifica/elimina), più "Salva come Preset Globale"/"Converti in Sezione Globale"/"Esporta JSON" quando offerti dal chiamante. */
@@ -142,16 +155,23 @@ export default function BlockHoverOverlay({
   onSaveAsPreset,
   onConvertToGlobalSection,
   onExportJson,
+  dragTooltipLabel,
+  tone = 'component',
 }: BlockHoverOverlayProps): JSX.Element {
   const duplicateNodeAction = useBlockEditorStore((state) => state.duplicateNodeAction);
   const selectNode = useBlockEditorStore((state) => state.selectNode);
+  const resolvedDragTooltipLabel = dragTooltipLabel ?? 'Trascina per riordinare';
 
   return (
     <Group
-      className={[styles.overlay, anchorInside ? styles.overlayInside : '']
+      className={[
+        styles.overlay,
+        anchorInside ? styles.overlayInside : '',
+        tone === 'section' ? styles.sectionOverlay : styles.componentOverlay,
+      ]
         .filter(Boolean)
         .join(' ')}
-      gap={0}
+      gap={6}
       wrap="nowrap"
       // Aggancio per `EditorBlockWrapper.module.css` (`.selected:has(...) >
       // [data-block-overlay='true']`): nasconde l'overlay di un antenato quando un
@@ -180,7 +200,7 @@ export default function BlockHoverOverlay({
         triggerClassName={styles.overlayButton}
       />
 
-      <Tooltip label="Trascina per riordinare" withArrow>
+      <Tooltip label={resolvedDragTooltipLabel} withArrow>
         <ActionIcon
           variant="transparent"
           size={HANDLE_BUTTON_SIZE}

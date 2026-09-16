@@ -10,8 +10,8 @@
  * (`{ default, tablet?, mobile? }`, ADR-29): qui si valorizza solo `default`, il
  * viewport attivo di default è `desktop` (`useActiveViewport`, store).
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, fireEvent, createEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../../../test/utils';
 import { findNode, type BlockNode } from '../block-tree.utils';
@@ -102,31 +102,29 @@ describe('EditorBlockWrapper — segnaposto colonne vuote (bug collasso griglia)
 });
 
 /**
- * `InlineFormattingToolbar` (T-integrazione-toolbar): ancorata al bordo superiore del
- * blocco `richText` selezionato, mutuamente esclusiva con `InlineFloatingToolbar` (che
- * prende il posto solo una volta iniziato l'editing, `isEditingText`). Vedi il commento di
- * testa di `InlineFormattingToolbar.tsx` e il montaggio in `EditorBlockWrapper.tsx`.
+ * Rimozione toolbar contestuale galleggiante (T-elementor-parity): `InlineFormattingToolbar`/
+ * `InlineFloatingToolbar` sono stati eliminati — un blocco testuale selezionato non deve più
+ * montare alcuna barra di formattazione fluttuante sul canvas, solo il bounding box di
+ * `BlockHoverOverlay` e l'editing nativo `contentEditable` già garantito da `Heading.tsx`/
+ * `RichText.tsx`.
  */
-describe('EditorBlockWrapper — InlineFormattingToolbar (T-integrazione-toolbar)', () => {
+describe('EditorBlockWrapper — nessuna toolbar contestuale galleggiante (T-elementor-parity)', () => {
   beforeEach(() => {
     useBlockEditorStore.getState().initTree([]);
     useBlockEditorStore.getState().setActiveViewport('desktop');
     useBlockEditorStore.getState().selectNode(null);
-    // jsdom non implementa `execCommand`/`queryCommandState` (usati da `RichText.tsx` on
-    // focus e da `applyFormattingCommand`/`InlineFloatingToolbar.tsx` sui comandi di
-    // formattazione): mock locale a questo describe, nessun impatto sul resto della suite.
-    document.execCommand = vi.fn().mockReturnValue(true);
-    document.queryCommandState = vi.fn().mockReturnValue(false);
   });
 
-  it('richText selezionato ma non in editing: la toolbar ancorata compare', () => {
+  it('richText selezionato: nessuna barra "Formattazione del blocco"', () => {
     const richText = node('rt-1', 'richText', { html: '<p>Ciao</p>' });
     useBlockEditorStore.getState().initTree([richText]);
     useBlockEditorStore.getState().selectNode('rt-1');
 
     renderWithProviders(<EditorBlockWrapper id="rt-1" />);
 
-    expect(screen.getByRole('toolbar', { name: 'Formattazione del blocco' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('toolbar', { name: 'Formattazione del blocco' }),
+    ).not.toBeInTheDocument();
   });
 
   it('heading vuoto selezionato mostra un placeholder visibile per mantenere la struttura del canvas', () => {
@@ -139,185 +137,12 @@ describe('EditorBlockWrapper — InlineFormattingToolbar (T-integrazione-toolbar
     expect(container.querySelector('h2[data-placeholder="Titolo"]')).toBeInTheDocument();
   });
 
-  it('heading selezionato: la toolbar di formattazione non compare mai (solo richText)', () => {
+  it('heading selezionato: nessuna barra "Livello del titolo"', () => {
     const heading = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
     useBlockEditorStore.getState().initTree([heading]);
     useBlockEditorStore.getState().selectNode('h-1');
 
     renderWithProviders(<EditorBlockWrapper id="h-1" />);
-
-    expect(
-      screen.queryByRole('toolbar', { name: 'Formattazione del blocco' }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('richText non selezionato: nessuna toolbar di formattazione', () => {
-    const richText = node('rt-1', 'richText', { html: '<p>Ciao</p>' });
-    useBlockEditorStore.getState().initTree([richText]);
-
-    renderWithProviders(<EditorBlockWrapper id="rt-1" />);
-
-    expect(
-      screen.queryByRole('toolbar', { name: 'Formattazione del blocco' }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("appena inizia l'editing (focus sul contentEditable) la toolbar ancorata lascia il posto a quella di selezione", () => {
-    const richText = node('rt-1', 'richText', { html: '<p>Ciao</p>' });
-    useBlockEditorStore.getState().initTree([richText]);
-    useBlockEditorStore.getState().selectNode('rt-1');
-
-    const { container } = renderWithProviders(<EditorBlockWrapper id="rt-1" />);
-
-    expect(screen.getByRole('toolbar', { name: 'Formattazione del blocco' })).toBeInTheDocument();
-
-    const editable = container.querySelector('[contenteditable="true"]');
-    if (!editable) throw new Error('contentEditable non trovato');
-    // jsdom non implementa `isContentEditable` (resta sempre `undefined`, verificato sulla
-    // versione installata): il gestore `onFocus` del wrapper lo legge per decidere se il
-    // focus è entrato in un discendente in editing — si simula qui il comportamento reale
-    // del browser, altrimenti `isEditingText` non scatterebbe mai in questo ambiente di
-    // test, indipendentemente dal codice sotto test.
-    Object.defineProperty(editable, 'isContentEditable', { value: true, configurable: true });
-    // React 17+ ascolta `focusin` (bubbling) per il proprio `onFocus` sintetico: un
-    // `fireEvent.focus` nudo (nativamente non-bubbling) non attraverserebbe la delega di
-    // React fino al gestore sul wrapper — occorre l'evento che bolle davvero.
-    fireEvent.focusIn(editable);
-
-    expect(
-      screen.queryByRole('toolbar', { name: 'Formattazione del blocco' }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('click su Grassetto non fa perdere la selezione del blocco (mousedown con preventDefault)', () => {
-    const richText = node('rt-1', 'richText', { html: '<p>Ciao</p>' });
-    useBlockEditorStore.getState().initTree([richText]);
-    useBlockEditorStore.getState().selectNode('rt-1');
-
-    renderWithProviders(<EditorBlockWrapper id="rt-1" />);
-
-    const boldButton = screen.getByRole('button', { name: 'Grassetto' });
-    const mouseDownEvent = createEvent.mouseDown(boldButton);
-    fireEvent(boldButton, mouseDownEvent);
-    expect(mouseDownEvent.defaultPrevented).toBe(true);
-
-    fireEvent.click(boldButton);
-    // Il blocco resta selezionato: il click sulla toolbar non deve deselezionarlo né farlo
-    // "perdere" (nessun blur/riselezione indesiderata verso un antenato).
-    expect(useBlockEditorStore.getState().selectedId).toBe('rt-1');
-  });
-
-  it('"Chiudi" nasconde la toolbar senza deselezionare il blocco', () => {
-    const richText = node('rt-1', 'richText', { html: '<p>Ciao</p>' });
-    useBlockEditorStore.getState().initTree([richText]);
-    useBlockEditorStore.getState().selectNode('rt-1');
-
-    renderWithProviders(<EditorBlockWrapper id="rt-1" />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Chiudi toolbar' }));
-
-    expect(
-      screen.queryByRole('toolbar', { name: 'Formattazione del blocco' }),
-    ).not.toBeInTheDocument();
-    expect(useBlockEditorStore.getState().selectedId).toBe('rt-1');
-  });
-
-  it('"Allinea giustificato" applica `justifyFull` a tutto il blocco', () => {
-    const richText = node('rt-1', 'richText', { html: '<p>Ciao</p>' });
-    useBlockEditorStore.getState().initTree([richText]);
-    useBlockEditorStore.getState().selectNode('rt-1');
-
-    renderWithProviders(<EditorBlockWrapper id="rt-1" />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Allinea giustificato' }));
-
-    expect(document.execCommand).toHaveBeenCalledWith('justifyFull', false, undefined);
-  });
-});
-
-/**
- * Controllo rapido del livello titolo (gap #4, T-integrazione-toolbar): estende
- * `InlineFormattingToolbar` con una modalità `heading`, montata nello stesso momento
- * (`isSelected && !isEditingText`) della modalità `text` per `richText` — vedi il commento
- * di testa di `InlineFormattingToolbar.tsx`. Usa un `aria-label` distinto ("Livello del
- * titolo") per non collidere con le query del describe precedente su
- * "Formattazione del blocco", che deve restare **assente** su `heading` (Grassetto/
- * Corsivo/Link restano esclusi, `text` è `plainText`).
- */
-describe('EditorBlockWrapper — controllo rapido livello titolo H2-H6 (gap #4)', () => {
-  beforeEach(() => {
-    useBlockEditorStore.getState().initTree([]);
-    useBlockEditorStore.getState().setActiveViewport('desktop');
-    useBlockEditorStore.getState().selectNode(null);
-  });
-
-  it('heading selezionato ma non in editing: compare la barra "Livello del titolo" con i 5 pulsanti H2-H6', () => {
-    const heading = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
-    useBlockEditorStore.getState().initTree([heading]);
-    useBlockEditorStore.getState().selectNode('h-1');
-
-    renderWithProviders(<EditorBlockWrapper id="h-1" />);
-
-    const toolbar = screen.getByRole('toolbar', { name: 'Livello del titolo' });
-    expect(toolbar).toBeInTheDocument();
-    for (const level of ['H2', 'H3', 'H4', 'H5', 'H6']) {
-      expect(screen.getByRole('button', { name: `Titolo ${level}` })).toBeInTheDocument();
-    }
-    // Nessun Grassetto/Corsivo/Link su heading: `text` è `plainText` per il registro.
-    expect(screen.queryByRole('button', { name: 'Grassetto' })).not.toBeInTheDocument();
-  });
-
-  it('il livello corrente è marcato attivo (`aria-pressed`)', () => {
-    const heading = node('h-1', 'heading', { level: 'h4', text: 'Titolo' });
-    useBlockEditorStore.getState().initTree([heading]);
-    useBlockEditorStore.getState().selectNode('h-1');
-
-    renderWithProviders(<EditorBlockWrapper id="h-1" />);
-
-    expect(screen.getByRole('button', { name: 'Titolo H4' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
-    expect(screen.getByRole('button', { name: 'Titolo H2' })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    );
-  });
-
-  it('click su un livello scrive `level` sul nodo tramite lo stesso canale di commit (undo/redo incluso), senza debounce', () => {
-    const heading = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
-    useBlockEditorStore.getState().initTree([heading]);
-    useBlockEditorStore.getState().selectNode('h-1');
-
-    renderWithProviders(<EditorBlockWrapper id="h-1" />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Titolo H4' }));
-
-    const updated = findNode(useBlockEditorStore.getState().tree, 'h-1');
-    expect(updated?.props.level).toBe('h4');
-  });
-
-  it('"Chiudi" nasconde la barra "Livello del titolo" senza deselezionare il blocco', () => {
-    const heading = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
-    useBlockEditorStore.getState().initTree([heading]);
-    useBlockEditorStore.getState().selectNode('h-1');
-
-    renderWithProviders(<EditorBlockWrapper id="h-1" />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Chiudi toolbar' }));
-
-    expect(screen.queryByRole('toolbar', { name: 'Livello del titolo' })).not.toBeInTheDocument();
-    expect(useBlockEditorStore.getState().selectedId).toBe('h-1');
-  });
-
-  it('richText selezionato: mai la barra "Livello del titolo" (solo heading)', () => {
-    const richText = node('rt-1', 'richText', { html: '<p>Ciao</p>' });
-    useBlockEditorStore.getState().initTree([richText]);
-    useBlockEditorStore.getState().selectNode('rt-1');
-    document.execCommand = vi.fn().mockReturnValue(true);
-    document.queryCommandState = vi.fn().mockReturnValue(false);
-
-    renderWithProviders(<EditorBlockWrapper id="rt-1" />);
 
     expect(screen.queryByRole('toolbar', { name: 'Livello del titolo' })).not.toBeInTheDocument();
   });
@@ -501,7 +326,7 @@ describe('EditorBlockWrapper — colore di livello di annidamento (RE-2)', () =>
     useBlockEditorStore.getState().selectNode(null);
   });
 
-  it('sezione di primo livello: --block-level-color viola (#9333ea)', () => {
+  it('sezione di primo livello: --block-level-color magenta Elementor (#e0007b)', () => {
     const section = node('sec-1', 'section', {}, []);
     useBlockEditorStore.getState().initTree([section]);
 
@@ -509,10 +334,10 @@ describe('EditorBlockWrapper — colore di livello di annidamento (RE-2)', () =>
     const wrapperEl = container.querySelector<HTMLElement>('[data-block-id="sec-1"]');
     if (!wrapperEl) throw new Error('wrapper non trovato');
 
-    expect(wrapperEl.style.getPropertyValue('--block-level-color')).toBe('#9333ea');
+    expect(wrapperEl.style.getPropertyValue('--block-level-color')).toBe('#e0007b');
   });
 
-  it('globalRef: --block-level-color viola (#9333ea), stesso livello di una sezione di primo livello', () => {
+  it('globalRef: --block-level-color magenta Elementor (#e0007b), stesso livello di una sezione di primo livello', () => {
     const globalRef = node('gr-1', 'globalRef', { globalSectionGuid: '0123456789abcdef' });
     useBlockEditorStore.getState().initTree([globalRef]);
 
@@ -520,7 +345,7 @@ describe('EditorBlockWrapper — colore di livello di annidamento (RE-2)', () =>
     const wrapperEl = container.querySelector<HTMLElement>('[data-block-id="gr-1"]');
     if (!wrapperEl) throw new Error('wrapper non trovato');
 
-    expect(wrapperEl.style.getPropertyValue('--block-level-color')).toBe('#9333ea');
+    expect(wrapperEl.style.getPropertyValue('--block-level-color')).toBe('#e0007b');
   });
 
   it('container annidato (figlio di una section): --block-level-color azzurro (#0284c7)', () => {
@@ -568,7 +393,7 @@ describe('EditorBlockWrapper — colore di livello di annidamento (RE-2)', () =>
     const overlayEl = container.querySelector('[data-block-overlay="true"]');
     if (!wrapperEl || !overlayEl) throw new Error('wrapper/overlay non trovati');
 
-    expect(wrapperEl.style.getPropertyValue('--block-level-color')).toBe('#9333ea');
+    expect(wrapperEl.style.getPropertyValue('--block-level-color')).toBe('#e0007b');
     // La custom property CSS eredita lungo il DOM: la maniglia deve essere un discendente
     // del wrapper che la imposta, non un elemento portato altrove (`withinPortal` di un
     // controllo interno non sposta l'intera toolbar fuori dal wrapper).
@@ -603,6 +428,8 @@ describe('EditorBlockWrapper — de-duplicazione delle guide visive (canvas over
 
     expect(wrapperEl).not.toHaveClass(styles.hoveredChrome);
     expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
+    expect(wrapperEl).not.toHaveClass(styles.hoveredSectionChrome);
+    expect(wrapperEl).not.toHaveClass(styles.selectedSectionChrome);
     expect(wrapperEl.querySelector(`.${styles.emptyContainer}`)).toBeInTheDocument();
   });
 
@@ -616,6 +443,8 @@ describe('EditorBlockWrapper — de-duplicazione delle guide visive (canvas over
 
     expect(wrapperEl).not.toHaveClass(styles.hoveredChrome);
     expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
+    expect(wrapperEl).not.toHaveClass(styles.hoveredSectionChrome);
+    expect(wrapperEl).not.toHaveClass(styles.selectedSectionChrome);
     expect(wrapperEl.querySelector(`.${styles.emptyContainer}`)).toBeInTheDocument();
   });
 
@@ -630,9 +459,11 @@ describe('EditorBlockWrapper — de-duplicazione delle guide visive (canvas over
 
     expect(wrapperEl).not.toHaveClass(styles.hoveredChrome);
     expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
+    expect(wrapperEl).not.toHaveClass(styles.hoveredSectionChrome);
+    expect(wrapperEl).not.toHaveClass(styles.selectedSectionChrome);
   });
 
-  it('hover su un container (non selezionato): bordo di stato tratteggiato di livello (.hoveredChrome)', () => {
+  it('hover su un container (non selezionato): bordo pieno magenta Elementor di Sezione/Container (.hoveredSectionChrome, T-editor-refinement — non più tratteggiato/di livello)', () => {
     const emptyContainer = node('cont-1', 'container', {}, []);
     useBlockEditorStore.getState().initTree([emptyContainer]);
 
@@ -642,11 +473,13 @@ describe('EditorBlockWrapper — de-duplicazione delle guide visive (canvas over
 
     fireEvent.mouseOver(wrapperEl);
 
-    expect(wrapperEl).toHaveClass(styles.hoveredChrome);
+    expect(wrapperEl).toHaveClass(styles.hoveredSectionChrome);
+    expect(wrapperEl).not.toHaveClass(styles.selectedSectionChrome);
+    expect(wrapperEl).not.toHaveClass(styles.hoveredChrome);
     expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
   });
 
-  it("selezione di un container: bordo pieno marcato + ombreggiatura (.selectedChrome), distinto dall'hover tratteggiato", () => {
+  it("selezione di un container: bordo pieno magenta Elementor + ombreggiatura (.selectedSectionChrome, T-editor-refinement), stesso colore/stile solid dell'hover — la sola differenza è l'ombreggiatura", () => {
     const emptyContainer = node('cont-1', 'container', {}, []);
     useBlockEditorStore.getState().initTree([emptyContainer]);
     useBlockEditorStore.getState().selectNode('cont-1');
@@ -654,8 +487,10 @@ describe('EditorBlockWrapper — de-duplicazione delle guide visive (canvas over
     const { container } = renderWithProviders(<EditorBlockWrapper id="cont-1" />);
     const wrapperEl = container.querySelector('[data-block-id="cont-1"]');
 
-    expect(wrapperEl).toHaveClass(styles.selectedChrome);
+    expect(wrapperEl).toHaveClass(styles.selectedSectionChrome);
+    expect(wrapperEl).not.toHaveClass(styles.hoveredSectionChrome);
     expect(wrapperEl).not.toHaveClass(styles.hoveredChrome);
+    expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
   });
 
   it('hover su un widget foglia (heading, non selezionato): nessun bordo di stato (mai su hover, solo su selezione)', () => {
@@ -670,6 +505,20 @@ describe('EditorBlockWrapper — de-duplicazione delle guide visive (canvas over
 
     expect(wrapperEl).not.toHaveClass(styles.hoveredChrome);
     expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
+  });
+
+  it('selezione di un widget foglia (heading): bordo di livello invariato (.selectedChrome, blu), non il magenta di Sezione/Container (T-editor-refinement — richiesta esplicita: i widget foglia possono mantenere la loro logica)', () => {
+    const heading = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
+    useBlockEditorStore.getState().initTree([heading]);
+    useBlockEditorStore.getState().selectNode('h-1');
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="h-1" />);
+    const wrapperEl = container.querySelector('[data-block-id="h-1"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
+
+    expect(wrapperEl).toHaveClass(styles.selectedChrome);
+    expect(wrapperEl).not.toHaveClass(styles.selectedSectionChrome);
+    expect(wrapperEl).not.toHaveClass(styles.hoveredSectionChrome);
   });
 });
 

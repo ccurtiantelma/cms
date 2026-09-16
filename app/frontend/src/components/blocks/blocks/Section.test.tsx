@@ -264,4 +264,57 @@ describe('Section', () => {
       expect(normalized).toMatch(/\.section\s*{[^}]*word-break:\s*break-word;/);
     });
   });
+
+  /**
+   * Regressione "sfondo boxed" (Change 3): prima di questo fix, `contentWidth: 'boxed'`
+   * restringeva l'INTERO `<section>` — sfondo incluso — invece di restringere solo il
+   * contenuto lasciando lo sfondo a piena larghezza dietro di esso. `<section>` e
+   * `.content` sono ora due elementi distinti (`Section.tsx`): questo blocco verifica che
+   * il vincolo di larghezza (`maxWidth_*`/`contentWidth_*`) e il padding finiscano SOLO sul
+   * secondo, mai sul primo — mentre lo sfondo (`background-color`) resta sul primo.
+   */
+  describe('Change 3 — lo sfondo del <section> resta a piena larghezza anche con contentWidth "boxed"', () => {
+    it('il tag <section> non porta mai le classi maxWidth_*/contentWidth_*, anche con contentWidth "boxed"', () => {
+      const html = renderToStaticMarkup(
+        <Section contentWidth="boxed" maxWidth="lg" styleBackgroundColor="#123456">
+          Contenuto
+        </Section>,
+      );
+
+      const sectionTagMatch = html.match(/^<section class="([^"]*)"[^>]*>/);
+      expect(sectionTagMatch).not.toBeNull();
+      const sectionClassList = sectionTagMatch![1];
+      expect(sectionClassList).not.toContain('maxWidth_lg');
+      expect(sectionClassList).not.toContain('contentWidth_boxed');
+
+      // Il vincolo esiste comunque nell'HTML reso — solo non sul <section> stesso: deve
+      // finire sul wrapper di contenuto subito annidato dentro.
+      expect(html).toContain('maxWidth_lg');
+      expect(html).toContain('contentWidth_boxed');
+
+      // Lo sfondo resta sul <section> esterno, invariato dallo split.
+      expect(html).toContain('style="background-color:#123456"');
+    });
+
+    it('il padding (stylePaddingTop) finisce sul wrapper di contenuto, non sul tag <section>', () => {
+      const html = renderToStaticMarkup(
+        <Section stylePaddingTop={{ default: '48' }}>Contenuto</Section>,
+      );
+
+      const sectionTagMatch = html.match(/^<section class="([^"]*)"[^>]*>/);
+      expect(sectionTagMatch).not.toBeNull();
+      expect(sectionTagMatch![1]).not.toContain('paddingTop_default_48');
+      expect(html).toContain('paddingTop_default_48');
+    });
+
+    it('il margine (styleMarginTop) resta sul tag <section> esterno (offset del box, invariato dallo split)', () => {
+      const html = renderToStaticMarkup(
+        <Section styleMarginTop={{ default: '32' }}>Contenuto</Section>,
+      );
+
+      const sectionTagMatch = html.match(/^<section class="([^"]*)"[^>]*>/);
+      expect(sectionTagMatch).not.toBeNull();
+      expect(sectionTagMatch![1]).toContain('marginTop_default_32');
+    });
+  });
 });

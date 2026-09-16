@@ -6,6 +6,11 @@
 ## Data approvazione
 2026-09-14 — approvato da: marketing@antelmagroup.net
 
+> **Nota (2026-09-16)**: `ADR-73-rimozione-maniglie-resize-widget-foglia.md` supera
+> parzialmente il punto 3 di questa ADR — la maniglia trascinabile sul canvas non si monta più
+> per `heading`/`richText`/`image`/`button` (nessuna modifica allo schema delle props, vedi
+> ADR-73 per i dettagli). Resta invariata per `container`.
+
 ## RFC di riferimento
 `docs/ai/rfc/RFC-F04e-super-elementor.md` — Decisione 4 (Overlays & Controls), esito firmato
 nella sezione "Decisione umana".

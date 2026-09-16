@@ -30,7 +30,7 @@
  * salvataggio — coerente con CLAUDE.md § Frontend ("validazione client solo UX").
  */
 import { useState } from 'react';
-import { ActionIcon, Alert, Badge, Group, Paper, Stack, Text, Tooltip } from '@mantine/core';
+import { ActionIcon, Alert, Group, Paper, Stack, Text, Tooltip } from '@mantine/core';
 import { IconArrowLeft, IconInfoCircle } from '@tabler/icons-react';
 import { useShallow } from 'zustand/react/shallow';
 import { BLOCK_TYPES, type BlockTypeDescriptor } from '../../../types/blocks.types';
@@ -262,30 +262,26 @@ export default function PropertyInspector(): JSX.Element {
         onClick={(event) => event.stopPropagation()}
       >
         <Stack gap="sm">
-          <Group justify="space-between" wrap="nowrap">
-            <Group gap="xs" wrap="nowrap">
-              {node && (
-                <Tooltip label="Torna ai widget" withArrow>
-                  <ActionIcon
-                    variant="subtle"
-                    color="gray"
-                    size="sm"
-                    aria-label="Torna ai widget"
-                    onClick={handleBackToWidgets}
-                  >
-                    <IconArrowLeft size={16} />
-                  </ActionIcon>
-                </Tooltip>
-              )}
-              <Text fw={700} c="dark.8">
-                Proprietà
-              </Text>
-            </Group>
-            {descriptor && (
-              <Badge variant="light" color="gray">
-                {descriptor.meta?.label ?? descriptor.type}
-              </Badge>
+          <Group gap="xs" wrap="nowrap">
+            {node && (
+              <Tooltip label="Torna ai widget" withArrow>
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  size="sm"
+                  aria-label="Torna ai widget"
+                  onClick={handleBackToWidgets}
+                >
+                  <IconArrowLeft size={16} />
+                </ActionIcon>
+              </Tooltip>
             )}
+            <Text fw={700} c="dark.8">
+              {/* Intestazione "Modifica {tipo}" (parità Elementor Pro, T-elementor-parity):
+                  ogni tipo — Sezione/Contenitore/Titolo/... — legge lo stesso `meta.label`
+                  del registro, unica fonte, mai una seconda etichetta duplicata a fianco. */}
+              {descriptor ? `Modifica ${descriptor.meta?.label ?? descriptor.type}` : 'Proprietà'}
+            </Text>
           </Group>
 
           {!node ? (

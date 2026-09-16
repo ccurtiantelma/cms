@@ -14,7 +14,8 @@
 /* Box del trigger: bordo tratteggiato e sfondo bianco, centrato e limitato in larghezza
    (valori letterali della spec). */
 .box {
-  max-width: 1100px;
+  max-width: none;
+  min-height: 180px;
   margin: 20px auto;
   border: 1px dashed #d5d8dc;
   border-radius: 4px;
@@ -44,13 +45,13 @@
 .templateButton,
 .templateButton:hover,
 .templateButton:focus,
-.widgetButton,
-.widgetButton:hover,
-.widgetButton:focus {
-  width: 36px !important;
-  height: 36px !important;
-  min-width: 36px !important;
-  min-height: 36px !important;
+.importButton,
+.importButton:hover,
+.importButton:focus {
+  width: 60px !important;
+  height: 60px !important;
+  min-width: 60px !important;
+  min-height: 60px !important;
   margin: 0 6px !important;
   border-radius: 50% !important;
   display: inline-flex !important;
@@ -76,10 +77,10 @@
   color: #ffffff !important;
 }
 
-/* Pulsante 3 — scintille: aggiungi widget (Magic/AI). Cerchio fucsia, icona bianca. */
-.widgetButton,
-.widgetButton:hover,
-.widgetButton:focus {
+/* Pulsante 3 — importa un preset JSON. */
+.importButton,
+.importButton:hover,
+.importButton:focus {
   background-color: #e040fb !important;
   color: #ffffff !important;
 }
