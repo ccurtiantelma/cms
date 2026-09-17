@@ -28,7 +28,7 @@ PROD_FILE="docker-compose.prod.yml"
 # Docker: quelle le libera già `compose down --remove-orphans`). Elenco
 # chiuso e specifico di questo progetto — non tocca nient'altro sulla
 # macchina, anche condivisa con altri stack (vedi header di docker-compose.yml).
-DEV_NPM_PORTS=(53000 55000 5173)
+DEV_NPM_PORTS=(53000 55000 55173 5173)
 
 log() { echo "[stack] $*"; }
 
