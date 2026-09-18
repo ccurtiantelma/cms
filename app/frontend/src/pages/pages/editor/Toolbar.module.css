@@ -63,7 +63,7 @@
  * Icone (Annulla/Ripristina/Cronologia/…): colore blu pieno del tema, non il colore di testo
  * "subtle" di default di Mantine (una tinta troppo tenue su questo sfondo azzurrino chiaro —
  * scarso contrasto segnalato dall'utente), stesso blu di `--mantine-primary-color-filled` già
- * usato per il pulsante "Cambia Stato" e l'icona attiva di `ViewportSelector`.
+ * usato per il pulsante "Cambia Stato" e l'icona attiva di `BreakpointSwitcher`.
  */
 .root :global(.mantine-ActionIcon-root[data-variant='subtle']),
 .root :global(.mantine-ActionIcon-root[data-variant='default']) {

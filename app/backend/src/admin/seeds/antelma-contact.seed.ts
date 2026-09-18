@@ -20,6 +20,7 @@ import { MigratableBlockNode } from '../../blocks/migration/block-migration.type
 import { BlockTreeValidatorService } from '../../blocks/validator/block-tree-validator.service';
 import { ValidatableBlockNode } from '../../blocks/validator/validatable-node.types';
 import { BlockPropSanitizerService } from '../../common/sanitizer/block-prop-sanitizer.service';
+import { CssTreeSanitizerService } from '../../common/sanitizer/css-tree-sanitizer.service';
 import {
   detectRasterMimeType,
   readRasterDimensions,
@@ -368,9 +369,7 @@ function buildAntelmaContactBlocks(): BlockNode[] {
               // Credenziali societarie riprese verbatim dalla riga legale del Footer
               // globale (`antelma-global-sections.seed.ts`, `antelma-gs-footer-legal-text`) —
               // stesso dato reale, nessuna credenziale inventata per questa colonna.
-              html:
-                '<p>© 2026 All Rights Reserved ' +
-                '| email: info@antelma.it</p>',
+              html: '<p>© 2026 All Rights Reserved ' + '| email: info@antelma.it</p>',
               styleFontSize: { default: 'sm' },
             },
             children: [],
@@ -555,7 +554,7 @@ function buildPersistableContentTree(): ContentTree {
     );
   }
 
-  const sanitizer = new BlockPropSanitizerService();
+  const sanitizer = new BlockPropSanitizerService(new CssTreeSanitizerService());
   const sanitized = sanitizer.sanitizeTree(
     migration.blocks as ValidatableBlockNode[],
     DEFAULT_BLOCK_REGISTRY,

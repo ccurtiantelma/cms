@@ -29,8 +29,8 @@ function pageWithPayload(): PublicPageDto {
       blocks: [
         {
           id: 'b1',
-          type: 'section',
-          v: 1,
+          type: 'container',
+          v: 2,
           props: {},
           children: [
             { id: 'b2', type: 'heading', v: 1, props: { level: 'h2', text: XSS_PAYLOAD }, children: [] },
@@ -107,8 +107,8 @@ function pageWithInteractiveWidgets(): PublicPageDto {
       blocks: [
         {
           id: 'section-1',
-          type: 'section',
-          v: 1,
+          type: 'container',
+          v: 2,
           props: {},
           children: [
             {

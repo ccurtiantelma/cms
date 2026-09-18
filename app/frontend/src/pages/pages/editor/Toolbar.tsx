@@ -8,21 +8,23 @@ import {
   IconEye,
 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
-import type { EditorViewport } from '../../../hooks/useBlockEditorStore';
+import type { ResponsiveBreakpointName } from '../../../types/blocks.types';
 import {
   PAGE_STATUS_COLORS,
   PAGE_STATUS_LABELS,
   statusActionLabel,
   type PageStatus,
 } from '../../../types/pages.types';
-import ViewportSelector from './ViewportSelector';
+import BreakpointSwitcher from './BreakpointSwitcher';
 import styles from './Toolbar.module.css';
 
 export interface ToolbarProps {
   pageTitle: string;
   backHref: string;
-  viewport: EditorViewport;
-  onViewportChange: (viewport: EditorViewport) => void;
+  /** Breakpoint a 7 vie (ADR-76) correntemente simulato dal canvas (`useActiveBreakpoint()`). */
+  activeBreakpoint: ResponsiveBreakpointName;
+  /** Invocata col nome del breakpoint scelto nello switcher (`setActiveBreakpoint`). */
+  onBreakpointChange: (breakpoint: ResponsiveBreakpointName) => void;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
@@ -67,8 +69,8 @@ export interface ToolbarProps {
 export default function Toolbar({
   pageTitle,
   backHref,
-  viewport,
-  onViewportChange,
+  activeBreakpoint,
+  onBreakpointChange,
   canUndo,
   canRedo,
   onUndo,
@@ -138,14 +140,7 @@ export default function Toolbar({
             {PAGE_STATUS_LABELS[pageStatus]}
           </Badge>
         )}
-        <ViewportSelector
-          value={viewport}
-          onViewportChange={(width) => {
-            const nextViewport: EditorViewport =
-              width === '768px' ? 'tablet' : width === '375px' ? 'mobile' : 'desktop';
-            onViewportChange(nextViewport);
-          }}
-        />
+        <BreakpointSwitcher value={activeBreakpoint} onBreakpointChange={onBreakpointChange} />
         {hasUnsavedChanges ? (
           <Badge color="orange" variant="light">
             Modifiche non salvate
@@ -225,7 +220,7 @@ export default function Toolbar({
                 Salva come template
               </Menu.Item>
             )}
-            {transitions.map((target) => (
+            {transitions.map((target) =>
               target === 'published' ? null : (
                 <Menu.Item
                   key={target}
@@ -236,8 +231,8 @@ export default function Toolbar({
                     ? 'Programma'
                     : statusActionLabel(target, pageStatus as PageStatus)}
                 </Menu.Item>
-              )
-            ))}
+              ),
+            )}
           </Menu.Dropdown>
         </Menu>
       </div>

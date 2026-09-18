@@ -71,7 +71,8 @@ function pushLog(entry: SpikeBridgeLogEntry): void {
 function describeElement(el: Element | null): string {
   if (!el) return '(nessuno)';
   const id = el.id ? `#${el.id}` : '';
-  const cls = el.className && typeof el.className === 'string' ? `.${el.className.split(' ').join('.')}` : '';
+  const cls =
+    el.className && typeof el.className === 'string' ? `.${el.className.split(' ').join('.')}` : '';
   return `${el.tagName.toLowerCase()}${id}${cls}`;
 }
 

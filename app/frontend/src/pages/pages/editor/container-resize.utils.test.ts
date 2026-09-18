@@ -23,8 +23,8 @@ afterEach(() => {
 });
 
 describe('resolveContainerWidthSpec — la prop deve essere dichiarata dal registro', () => {
-  it('restituisce min/max sul registro reale: container.block.ts dichiara styleFlexBasis (unitValue, %, 0-100)', () => {
-    expect(resolveContainerWidthSpec()).toEqual({ min: 0, max: 100 });
+  it('registro reale: container v2 (ADR-82-container-unificato-grid-flex.md § "Decisione" punto 1) non dichiara più styleFlexBasis — nessuna maniglia finché un round successivo (§ "Conseguenze", task R2 T4/T5) non la ripristina su una prop diversa', () => {
+    expect(resolveContainerWidthSpec()).toBeNull();
   });
 
   it('restituisce min/max quando il registro dichiara la prop come unitValue in percentuale', async () => {
@@ -36,18 +36,19 @@ describe('resolveContainerWidthSpec — la prop deve essere dichiarata dal regis
           descriptor.type === 'container'
             ? {
                 ...descriptor,
-                props: descriptor.props.map((entry) =>
-                  entry.name === CONTAINER_WIDTH_PROP
-                    ? {
-                        name: CONTAINER_WIDTH_PROP,
-                        kind: 'unitValue' as const,
-                        required: false,
-                        units: ['%'] as const,
-                        min: 5,
-                        max: 100,
-                      }
-                    : entry,
-                ),
+                // Il registro reale non dichiara più `CONTAINER_WIDTH_PROP` (ADR-82): si
+                // aggiunge qui, non si sostituisce un omonimo che non esiste più.
+                props: [
+                  ...descriptor.props.filter((entry) => entry.name !== CONTAINER_WIDTH_PROP),
+                  {
+                    name: CONTAINER_WIDTH_PROP,
+                    kind: 'unitValue' as const,
+                    required: false,
+                    units: ['%'] as const,
+                    min: 5,
+                    max: 100,
+                  },
+                ],
               }
             : descriptor,
         ),
@@ -66,11 +67,10 @@ describe('resolveContainerWidthSpec — la prop deve essere dichiarata dal regis
           descriptor.type === 'container'
             ? {
                 ...descriptor,
-                props: descriptor.props.map((entry) =>
-                  entry.name === CONTAINER_WIDTH_PROP
-                    ? { name: CONTAINER_WIDTH_PROP, kind: 'plainText' as const, required: false }
-                    : entry,
-                ),
+                props: [
+                  ...descriptor.props.filter((entry) => entry.name !== CONTAINER_WIDTH_PROP),
+                  { name: CONTAINER_WIDTH_PROP, kind: 'plainText' as const, required: false },
+                ],
               }
             : descriptor,
         ),

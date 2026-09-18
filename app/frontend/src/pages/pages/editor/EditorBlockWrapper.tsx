@@ -34,10 +34,11 @@
  * **Maniglia centrale (RE-2, restyle Elementor Pro).** La toolbar è tornata ad essere
  * ancorata in alto **al centro** del bordo superiore (`BlockHoverOverlay.module.css`),
  * non più in alto a destra come nel round F04d-02 sopra — richiesta esplicita del task:
- * le maniglie contestuali "posizionate in angolo" erano il deficit da correggere. Sei
- * controlli oggi (era "cinque" quando questo commento fu scritto): "+" (aggiungi sopra) si
- * aggiunge a trascina/seleziona genitore/duplica/modifica/elimina, più i controlli
- * opzionali (Salva Preset/Converti in Sezione Globale/Esporta JSON) invariati.
+ * le maniglie contestuali "posizionate in angolo" erano il deficit da correggere. Sette
+ * controlli base oggi (era "sei", poi "cinque" quando questo commento fu scritto per la
+ * prima volta): "+" (aggiungi sopra) e "+" speculare (aggiungi sotto) si aggiungono a
+ * trascina/seleziona genitore/duplica/modifica/elimina, più i controlli opzionali (Salva
+ * Preset/Converti in Sezione Globale/Esporta JSON) invariati.
  *
 
  * Ogni azione che cambia la struttura passa dallo store, che la verifica contro il
@@ -129,6 +130,7 @@ import CarouselBlock, {
 } from '../../../components/blocks/blocks/CarouselBlock';
 import CarouselSlideBlock from '../../../components/blocks/blocks/CarouselSlideBlock';
 import ModalTriggerBlock from '../../../components/blocks/blocks/ModalTriggerBlock';
+import GalleryBlock from '../../../components/blocks/blocks/GalleryBlock';
 import tokenStyles from '../../../components/blocks/style-tokens.module.css';
 import {
   resolveHideClassName,
@@ -175,22 +177,40 @@ interface SectionContainerProps {
 }
 
 /**
- * Props del blocco `container` (ADR-39): le sei props di layout flex
- * (`display`/`flexDirection`/`justifyContent`/`alignItems`/`wrap`/`gap`) più le due props
- * avanzate universali di ADR-38 § 6 (`customCssClass`/`customElementId`) — schema
- * indipendente da quello di `section`, mai un solo oggetto condiviso fra i contenitori del
- * registro (ADR-39 § 2: nessuna prop di stile su `container` in questo round).
+ * Props del blocco `container` `v: 2` (ADR-82-container-unificato-grid-flex.md): solo ciò che
+ * `Container.tsx` rende direttamente (`tag`, le poche prop scalari semplici, `htmlId`/
+ * `cssClass`) — il layout Flex/Grid, la spaziatura, il bordo/raggio/ombra/sfondo/posizione/
+ * trasformazione/filtro sono valori liberi PropKind v2, resi dal Runtime Style Bridge
+ * (`generateCanvasCss.ts`), mai passati come prop a questo componente (vedi il commento di
+ * testa di `Container.tsx`). `id` è il `node.id` strutturale, obbligatorio.
  */
 interface ContainerBlockProps {
+  id?: string;
   children: ReactNode;
-  display?: unknown;
-  flexDirection?: unknown;
-  justifyContent?: unknown;
-  alignItems?: unknown;
-  wrap?: unknown;
-  gap?: unknown;
-  styleBackgroundColor?: unknown;
-  styleColor?: unknown;
+  tag?: unknown;
+  contentWidth?: unknown;
+  boxedWidth?: unknown;
+  minHeight?: unknown;
+  overflow?: unknown;
+  opacity?: unknown;
+  htmlId?: unknown;
+  cssClass?: unknown;
+}
+
+/**
+ * Props del blocco `gallery` (`PLAN-parita-elementor-pro.md` § R4): stesso principio di
+ * {@link ContainerBlockProps} — `layout` (identico `kind: 'layout'` di `container` v2, ADR-82)
+ * non è passato come prop (Runtime Style Bridge via `id`), solo ciò che `GalleryBlock.tsx`
+ * rende direttamente (`galleryMode`/`lightbox`/`customCssClass`/`customElementId`). Nessuna
+ * prop derivata dal genitore (a differenza dei sette widget compositi ADR-57 § 2 sotto): i
+ * figli `image` non hanno bisogno di alcuna informazione di gruppo, stesso principio di
+ * `container`.
+ */
+interface GalleryBlockContainerProps {
+  id?: string;
+  children: ReactNode;
+  galleryMode?: unknown;
+  lightbox?: unknown;
   customCssClass?: unknown;
   customElementId?: unknown;
 }
@@ -364,6 +384,7 @@ function ModalTriggerContainer({
 type ContainerComponentProps =
   | SectionContainerProps
   | ContainerBlockProps
+  | GalleryBlockContainerProps
   | FormBlockContainerProps
   | NavMenuContainerProps
   | AccordionItemContainerProps
@@ -382,6 +403,7 @@ type ContainerComponentProps =
 const CONTAINER_COMPONENTS: Record<string, (props: ContainerComponentProps) => JSX.Element> = {
   section: Section,
   container: Container,
+  gallery: GalleryBlock,
   form: FormBlock,
   navMenu: NavMenuBlock,
   accordion: AccordionBlock,
@@ -432,6 +454,7 @@ function resolveContainerComponentProps(
 ):
   | Omit<SectionContainerProps, 'children'>
   | Omit<ContainerBlockProps, 'children'>
+  | Omit<GalleryBlockContainerProps, 'children'>
   | Omit<FormBlockContainerProps, 'children'>
   | Omit<NavMenuContainerProps, 'children'>
   | Omit<AccordionItemContainerProps, 'children'>
@@ -444,15 +467,31 @@ function resolveContainerComponentProps(
     return {};
   }
   if (node.type === 'container') {
+    // `container` v2 (ADR-82): layout Flex/Grid, spaziatura, bordo/raggio/ombra/sfondo/
+    // posizione/trasformazione/filtro non sono più letti qui — sono valori liberi PropKind v2
+    // resi dal Runtime Style Bridge (`generateCanvasCss.ts`) via `data-canvas-style-id`, non
+    // da una prop passata al componente (vedi il commento di testa di `Container.tsx`). `id`
+    // è il `node.id` strutturale, il bersaglio di quell'attributo.
     return {
-      display: node.props.display,
-      flexDirection: node.props.flexDirection,
-      justifyContent: node.props.justifyContent,
-      alignItems: node.props.alignItems,
-      wrap: node.props.wrap,
-      gap: node.props.gap,
-      styleBackgroundColor: node.props.styleBackgroundColor,
-      styleColor: node.props.styleColor,
+      id: node.id,
+      tag: node.props.tag,
+      contentWidth: node.props.contentWidth,
+      boxedWidth: node.props.boxedWidth,
+      minHeight: node.props.minHeight,
+      overflow: node.props.overflow,
+      opacity: node.props.opacity,
+      htmlId: node.props.htmlId,
+      cssClass: node.props.cssClass,
+    };
+  }
+  if (node.type === 'gallery') {
+    // Stesso principio del ramo `container` sopra: `layout` non è passato come prop (Runtime
+    // Style Bridge via `id`), solo le poche prop scalari semplici rese direttamente da
+    // `GalleryBlock.tsx`. Nessuna prop derivata dal genitore/dai fratelli.
+    return {
+      id: node.id,
+      galleryMode: node.props.galleryMode,
+      lightbox: node.props.lightbox,
       customCssClass: node.props.customCssClass,
       customElementId: node.props.customElementId,
     };
@@ -1265,18 +1304,17 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
    * spegne la maniglia corrispondente: nessun elemento renderizzato, nessun commit
    * possibile (stesso principio di `CONTAINER_WIDTH_SPEC !== null`).
    *
-   * `styleWidth`/`styleHeight`: oggi dichiarate su `container`/`image` (ADR-71 § "Decisione"
-   * punto 3) — coesistono col resizer esistente di `container.styleFlexBasis`, mai al suo
-   * posto (SPEC-F04-super-elementor.md § 4.2, "accanto, non al posto").
+   * `boxedWidth`/`minHeight`: prop di `container` `v: 2` (`ADR-82-container-unificato-grid-
+   * flex.md` § "Decisione" punto 1, sostituiscono le `styleWidth`/`styleHeight` di `container`
+   * `v: 1` viste da ADR-71 § "Decisione" punto 3) — coesistono col resizer esistente di
+   * `container.styleFlexBasis`, mai al suo posto (SPEC-F04-super-elementor.md § 4.2, "accanto,
+   * non al posto"). `image` dichiara ancora `styleWidth`/`styleHeight` (prop proprie, invariate
+   * da `ADR-82`) ma resta comunque esclusa da questa maniglia in quanto widget foglia (ADR-73).
    * `styleMargin{Top,Bottom,Left,Right}`: dichiarate sui tipi che già hanno
    * `styleSpaceBefore/After` (`button`/`heading`/`richText`/`image`).
    */
-  const widthResizeSpec = isSelected
-    ? resolveResizePropSpec(currentNode.type, 'styleWidth')
-    : null;
-  const heightResizeSpec = isSelected
-    ? resolveResizePropSpec(currentNode.type, 'styleHeight')
-    : null;
+  const widthResizeSpec = isSelected ? resolveResizePropSpec(currentNode.type, 'boxedWidth') : null;
+  const heightResizeSpec = isSelected ? resolveResizePropSpec(currentNode.type, 'minHeight') : null;
   const marginTopResizeSpec = isSelected
     ? resolveResizePropSpec(currentNode.type, 'styleMarginTop')
     : null;
@@ -1585,29 +1623,31 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
 
         {/*
           Maniglie generiche di resize (ADR-71, SPEC-F04-super-elementor.md § 4.2/4.3):
-          `styleWidth`/`styleHeight` accanto alla maniglia esistente sopra (mai al suo
-          posto), più i quattro margini per lato sui tipi che li dichiarano. Ognuna possiede
-          il proprio gesto (`ResizeHandle.tsx`), a differenza della maniglia sopra — qui non
-          servono handler locali.
+          `boxedWidth`/`minHeight` (ADR-82 § "Decisione" punto 1) accanto alla maniglia
+          esistente sopra (mai al suo posto), più i quattro margini per lato sui tipi che li
+          dichiarano. Ognuna possiede il proprio gesto (`ResizeHandle.tsx`), a differenza della
+          maniglia sopra — qui non servono handler locali. `units` è quello già risolto da
+          `resolveResizePropSpec` (mai un letterale duplicato qui: `minHeight` dichiara
+          `px`/`vh` nel registro, di cui questa maniglia pilota solo `px`).
         */}
         {widthResizeSpec && (
           <ResizeHandle
             blockId={id}
-            propName="styleWidth"
+            propName="boxedWidth"
             axis="horizontal"
             min={widthResizeSpec.min}
             max={widthResizeSpec.max}
-            units={['px', '%']}
+            units={widthResizeSpec.units}
           />
         )}
         {heightResizeSpec && (
           <ResizeHandle
             blockId={id}
-            propName="styleHeight"
+            propName="minHeight"
             axis="vertical"
             min={heightResizeSpec.min}
             max={heightResizeSpec.max}
-            units={['px', '%']}
+            units={heightResizeSpec.units}
           />
         )}
         {marginTopResizeSpec && (
@@ -1658,12 +1698,14 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           richiesta esplicita di un round successivo del task) — reversal esplicito e
           autorizzato dal proprietario del progetto delle tre varianti mutuamente esclusive
           per categoria che vivevano qui prima (Handle Tab di Sezione, badge informativo di
-          Colonna, linguetta "Modifica" di foglia): cinque controlli sempre nello stesso
-          posto (`BlockHoverOverlay.tsx`) — trascina (`attributes`/`listeners` dnd-kit di
-          sempre), seleziona genitore (`selectNode(location.parentId)`, disabilitato su un
-          nodo di radice), duplica (`duplicateNodeAction`), elimina (apre lo stesso
-          `ConfirmModal` già montato più sotto, mai un secondo modal), modifica
-          (`selectNode`, già imposta `activeSidebarTab: 'properties'`). "Sposta su/giù" e
+          Colonna, linguetta "Modifica" di foglia): sette controlli base sempre nello stesso
+          posto (`BlockHoverOverlay.tsx`) — aggiungi sopra e aggiungi sotto (`BlockPalette`,
+          stesso menu puntato su `location.parentId` con indice prima/dopo il nodo), trascina
+          (`attributes`/`listeners` dnd-kit di sempre), seleziona genitore
+          (`selectNode(location.parentId)`, disabilitato su un nodo di radice), duplica
+          (`duplicateNodeAction`), elimina (apre lo stesso `ConfirmModal` già montato più
+          sotto, mai un secondo modal), modifica (`selectNode`, già imposta
+          `activeSidebarTab: 'properties'`). "Sposta su/giù" e
           "Sposta dentro/fuori dal contenitore" restano raggiungibili solo dal menu
           contestuale (tasto destro, `CanvasContextMenu.tsx`) — mai una seconda copia della
           stessa azione qui. Gli `aria-label` dei quattro
@@ -1683,6 +1725,12 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
             // come parent, non `location.parentId`).
             addBeforeIndex={location.index}
             addBeforeParentType={location.parentType}
+            // Ultimo controllo base "+" (speculare al primo): inserisce un blocco fratello
+            // **dopo** questo nodo, stesso `location.parentId` di sopra ma indice del
+            // fratello successivo (`location.index + 1`) invece dell'indice del nodo
+            // corrente.
+            addAfterIndex={location.index + 1}
+            addAfterParentType={location.parentType}
             attributes={attributes}
             listeners={listeners}
             anchorInside={overlayAnchoredInside}

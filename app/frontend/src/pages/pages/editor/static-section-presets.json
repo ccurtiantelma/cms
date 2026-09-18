@@ -27,7 +27,10 @@
         {
           "id": "preset-button",
           "type": "button",
-          "props": { "label": "Scopri di più", "href": "/" },
+          "props": {
+            "label": "Scopri di più",
+            "link": { "href": "/", "target": "_self", "rel": [] }
+          },
           "children": []
         }
       ]
@@ -103,7 +106,10 @@
         {
           "id": "preset-button",
           "type": "button",
-          "props": { "label": "Contattaci", "href": "/contatti" },
+          "props": {
+            "label": "Contattaci",
+            "link": { "href": "/contatti", "target": "_self", "rel": [] }
+          },
           "children": []
         }
       ]
@@ -217,7 +223,10 @@
         {
           "id": "preset-plan-1-cta",
           "type": "button",
-          "props": { "label": "Scegli Base", "href": "/contatti" },
+          "props": {
+            "label": "Scegli Base",
+            "link": { "href": "/contatti", "target": "_self", "rel": [] }
+          },
           "children": []
         },
         {
@@ -237,7 +246,10 @@
         {
           "id": "preset-plan-2-cta",
           "type": "button",
-          "props": { "label": "Scegli Pro", "href": "/contatti" },
+          "props": {
+            "label": "Scegli Pro",
+            "link": { "href": "/contatti", "target": "_self", "rel": [] }
+          },
           "children": []
         },
         {
@@ -257,7 +269,10 @@
         {
           "id": "preset-plan-3-cta",
           "type": "button",
-          "props": { "label": "Contattaci", "href": "/contatti" },
+          "props": {
+            "label": "Contattaci",
+            "link": { "href": "/contatti", "target": "_self", "rel": [] }
+          },
           "children": []
         }
       ]

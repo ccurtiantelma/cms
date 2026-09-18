@@ -1,4 +1,12 @@
-import { Body, Controller, NotFoundException, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  NotFoundException,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { TemplateResolverService } from './template-resolver.service';
@@ -23,6 +31,7 @@ export class PublicSiteTemplatesController {
 
   /** Risolve il Template pubblicato applicabile a una rotta pubblica. `404` se nessun Template verifica le condizioni. */
   @Post('resolve')
+  @HttpCode(HttpStatus.OK)
   @Throttle({ public: { limit: 300, ttl: 60_000 } })
   @ApiOperation({ summary: 'Risolve il Template di tema applicabile a una rotta pubblica' })
   @ApiResponse({ status: 200, description: 'Template risolto', type: ResolvedSiteTemplateDto })

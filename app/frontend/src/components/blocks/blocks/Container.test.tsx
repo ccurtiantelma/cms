@@ -1,10 +1,11 @@
 /**
- * Component test di `Container.tsx` (ADR-39/41): nessuna suite dedicata esisteva prima di
- * questo file (SPEC-F04-grid-responsive-engine.md § 6, gap 2). Copre le sei props di layout
- * flex, `styleFlexBasis` (`kind: 'unitValue'`, unità `%`), i colori (`styleBackgroundColor`/
- * `styleColor`) e il vincolo T8 (ADR-29 Conseguenza / ADR-39 Conseguenza): un valore salvato
- * con tutti e tre i breakpoint deve produrre tutte e tre le classi nell'HTML reso, mai solo
- * `default` — stesso principio già coperto per `Section.tsx`.
+ * Component test di `Container.tsx` `v: 2` (ADR-82-container-unificato-grid-flex.md): riscritto
+ * per lo schema v2 — il layout Flex/Grid, la spaziatura e ogni altro valore libero PropKind v2
+ * non sono più letti da questo componente (resi dal Runtime Style Bridge,
+ * `generateCanvasCss.test.ts`), quindi non sono più asseriti qui. Questa suite copre solo ciò
+ * che `Container.tsx` rende ancora direttamente: `tag` (elenco chiuso a 8 nomi), `htmlId`/
+ * `cssClass`, `contentWidth`/`boxedWidth`/`minHeight`/`overflow`/`opacity` (style inline
+ * mirato) e l'attributo `data-canvas-style-id` (bersaglio del CSS generato altrove).
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -17,175 +18,158 @@ import Container from './Container';
  * Vitest (`vitest.config.ts`, `test.css: false`) qualunque import che termina in
  * `.module.css` risolve al Proxy di classi hashate a prescindere dalla query string — lo
  * stesso limite documentato in `style-tokens.test.ts`, non aggirabile con `?raw`.
- * `process.cwd()`, non `import.meta.url`: sotto `environment: 'jsdom'` quest'ultimo risolve
- * a un'origine fittizia del browser (`http://…`), non a un percorso `file://` reale.
  */
 const containerCss = readFileSync(
   resolve(process.cwd(), 'src/components/blocks/blocks/Container.module.css'),
   'utf-8',
 );
 
-describe('Container', () => {
-  it('senza alcuna prop di stile: nessun attributo style, solo la classe di base', () => {
-    const html = renderToStaticMarkup(<Container>Contenuto</Container>);
+describe('Container (v2)', () => {
+  it('senza alcuna prop: solo la classe di base, tag <div>, nessun attributo style', () => {
+    const html = renderToStaticMarkup(<Container id="b1">Contenuto</Container>);
 
     expect(html).not.toContain('style=');
+    expect(html).toMatch(/^<div class="[^"]*container[^"]*"/);
   });
 
-  /**
-   * Test di regressione RFC-58 T6 (Punto 3, seconda metà): un `container` figlio senza
-   * `children` non deve ricevere alcun vincolo di altezza minima — comportamento CSS
-   * Flexbox standard (nessun `min-height` in `Container.module.css`), deliberatamente
-   * diverso dall'affordance di editing `.emptyContainer` (`min-height: 120px`) che vive
-   * solo in `EditorBlockWrapper.module.css`, mai in questo componente. Questo componente è
-   * lo stesso montato dal consumer SSR pubblico (`app/public-site`, alias `@blocks`): vedi
-   * `app/public-site/test/section-container-layout-regression.spec.tsx` per l'asserzione
-   * equivalente sull'HTML SSR reale.
-   */
-  it('senza children (container vuoto): nessun attributo style, nessun min-height, nessuna classe emptyContainer', () => {
-    const html = renderToStaticMarkup(<Container>{null}</Container>);
+  it('porta sempre `data-canvas-style-id` con il valore di `id` (bersaglio del Runtime Style Bridge)', () => {
+    const html = renderToStaticMarkup(<Container id="node-42">Contenuto</Container>);
 
-    expect(html).not.toContain('style=');
-    expect(html).not.toMatch(/min-height/i);
-    expect(html).not.toMatch(/emptyContainer/);
-    // Solo la classe di base `container` (nessuna prop di layout passata): stesso pattern
-    // di corrispondenza sostringa già in uso nel resto della suite (le classi CSS Modules
-    // sono hashate anche in questa pipeline di test, es. `_container_bb9328`).
-    expect(html).toMatch(/^<div class="[^"]*container[^"]*"><\/div>$/);
+    expect(html).toContain('data-canvas-style-id="node-42"');
   });
 
-  /**
-   * `display` non produce mai una classe dedicata (ADR-39 § 2 punto 1, commento di testa di
-   * `Container.tsx`): un solo valore possibile in questo round, già cablato in
-   * `Container.module.css` senza bisogno di un token — qualunque cosa arrivi in questa prop
-   * non deve mai far crashare il rendering.
-   */
-  it('display non genera alcuna classe dedicata, qualunque sia il valore ricevuto', () => {
-    const html = renderToStaticMarkup(<Container display="flex">Contenuto</Container>);
-
-    expect(html).not.toContain('display_');
-  });
-
-  describe('props di layout flex responsive (ADR-39)', () => {
-    it('flexDirection: solo `default` presente → solo la classe default', () => {
-      const html = renderToStaticMarkup(
-        <Container flexDirection={{ default: 'column' }}>Contenuto</Container>,
-      );
-
-      expect(html).toContain('flexDirection_default_column');
-      expect(html).not.toContain('flexDirection_tablet_');
-      expect(html).not.toContain('flexDirection_mobile_');
+  describe('tag (kind: enum, elenco chiuso a 8 nomi)', () => {
+    it('assente → <div>', () => {
+      const html = renderToStaticMarkup(<Container id="b1">x</Container>);
+      expect(html).toMatch(/^<div[ >]/);
     });
 
-    /**
-     * T8 (SPEC-F04-grid-responsive-engine.md § 6): tutti e tre i breakpoint presenti nel
-     * valore salvato devono produrre tutte e tre le classi, mai solo `default`.
-     */
-    it('flexDirection con tutti e tre i breakpoint produce le tre classi, non solo default', () => {
+    it('valore ammesso (es. "section") → tag reso corrispondente', () => {
       const html = renderToStaticMarkup(
-        <Container flexDirection={{ default: 'row', tablet: 'column', mobile: 'column-reverse' }}>
-          Contenuto
+        <Container id="b1" tag="section">
+          x
         </Container>,
       );
-
-      expect(html).toContain('flexDirection_default_row');
-      expect(html).toContain('flexDirection_tablet_column');
-      expect(html).toContain('flexDirection_mobile_column-reverse');
+      expect(html).toMatch(/^<section[ >]/);
+      expect(html).toContain('</section>');
     });
 
-    it('justifyContent: emette la classe del token salvato', () => {
+    it("valore fuori dall'elenco chiuso → ricade su <div>, nessun errore", () => {
+      expect(() =>
+        renderToStaticMarkup(
+          <Container id="b1" tag="script">
+            x
+          </Container>,
+        ),
+      ).not.toThrow();
       const html = renderToStaticMarkup(
-        <Container justifyContent={{ default: 'space-between' }}>Contenuto</Container>,
+        <Container id="b1" tag="script">
+          x
+        </Container>,
       );
-
-      expect(html).toContain('justifyContent_default_space-between');
-    });
-
-    it('alignItems: emette la classe del token salvato', () => {
-      const html = renderToStaticMarkup(
-        <Container alignItems={{ default: 'center' }}>Contenuto</Container>,
-      );
-
-      expect(html).toContain('alignItems_default_center');
-    });
-
-    it('wrap: emette la classe del token salvato', () => {
-      const html = renderToStaticMarkup(
-        <Container wrap={{ default: 'wrap' }}>Contenuto</Container>,
-      );
-
-      expect(html).toContain('wrap_default_wrap');
-    });
-
-    it('gap con tutti e tre i breakpoint produce le tre classi, non solo default', () => {
-      const html = renderToStaticMarkup(
-        <Container gap={{ default: 'lg', tablet: 'md', mobile: 'sm' }}>Contenuto</Container>,
-      );
-
-      expect(html).toContain('gap_default_lg');
-      expect(html).toContain('gap_tablet_md');
-      expect(html).toContain('gap_mobile_sm');
+      expect(html).toMatch(/^<div[ >]/);
     });
   });
 
-  describe('styleFlexBasis (kind: unitValue, %) — ADR-38 § 2', () => {
-    it('valore { value, unit } valido → flex-basis e flex-grow:0 inline, mai una classe', () => {
+  describe('htmlId/cssClass (rinominate da customElementId/customCssClass di container v1, ADR-82 § "Decisione" punto 4)', () => {
+    it('htmlId stringa → id HTML', () => {
       const html = renderToStaticMarkup(
-        <Container styleFlexBasis={{ value: 33, unit: '%' }}>Contenuto</Container>,
+        <Container id="b1" htmlId="hero">
+          x
+        </Container>,
       );
-
-      expect(html).toContain('style="flex-basis:33%;flex-grow:0"');
+      expect(html).toContain('id="hero"');
     });
 
-    it('valore malformato (manca `unit`) → nessuno stile inline, nessun errore (tolleranza di rendering)', () => {
-      expect(() =>
-        renderToStaticMarkup(<Container styleFlexBasis={{ value: 33 }}>Contenuto</Container>),
-      ).not.toThrow();
-
+    it('cssClass stringa → classe aggiuntiva accanto a quella di base', () => {
       const html = renderToStaticMarkup(
-        <Container styleFlexBasis={{ value: 33 }}>Contenuto</Container>,
+        <Container id="b1" cssClass="my-custom-class">
+          x
+        </Container>,
       );
-      expect(html).not.toContain('flex-basis');
+      expect(html).toContain('my-custom-class');
+      expect(html).toMatch(/class="[^"]*container[^"]*my-custom-class[^"]*"/);
+    });
+  });
+
+  describe('prop scalari semplici rese con style inline mirato', () => {
+    it('opacity numerica → opacity inline', () => {
+      const html = renderToStaticMarkup(
+        <Container id="b1" opacity={0.5}>
+          x
+        </Container>,
+      );
+      expect(html).toContain('style="opacity:0.5"');
+    });
+
+    it('minHeight (UnitValue) → min-height inline', () => {
+      const html = renderToStaticMarkup(
+        <Container id="b1" minHeight={{ value: 400, unit: 'px' }}>
+          x
+        </Container>,
+      );
+      expect(html).toContain('min-height:400px');
+    });
+
+    it('contentWidth "boxed" + boxedWidth → max-width inline centrato', () => {
+      const html = renderToStaticMarkup(
+        <Container id="b1" contentWidth="boxed" boxedWidth={{ value: 1200, unit: 'px' }}>
+          x
+        </Container>,
+      );
+      expect(html).toContain('max-width:1200px');
+      expect(html).toContain('margin-left:auto');
+      expect(html).toContain('margin-right:auto');
+    });
+
+    it('contentWidth "full" → nessun max-width, anche con boxedWidth presente', () => {
+      const html = renderToStaticMarkup(
+        <Container id="b1" contentWidth="full" boxedWidth={{ value: 1200, unit: 'px' }}>
+          x
+        </Container>,
+      );
+      expect(html).not.toContain('max-width');
+    });
+
+    it('overflow tra i tre valori ammessi → overflow inline', () => {
+      const html = renderToStaticMarkup(
+        <Container id="b1" overflow="hidden">
+          x
+        </Container>,
+      );
+      expect(html).toContain('overflow:hidden');
+    });
+
+    it("overflow fuori dall'elenco chiuso → nessuno stile inline, nessun errore", () => {
+      expect(() =>
+        renderToStaticMarkup(
+          <Container id="b1" overflow="scroll">
+            x
+          </Container>,
+        ),
+      ).not.toThrow();
+      const html = renderToStaticMarkup(
+        <Container id="b1" overflow="scroll">
+          x
+        </Container>,
+      );
       expect(html).not.toContain('style=');
     });
 
-    it('valore assente → nessuno stile inline', () => {
-      const html = renderToStaticMarkup(<Container>Contenuto</Container>);
-
-      expect(html).not.toContain('flex-basis');
-    });
-  });
-
-  describe('colori (kind: color) — ADR-33 § 3', () => {
-    it('styleBackgroundColor → background-color inline', () => {
-      const html = renderToStaticMarkup(
-        <Container styleBackgroundColor="#abcdef">Contenuto</Container>,
-      );
-
-      expect(html).toContain('style="background-color:#abcdef"');
-    });
-
-    it('styleColor da solo → solo color inline, mai background-color', () => {
-      const html = renderToStaticMarkup(<Container styleColor="#ffffff">Contenuto</Container>);
-
-      expect(html).toContain('style="color:#ffffff"');
-      expect(html).not.toContain('background-color');
-    });
-
-    it('styleBackgroundColor e styleColor insieme → entrambi inline, stesso nodo', () => {
-      const html = renderToStaticMarkup(
-        <Container styleBackgroundColor="#111111" styleColor="#ffffff">
-          Contenuto
-        </Container>,
-      );
-
-      expect(html).toContain('style="background-color:#111111;color:#ffffff"');
+    it('valore malformato (minHeight senza `unit`) → nessuno stile inline, nessun errore (tolleranza di rendering)', () => {
+      expect(() =>
+        renderToStaticMarkup(
+          <Container id="b1" minHeight={{ value: 400 }}>
+            x
+          </Container>,
+        ),
+      ).not.toThrow();
     });
   });
 
   /**
    * Regressione overflow orizzontale: come `Section.test.tsx`, asserzioni sul CSS sorgente
-   * via import `?raw` — sotto `test.css: false` (`vitest.config.ts`) l'HTML reso da
+   * via lettura filesystem — sotto `test.css: false` (`vitest.config.ts`) l'HTML reso da
    * `renderToStaticMarkup` non porta le regole delle classi CSS Modules.
    */
   describe('anti-overflow orizzontale', () => {

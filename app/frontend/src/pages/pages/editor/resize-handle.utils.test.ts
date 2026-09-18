@@ -17,11 +17,19 @@ import {
 } from './resize-handle.utils';
 
 describe('resolveResizePropSpec — risoluzione dal registro reale', () => {
-  it('container.styleWidth: unitValue px/%, min/max dichiarati (ADR-71 § 3)', () => {
-    expect(resolveResizePropSpec('container', 'styleWidth')).toEqual({
+  it('container.boxedWidth: unitValue px/%, min/max dichiarati (ADR-82 § "Decisione" punto 1)', () => {
+    expect(resolveResizePropSpec('container', 'boxedWidth')).toEqual({
       min: 0,
       max: 4000,
       units: ['px', '%'],
+    });
+  });
+
+  it('container.minHeight: unitValue px/vh nel registro, ma questa maniglia pilota solo px (RESIZE_HANDLE_UNITS, ADR-71 § "Decisione" punto 2)', () => {
+    expect(resolveResizePropSpec('container', 'minHeight')).toEqual({
+      min: 0,
+      max: 2000,
+      units: ['px'],
     });
   });
 
@@ -29,12 +37,12 @@ describe('resolveResizePropSpec — risoluzione dal registro reale', () => {
     expect(resolveResizePropSpec('heading', 'styleMarginTop')).toBeNull();
   });
 
-  it('image.styleWidth dichiara anche "vw" nel registro (ADR-58), ma image è un widget foglia escluso dalla maniglia trascinabile (ADR-73 § "Decisione" punto 1)', () => {
-    expect(resolveResizePropSpec('image', 'styleWidth')).toBeNull();
+  it('image.styleWidth (prop propria, invariata da ADR-82) dichiara anche "vw" nel registro (ADR-58), ma image è un widget foglia escluso dalla maniglia trascinabile (ADR-73 § "Decisione" punto 1)', () => {
+    expect(resolveResizePropSpec('image', 'boxedWidth')).toBeNull();
   });
 
-  it('restituisce null se il tipo non dichiara affatto la prop (section non ha styleWidth, e non è un widget foglia escluso a priori)', () => {
-    expect(resolveResizePropSpec('section', 'styleWidth')).toBeNull();
+  it('restituisce null se il tipo non dichiara affatto la prop (section non ha boxedWidth, e non è un widget foglia escluso a priori)', () => {
+    expect(resolveResizePropSpec('section', 'boxedWidth')).toBeNull();
   });
 
   it('restituisce null se la prop esiste col nome giusto ma di kind diverso — container.styleMarginTop resta un enum a token (ADR-33 § 4), non una prop pilotabile da maniglia', () => {
@@ -42,7 +50,7 @@ describe('resolveResizePropSpec — risoluzione dal registro reale', () => {
   });
 
   it('restituisce null per un tipo inesistente nel registro', () => {
-    expect(resolveResizePropSpec('non-existent-type', 'styleWidth')).toBeNull();
+    expect(resolveResizePropSpec('non-existent-type', 'boxedWidth')).toBeNull();
   });
 });
 
@@ -54,21 +62,21 @@ describe('resolveResizePropSpec — widget foglia esclusi dalla maniglia (ADR-73
       expect(resolveResizePropSpec(blockType, 'styleMarginBottom')).toBeNull();
       expect(resolveResizePropSpec(blockType, 'styleMarginLeft')).toBeNull();
       expect(resolveResizePropSpec(blockType, 'styleMarginRight')).toBeNull();
-      expect(resolveResizePropSpec(blockType, 'styleWidth')).toBeNull();
-      expect(resolveResizePropSpec(blockType, 'styleHeight')).toBeNull();
+      expect(resolveResizePropSpec(blockType, 'boxedWidth')).toBeNull();
+      expect(resolveResizePropSpec(blockType, 'minHeight')).toBeNull();
     },
   );
 
-  it('container non è escluso: styleWidth/styleHeight continuano a risolvere dal registro come prima (ADR-73 § "Decisione" punto 2)', () => {
-    expect(resolveResizePropSpec('container', 'styleWidth')).toEqual({
+  it('container non è escluso: boxedWidth/minHeight continuano a risolvere dal registro (ADR-73 § "Decisione" punto 2, ADR-82 § "Decisione" punto 1)', () => {
+    expect(resolveResizePropSpec('container', 'boxedWidth')).toEqual({
       min: 0,
       max: 4000,
       units: ['px', '%'],
     });
-    expect(resolveResizePropSpec('container', 'styleHeight')).toEqual({
+    expect(resolveResizePropSpec('container', 'minHeight')).toEqual({
       min: 0,
-      max: 4000,
-      units: ['px', '%'],
+      max: 2000,
+      units: ['px'],
     });
   });
 });
@@ -79,9 +87,9 @@ describe('resolveResizeDirection', () => {
     expect(resolveResizeDirection('styleMarginLeft')).toBe(-1);
   });
 
-  it('styleWidth/styleHeight/styleMarginBottom/styleMarginRight: 1 (i lati "finali" del box)', () => {
-    expect(resolveResizeDirection('styleWidth')).toBe(1);
-    expect(resolveResizeDirection('styleHeight')).toBe(1);
+  it('boxedWidth/minHeight/styleMarginBottom/styleMarginRight: 1 (i lati "finali" del box)', () => {
+    expect(resolveResizeDirection('boxedWidth')).toBe(1);
+    expect(resolveResizeDirection('minHeight')).toBe(1);
     expect(resolveResizeDirection('styleMarginBottom')).toBe(1);
     expect(resolveResizeDirection('styleMarginRight')).toBe(1);
   });
@@ -129,7 +137,7 @@ describe('clampResizeValue', () => {
 });
 
 describe('readUnitValue / toUnitValue', () => {
-  it('legge un valore composto valido nell\'unità ammessa', () => {
+  it("legge un valore composto valido nell'unità ammessa", () => {
     expect(readUnitValue({ value: 42, unit: 'px' }, RESIZE_HANDLE_UNITS)).toEqual({
       value: 42,
       unit: 'px',

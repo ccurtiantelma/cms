@@ -4,8 +4,11 @@
  * visibilità legata a selezione + registro, anteprima durante il trascinamento (nessuna voce
  * di history), commit clampato al rilascio. Stesso idioma e stesse infrastrutture jsdom di
  * `ContainerResizeHandle.test.tsx` (la maniglia pre-esistente), ma sul **registro reale** —
- * a differenza di quel file, qui non serve mockare `blocks.types` perché `container.styleWidth`/
- * `container.styleHeight` sono già dichiarate `unitValue` px/% dal registro (ADR-71 § 3).
+ * a differenza di quel file, qui non serve mockare `blocks.types` perché `container.boxedWidth`/
+ * `container.minHeight` sono già dichiarate `unitValue` dal registro (`ADR-82-container-
+ * unificato-grid-flex.md` § "Decisione" punto 1, sostituiscono le `styleWidth`/`styleHeight`
+ * di `container` `v: 1` viste da ADR-71 § 3: `boxedWidth` resta `px`/`%`, `minHeight` dichiara
+ * `px`/`vh` ma questa maniglia ne pilota solo `px`, `RESIZE_HANDLE_UNITS`).
  * Copre solo i casi specifici della maniglia generica: `px` diretto oltre a `%`, risoluzione
  * dinamica per `(blockType, propName)` diversi, maniglia assente quando il registro non
  * dichiara la prop per quel tipo — mai duplicando i casi già coperti da
@@ -16,7 +19,7 @@
  * `ResizeHandle` per nessuna prop (né margini né, per `image`, `styleWidth`/`styleHeight`) —
  * solo `container` resta un widget con maniglia trascinabile sul canvas. I casi di
  * trascinamento/commit sotto, che prima usavano `heading.styleMarginTop` come esempio di
- * comodo, ora usano `container.styleHeight` (stesso asse verticale, stessa meccanica `px`
+ * comodo, ora usano `container.minHeight` (stesso asse verticale, stessa meccanica `px`
  * diretto, `direction: 1` invece di `-1` — la direzione `-1` dei margini "iniziali" resta
  * comunque coperta a livello di funzione pura in `resize-handle.utils.test.ts`, non più
  * raggiungibile da nessun tipo di blocco a livello di componente dopo ADR-73).
@@ -122,24 +125,24 @@ describe('ResizeHandle — visibilità (ADR-71): solo su nodo selezionato e prop
     expect(screen.queryByTestId('resize-handle-styleMarginTop')).toBeNull();
   });
 
-  it('heading non selezionato: nessuna maniglia (né per l\'esclusione ADR-73, né per la mancata selezione)', () => {
+  it("heading non selezionato: nessuna maniglia (né per l'esclusione ADR-73, né per la mancata selezione)", () => {
     mountNode('heading', { level: 'h2', text: 'Titolo' }, { selected: false });
     expect(screen.queryByTestId('resize-handle-styleMarginTop')).toBeNull();
   });
 
-  it('container selezionato: la maniglia styleWidth è montata (dichiarata dal registro, ADR-71 § 3 — container non è escluso da ADR-73)', () => {
+  it('container selezionato: la maniglia boxedWidth è montata (dichiarata dal registro, ADR-82 § "Decisione" punto 1 — container non è escluso da ADR-73)', () => {
     mountNode('container', {}, { selected: true });
-    expect(screen.queryByTestId('resize-handle-styleWidth')).not.toBeNull();
+    expect(screen.queryByTestId('resize-handle-boxedWidth')).not.toBeNull();
   });
 
-  it('container selezionato: la maniglia styleHeight è montata (dichiarata dal registro, ADR-71 § 3 — container non è escluso da ADR-73)', () => {
+  it('container selezionato: la maniglia minHeight è montata (dichiarata dal registro, ADR-82 § "Decisione" punto 1 — container non è escluso da ADR-73)', () => {
     mountNode('container', {}, { selected: true });
-    expect(screen.queryByTestId('resize-handle-styleHeight')).not.toBeNull();
+    expect(screen.queryByTestId('resize-handle-minHeight')).not.toBeNull();
   });
 
-  it('heading non dichiara styleWidth (oltre a essere comunque un widget foglia escluso, ADR-73): nessuna maniglia, anche selezionato', () => {
+  it('heading non dichiara boxedWidth (oltre a essere comunque un widget foglia escluso, ADR-73): nessuna maniglia, anche selezionato', () => {
     mountNode('heading', { level: 'h2', text: 'Titolo' }, { selected: true });
-    expect(screen.queryByTestId('resize-handle-styleWidth')).toBeNull();
+    expect(screen.queryByTestId('resize-handle-boxedWidth')).toBeNull();
   });
 
   it('container.styleMarginTop resta un enum a token (ADR-33 § 4), non una prop pilotabile da maniglia: nessuna maniglia anche selezionato', () => {
@@ -163,11 +166,11 @@ describe('ResizeHandle — visibilità (ADR-71): solo su nodo selezionato e prop
   };
 
   it.each(['richText', 'image', 'button'] as const)(
-    '%s selezionato: nessuna maniglia styleWidth/styleHeight/margini, qualunque prop dichiarata dal registro (ADR-73)',
+    '%s selezionato: nessuna maniglia boxedWidth/minHeight/margini, qualunque prop dichiarata dal registro (ADR-73)',
     (blockType) => {
       mountNode(blockType, LEAF_MOUNT_PROPS[blockType], { selected: true });
-      expect(screen.queryByTestId('resize-handle-styleWidth')).toBeNull();
-      expect(screen.queryByTestId('resize-handle-styleHeight')).toBeNull();
+      expect(screen.queryByTestId('resize-handle-boxedWidth')).toBeNull();
+      expect(screen.queryByTestId('resize-handle-minHeight')).toBeNull();
       expect(screen.queryByTestId('resize-handle-styleMarginTop')).toBeNull();
       expect(screen.queryByTestId('resize-handle-styleMarginBottom')).toBeNull();
       expect(screen.queryByTestId('resize-handle-styleMarginLeft')).toBeNull();
@@ -178,83 +181,79 @@ describe('ResizeHandle — visibilità (ADR-71): solo su nodo selezionato e prop
 
 describe('ResizeHandle — trascinamento: solo anteprima, nessuna voce di history (ADR-71 § "Decisione" punto 5)', () => {
   it('px diretto: il trascinamento aggiorna solo usePropResizePreview, la prop sul nodo resta invariata', () => {
-    mountNode('container', { styleHeight: { value: 20, unit: 'px' } }, { selected: true });
+    mountNode('container', { minHeight: { value: 20, unit: 'px' } }, { selected: true });
     const depthBefore = useBlockEditorStore.getState().undoStack.length;
-    const grip = screen.getByTestId('resize-handle-styleHeight');
+    const grip = screen.getByTestId('resize-handle-minHeight');
 
-    // Asse verticale, direzione 1 (styleHeight, lato "finale" del box): muoversi verso il
+    // Asse verticale, direzione 1 (minHeight, lato "finale" del box): muoversi verso il
     // basso (clientY maggiore dell'origine) allarga l'altezza. Origine a 400, spostamento a
     // 430 → 30px verso il basso.
     fireEvent.pointerDown(grip, { pointerId: 1, clientY: 400 });
     fireEvent.pointerMove(grip, { pointerId: 1, clientY: 430 });
 
-    const { result } = renderHook(() => usePropResizePreview('n-1', 'styleHeight'));
+    const { result } = renderHook(() => usePropResizePreview('n-1', 'minHeight'));
     expect(result.current).toEqual({ value: 50, unit: 'px' });
-    expect(currentNode()?.props.styleHeight).toEqual({ value: 20, unit: 'px' });
+    expect(currentNode()?.props.minHeight).toEqual({ value: 20, unit: 'px' });
     expect(useBlockEditorStore.getState().undoStack.length).toBe(depthBefore);
   });
 
   it('%: il delta è relativo al contenitore padre, non al pixel assoluto', () => {
-    mountNode(
-      'container',
-      { styleWidth: { value: 50, unit: '%' } },
-      { selected: true },
-    );
-    const grip = screen.getByTestId('resize-handle-styleWidth');
+    mountNode('container', { boxedWidth: { value: 50, unit: '%' } }, { selected: true });
+    const grip = screen.getByTestId('resize-handle-boxedWidth');
 
-    // Asse orizzontale, direzione 1 (styleWidth). Padre di 800px: 80px di spostamento a
+    // Asse orizzontale, direzione 1 (boxedWidth). Padre di 800px: 80px di spostamento a
     // destra equivalgono a 10 punti percentuali (80/800*100).
     fireEvent.pointerDown(grip, { pointerId: 1, clientX: 0 });
     fireEvent.pointerMove(grip, { pointerId: 1, clientX: 80 });
 
-    expect(screen.getByTestId('resize-handle-badge-styleWidth').textContent).toBe('60%');
+    expect(screen.getByTestId('resize-handle-badge-boxedWidth').textContent).toBe('60%');
   });
 
   it('il badge in tempo reale compare solo durante il trascinamento, non a riposo', () => {
-    mountNode('container', { styleHeight: { value: 20, unit: 'px' } }, { selected: true });
-    expect(screen.queryByTestId('resize-handle-badge-styleHeight')).toBeNull();
+    mountNode('container', { minHeight: { value: 20, unit: 'px' } }, { selected: true });
+    expect(screen.queryByTestId('resize-handle-badge-minHeight')).toBeNull();
 
-    fireEvent.pointerDown(screen.getByTestId('resize-handle-styleHeight'), {
+    fireEvent.pointerDown(screen.getByTestId('resize-handle-minHeight'), {
       pointerId: 1,
       clientY: 400,
     });
-    expect(screen.getByTestId('resize-handle-badge-styleHeight')).toBeTruthy();
+    expect(screen.getByTestId('resize-handle-badge-minHeight')).toBeTruthy();
   });
 });
 
 describe('ResizeHandle — commit al rilascio, clampato dentro [min, max] (ADR-71 § "Decisione" punto 5)', () => {
   it('il rilascio chiama updateBlockPropsAction con il valore finale e registra UNA sola voce di history', () => {
-    mountNode('container', { styleHeight: { value: 20, unit: 'px' } }, { selected: true });
+    mountNode('container', { minHeight: { value: 20, unit: 'px' } }, { selected: true });
     const depthBefore = useBlockEditorStore.getState().undoStack.length;
-    const grip = screen.getByTestId('resize-handle-styleHeight');
+    const grip = screen.getByTestId('resize-handle-minHeight');
 
     fireEvent.pointerDown(grip, { pointerId: 1, clientY: 400 });
     fireEvent.pointerMove(grip, { pointerId: 1, clientY: 430 });
     fireEvent.pointerUp(grip, { pointerId: 1, clientY: 430 });
 
-    expect(currentNode()?.props.styleHeight).toEqual({ value: 50, unit: 'px' });
+    expect(currentNode()?.props.minHeight).toEqual({ value: 50, unit: 'px' });
     expect(useBlockEditorStore.getState().undoStack.length).toBe(depthBefore + 1);
-    const { result } = renderHook(() => usePropResizePreview('n-1', 'styleHeight'));
+    const { result } = renderHook(() => usePropResizePreview('n-1', 'minHeight'));
     expect(result.current).toBeNull();
   });
 
-  it('un trascinamento oltre il massimo dichiarato (4000, container.styleHeight) commette il valore clampato al massimo, mai il valore grezzo', () => {
-    mountNode('container', { styleHeight: { value: 0, unit: 'px' } }, { selected: true });
-    const grip = screen.getByTestId('resize-handle-styleHeight');
+  it('un trascinamento oltre il massimo dichiarato (2000, container.minHeight) commette il valore clampato al massimo, mai il valore grezzo', () => {
+    mountNode('container', { minHeight: { value: 0, unit: 'px' } }, { selected: true });
+    const grip = screen.getByTestId('resize-handle-minHeight');
 
     // direzione 1: muoversi molto verso il basso (clientY molto maggiore dell'origine) spinge
-    // il valore ben oltre il massimo dichiarato (4000px, molto più ampio dei 500px del
+    // il valore ben oltre il massimo dichiarato (2000px, molto più ampio dei 500px del
     // vecchio esempio a margine — serve un delta maggiore per superarlo).
     fireEvent.pointerDown(grip, { pointerId: 1, clientY: -5000 });
     fireEvent.pointerMove(grip, { pointerId: 1, clientY: 5000 });
     fireEvent.pointerUp(grip, { pointerId: 1, clientY: 5000 });
 
-    expect(currentNode()?.props.styleHeight).toEqual({ value: 4000, unit: 'px' });
+    expect(currentNode()?.props.minHeight).toEqual({ value: 2000, unit: 'px' });
   });
 
   it('un trascinamento sotto il minimo dichiarato (0) commette il valore clampato al minimo', () => {
-    mountNode('container', { styleHeight: { value: 100, unit: 'px' } }, { selected: true });
-    const grip = screen.getByTestId('resize-handle-styleHeight');
+    mountNode('container', { minHeight: { value: 100, unit: 'px' } }, { selected: true });
+    const grip = screen.getByTestId('resize-handle-minHeight');
 
     // direzione 1: muoversi verso l'alto (clientY minore dell'origine) riduce l'altezza —
     // ben oltre lo zero.
@@ -262,21 +261,21 @@ describe('ResizeHandle — commit al rilascio, clampato dentro [min, max] (ADR-7
     fireEvent.pointerMove(grip, { pointerId: 1, clientY: 0 });
     fireEvent.pointerUp(grip, { pointerId: 1, clientY: 0 });
 
-    expect(currentNode()?.props.styleHeight).toEqual({ value: 0, unit: 'px' });
+    expect(currentNode()?.props.minHeight).toEqual({ value: 0, unit: 'px' });
   });
 
   it('pointercancel abbandona il gesto senza committare nulla', () => {
-    mountNode('container', { styleHeight: { value: 20, unit: 'px' } }, { selected: true });
+    mountNode('container', { minHeight: { value: 20, unit: 'px' } }, { selected: true });
     const depthBefore = useBlockEditorStore.getState().undoStack.length;
-    const grip = screen.getByTestId('resize-handle-styleHeight');
+    const grip = screen.getByTestId('resize-handle-minHeight');
 
     fireEvent.pointerDown(grip, { pointerId: 1, clientY: 400 });
     fireEvent.pointerMove(grip, { pointerId: 1, clientY: 430 });
     fireEvent.pointerCancel(grip, { pointerId: 1 });
 
     expect(useBlockEditorStore.getState().undoStack.length).toBe(depthBefore);
-    expect(currentNode()?.props.styleHeight).toEqual({ value: 20, unit: 'px' });
-    const { result } = renderHook(() => usePropResizePreview('n-1', 'styleHeight'));
+    expect(currentNode()?.props.minHeight).toEqual({ value: 20, unit: 'px' });
+    const { result } = renderHook(() => usePropResizePreview('n-1', 'minHeight'));
     expect(result.current).toBeNull();
   });
 });

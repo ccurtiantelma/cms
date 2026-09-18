@@ -70,7 +70,25 @@ export interface BlockPropDescriptor {
     | 'border'
     | 'shadow'
     | 'cssClassName'
-    | 'htmlId';
+    | 'htmlId'
+    | 'colorRef'
+    | 'fontRef'
+    | 'typography'
+    | 'spacing'
+    | 'radius'
+    | 'gradient'
+    | 'position'
+    | 'transform'
+    | 'filter'
+    | 'layout'
+    | 'background'
+    | 'link'
+    | 'animation'
+    | 'motion'
+    | 'attributes'
+    | 'css'
+    | 'hideOn'
+    | 'shapeDivider';
   required: boolean;
   default?: unknown;
   maxLength?: number;
@@ -81,10 +99,40 @@ export interface BlockPropDescriptor {
   responsive?: boolean;
   /** Solo \`kind: 'unitValue'\` (ADR-38 § 2): elenco chiuso di unità ammesse per questa prop. */
   units?: readonly ('px' | '%' | 'em' | 'rem' | 'vw' | 'vh')[];
-  /** Solo \`kind: 'unitValue'\` (ADR-38 § 2): intervallo numerico ammesso, dichiarato dalla prop. */
+  /** Solo \`kind: 'unitValue'\`/\`'spacing'\`: intervallo numerico ammesso, dichiarato dalla prop. */
   min?: number;
   max?: number;
+  /** Modificatore d'envelope stateful (ADR-75 § "Decisione" punto 1): \`{ normal, hover?, focus?, active? }\` invece di uno scalare. */
+  stateful?: boolean;
+  /** Solo \`kind: 'colorRef'\` (SPEC-PROPKIND-V2-DETAILS.md § 1): ammette \`#RRGGBBAA\` oltre a \`#RGB\`/\`#RRGGBB\`. */
+  allowAlpha?: boolean;
+  /** Solo \`kind: 'colorRef'\` (Addendum S1.2, SPEC-PROPKIND-V2-DETAILS.md): proprietà CSS di destinazione, letta da \`toCss()\`. */
+  cssProperty?: 'color' | 'background-color' | 'border-color' | 'outline-color';
+  /** Solo \`kind: 'spacing'\` (SPEC-PROPKIND-V2-DETAILS.md § 4 punto 1): \`min\` può essere negativo. */
+  allowNegative?: boolean;
+  /** Solo \`kind: 'spacing'\` (Addendum S1.2, SPEC-PROPKIND-V2-DETAILS.md): lato CSS di destinazione, letto da \`toCss()\`. */
+  target?: 'padding' | 'margin';
 }
+
+/** Nomi di breakpoint ammessi per una prop \`responsive\` (ADR-76 § "Decisione" punto 1/2), dal più largo al più stretto. */
+export const RESPONSIVE_BREAKPOINTS = [
+  'default',
+  'widescreen',
+  'laptop',
+  'tabletExtra',
+  'tablet',
+  'mobileExtra',
+  'mobile',
+] as const;
+
+/** Uno dei 7 nomi di {@link RESPONSIVE_BREAKPOINTS}. */
+export type ResponsiveBreakpointName = (typeof RESPONSIVE_BREAKPOINTS)[number];
+
+/** Elenco chiuso a 4 stati (ADR-75 § "Decisione" punto 3), ordine fisso normal → hover → focus → active. */
+export const PROP_STATES = ['normal', 'hover', 'focus', 'active'] as const;
+
+/** Uno dei 4 nomi di {@link PROP_STATES}. */
+export type PropStateName = (typeof PROP_STATES)[number];
 
 /** Metadati d'editor di una singola prop (ADR-30 § 1), opachi alla validazione. */
 export interface BlockEditorPropMeta {

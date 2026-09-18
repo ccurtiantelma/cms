@@ -7,6 +7,7 @@ import { networkMocks } from './setup/network-mocks.setup';
 import * as crypto from 'crypto';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { json } from 'express';
 import * as cookieParser from 'cookie-parser';
 import * as jwt from 'jsonwebtoken';
 import * as request from 'supertest';
@@ -41,8 +42,13 @@ describe('PagesController (e2e) — validazione albero blocchi (PLAN-F02 T7)', (
       imports: [AppModule],
     }).compile();
 
-    app = moduleRef.createNestApplication();
+    app = moduleRef.createNestApplication({ bodyParser: false });
     app.setGlobalPrefix('api/v1');
+    // Stesso limite di `main.ts` (`app.use('/api/v1/app', json({ limit: '1mb' }))`):
+    // questo bootstrap e2e non passa da `main.ts`, quindi userebbe altrimenti
+    // il limite di default di Express (100kb) — insufficiente per un albero a
+    // MAX_NODES=1500 (ADR-82 § "Decisione" punto 5, ~140 KB in JSON).
+    app.use('/api/v1/app', json({ limit: '1mb' }));
     app.useGlobalPipes(
       new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
     );
@@ -196,9 +202,12 @@ describe('PagesController (e2e) — validazione albero blocchi (PLAN-F02 T7)', (
 
       const invalidTree = {
         version: 1,
-        blocks: [
-          { id: 'sec', type: 'section', v: 1, props: { colonna: 2 }, children: [] }, // section non dichiara props
-        ],
+        // `container` (non `section`: `section` v1 è ormai riscritta a
+        // `container` v2 dalla migrazione di identità di ADR-82 **prima**
+        // della validazione, che non copia mai una chiave sconosciuta come
+        // `colonna` — il veicolo per questo test deve essere già alla
+        // versione corrente per non passare da quella riscrittura).
+        blocks: [{ id: 'c', type: 'container', v: 2, props: { colonna: 2 }, children: [] }],
       };
 
       const res = await authedRequest('post', '/api/v1/app/pages', admin).send({
@@ -272,7 +281,7 @@ describe('PagesController (e2e) — validazione albero blocchi (PLAN-F02 T7)', (
   // ─── 3. Limiti di profondità e numero di nodi (SPEC-F02 § 1.1/§ 1.2) ──
 
   describe("Limiti dell'envelope — profondità e numero massimo di nodi", () => {
-    it('profondità 6 (> MAX_DEPTH=5): 400 CONTENT_TREE_TOO_DEEP col path del primo nodo oltre il limite', async () => {
+    it('profondità 9 (> MAX_DEPTH=8, ADR-82): 400 CONTENT_TREE_TOO_DEEP col path del primo nodo oltre il limite', async () => {
       const admin = await seedAuth(AppUserRoles.Admin, 'depth1');
 
       // `heading` è foglia (children.allow: []): usiamo nodi generici (non
@@ -290,14 +299,14 @@ describe('PagesController (e2e) — validazione albero blocchi (PLAN-F02 T7)', (
         }
         return {
           id: `n${depth}`,
-          type: 'section',
+          type: 'container',
           v: 1,
           props: {},
           children: [nestedNode(depth - 1)],
         };
       }
 
-      const tree = { version: 1, blocks: [nestedNode(5)] }; // profondità 6 (radice=1)
+      const tree = { version: 1, blocks: [nestedNode(8)] }; // profondità 9 (radice=1)
 
       const res = await authedRequest('post', '/api/v1/app/pages', admin).send({
         title: 'Pagina troppo profonda',
@@ -307,16 +316,24 @@ describe('PagesController (e2e) — validazione albero blocchi (PLAN-F02 T7)', (
 
       expect(res.status).toBe(400);
       expect(res.body.code).toBe('CONTENT_TREE_TOO_DEEP');
-      expect(res.body.details).toMatchObject({ depth: 6, max: 5 });
+      expect(res.body.details).toMatchObject({ depth: 9, max: 8 });
     });
 
-    it('501 nodi (> MAX_NODES=500): 400 CONTENT_TREE_TOO_MANY_NODES', async () => {
+    it('1501 nodi (> MAX_NODES=1500, ADR-82): 400 CONTENT_TREE_TOO_MANY_NODES', async () => {
       const admin = await seedAuth(AppUserRoles.Admin, 'nodes1');
 
-      const blocks = Array.from({ length: 501 }, (_unused, index) => ({
+      // `v: 2` (versione corrente di `heading`) con solo `level`/`text`: evita
+      // il costo di migrazione (ogni prop v2 opzionale — `color`/`typography`/
+      // `margin`/`hideOn` — resta assente), così il payload misura solo il
+      // limite di conteggio nodi (MAX_NODES), non quello di byte
+      // (MAX_PAYLOAD_BYTES, deliberatamente invariato da ADR-82 § "Decisione"
+      // punto 5: un albero di nodi v1 migrati "arricchiti" a v2 può pesare
+      // sensibilmente di più di quanto la formula storica "500 nodi × ~1 KiB"
+      // prevedesse — non è la stessa cosa che questo test verifica).
+      const blocks = Array.from({ length: 1501 }, (_unused, index) => ({
         id: `n${index}`,
         type: 'heading',
-        v: 1,
+        v: 2,
         props: { level: 'h2', text: `Nodo ${index}` },
         children: [],
       }));
@@ -329,16 +346,18 @@ describe('PagesController (e2e) — validazione albero blocchi (PLAN-F02 T7)', (
 
       expect(res.status).toBe(400);
       expect(res.body.code).toBe('CONTENT_TREE_TOO_MANY_NODES');
-      expect(res.body.details).toMatchObject({ count: 501, max: 500 });
+      expect(res.body.details).toMatchObject({ count: 1501, max: 1500 });
     });
 
-    it('500 nodi (= MAX_NODES): accettato', async () => {
+    it('1500 nodi (= MAX_NODES, ADR-82): accettato', async () => {
       const admin = await seedAuth(AppUserRoles.Admin, 'nodes2');
 
-      const blocks = Array.from({ length: 500 }, (_unused, index) => ({
+      // Stesso motivo del test "1501 nodi" sopra: `v: 2` con solo `level`/`text`
+      // per non far dipendere questo test dal limite di byte (invariato).
+      const blocks = Array.from({ length: 1500 }, (_unused, index) => ({
         id: `n${index}`,
         type: 'heading',
-        v: 1,
+        v: 2,
         props: { level: 'h2', text: `Nodo ${index}` },
         children: [],
       }));
@@ -362,9 +381,10 @@ describe('PagesController (e2e) — validazione albero blocchi (PLAN-F02 T7)', (
       const guid = crypto.randomBytes(8).toString('hex');
       const translationGroupId = crypto.randomBytes(8).toString('hex');
 
-      // `richText` è a v:1 nel registro di produzione: v:2 è quindi "dal
-      // futuro" (ADR-21 § 1 — conseguenza normale di un rollback di backend
-      // dopo un incremento di v, non un caso teorico).
+      // `richText` è a v:2 nel registro di produzione (ADR-81, round R1
+      // "parità Elementor Pro"): v:3 è quindi "dal futuro" (ADR-21 § 1 —
+      // conseguenza normale di un rollback di backend dopo un incremento di
+      // v, non un caso teorico).
       await db.insert(pageEntity).values({
         guid,
         title: 'Pagina con nodo dal futuro',
@@ -378,7 +398,7 @@ describe('PagesController (e2e) — validazione albero blocchi (PLAN-F02 T7)', (
             {
               id: 'b1',
               type: 'richText',
-              v: 2,
+              v: 3,
               props: { html: 'contenuto dal futuro' },
               children: [],
             },
@@ -397,11 +417,11 @@ describe('PagesController (e2e) — validazione albero blocchi (PLAN-F02 T7)', (
       expect(res.body.contentIssues[0]).toMatchObject({
         path: 'blocks[0]',
         code: 'BLOCK_VERSION_UNSUPPORTED',
-        details: { path: 'blocks[0]', type: 'richText', v: 2, current: 1 },
+        details: { path: 'blocks[0]', type: 'richText', v: 3, current: 2 },
       });
       // Il nodo torna come persistito: props non toccate, v non declassata.
       expect(res.body.draftContent.blocks[0]).toMatchObject({
-        v: 2,
+        v: 3,
         props: { html: 'contenuto dal futuro' },
       });
 

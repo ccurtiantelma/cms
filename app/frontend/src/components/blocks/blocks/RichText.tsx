@@ -21,6 +21,10 @@
  * contenuto identico a quello appena digitato, che sposterebbe il cursore. Un cambio
  * genuino dall'esterno (undo/redo, cambio pagina, HTML ri-sanitizzato dal server) resta
  * scritto normalmente.
+ *
+ * `id` (Canvas Style Bridge, Sub-Task S2.1b): stesso principio di `Heading.tsx` (vedi il suo
+ * commento di testa, paragrafo `id`) — `node.id` strutturale come `data-canvas-style-id`
+ * sull'elemento radice, opzionale.
  */
 import { useLayoutEffect, useRef } from 'react';
 import styles from './RichText.module.css';
@@ -32,6 +36,8 @@ import {
 } from '../style-tokens';
 
 interface RichTextProps {
+  /** Vedi il commento di testa del file, paragrafo `id`. */
+  id?: string;
   html: string;
   styleSpaceBefore?: unknown;
   styleSpaceAfter?: unknown;
@@ -59,6 +65,7 @@ interface RichTextProps {
 }
 
 export default function RichText({
+  id,
   html,
   styleSpaceBefore,
   styleSpaceAfter,
@@ -113,6 +120,7 @@ export default function RichText({
       <div
         className={className}
         data-placeholder={isCanvasPreview ? placeholder : undefined}
+        data-canvas-style-id={id}
         dangerouslySetInnerHTML={{ __html: html }}
       />
     );
@@ -145,6 +153,7 @@ export default function RichText({
       contentEditable
       suppressContentEditableWarning
       data-placeholder={placeholder}
+      data-canvas-style-id={id}
       onFocus={() => document.execCommand('defaultParagraphSeparator', false, 'p')}
       onInput={(event) => onHtmlInput?.(event.currentTarget.innerHTML)}
       onBlur={(event) => onHtmlChange?.(event.currentTarget.innerHTML)}

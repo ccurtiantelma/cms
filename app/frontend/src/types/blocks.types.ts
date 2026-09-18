@@ -30,7 +30,25 @@ export interface BlockPropDescriptor {
     | 'border'
     | 'shadow'
     | 'cssClassName'
-    | 'htmlId';
+    | 'htmlId'
+    | 'colorRef'
+    | 'fontRef'
+    | 'typography'
+    | 'spacing'
+    | 'radius'
+    | 'gradient'
+    | 'position'
+    | 'transform'
+    | 'filter'
+    | 'layout'
+    | 'background'
+    | 'link'
+    | 'animation'
+    | 'motion'
+    | 'attributes'
+    | 'css'
+    | 'hideOn'
+    | 'shapeDivider';
   required: boolean;
   default?: unknown;
   maxLength?: number;
@@ -41,10 +59,40 @@ export interface BlockPropDescriptor {
   responsive?: boolean;
   /** Solo `kind: 'unitValue'` (ADR-38 § 2): elenco chiuso di unità ammesse per questa prop. */
   units?: readonly ('px' | '%' | 'em' | 'rem' | 'vw' | 'vh')[];
-  /** Solo `kind: 'unitValue'` (ADR-38 § 2): intervallo numerico ammesso, dichiarato dalla prop. */
+  /** Solo `kind: 'unitValue'`/`'spacing'`: intervallo numerico ammesso, dichiarato dalla prop. */
   min?: number;
   max?: number;
+  /** Modificatore d'envelope stateful (ADR-75 § "Decisione" punto 1): `{ normal, hover?, focus?, active? }` invece di uno scalare. */
+  stateful?: boolean;
+  /** Solo `kind: 'colorRef'` (SPEC-PROPKIND-V2-DETAILS.md § 1): ammette `#RRGGBBAA` oltre a `#RGB`/`#RRGGBB`. */
+  allowAlpha?: boolean;
+  /** Solo `kind: 'colorRef'` (Addendum S1.2, SPEC-PROPKIND-V2-DETAILS.md): proprietà CSS di destinazione, letta da `toCss()`. */
+  cssProperty?: 'color' | 'background-color' | 'border-color' | 'outline-color';
+  /** Solo `kind: 'spacing'` (SPEC-PROPKIND-V2-DETAILS.md § 4 punto 1): `min` può essere negativo. */
+  allowNegative?: boolean;
+  /** Solo `kind: 'spacing'` (Addendum S1.2, SPEC-PROPKIND-V2-DETAILS.md): lato CSS di destinazione, letto da `toCss()`. */
+  target?: 'padding' | 'margin';
 }
+
+/** Nomi di breakpoint ammessi per una prop `responsive` (ADR-76 § "Decisione" punto 1/2), dal più largo al più stretto. */
+export const RESPONSIVE_BREAKPOINTS = [
+  'default',
+  'widescreen',
+  'laptop',
+  'tabletExtra',
+  'tablet',
+  'mobileExtra',
+  'mobile',
+] as const;
+
+/** Uno dei 7 nomi di {@link RESPONSIVE_BREAKPOINTS}. */
+export type ResponsiveBreakpointName = (typeof RESPONSIVE_BREAKPOINTS)[number];
+
+/** Elenco chiuso a 4 stati (ADR-75 § "Decisione" punto 3), ordine fisso normal → hover → focus → active. */
+export const PROP_STATES = ['normal', 'hover', 'focus', 'active'] as const;
+
+/** Uno dei 4 nomi di {@link PROP_STATES}. */
+export type PropStateName = (typeof PROP_STATES)[number];
 
 /** Metadati d'editor di una singola prop (ADR-30 § 1), opachi alla validazione. */
 export interface BlockEditorPropMeta {
@@ -93,12 +141,13 @@ export const ROOT_ALLOWED = [
   'tabs',
   'carousel',
   'modalTrigger',
+  'gallery',
 ] as const;
 
 /** Limiti dell'envelope (SPEC-F02-blocchi.md § 1): per avvisare prima del 400, non per applicarli. */
 export const CONTENT_TREE_LIMITS = {
-  maxDepth: 5,
-  maxNodes: 500,
+  maxDepth: 8,
+  maxNodes: 1500,
   maxPayloadBytes: 524288,
 } as const;
 
@@ -107,7 +156,7 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
   {
     type: 'section',
     v: 1,
-    enabled: true,
+    enabled: false,
     childrenAllow: [
       'heading',
       'richText',
@@ -120,6 +169,7 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
       'tabs',
       'carousel',
       'modalTrigger',
+      'gallery',
     ],
     props: [
       {
@@ -651,7 +701,7 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
   },
   {
     type: 'heading',
-    v: 1,
+    v: 2,
     enabled: true,
     childrenAllow: [],
     props: [
@@ -688,44 +738,19 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         responsive: true,
       },
       {
-        name: 'styleTextColor',
-        kind: 'enum',
+        name: 'color',
+        kind: 'colorRef',
         required: false,
-        default: {
-          default: 'default',
-        },
-        values: ['default', 'muted', 'accent', 'inverse'],
         responsive: true,
+        stateful: true,
+        cssProperty: 'color',
       },
       {
-        name: 'styleFontSize',
-        kind: 'enum',
+        name: 'typography',
+        kind: 'typography',
         required: false,
-        default: {
-          default: 'md',
-        },
-        values: ['sm', 'md', 'lg', 'xl'],
         responsive: true,
-      },
-      {
-        name: 'styleFontWeight',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: 'regular',
-        },
-        values: ['regular', 'medium', 'bold'],
-        responsive: true,
-      },
-      {
-        name: 'styleFontFamily',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: 'default',
-        },
-        values: ['default', 'inter', 'roboto', 'playfair', 'montserrat', 'monospace'],
-        responsive: true,
+        stateful: true,
       },
       {
         name: 'styleLayer',
@@ -735,35 +760,9 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         values: ['base', 'raised', 'overlay', 'top'],
       },
       {
-        name: 'styleHideDesktop',
-        kind: 'boolean',
+        name: 'hideOn',
+        kind: 'hideOn',
         required: false,
-        default: false,
-      },
-      {
-        name: 'styleHideTablet',
-        kind: 'boolean',
-        required: false,
-        default: false,
-      },
-      {
-        name: 'styleHideMobile',
-        kind: 'boolean',
-        required: false,
-        default: false,
-      },
-      {
-        name: 'styleTextColorCustom',
-        kind: 'color',
-        required: false,
-      },
-      {
-        name: 'styleFontSizeCustom',
-        kind: 'unitValue',
-        required: false,
-        units: ['px', '%', 'em', 'rem'],
-        min: 1,
-        max: 200,
       },
       {
         name: 'styleBorder',
@@ -792,36 +791,14 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         values: ['left', 'center', 'right', 'justify'],
       },
       {
-        name: 'styleMarginTop',
-        kind: 'unitValue',
+        name: 'margin',
+        kind: 'spacing',
         required: false,
-        units: ['px', '%'],
+        responsive: true,
+        units: ['px', '%', 'em', 'rem'],
         min: 0,
         max: 500,
-      },
-      {
-        name: 'styleMarginRight',
-        kind: 'unitValue',
-        required: false,
-        units: ['px', '%'],
-        min: 0,
-        max: 500,
-      },
-      {
-        name: 'styleMarginBottom',
-        kind: 'unitValue',
-        required: false,
-        units: ['px', '%'],
-        min: 0,
-        max: 500,
-      },
-      {
-        name: 'styleMarginLeft',
-        kind: 'unitValue',
-        required: false,
-        units: ['px', '%'],
-        min: 0,
-        max: 500,
+        target: 'margin',
       },
     ],
     meta: {
@@ -847,57 +824,25 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           tab: 'style',
           order: 4,
         },
-        styleTextColor: {
+        color: {
           label: 'Colore testo',
           tab: 'style',
           order: 5,
         },
-        styleFontSize: {
-          label: 'Dimensione testo',
+        typography: {
+          label: 'Tipografia',
           tab: 'style',
           order: 6,
-        },
-        styleFontWeight: {
-          label: 'Spessore testo',
-          tab: 'style',
-          order: 7,
-        },
-        styleFontFamily: {
-          label: 'Famiglia Font',
-          tab: 'style',
-          order: 8,
         },
         styleLayer: {
           label: 'Livello di sovrapposizione',
           tab: 'advanced',
           order: 9,
         },
-        styleHideDesktop: {
-          label: 'Nascondi su Desktop',
+        hideOn: {
+          label: 'Nascondi su breakpoint',
           tab: 'advanced',
           order: 10,
-        },
-        styleHideTablet: {
-          label: 'Nascondi su Tablet',
-          tab: 'advanced',
-          order: 11,
-        },
-        styleHideMobile: {
-          label: 'Nascondi su Mobile',
-          tab: 'advanced',
-          order: 12,
-        },
-        styleTextColorCustom: {
-          label: 'Colore testo personalizzato',
-          tab: 'style',
-          order: 13,
-          help: 'Colore libero (esadecimale). Ha priorità su "Colore testo" se impostato.',
-        },
-        styleFontSizeCustom: {
-          label: 'Dimensione testo personalizzata',
-          tab: 'style',
-          order: 14,
-          help: 'Valore libero con unità. Ha priorità su "Dimensione testo" se impostato.',
         },
         styleBorder: {
           label: 'Bordo',
@@ -926,32 +871,17 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           tab: 'style',
           order: 19,
         },
-        styleMarginTop: {
-          label: 'Margine superiore',
+        margin: {
+          label: 'Margine',
           tab: 'style',
           order: 20,
-        },
-        styleMarginRight: {
-          label: 'Margine destro',
-          tab: 'style',
-          order: 21,
-        },
-        styleMarginBottom: {
-          label: 'Margine inferiore',
-          tab: 'style',
-          order: 22,
-        },
-        styleMarginLeft: {
-          label: 'Margine sinistro',
-          tab: 'style',
-          order: 23,
         },
       },
     },
   },
   {
     type: 'richText',
-    v: 1,
+    v: 2,
     enabled: true,
     childrenAllow: [],
     props: [
@@ -983,44 +913,19 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         responsive: true,
       },
       {
-        name: 'styleTextColor',
-        kind: 'enum',
+        name: 'color',
+        kind: 'colorRef',
         required: false,
-        default: {
-          default: 'default',
-        },
-        values: ['default', 'muted', 'accent', 'inverse'],
         responsive: true,
+        stateful: true,
+        cssProperty: 'color',
       },
       {
-        name: 'styleFontSize',
-        kind: 'enum',
+        name: 'typography',
+        kind: 'typography',
         required: false,
-        default: {
-          default: 'md',
-        },
-        values: ['sm', 'md', 'lg', 'xl'],
         responsive: true,
-      },
-      {
-        name: 'styleFontWeight',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: 'regular',
-        },
-        values: ['regular', 'medium', 'bold'],
-        responsive: true,
-      },
-      {
-        name: 'styleFontFamily',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: 'default',
-        },
-        values: ['default', 'inter', 'roboto', 'playfair', 'montserrat', 'monospace'],
-        responsive: true,
+        stateful: true,
       },
       {
         name: 'styleLayer',
@@ -1030,55 +935,9 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         values: ['base', 'raised', 'overlay', 'top'],
       },
       {
-        name: 'styleHideDesktop',
-        kind: 'boolean',
+        name: 'hideOn',
+        kind: 'hideOn',
         required: false,
-        default: false,
-      },
-      {
-        name: 'styleHideTablet',
-        kind: 'boolean',
-        required: false,
-        default: false,
-      },
-      {
-        name: 'styleHideMobile',
-        kind: 'boolean',
-        required: false,
-        default: false,
-      },
-      {
-        name: 'styleTextColorCustom',
-        kind: 'color',
-        required: false,
-      },
-      {
-        name: 'styleBackgroundColor',
-        kind: 'color',
-        required: false,
-      },
-      {
-        name: 'styleColor',
-        kind: 'color',
-        required: false,
-      },
-      {
-        name: 'backgroundColor',
-        kind: 'color',
-        required: false,
-      },
-      {
-        name: 'color',
-        kind: 'color',
-        required: false,
-      },
-      {
-        name: 'styleFontSizeCustom',
-        kind: 'unitValue',
-        required: false,
-        units: ['px', '%', 'em', 'rem'],
-        min: 1,
-        max: 200,
       },
       {
         name: 'styleBorder',
@@ -1101,36 +960,14 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         required: false,
       },
       {
-        name: 'styleMarginTop',
-        kind: 'unitValue',
+        name: 'margin',
+        kind: 'spacing',
         required: false,
-        units: ['px', '%'],
+        responsive: true,
+        units: ['px', '%', 'em', 'rem'],
         min: 0,
         max: 500,
-      },
-      {
-        name: 'styleMarginRight',
-        kind: 'unitValue',
-        required: false,
-        units: ['px', '%'],
-        min: 0,
-        max: 500,
-      },
-      {
-        name: 'styleMarginBottom',
-        kind: 'unitValue',
-        required: false,
-        units: ['px', '%'],
-        min: 0,
-        max: 500,
-      },
-      {
-        name: 'styleMarginLeft',
-        kind: 'unitValue',
-        required: false,
-        units: ['px', '%'],
-        min: 0,
-        max: 500,
+        target: 'margin',
       },
     ],
     meta: {
@@ -1152,77 +989,25 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           tab: 'style',
           order: 3,
         },
-        styleTextColor: {
+        color: {
           label: 'Colore testo',
           tab: 'style',
           order: 4,
         },
-        styleFontSize: {
-          label: 'Dimensione testo',
+        typography: {
+          label: 'Tipografia',
           tab: 'style',
           order: 5,
-        },
-        styleFontWeight: {
-          label: 'Spessore testo',
-          tab: 'style',
-          order: 6,
-        },
-        styleFontFamily: {
-          label: 'Famiglia Font',
-          tab: 'style',
-          order: 8,
         },
         styleLayer: {
           label: 'Livello di sovrapposizione',
           tab: 'advanced',
           order: 9,
         },
-        styleHideDesktop: {
-          label: 'Nascondi su Desktop',
+        hideOn: {
+          label: 'Nascondi su breakpoint',
           tab: 'advanced',
           order: 10,
-        },
-        styleHideTablet: {
-          label: 'Nascondi su Tablet',
-          tab: 'advanced',
-          order: 11,
-        },
-        styleHideMobile: {
-          label: 'Nascondi su Mobile',
-          tab: 'advanced',
-          order: 12,
-        },
-        styleTextColorCustom: {
-          label: 'Colore testo personalizzato',
-          tab: 'style',
-          order: 13,
-          help: 'Colore libero (esadecimale). Ha priorità su "Colore testo" se impostato.',
-        },
-        styleBackgroundColor: {
-          label: 'Colore di sfondo',
-          tab: 'style',
-          order: 19,
-        },
-        styleColor: {
-          label: 'Colore testo',
-          tab: 'style',
-          order: 20,
-        },
-        backgroundColor: {
-          label: 'Colore di sfondo (fallback)',
-          tab: 'style',
-          order: 21,
-        },
-        color: {
-          label: 'Colore testo (fallback)',
-          tab: 'style',
-          order: 22,
-        },
-        styleFontSizeCustom: {
-          label: 'Dimensione testo personalizzata',
-          tab: 'style',
-          order: 14,
-          help: 'Valore libero con unità. Ha priorità su "Dimensione testo" se impostato.',
         },
         styleBorder: {
           label: 'Bordo',
@@ -1246,32 +1031,17 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           order: 18,
           help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
         },
-        styleMarginTop: {
-          label: 'Margine superiore',
+        margin: {
+          label: 'Margine',
           tab: 'style',
           order: 19,
-        },
-        styleMarginRight: {
-          label: 'Margine destro',
-          tab: 'style',
-          order: 20,
-        },
-        styleMarginBottom: {
-          label: 'Margine inferiore',
-          tab: 'style',
-          order: 21,
-        },
-        styleMarginLeft: {
-          label: 'Margine sinistro',
-          tab: 'style',
-          order: 22,
         },
       },
     },
   },
   {
     type: 'image',
-    v: 1,
+    v: 2,
     enabled: true,
     childrenAllow: [],
     props: [
@@ -1315,22 +1085,9 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         values: ['base', 'raised', 'overlay', 'top'],
       },
       {
-        name: 'styleHideDesktop',
-        kind: 'boolean',
+        name: 'hideOn',
+        kind: 'hideOn',
         required: false,
-        default: false,
-      },
-      {
-        name: 'styleHideTablet',
-        kind: 'boolean',
-        required: false,
-        default: false,
-      },
-      {
-        name: 'styleHideMobile',
-        kind: 'boolean',
-        required: false,
-        default: false,
       },
       {
         name: 'styleBorder',
@@ -1390,36 +1147,14 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         required: false,
       },
       {
-        name: 'styleMarginTop',
-        kind: 'unitValue',
+        name: 'margin',
+        kind: 'spacing',
         required: false,
-        units: ['px', '%'],
+        responsive: true,
+        units: ['px', '%', 'em', 'rem'],
         min: 0,
         max: 500,
-      },
-      {
-        name: 'styleMarginRight',
-        kind: 'unitValue',
-        required: false,
-        units: ['px', '%'],
-        min: 0,
-        max: 500,
-      },
-      {
-        name: 'styleMarginBottom',
-        kind: 'unitValue',
-        required: false,
-        units: ['px', '%'],
-        min: 0,
-        max: 500,
-      },
-      {
-        name: 'styleMarginLeft',
-        kind: 'unitValue',
-        required: false,
-        units: ['px', '%'],
-        min: 0,
-        max: 500,
+        target: 'margin',
       },
     ],
     meta: {
@@ -1450,20 +1185,10 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           tab: 'advanced',
           order: 5,
         },
-        styleHideDesktop: {
-          label: 'Nascondi su Desktop',
+        hideOn: {
+          label: 'Nascondi su breakpoint',
           tab: 'advanced',
           order: 6,
-        },
-        styleHideTablet: {
-          label: 'Nascondi su Tablet',
-          tab: 'advanced',
-          order: 7,
-        },
-        styleHideMobile: {
-          label: 'Nascondi su Mobile',
-          tab: 'advanced',
-          order: 8,
         },
         styleBorder: {
           label: 'Bordo',
@@ -1512,32 +1237,17 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           order: 17,
           help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
         },
-        styleMarginTop: {
-          label: 'Margine superiore',
+        margin: {
+          label: 'Margine',
           tab: 'style',
           order: 18,
-        },
-        styleMarginRight: {
-          label: 'Margine destro',
-          tab: 'style',
-          order: 19,
-        },
-        styleMarginBottom: {
-          label: 'Margine inferiore',
-          tab: 'style',
-          order: 20,
-        },
-        styleMarginLeft: {
-          label: 'Margine sinistro',
-          tab: 'style',
-          order: 21,
         },
       },
     },
   },
   {
     type: 'button',
-    v: 1,
+    v: 2,
     enabled: true,
     childrenAllow: [],
     props: [
@@ -1548,10 +1258,9 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         maxLength: 80,
       },
       {
-        name: 'href',
-        kind: 'url',
+        name: 'link',
+        kind: 'link',
         required: true,
-        maxLength: 2048,
       },
       {
         name: 'styleSpaceBefore',
@@ -1574,64 +1283,19 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         responsive: true,
       },
       {
-        name: 'styleTextColor',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: 'default',
-        },
-        values: ['default', 'muted', 'accent', 'inverse'],
-        responsive: true,
-      },
-      {
-        name: 'styleBackgroundColor',
-        kind: 'color',
-        required: false,
-      },
-      {
-        name: 'styleColor',
-        kind: 'color',
-        required: false,
-      },
-      {
-        name: 'backgroundColor',
-        kind: 'color',
-        required: false,
-      },
-      {
         name: 'color',
-        kind: 'color',
+        kind: 'colorRef',
         required: false,
+        responsive: true,
+        stateful: true,
+        cssProperty: 'color',
       },
       {
-        name: 'styleFontSize',
-        kind: 'enum',
+        name: 'typography',
+        kind: 'typography',
         required: false,
-        default: {
-          default: 'md',
-        },
-        values: ['sm', 'md', 'lg', 'xl'],
         responsive: true,
-      },
-      {
-        name: 'styleFontWeight',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: 'regular',
-        },
-        values: ['regular', 'medium', 'bold'],
-        responsive: true,
-      },
-      {
-        name: 'styleFontFamily',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: 'default',
-        },
-        values: ['default', 'inter', 'roboto', 'playfair', 'montserrat', 'monospace'],
-        responsive: true,
+        stateful: true,
       },
       {
         name: 'styleLayer',
@@ -1641,54 +1305,19 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         values: ['base', 'raised', 'overlay', 'top'],
       },
       {
-        name: 'styleHideDesktop',
-        kind: 'boolean',
+        name: 'hideOn',
+        kind: 'hideOn',
         required: false,
-        default: false,
       },
       {
-        name: 'styleHideTablet',
-        kind: 'boolean',
+        name: 'margin',
+        kind: 'spacing',
         required: false,
-        default: false,
-      },
-      {
-        name: 'styleHideMobile',
-        kind: 'boolean',
-        required: false,
-        default: false,
-      },
-      {
-        name: 'styleMarginTop',
-        kind: 'unitValue',
-        required: false,
-        units: ['px', '%'],
+        responsive: true,
+        units: ['px', '%', 'em', 'rem'],
         min: 0,
         max: 500,
-      },
-      {
-        name: 'styleMarginRight',
-        kind: 'unitValue',
-        required: false,
-        units: ['px', '%'],
-        min: 0,
-        max: 500,
-      },
-      {
-        name: 'styleMarginBottom',
-        kind: 'unitValue',
-        required: false,
-        units: ['px', '%'],
-        min: 0,
-        max: 500,
-      },
-      {
-        name: 'styleMarginLeft',
-        kind: 'unitValue',
-        required: false,
-        units: ['px', '%'],
-        min: 0,
-        max: 500,
+        target: 'margin',
       },
       {
         name: 'customCssClass',
@@ -1710,7 +1339,7 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           label: 'Etichetta',
           order: 1,
         },
-        href: {
+        link: {
           label: 'Link',
           order: 2,
         },
@@ -1724,65 +1353,30 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           tab: 'style',
           order: 4,
         },
-        styleTextColor: {
+        color: {
           label: 'Colore testo',
           tab: 'style',
           order: 5,
         },
-        styleBackgroundColor: {
-          label: 'Colore di sfondo',
-          tab: 'style',
-          order: 15,
-        },
-        styleColor: {
-          label: 'Colore testo personalizzato',
-          tab: 'style',
-          order: 16,
-        },
-        backgroundColor: {
-          label: 'Colore di sfondo (fallback)',
-          tab: 'style',
-          order: 17,
-        },
-        color: {
-          label: 'Colore testo (fallback)',
-          tab: 'style',
-          order: 18,
-        },
-        styleFontSize: {
-          label: 'Dimensione testo',
+        typography: {
+          label: 'Tipografia',
           tab: 'style',
           order: 6,
-        },
-        styleFontWeight: {
-          label: 'Spessore testo',
-          tab: 'style',
-          order: 7,
-        },
-        styleFontFamily: {
-          label: 'Famiglia Font',
-          tab: 'style',
-          order: 8,
         },
         styleLayer: {
           label: 'Livello di sovrapposizione',
           tab: 'advanced',
           order: 9,
         },
-        styleHideDesktop: {
-          label: 'Nascondi su Desktop',
+        hideOn: {
+          label: 'Nascondi su breakpoint',
           tab: 'advanced',
           order: 10,
         },
-        styleHideTablet: {
-          label: 'Nascondi su Tablet',
-          tab: 'advanced',
-          order: 11,
-        },
-        styleHideMobile: {
-          label: 'Nascondi su Mobile',
-          tab: 'advanced',
-          order: 12,
+        margin: {
+          label: 'Margine',
+          tab: 'style',
+          order: 15,
         },
         customCssClass: {
           label: 'Classe CSS personalizzata',
@@ -1796,209 +1390,37 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           order: 14,
           help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
         },
-        styleMarginTop: {
-          label: 'Margine superiore',
-          tab: 'style',
-          order: 15,
-        },
-        styleMarginRight: {
-          label: 'Margine destro',
-          tab: 'style',
-          order: 16,
-        },
-        styleMarginBottom: {
-          label: 'Margine inferiore',
-          tab: 'style',
-          order: 17,
-        },
-        styleMarginLeft: {
-          label: 'Margine sinistro',
-          tab: 'style',
-          order: 18,
-        },
       },
     },
   },
   {
     type: 'container',
-    v: 1,
+    v: 2,
     enabled: true,
     childrenAllow: '*',
     props: [
       {
-        name: 'display',
+        name: 'tag',
         kind: 'enum',
         required: false,
-        default: 'flex',
-        values: ['flex'],
+        default: 'div',
+        values: ['div', 'section', 'header', 'footer', 'article', 'aside', 'nav', 'main'],
       },
       {
-        name: 'flexDirection',
-        kind: 'enum',
+        name: 'layout',
+        kind: 'layout',
         required: false,
-        default: {
-          default: 'row',
-        },
-        values: ['row', 'row-reverse', 'column', 'column-reverse'],
         responsive: true,
       },
       {
-        name: 'justifyContent',
+        name: 'contentWidth',
         kind: 'enum',
         required: false,
-        default: {
-          default: 'flex-start',
-        },
-        values: [
-          'flex-start',
-          'flex-end',
-          'center',
-          'space-between',
-          'space-around',
-          'space-evenly',
-        ],
-        responsive: true,
+        default: 'boxed',
+        values: ['boxed', 'full'],
       },
       {
-        name: 'alignItems',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: 'stretch',
-        },
-        values: ['stretch', 'flex-start', 'center', 'flex-end'],
-        responsive: true,
-      },
-      {
-        name: 'wrap',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: 'nowrap',
-        },
-        values: ['nowrap', 'wrap'],
-        responsive: true,
-      },
-      {
-        name: 'gap',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: 'none',
-        },
-        values: ['none', 'sm', 'md', 'lg'],
-        responsive: true,
-      },
-      {
-        name: 'styleFlexBasis',
-        kind: 'unitValue',
-        required: false,
-        units: ['%'],
-        min: 0,
-        max: 100,
-      },
-      {
-        name: 'styleBackgroundColor',
-        kind: 'color',
-        required: false,
-      },
-      {
-        name: 'styleColor',
-        kind: 'color',
-        required: false,
-      },
-      {
-        name: 'backgroundColor',
-        kind: 'color',
-        required: false,
-      },
-      {
-        name: 'color',
-        kind: 'color',
-        required: false,
-      },
-      {
-        name: 'stylePaddingTop',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: '0',
-        },
-        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
-        responsive: true,
-      },
-      {
-        name: 'stylePaddingRight',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: '0',
-        },
-        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
-        responsive: true,
-      },
-      {
-        name: 'stylePaddingBottom',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: '0',
-        },
-        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
-        responsive: true,
-      },
-      {
-        name: 'stylePaddingLeft',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: '0',
-        },
-        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
-        responsive: true,
-      },
-      {
-        name: 'styleMarginTop',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: '0',
-        },
-        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
-        responsive: true,
-      },
-      {
-        name: 'styleMarginRight',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: '0',
-        },
-        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
-        responsive: true,
-      },
-      {
-        name: 'styleMarginBottom',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: '0',
-        },
-        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
-        responsive: true,
-      },
-      {
-        name: 'styleMarginLeft',
-        kind: 'enum',
-        required: false,
-        default: {
-          default: '0',
-        },
-        values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
-        responsive: true,
-      },
-      {
-        name: 'styleWidth',
+        name: 'boxedWidth',
         kind: 'unitValue',
         required: false,
         units: ['px', '%'],
@@ -2006,21 +1428,139 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
         max: 4000,
       },
       {
-        name: 'styleHeight',
+        name: 'minHeight',
         kind: 'unitValue',
         required: false,
-        units: ['px', '%'],
+        units: ['px', 'vh'],
         min: 0,
-        max: 4000,
+        max: 2000,
       },
       {
-        name: 'customCssClass',
+        name: 'overflow',
+        kind: 'enum',
+        required: false,
+        default: 'visible',
+        values: ['visible', 'hidden', 'auto'],
+      },
+      {
+        name: 'background',
+        kind: 'background',
+        required: false,
+        stateful: true,
+      },
+      {
+        name: 'border',
+        kind: 'border',
+        required: false,
+        stateful: true,
+      },
+      {
+        name: 'radius',
+        kind: 'radius',
+        required: false,
+      },
+      {
+        name: 'shadow',
+        kind: 'shadow',
+        required: false,
+        stateful: true,
+      },
+      {
+        name: 'padding',
+        kind: 'spacing',
+        required: false,
+        responsive: true,
+        units: ['px', '%', 'em', 'rem'],
+        min: 0,
+        max: 500,
+        target: 'padding',
+      },
+      {
+        name: 'margin',
+        kind: 'spacing',
+        required: false,
+        responsive: true,
+        units: ['px', '%', 'em', 'rem'],
+        min: 0,
+        max: 500,
+        target: 'margin',
+      },
+      {
+        name: 'position',
+        kind: 'position',
+        required: false,
+        responsive: true,
+      },
+      {
+        name: 'transform',
+        kind: 'transform',
+        required: false,
+        responsive: true,
+        stateful: true,
+      },
+      {
+        name: 'opacity',
+        kind: 'number',
+        required: false,
+        min: 0,
+        max: 1,
+      },
+      {
+        name: 'filter',
+        kind: 'filter',
+        required: false,
+        responsive: true,
+        stateful: true,
+      },
+      {
+        name: 'link',
+        kind: 'link',
+        required: false,
+      },
+      {
+        name: 'animation',
+        kind: 'animation',
+        required: false,
+      },
+      {
+        name: 'motion',
+        kind: 'motion',
+        required: false,
+      },
+      {
+        name: 'shapeDividerTop',
+        kind: 'shapeDivider',
+        required: false,
+      },
+      {
+        name: 'shapeDividerBottom',
+        kind: 'shapeDivider',
+        required: false,
+      },
+      {
+        name: 'htmlId',
+        kind: 'htmlId',
+        required: false,
+      },
+      {
+        name: 'cssClass',
         kind: 'cssClassName',
         required: false,
       },
       {
-        name: 'customElementId',
-        kind: 'htmlId',
+        name: 'attributes',
+        kind: 'attributes',
+        required: false,
+      },
+      {
+        name: 'css',
+        kind: 'css',
+        required: false,
+        maxLength: 5000,
+      },
+      {
+        name: 'hideOn',
+        kind: 'hideOn',
         required: false,
       },
     ],
@@ -2029,122 +1569,138 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
       category: 'layout',
       icon: 'box-align-top',
       props: {
-        display: {
-          label: 'Layout',
-          tab: 'style',
+        tag: {
+          label: 'Tag HTML',
+          tab: 'advanced',
           order: 1,
         },
-        flexDirection: {
-          label: 'Direzione',
+        layout: {
+          label: 'Layout (Flex/Grid)',
           tab: 'style',
           order: 2,
         },
-        justifyContent: {
-          label: 'Allineamento orizzontale',
+        contentWidth: {
+          label: 'Larghezza contenuto',
           tab: 'style',
           order: 3,
         },
-        alignItems: {
-          label: 'Allineamento verticale',
+        boxedWidth: {
+          label: 'Larghezza massima',
           tab: 'style',
           order: 4,
         },
-        wrap: {
-          label: 'A capo',
+        minHeight: {
+          label: 'Altezza minima',
           tab: 'style',
           order: 5,
         },
-        gap: {
-          label: 'Spaziatura',
+        overflow: {
+          label: 'Overflow',
           tab: 'style',
           order: 6,
         },
-        styleFlexBasis: {
-          label: 'Larghezza',
+        background: {
+          label: 'Sfondo',
           tab: 'style',
           order: 7,
         },
-        styleBackgroundColor: {
-          label: 'Colore di sfondo',
-          tab: 'style',
-          order: 12,
-        },
-        styleColor: {
-          label: 'Colore testo',
-          tab: 'style',
-          order: 13,
-        },
-        backgroundColor: {
-          label: 'Colore di sfondo (fallback)',
-          tab: 'style',
-          order: 14,
-        },
-        color: {
-          label: 'Colore testo (fallback)',
-          tab: 'style',
-          order: 15,
-        },
-        stylePaddingTop: {
-          label: 'Padding superiore',
+        border: {
+          label: 'Bordo',
           tab: 'style',
           order: 8,
         },
-        stylePaddingRight: {
-          label: 'Padding destro',
+        radius: {
+          label: 'Raggio angoli',
           tab: 'style',
           order: 9,
         },
-        stylePaddingBottom: {
-          label: 'Padding inferiore',
+        shadow: {
+          label: 'Ombra',
           tab: 'style',
           order: 10,
         },
-        stylePaddingLeft: {
-          label: 'Padding sinistro',
+        padding: {
+          label: 'Padding',
           tab: 'style',
           order: 11,
         },
-        styleMarginTop: {
-          label: 'Margine superiore',
+        margin: {
+          label: 'Margine',
           tab: 'style',
           order: 12,
         },
-        styleMarginRight: {
-          label: 'Margine destro',
-          tab: 'style',
+        position: {
+          label: 'Posizionamento',
+          tab: 'advanced',
           order: 13,
         },
-        styleMarginBottom: {
-          label: 'Margine inferiore',
-          tab: 'style',
+        transform: {
+          label: 'Trasformazione',
+          tab: 'advanced',
           order: 14,
         },
-        styleMarginLeft: {
-          label: 'Margine sinistro',
+        opacity: {
+          label: 'Opacità',
           tab: 'style',
           order: 15,
         },
-        styleWidth: {
-          label: 'Larghezza personalizzata',
+        filter: {
+          label: 'Filtro',
           tab: 'style',
+          order: 16,
+        },
+        link: {
+          label: 'Link',
+          tab: 'content',
+          order: 17,
+        },
+        animation: {
+          label: 'Animazione',
+          tab: 'advanced',
           order: 18,
         },
-        styleHeight: {
-          label: 'Altezza personalizzata',
-          tab: 'style',
+        motion: {
+          label: 'Effetti di scorrimento',
+          tab: 'advanced',
           order: 19,
         },
-        customCssClass: {
-          label: 'Classe CSS personalizzata',
-          tab: 'advanced',
-          order: 16,
-          help: 'Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore.',
+        shapeDividerTop: {
+          label: 'Divisore forma (superiore)',
+          tab: 'style',
+          order: 20,
         },
-        customElementId: {
+        shapeDividerBottom: {
+          label: 'Divisore forma (inferiore)',
+          tab: 'style',
+          order: 21,
+        },
+        htmlId: {
           label: 'ID elemento personalizzato',
           tab: 'advanced',
-          order: 17,
+          order: 22,
           help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
+        },
+        cssClass: {
+          label: 'Classe CSS personalizzata',
+          tab: 'advanced',
+          order: 23,
+          help: 'Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore.',
+        },
+        attributes: {
+          label: 'Attributi HTML personalizzati',
+          tab: 'advanced',
+          order: 24,
+        },
+        css: {
+          label: 'CSS personalizzato',
+          tab: 'advanced',
+          order: 25,
+          help: 'Sanitizzazione avanzata rimandata ad ADR-78 (non ancora firmata).',
+        },
+        hideOn: {
+          label: 'Nascondi su breakpoint',
+          tab: 'advanced',
+          order: 26,
         },
       },
     },
@@ -2636,6 +2192,89 @@ export const BLOCK_TYPES: readonly BlockTypeDescriptor[] = [
           label: 'Animazione',
           order: 2,
           help: 'Solo presentazione: nessun JavaScript, tecnica CSS :target.',
+        },
+      },
+    },
+  },
+  {
+    type: 'gallery',
+    v: 1,
+    enabled: true,
+    childrenAllow: ['image'],
+    props: [
+      {
+        name: 'layout',
+        kind: 'layout',
+        required: false,
+        responsive: true,
+      },
+      {
+        name: 'galleryMode',
+        kind: 'enum',
+        required: false,
+        default: 'grid',
+        values: ['grid', 'masonry', 'metro'],
+      },
+      {
+        name: 'lightbox',
+        kind: 'boolean',
+        required: false,
+        default: false,
+      },
+      {
+        name: 'hideOn',
+        kind: 'hideOn',
+        required: false,
+      },
+      {
+        name: 'customCssClass',
+        kind: 'cssClassName',
+        required: false,
+      },
+      {
+        name: 'customElementId',
+        kind: 'htmlId',
+        required: false,
+      },
+    ],
+    meta: {
+      label: 'Galleria',
+      category: 'media',
+      icon: 'layout-grid',
+      props: {
+        layout: {
+          label: 'Layout (colonne/spaziatura)',
+          tab: 'style',
+          order: 1,
+        },
+        galleryMode: {
+          label: 'Modalità',
+          tab: 'style',
+          order: 2,
+          help: 'Algoritmo di disposizione sopra la griglia base: grid (celle uniformi), masonry, metro.',
+        },
+        lightbox: {
+          label: 'Lightbox',
+          tab: 'advanced',
+          order: 3,
+          help: 'Solo persistito in questo round: nessun runtime JS lo onora ancora (R5, PLAN-parita-elementor-pro.md § R4/R5).',
+        },
+        hideOn: {
+          label: 'Nascondi su breakpoint',
+          tab: 'advanced',
+          order: 4,
+        },
+        customCssClass: {
+          label: 'Classe CSS personalizzata',
+          tab: 'advanced',
+          order: 5,
+          help: 'Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore.',
+        },
+        customElementId: {
+          label: 'ID elemento personalizzato',
+          tab: 'advanced',
+          order: 6,
+          help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
         },
       },
     },

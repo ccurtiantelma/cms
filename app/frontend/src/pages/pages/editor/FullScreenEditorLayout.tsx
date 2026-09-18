@@ -21,10 +21,12 @@
  * dell'editor a blocchi ha bisogno di un controllo pixel-preciso sulle tre colonne che un
  * `Modal` non offre.
  *
- * **Viewport switcher e pannello struttura** leggono/scrivono `activeViewport` e
+ * **Breakpoint switcher e pannello struttura** leggono/scrivono `activeBreakpoint` e
  * `isStructurePanelOpen` di `useBlockEditorStore` direttamente (non via props): sono stato di
  * chrome dell'editor, non stato della Pagina — lo stesso motivo per cui undo/redo restano
  * qui e non in `BlockEditorPanel` (CLAUDE.md — selettori Zustand mirati, mai l'intero store).
+ * `setActiveBreakpoint` deriva anche `activeViewport` (3 vie, solo il Property Inspector) —
+ * vedi `viewportForBreakpoint` in `useBlockEditorStore.ts`.
  *
  * **Ospita il `DndContext` di dnd-kit** (PLAN-F04c-editor-maturo.md T7, esteso alla sidebar
  * Widgets): non vive più in `EditorCanvas`, perché ora una sorgente di drag (`WidgetPalette`,
@@ -50,13 +52,12 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from 'react';
 import { ActionIcon, Paper, Text } from '@mantine/core';
-import {
-  IconChevronLeft,
-  IconChevronRight,
-} from '@tabler/icons-react';
+import { useElementSize, useMergedRef } from '@mantine/hooks';
+import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
 import {
   DndContext,
   DragOverlay,
@@ -71,16 +72,17 @@ import {
   type MeasuringConfiguration,
 } from '@dnd-kit/core';
 import {
-  useActiveViewport,
+  useActiveBreakpoint,
+  useActiveBreakpoints,
   useBlockEditorStore,
   useCanRedo,
   useCanUndo,
   useIsPreviewMode,
   useIsSidebarOpen,
   useIsStructurePanelOpen,
-  type EditorViewport,
 } from '../../../hooks/useBlockEditorStore';
-import { BLOCK_TYPES } from '../../../types/blocks.types';
+import { BREAKPOINT_LABELS, type ResolvedBreakpoint } from '../../../libs/breakpoints';
+import { BLOCK_TYPES, type ResponsiveBreakpointName } from '../../../types/blocks.types';
 import type { PageRecord, PageStatus } from '../../../types/pages.types';
 import { blockIcon, defaultPropsFor } from './BlockPalette';
 import EditorSidebar from './sidebar/EditorSidebar';
@@ -113,16 +115,22 @@ interface DraggedBlockInfo {
 }
 
 /**
- * Dimensioni del device frame simulato, solo per la label sotto la Topbar
- * (`.viewportDimensionLabel`) — Desktop resta fluido (`.viewportDesktop`, nessuna label),
- * Tablet/Mobile hanno invece una larghezza/altezza fissa da mostrare com'è, non calcolata
- * da `getBoundingClientRect` (la label deve leggere il vincolo dichiarato, non l'esito del
- * layout).
+ * Larghezza (px) del device frame simulato per il breakpoint `name`, o `undefined` per
+ * `'default'` (fluido, `.viewportDesktop`) — Sub-Task "Frame WYSIWYG In-Place & Breakpoint
+ * Switcher". Letta da `ResolvedBreakpoint.widthPx` (`libs/breakpoints.ts`, calcolato
+ * direttamente da `config.maxWidth`/`config.minWidth` del DTO, mai da un parsing della
+ * stringa `mediaQuery`): la stessa lista già ordinata e filtrata per `active` che alimenta
+ * `BreakpointSwitcher.tsx`, non un secondo calcolo. `undefined` anche nel caso limite in cui
+ * `name` non sia (più) fra i breakpoint attivi (es. la configurazione del sito è cambiata
+ * mentre l'editor era aperto con quel breakpoint selezionato): il frame torna fluido invece
+ * di mostrare una larghezza stantia.
  */
-const VIEWPORT_DIMENSIONS: Record<'tablet' | 'mobile', { width: number; height: number }> = {
-  tablet: { width: 768, height: 1024 },
-  mobile: { width: 375, height: 667 },
-};
+function resolveFrameWidthPx(
+  name: ResponsiveBreakpointName,
+  activeBreakpoints: readonly ResolvedBreakpoint[],
+): number | undefined {
+  return activeBreakpoints.find((breakpoint) => breakpoint.name === name)?.widthPx;
+}
 
 /**
  * Larghezza (px) della sidebar sinistra aperta — stessa costante usata per posizionare
@@ -238,8 +246,15 @@ export default function FullScreenEditorLayout({
   statusSubmitting,
   onRequestStatusChange,
 }: FullScreenEditorLayoutProps): JSX.Element {
-  const activeViewport = useActiveViewport();
-  const setActiveViewport = useBlockEditorStore((state) => state.setActiveViewport);
+  // Breakpoint a 7 vie (ADR-76) simulato ORA dal canvas (`BreakpointSwitcher.tsx`, topbar) e
+  // l'elenco di quelli attivi per il sito (già filtrati/ordinati da `resolveActiveBreakpoints()`):
+  // il primo pilota `data-breakpoint`/la larghezza del frame sotto, il secondo risolve quella
+  // larghezza in pixel reali (`resolveFrameWidthPx`). `setActiveBreakpoint` aggiorna anche
+  // `activeViewport` (3 vie) per conto proprio (vedi `viewportForBreakpoint` nello store): il
+  // Property Inspector non ha bisogno di essere letto/scritto da qui.
+  const activeBreakpoint = useActiveBreakpoint();
+  const activeBreakpoints = useActiveBreakpoints();
+  const setActiveBreakpoint = useBlockEditorStore((state) => state.setActiveBreakpoint);
   // Il pulsante che apriva/chiudeva questo pannello è stato rimosso dalla topbar (E01): la
   // stessa "Struttura" è già raggiungibile dalla sidebar sinistra (`EditorSidebar`, scheda
   // "Struttura"). `isStructurePanelOpen` resta comunque letto qui sotto — parte a `false`
@@ -291,6 +306,19 @@ export default function FullScreenEditorLayout({
   const autoScrollFrameRef = useRef<number | null>(null);
   /** Ultima posizione verticale nota del puntatore durante il drag, letta dal loop `rAF`. */
   const pointerYRef = useRef<number | null>(null);
+
+  /**
+   * Larghezza reale disponibile di `.canvasArea` (Sub-Task "Frame WYSIWYG In-Place &
+   * Breakpoint Switcher"): un breakpoint largo (es. `widescreen`, `minWidth` 2400px) può
+   * eccedere lo spazio a disposizione — `frameScale` sotto ricalcola un fattore di riduzione
+   * puramente visivo (`transform: scale(...)`, mai una riduzione della larghezza dichiarata
+   * del frame, che deve restare il pixel reale letto dall'`<iframe>` per far scattare le sue
+   * vere media query) ogni volta che questa larghezza cambia. `useMergedRef` (stesso principio
+   * di `IframeCanvas.tsx` § `assignRefs`) combina questo ref con `canvasAreaRef` sopra, che
+   * resta il riferimento imperativo letto dall'auto-scroll durante il drag.
+   */
+  const { ref: canvasSizeRef, width: canvasAreaWidth } = useElementSize<HTMLDivElement>();
+  const setCanvasAreaRef = useMergedRef(canvasAreaRef, canvasSizeRef);
 
   /**
    * Riferimento sincrono all'elemento `<iframe>` del canvas, sollevato da `IframeCanvas.tsx`
@@ -387,11 +415,25 @@ export default function FullScreenEditorLayout({
     moveNodeToAction(String(active.id), target.parentId, target.index);
   }
 
-  const viewportClass: Record<EditorViewport, string> = {
-    desktop: styles.viewportDesktop,
-    tablet: styles.viewportTablet,
-    mobile: styles.viewportMobile,
-  };
+  // Larghezza dichiarata del frame per il breakpoint simulato (`undefined` ⇒ `'default'`
+  // fluido, `.viewportDesktop`) e fattore di riduzione puramente visivo quando eccede lo
+  // spazio disponibile di `.canvasArea` (punto 4 del task, `resolveFrameWidthPx` sopra).
+  const frameWidthPx = resolveFrameWidthPx(activeBreakpoint, activeBreakpoints);
+  const isFluidFrame = frameWidthPx === undefined;
+  // `Math.min(1, ...)`: un frame già più stretto dell'area disponibile non va mai ingrandito
+  // (nessuno zoom-in), solo mai fatto traboccare orizzontalmente. `canvasAreaWidth === 0`
+  // (primo render, prima che `ResizeObserver` misuri) ⇒ nessuna riduzione ancora applicata,
+  // stesso principio prudente di un frame più stretto dell'area.
+  const frameScale =
+    !isFluidFrame && frameWidthPx && canvasAreaWidth > 0
+      ? Math.min(1, canvasAreaWidth / frameWidthPx)
+      : 1;
+  // Stile inline sopra la classe base `.viewportContainer` (che porta già la `transition`
+  // fluida su `width`/`transform`, riusata invariata): il frame fluido (`'default'`) non
+  // riceve alcuno stile inline, resta pilotato solo da `.viewportDesktop` come oggi.
+  const viewportFrameStyle: CSSProperties | undefined = isFluidFrame
+    ? undefined
+    : { width: `${frameWidthPx}px`, transform: `scale(${frameScale})` };
 
   const isDragActive = draggedBlock !== null;
 
@@ -451,8 +493,8 @@ export default function FullScreenEditorLayout({
       <Toolbar
         pageTitle={pageTitle}
         backHref={backHref}
-        viewport={activeViewport}
-        onViewportChange={setActiveViewport}
+        activeBreakpoint={activeBreakpoint}
+        onBreakpointChange={setActiveBreakpoint}
         canUndo={canUndo}
         canRedo={canRedo}
         onUndo={undo}
@@ -480,15 +522,14 @@ export default function FullScreenEditorLayout({
       />
 
       {/*
-        Label discreta sotto la Topbar coi pixel del device frame simulato, solo quando
-        Tablet/Mobile impongono una larghezza fissa (Desktop resta fluido, `VIEWPORT_
-        DIMENSIONS` sopra non lo elenca) — puramente informativa, nessun effetto sul
-        rendering: la larghezza reale del frame resta pilotata solo da `viewportClass` sotto.
+        Label discreta sotto la Topbar con la larghezza del device frame simulato, solo per i
+        breakpoint non fluidi (`'default'` resta escluso, `isFluidFrame` sopra) — puramente
+        informativa, nessun effetto sul rendering: la larghezza reale del frame resta pilotata
+        solo da `viewportFrameStyle` sotto.
       */}
-      {activeViewport !== 'desktop' && (
+      {!isFluidFrame && (
         <div className={styles.viewportDimensionLabel}>
-          {VIEWPORT_DIMENSIONS[activeViewport].width}px ×{' '}
-          {VIEWPORT_DIMENSIONS[activeViewport].height}px
+          {BREAKPOINT_LABELS[activeBreakpoint]} · {frameWidthPx}px
         </div>
       )}
 
@@ -564,7 +605,7 @@ export default function FullScreenEditorLayout({
 
             <div
               className={styles.canvasArea}
-              ref={canvasAreaRef}
+              ref={setCanvasAreaRef}
               // "Anteprima Pura" (E01): disattiva i contorni hover/selezione del canvas —
               // vedi la regola `[data-preview-mode='true']` in
               // `EditorBlockWrapper.module.css`, gate CSS puro, nessuna prop nuova sul
@@ -579,15 +620,20 @@ export default function FullScreenEditorLayout({
               data-canvas-scroll-area="true"
             >
               {/*
-              `data-viewport` non pilota nessuna media query nuova (il sync col rendering
-              responsive dei blocchi passa già da `container-type: inline-size` qui sotto,
-              letto dalle `@container` di `style-tokens.module.css`, ADR-29 § 2): resta solo
-              un aggancio dichiarativo per selettori CSS/E2E futuri sul breakpoint simulato,
-              senza introdurre un secondo sistema di breakpoint.
+              `data-breakpoint` non pilota nessuna media query nuova (il sync col rendering
+              responsive dei blocchi passa già dalla larghezza reale dell'`<iframe>` sotto,
+              ridimensionato a `frameWidthPx` — vere media query CSS, non classi finte):
+              resta solo un aggancio dichiarativo per selettori CSS/E2E futuri sul breakpoint
+              simulato, senza introdurre un secondo sistema di breakpoint. `viewportFrameStyle`
+              (`undefined` per `'default'`) porta la larghezza esatta in px e il fattore di
+              riduzione visiva (`transform: scale(...)`, punto 4 del task) sopra la classe
+              base `.viewportContainer`, che porta già la `transition` fluida riusata invariata
+              da prima di questo task — l'animazione resta fluida qualunque sia il breakpoint.
             */}
               <div
-                className={`${styles.viewportContainer} ${viewportClass[activeViewport]}`}
-                data-viewport={activeViewport}
+                className={`${styles.viewportContainer} ${isFluidFrame ? styles.viewportDesktop : styles.viewportFramed}`}
+                style={viewportFrameStyle}
+                data-breakpoint={activeBreakpoint}
               >
                 {/*
                   Canvas incapsulato in iframe same-origin (ADR-72): `IframeCanvas` proietta
@@ -635,7 +681,6 @@ export default function FullScreenEditorLayout({
       {/* Input file nascosto dietro l'`ActionIcon` "Importa JSON" sopra (ADR-56 § 3):
           `display: none` via `hidden`, mai un elemento visibile — il click è delegato dal
           `ref` (`handleImportClick`). */}
-
     </div>
   );
 }

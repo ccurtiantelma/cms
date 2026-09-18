@@ -100,8 +100,8 @@ function IframeCanvasRoot(): React.JSX.Element {
       }}
     >
       <p style={{ margin: '0 0 10px', fontSize: 12, color: '#495057' }}>
-        Canvas (iframe) — <code>useDroppable(&apos;iframe-canvas-root&apos;)</code>.
-        isOver=<b>{String(isOver)}</b> · pointermove nativi ricevuti da questo documento:{' '}
+        Canvas (iframe) — <code>useDroppable(&apos;iframe-canvas-root&apos;)</code>. isOver=
+        <b>{String(isOver)}</b> · pointermove nativi ricevuti da questo documento:{' '}
         <b>{pointerEventsSeen}</b>
       </p>
       <IframeBlock id="iframe-block-1" label="Blocco A (container)" />

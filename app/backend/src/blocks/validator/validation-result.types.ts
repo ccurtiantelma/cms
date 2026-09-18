@@ -23,7 +23,14 @@ export type BlockPropInvalidReason =
   | 'urlScheme'
   | 'guidFormat'
   | 'format'
-  | 'range';
+  | 'range'
+  // Sanitizzazione AST `kind: 'css'` (ADR-78 § "Decisione" punto 6,
+  // `CssTreeSanitizerService`): rifiuto integrale, mai riparazione parziale.
+  | 'atRule'
+  | 'selector'
+  | 'property'
+  | 'url'
+  | 'parse';
 
 /** `type` sconosciuto, `enabled: false`, o `minRole` non soddisfatto. */
 export interface BlockTypeUnknownDetails {
@@ -64,6 +71,14 @@ export interface BlockPropInvalidDetails {
   reason: BlockPropInvalidReason;
   constraint?: number | string[] | [number, number];
   actual?: number;
+  /**
+   * Messaggio descrittivo del fallimento (solo `kind: 'css'`,
+   * `CssTreeSanitizerService`): mai il valore CSS colpevole per intero (SPEC
+   * F02 § 4 principio generale su `constraint`/`actual`), ma una descrizione
+   * puntuale (proprietà/selettore/at-rule rifiutata) utile a chi scrive il
+   * blocco per correggere il CSS senza esporre dettagli di parsing interni.
+   */
+  detail?: string;
 }
 
 /**

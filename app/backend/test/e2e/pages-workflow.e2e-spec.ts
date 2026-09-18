@@ -256,7 +256,10 @@ describe('PagesController — Workflow editoriale + RBAC ownership (e2e, DB/Redi
             children: [
               expect.objectContaining({
                 id: 'heading-1',
-                props: { level: 'h2', text: 'Titolo pubblicato' },
+                // `objectContaining`, non uguaglianza esatta: `heading` v2
+                // (ADR-81) aggiunge `color`/`typography`/`margin`/`hideOn`
+                // in migrazione, qui non rilevanti per questa asserzione.
+                props: expect.objectContaining({ level: 'h2', text: 'Titolo pubblicato' }),
               }),
             ],
           }),

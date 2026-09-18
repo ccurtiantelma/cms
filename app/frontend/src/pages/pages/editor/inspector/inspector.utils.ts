@@ -8,7 +8,12 @@
  * una copia locale in un sotto-componente (violerebbe lo stesso invariante che
  * `VisualBoxModelInspector.tsx` proteggeva riusando gli export di `PropertyInspector.tsx`).
  */
-import type { BlockEditorPropMeta, BlockPropDescriptor } from '../../../../types/blocks.types';
+import type {
+  BlockEditorPropMeta,
+  BlockPropDescriptor,
+  PropStateName,
+  ResponsiveBreakpointName,
+} from '../../../../types/blocks.types';
 import type { EditorViewport } from '../../../../hooks/useBlockEditorStore';
 
 /**
@@ -113,23 +118,22 @@ export const SPACING_SLIDER_PROPS = new Set([
 ]);
 
 /**
- * Le quattro props di direzione/allineamento flex di `container` (ADR-39): stesso
- * `kind: 'enum'`/`responsive` delle altre enum responsive del registro, ma la
- * "Conseguenza" dell'ADR chiede esplicitamente "nuovi controlli Mantine per
- * display/flexDirection/justifyContent/alignItems/wrap con overlay responsive
- * tablet/mobile" — un `SegmentedControl` (scelta fra un piccolo insieme chiuso di
- * opzioni mutuamente esclusive) invece del `Select` generico. Riconosciute per nome,
- * stesso principio di `SPACING_SLIDER_PROPS`: `gap` resta deliberatamente fuori da questo
- * insieme (stessa scala di token di `section.gap`, l'ADR chiede di riusare il controllo
- * esistente così com'è), `display` resta sul `Select` non responsive (un solo valore
- * ammesso in questo round, ADR-39 § 2 punto 1).
+ * Le props di direzione/allineamento flex a `kind: 'enum'`/`responsive` che usano un
+ * `SegmentedControl` (scelta fra un piccolo insieme chiuso di opzioni mutuamente esclusive)
+ * invece del `Select` generico (ADR-39, round originario di `container` v1). Riconosciute
+ * per nome, stesso principio di `SPACING_SLIDER_PROPS`.
+ *
+ * `container` `v: 2` (`ADR-82-container-unificato-grid-flex.md` § "Decisione" punto 1)
+ * consolida `display`/`flexDirection`/`justifyContent`/`alignItems`/`wrap`/`gap` in un solo
+ * campo composito `layout: layout` (responsive sull'intero oggetto, non i singoli campi):
+ * `flexDirection`/`wrap` non sono più dichiarati da **nessun** tipo del registro, quindi
+ * questo `Set` non li contiene più — un editor dedicato per `kind: 'layout'` (Grid/Flex) è
+ * un task successivo (ADR-82 § "Conseguenze"), fuori scopo di questa migrazione. `section`
+ * (v1, deprecato ma non rimosso, `ADR-82` § "Decisione" punto 2) resta l'unico tipo che
+ * dichiara ancora `alignItems`/`justifyContent` come prop scalari indipendenti: restano nel
+ * `Set` solo per lui.
  */
-export const CONTAINER_FLEX_SEGMENTED_PROPS = new Set([
-  'flexDirection',
-  'justifyContent',
-  'alignItems',
-  'wrap',
-]);
+export const CONTAINER_FLEX_SEGMENTED_PROPS = new Set(['justifyContent', 'alignItems']);
 
 /**
  * Nomi extra (oltre a `SPACING_SLIDER_PROPS`) che nel tab "Stile" finiscono nella sezione
@@ -396,7 +400,20 @@ export function uxError(prop: BlockPropDescriptor, value: unknown): string | und
   // significativo per questi tre — ogni campo numerico resta comunque vincolato dal proprio
   // controllo (Slider min/max, `Select` per un enum chiuso), e nessuna delle prop reali che
   // li usano è `required`. Il controllo qui si ferma prima di leggerli come stringa.
-  if (prop.kind === 'unitValue' || prop.kind === 'border' || prop.kind === 'shadow') {
+  // Stesso principio esteso ai kind v2 compositi (Sub-Task S2.3): `colorRef` può essere un
+  // oggetto `{ ref }`, `typography`/`spacing`/`layout` sono sempre oggetti (interi o annidati
+  // stato/breakpoint) — `asString` li stringificherebbe in `[object Object]`, che non è mai
+  // un errore significativo. Ogni campo interno resta comunque vincolato dal proprio controllo
+  // dedicato (`ColorField`/`TypographyField`/`SpacingField`/`LayoutField`).
+  if (
+    prop.kind === 'unitValue' ||
+    prop.kind === 'border' ||
+    prop.kind === 'shadow' ||
+    prop.kind === 'colorRef' ||
+    prop.kind === 'typography' ||
+    prop.kind === 'spacing' ||
+    prop.kind === 'layout'
+  ) {
     return undefined;
   }
   const text = asString(value);
@@ -419,4 +436,261 @@ export function uxError(prop: BlockPropDescriptor, value: unknown): string | und
     return 'Obbligatoria: il salvataggio verrà rifiutato finché è vuota';
   }
   return undefined;
+}
+
+// ─── PropKind v2 (ADR-75/ADR-76, round R2 "parità Elementor Pro") ───────────────────────────
+//
+// `updateBlockPropsAction` (`useBlockEditorStore.ts`) resta l'unica azione di scrittura: fa un
+// merge **per chiave di prop**, non annidato (`{ ...node.props, [propName]: nextValue }`,
+// `block-tree.utils.ts` `updateBlockProps`). Per una prop `stateful`/`responsive` v2 questo
+// significa che `nextValue` deve già essere l'intero valore della prop con **un solo ramo
+// stato→breakpoint sostituito e ogni altro ramo preservato** — esattamente il rischio di
+// "perdita silenziosa" già descritto per il v1 da ADR-29 § "Conseguenza" e raddoppiato da
+// ADR-75 § "Conseguenze" per la dimensione stato in più. Le due funzioni sotto sono quel
+// costruttore di patch, pure e senza stato, coerenti con `responsiveEnvelope`/`breakpointKey`
+// sopra (stesso principio, esteso da un solo modificatore a due componibili — ADR-75 §
+// "Decisione" punto 1: ordine fisso stato esterno, breakpoint interno).
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Costruisce il valore completo (da passare a `updateBlockPropsAction`) di una prop `kind` v2
+ * il cui modificatore `responsive` si applica sull'**intero** valore di stato (ogni `kind` v2
+ * tranne `typography`, che opera per campo — vedi {@link buildTypographyFieldPatch}):
+ * `colorRef`, `radius`, `gradient`, `position`, `transform`, `filter`, `layout`, `spacing`
+ * (mai `stateful`, ADR-75 § "Decisione" punto 6, ma può essere `responsive`).
+ *
+ * Sostituisce solo la combinazione `(state, breakpoint)` richiesta, preservando ogni altro
+ * stato/breakpoint già presente nel valore corrente — mai `{ [state]: { [breakpoint]:
+ * nakedValue } }` da solo, che cancellerebbe silenziosamente il resto.
+ *
+ * @param prop Descrittore della prop (`stateful`/`responsive`, letti dal registro).
+ * @param currentValue Valore grezzo attuale della prop così come letto da `node.props`.
+ * @param state Stato da scrivere (`'normal'` se `prop.stateful` non è dichiarato).
+ * @param breakpoint Breakpoint da scrivere (`'default'` se `prop.responsive` non è dichiarato).
+ * @param nakedValue Il "valore nudo" del `kind` per questa combinazione (mai un envelope).
+ * @returns Il valore completo da scrivere sulla prop, con ogni altro ramo intatto.
+ */
+export function buildStatefulResponsivePropPatch(
+  prop: BlockPropDescriptor,
+  currentValue: unknown,
+  state: PropStateName,
+  breakpoint: ResponsiveBreakpointName,
+  nakedValue: unknown,
+): unknown {
+  const stateful = Boolean(prop.stateful);
+  const responsive = Boolean(prop.responsive);
+
+  if (!stateful && !responsive) {
+    // Nessun envelope: il valore nudo è l'intera prop (stesso principio di § 10 punto 1 di
+    // SPEC-PROPKIND-V2-DETAILS.md, applicato qui alla scrittura invece che alla lettura).
+    return nakedValue;
+  }
+
+  if (!stateful) {
+    // Solo `responsive`: il valore corrente è già l'envelope breakpoint `{ default, ... }`.
+    const envelope = isPlainRecord(currentValue) ? currentValue : {};
+    return { ...envelope, [breakpoint]: nakedValue };
+  }
+
+  // `stateful` (con o senza `responsive`, ADR-75 § "Decisione" punto 1): stato esterno,
+  // breakpoint interno. `normal` è sempre la chiave obbligatoria — preservata se già presente,
+  // mai richiesta esplicitamente da questa funzione (un nodo nuovo senza valore ancora scritto
+  // parte da un oggetto vuoto, coerente con `responsiveEnvelope` sopra per il v1).
+  const stateEnvelope = isPlainRecord(currentValue) ? { ...currentValue } : {};
+  if (!responsive) {
+    stateEnvelope[state] = nakedValue;
+    return stateEnvelope;
+  }
+  const breakpointEnvelope = isPlainRecord(stateEnvelope[state]) ? stateEnvelope[state] : {};
+  stateEnvelope[state] = { ...breakpointEnvelope, [breakpoint]: nakedValue };
+  return stateEnvelope;
+}
+
+/**
+ * Stessa funzione di {@link buildStatefulResponsivePropPatch}, specializzata per `kind:
+ * 'typography'` (SPEC-PROPKIND-V2-DETAILS.md § 3 punto 3/punto 4): `stateful` opera
+ * sull'intero oggetto (come sopra), ma `responsive` opera **per campo** — il breakpoint si
+ * annida dentro il singolo campo del ramo di stato attivo, non sull'intero `TypographyValue`.
+ *
+ * @param currentValue Valore grezzo attuale della prop `typography`.
+ * @param state Stato da scrivere (sempre presente per questo `kind`, ADR-75 § "Decisione" punto 1).
+ * @param field Il campo di `TypographyValue` da scrivere (es. `'fontSize'`).
+ * @param breakpoint Breakpoint da scrivere per **questo campo**.
+ * @param nakedFieldValue Il valore nudo del campo (es. `{ value: 32, unit: 'px' }`).
+ * @returns Il valore completo da scrivere sulla prop `typography`, con ogni altro
+ *   stato/campo/breakpoint intatto.
+ */
+export function buildTypographyFieldPatch(
+  currentValue: unknown,
+  state: PropStateName,
+  field: string,
+  breakpoint: ResponsiveBreakpointName,
+  nakedFieldValue: unknown,
+): unknown {
+  const stateEnvelope = isPlainRecord(currentValue) ? { ...currentValue } : {};
+  const typographyValue = isPlainRecord(stateEnvelope[state]) ? { ...stateEnvelope[state] } : {};
+  const fieldEnvelope = isPlainRecord(typographyValue[field]) ? typographyValue[field] : {};
+  typographyValue[field] = { ...fieldEnvelope, [breakpoint]: nakedFieldValue };
+  stateEnvelope[state] = typographyValue;
+  return stateEnvelope;
+}
+
+// ─── Lettura a 7 vie per i nuovi controlli dedicati (Sub-Task S2.3) ─────────────────────────
+//
+// `PropField.tsx` riceve oggi `activeBreakpoint: 'default' | 'tablet' | 'mobile'` (derivato da
+// `breakpointKey(activeViewport)`, modello legacy a 3 vie di ADR-29 — usato dai controlli v1
+// invariati sopra). I kind v2 `responsive` (`colorRef`/`typography`/`spacing`/`layout`/...)
+// usano invece la busta a 7 nomi di ADR-76 (`RESPONSIVE_BREAKPOINTS`): le funzioni sotto
+// generalizzano `effectiveScalarForViewport`/`hasExplicitOverrideAtBreakpoint` a quelle 7
+// chiavi, lette dal breakpoint REALE dello store (`useActiveBreakpoint()`, 7 vie), mai dal
+// prop legacy a 3 vie — scelta di design dichiarata nel resoconto finale del Sub-Task (gap 1).
+// Scrivono solo sulla chiave attiva corrente, mai sovrascrivendo l'intero envelope: stesso
+// principio "niente perdita silenziosa" di ADR-29 § "Conseguenza", qui in lettura.
+
+/**
+ * Ordine di cascata dei 7 breakpoint di ADR-76 (dal più stretto al più largo, `default` come
+ * terminale): generalizza a 7 vie la cascata a 3 di `effectiveScalarForViewport` (ADR-29).
+ * `widescreen` ne resta fuori (ADR-76 § "Decisione" punto 3, soglia `min-width`, non cascata
+ * verso il basso: un valore assente per `widescreen` ricade direttamente su `default`).
+ */
+export const BREAKPOINT_CASCADE_ORDER: readonly ResponsiveBreakpointName[] = [
+  'mobile',
+  'mobileExtra',
+  'tablet',
+  'tabletExtra',
+  'laptop',
+  'default',
+];
+
+/**
+ * Valore effettivo di un envelope a 7 vie (ADR-76) per `breakpoint`, seguendo la cascata verso
+ * il basso — generalizzazione di `effectiveScalarForViewport` (3 vie, ADR-29) per i kind v2.
+ * Solo per la lettura/anteprima in UI, mai per decidere cosa scrivere: la scrittura resta
+ * sempre e solo sulla chiave del breakpoint attivo (vedi {@link buildStatefulResponsivePropPatch}).
+ */
+export function effectiveNakedValueForBreakpoint(
+  envelope: Record<string, unknown>,
+  breakpoint: ResponsiveBreakpointName,
+): unknown {
+  if (breakpoint === 'widescreen') {
+    return envelope.widescreen !== undefined ? envelope.widescreen : envelope.default;
+  }
+  const startIndex = BREAKPOINT_CASCADE_ORDER.indexOf(breakpoint);
+  const chain = startIndex >= 0 ? BREAKPOINT_CASCADE_ORDER.slice(startIndex) : ['default'];
+  for (const name of chain) {
+    if (envelope[name] !== undefined) return envelope[name];
+  }
+  return undefined;
+}
+
+/**
+ * Vero se l'envelope a 7 vie porta un valore esplicito per `breakpoint` (non ereditato in
+ * cascata) — generalizzazione di `hasExplicitOverrideAtBreakpoint` (3 vie, ADR-29) per i kind
+ * v2. `default` non è mai un "override" (è la base della cascata), stesso principio della
+ * funzione a 3 vie.
+ */
+export function hasExplicitBreakpointOverride(
+  envelope: Record<string, unknown>,
+  breakpoint: ResponsiveBreakpointName,
+): boolean {
+  if (breakpoint === 'default') return false;
+  return envelope[breakpoint] !== undefined;
+}
+
+/**
+ * Mirror in lettura di {@link buildStatefulResponsivePropPatch}: il valore nudo corrente per
+ * la combinazione (stato, breakpoint) richiesta, cascando sui breakpoint quando la prop è
+ * `responsive` (mai fra stati diversi: uno stato assente è semplicemente "non ancora
+ * impostato", ADR-75 non prevede una cascata fra stati).
+ */
+export function readStatefulResponsiveValue(
+  prop: BlockPropDescriptor,
+  currentValue: unknown,
+  state: PropStateName,
+  breakpoint: ResponsiveBreakpointName,
+): unknown {
+  const stateful = Boolean(prop.stateful);
+  const responsive = Boolean(prop.responsive);
+
+  if (!stateful && !responsive) return currentValue;
+
+  if (!stateful) {
+    const envelope = isPlainRecord(currentValue) ? currentValue : {};
+    return effectiveNakedValueForBreakpoint(envelope, breakpoint);
+  }
+
+  const stateEnvelope = isPlainRecord(currentValue) ? currentValue : {};
+  const stateValue = stateEnvelope[state];
+  if (!responsive) return stateValue;
+  const breakpointEnvelope = isPlainRecord(stateValue) ? stateValue : {};
+  return effectiveNakedValueForBreakpoint(breakpointEnvelope, breakpoint);
+}
+
+/**
+ * Vero se la combinazione (stato, breakpoint) richiesta porta un valore esplicito, non
+ * ereditato in cascata dal breakpoint `default` — mirror di lettura pensato per il pallino
+ * d'override (`BreakpointOverrideDot`, `PropField.tsx`) applicato ai kind v2.
+ */
+export function hasStatefulResponsiveOverride(
+  prop: BlockPropDescriptor,
+  currentValue: unknown,
+  state: PropStateName,
+  breakpoint: ResponsiveBreakpointName,
+): boolean {
+  if (!prop.responsive || breakpoint === 'default') return false;
+  if (!prop.stateful) {
+    const envelope = isPlainRecord(currentValue) ? currentValue : {};
+    return hasExplicitBreakpointOverride(envelope, breakpoint);
+  }
+  const stateEnvelope = isPlainRecord(currentValue) ? currentValue : {};
+  const breakpointEnvelope = isPlainRecord(stateEnvelope[state])
+    ? (stateEnvelope[state] as Record<string, unknown>)
+    : {};
+  return hasExplicitBreakpointOverride(breakpointEnvelope, breakpoint);
+}
+
+/**
+ * Mirror in lettura di {@link buildTypographyFieldPatch}: il valore nudo corrente del campo
+ * `field` per (stato, breakpoint), sempre trattato come envelope breakpoint per-campo (SPEC-
+ * PROPKIND-V2-DETAILS.md § 3 punto 3) — coerente con l'assunzione già fatta in scrittura da
+ * `buildTypographyFieldPatch` (ogni prop reale del registro che dichiara `kind: 'typography'`
+ * dichiara anche `responsive: true`, § 3 punto 3/4 dello stesso documento).
+ */
+export function readTypographyFieldValue(
+  currentValue: unknown,
+  state: PropStateName,
+  field: string,
+  breakpoint: ResponsiveBreakpointName,
+): unknown {
+  const stateEnvelope = isPlainRecord(currentValue) ? currentValue : {};
+  const typographyValue = isPlainRecord(stateEnvelope[state])
+    ? (stateEnvelope[state] as Record<string, unknown>)
+    : {};
+  const fieldValue = typographyValue[field];
+  const fieldEnvelope = isPlainRecord(fieldValue) ? fieldValue : {};
+  return effectiveNakedValueForBreakpoint(fieldEnvelope, breakpoint);
+}
+
+/**
+ * Vero se il campo `field` di `typography` porta un valore esplicito per (stato, breakpoint),
+ * non ereditato in cascata — stesso principio di {@link hasStatefulResponsiveOverride}, per
+ * campo invece che per l'intera prop.
+ */
+export function hasTypographyFieldOverride(
+  currentValue: unknown,
+  state: PropStateName,
+  field: string,
+  breakpoint: ResponsiveBreakpointName,
+): boolean {
+  if (breakpoint === 'default') return false;
+  const stateEnvelope = isPlainRecord(currentValue) ? currentValue : {};
+  const typographyValue = isPlainRecord(stateEnvelope[state])
+    ? (stateEnvelope[state] as Record<string, unknown>)
+    : {};
+  const fieldValue = typographyValue[field];
+  const fieldEnvelope = isPlainRecord(fieldValue) ? (fieldValue as Record<string, unknown>) : {};
+  return hasExplicitBreakpointOverride(fieldEnvelope, breakpoint);
 }

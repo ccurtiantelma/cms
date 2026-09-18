@@ -27,6 +27,12 @@
  * un `<img src="">` rotto — stesso principio di `ContentPlaceholderBlock.tsx`: niente
  * Mantine/`@tabler/icons-react` (raggiungibile anche dal sito pubblico via lo stesso
  * `BlockRenderer`), solo un'icona SVG inline.
+ *
+ * `id` (Canvas Style Bridge, Sub-Task S2.1b): stesso principio di `Heading.tsx` (vedi il suo
+ * commento di testa, paragrafo `id`) — `node.id` strutturale come `data-canvas-style-id`
+ * sull'elemento radice, opzionale. Questo componente ha **due** possibili radici (il
+ * segnaposto tratteggiato senza `mediaRef`, l'`<img>` altrimenti): entrambe lo portano, mai
+ * solo una — il Bridge deve poter colpire il nodo qualunque sia lo stato in cui si trova.
  */
 import type { CSSProperties } from 'react';
 import styles from './Image.module.css';
@@ -39,6 +45,8 @@ import {
 import { resolveMediaSrc } from '../media-url';
 
 interface ImageProps {
+  /** Vedi il commento di testa del file, paragrafo `id`. */
+  id?: string;
   mediaRef: string;
   alt: string;
   styleSpaceBefore?: unknown;
@@ -128,6 +136,7 @@ function resolveSizeStyle(
 }
 
 export default function Image({
+  id,
   mediaRef,
   alt,
   styleSpaceBefore,
@@ -157,7 +166,11 @@ export default function Image({
   if (!mediaRef) {
     const placeholderClassName = [styles.placeholder, className].filter(Boolean).join(' ');
     return (
-      <div className={placeholderClassName} data-block-role="image-placeholder">
+      <div
+        className={placeholderClassName}
+        data-block-role="image-placeholder"
+        data-canvas-style-id={id}
+      >
         <svg
           className={styles.placeholderIcon}
           width="28"
@@ -194,6 +207,7 @@ export default function Image({
       src={resolveMediaSrc(mediaRef)}
       data-media-ref={mediaRef}
       data-media-preset={mediaPreset}
+      data-canvas-style-id={id}
     />
   );
 }

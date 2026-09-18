@@ -20,7 +20,11 @@ import { LocalFolderDeployer } from './deploy/local-folder.deployer';
  * `STATIC_SITE_DEPLOYER` ha oggi un'unica implementazione attiva
  * (`LocalFolderDeployer`, Decisione 8): nessuno switch su `AppConstants`
  * come per `STORAGE_DRIVER`, perché `S3Deployer`/`CloudflarePagesDeployer`
- * non esistono finché non c'è un'ADR dedicata.
+ * non esistono finché non c'è un'ADR dedicata. Esportato (oltre a
+ * `ExportService`) da S1.3 (`SPEC-GLOBAL-KIT.md` § 3 punto 6): `SettingsModule`
+ * lo inietta per scrivere `global-kit.<hash>.css` sincronicamente a ogni `PUT
+ * app/settings/global-kit` riuscito, stesso adapter mai `node:fs` diretto già
+ * vincolante per `ExportProcessor`.
  */
 @Module({
   imports: [
@@ -36,6 +40,6 @@ import { LocalFolderDeployer } from './deploy/local-folder.deployer';
     ManifestService,
     { provide: STATIC_SITE_DEPLOYER, useClass: LocalFolderDeployer },
   ],
-  exports: [ExportService],
+  exports: [ExportService, STATIC_SITE_DEPLOYER],
 })
 export class ExportModule {}

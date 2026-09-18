@@ -1,7 +1,7 @@
 # SPEC — PropKind v2, dettaglio: interfacce, schemi di validazione, `toCss()`
 
 ## Status
-[x] Bozza — round R1 di `docs/PLAN-parita-elementor-pro.md` · [ ] Approvata · [ ] Superseded
+[ ] Bozza — round R1 di `docs/PLAN-parita-elementor-pro.md` · [x] Approvata (2026-09-17, contestuale ad ADR-74/75/76/77) · [ ] Superseded
 
 ## Dominio
 `docs/ai/INDEX.md` § "Parità Elementor Pro — R0 Decisioni fondative" (la riga copre anche i
@@ -61,6 +61,7 @@ export interface ColorRefPropSpec extends BasePropSpec {
   allowAlpha?: boolean;
   stateful?: boolean;
   responsive?: boolean; // raro: un colorRef quasi mai varia per breakpoint, ma non è escluso
+  cssProperty: 'color' | 'background-color' | 'border-color' | 'outline-color'; // Addendum S1.2, vedi sotto
 }
 
 /** Forma del valore, non responsive/stateful (caso base). */
@@ -177,6 +178,7 @@ export interface SpacingPropSpec extends BasePropSpec {
   min: number;
   max: number;
   allowNegative?: boolean;
+  target: 'padding' | 'margin'; // Addendum S1.2, vedi sotto
 }
 
 interface SpacingValue {
@@ -368,6 +370,34 @@ interface FilterValue {
 
 ---
 
+## Addendum S1.2 — proprietà CSS per `colorRef`/`spacing`
+
+Gap individuato all'avvio del Sub-Task S1.2 (compilatore `toCss()`): a differenza degli altri 7
+`kind` di questo documento, la proprietà CSS di destinazione di `colorRef` e `spacing` **non è
+fissa per costruzione** — lo stesso `kind` è riusato per proprietà diverse a seconda del prop che
+lo dichiara (`ADR-82-container-unificato-grid-flex.md` righe 102-104/145-147: `padding: spacing` e
+`margin: spacing` sullo stesso `container`; gap analysis riga 49 "hover bg/text/border" per
+`button`: lo stesso `colorRef` serve sia `styleBackgroundColor` che `styleColor`). Nessuno dei due
+descrittori originari (sopra) portava un campo per questa informazione — `toCss()` non potrebbe
+determinarla da `kind` + valore da solo.
+
+**Decisione** (approvata in sessione, marketing@antelmagroup.net, 2026-09-17, contestualmente
+all'avvio di S1.2): aggiungere un campo **obbligatorio** additivo a ciascuno dei due descrittori
+(sopra, già integrato nei blocchi di codice):
+- `ColorRefPropSpec.cssProperty`: unione chiusa a 4 valori (`color`/`background-color`/
+  `border-color`/`outline-color`), stesso principio delle unioni chiuse già in vigore nel registro
+  (niente stringa libera, coerente con `CssClassNamePropSpec`/`HtmlIdPropSpec` § pattern fisso).
+- `SpacingPropSpec.target`: unione chiusa a 2 valori (`padding`/`margin`).
+
+Campo **obbligatorio** e non opzionale (a differenza di `stateful`/`responsive`) perché senza di
+esso `toCss()` non ha alcun fallback sensato per questi due `kind` — un default silenzioso
+produrrebbe CSS errato senza segnalazione, mentre ogni prop che dichiara oggi/in futuro questi
+`kind` deve specificarlo esplicitamente. Nessun impatto sul validatore (`block-tree-validator.
+service.ts`): il campo è letto solo dal compilatore, la forma del *valore* validato non cambia.
+`toCss()` § 10 punto 4 sotto usa questi campi per selezionare la/e proprietà emesse.
+
+---
+
 ## 10. `toCss()` — compilazione unica per `kind`
 
 ### Firma
@@ -409,7 +439,12 @@ interface CssDeclarationBlock {
    `shadow` (`prop-spec.types.ts` righe 197-223), esteso ai nuovi `kind` compositi.
 5. **`colorRef`/`fontRef` non emettono mai un valore letterale**: `colorRef` con `{ref}` emette
    `var(--gk-color-<id>)` (`SPEC-GLOBAL-KIT.md` § 3), `colorRef` con hex letterale emette l'hex
-   così com'è. Stessa distinzione per `fontRef`.
+   così com'è. Stessa distinzione per `fontRef`. La proprietà CSS emessa è `spec.cssProperty`
+   (Addendum S1.2 sopra), mai dedotta dal nome della prop o cablata nel generatore.
+5bis. **`spacing` emette sul lato `spec.target`** (Addendum S1.2 sopra): `padding-top/right/
+   bottom/left` se `target: 'padding'`, `margin-top/right/bottom/left` se `target: 'margin'` —
+   stesso generatore di dichiarazioni per entrambi, cambia solo il prefisso di proprietà letto dal
+   descrittore.
 6. **Nessuna deduplicazione fra blocchi diversi**: ogni nodo emette il proprio insieme completo di
    `CssDeclarationBlock`, anche se identico a un nodo fratello — coerente con la scelta già fatta per
    il CSS critico inline di ADR-53 § 2 (il costo di duplicazione è accettato in cambio di zero

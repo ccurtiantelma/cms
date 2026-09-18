@@ -122,14 +122,33 @@ describe('PagesController (e2e) — round-trip di props di stile responsive (ADR
       .set('Cookie', auth.cookie);
   }
 
-  /** Envelope responsive con i tre breakpoint tutti valorizzati con token diversi fra loro. */
-  const RESPONSIVE_ENVELOPE = { default: 'md', tablet: 'sm', mobile: 'none' };
+  /**
+   * `layout` (`container` v2, ADR-82): l'intero oggetto è responsive (non i
+   * singoli campi, ADR-82 § "Decisione" punto 1) — tre breakpoint tutti
+   * valorizzati con rami diversi fra loro.
+   */
+  const LAYOUT_RESPONSIVE_VALUE = {
+    default: { display: 'flex', direction: 'row' },
+    tablet: { direction: 'column' },
+    mobile: { direction: 'column-reverse' },
+  };
+  /**
+   * `typography.fontWeight` (`heading` v2, ADR-81): `typography` è
+   * `stateful: true` (inviluppo `{ normal, hover? }`, ADR-75) e `responsive`
+   * **per campo** (`SPEC-PROPKIND-V2-DETAILS.md` § 3 punto 3) — qui solo
+   * `fontWeight` porta i tre breakpoint, `tablet` opzionale assente di
+   * proposito su un campo diverso non testato qui.
+   */
+  const TYPOGRAPHY_RESPONSIVE_VALUE = {
+    normal: { fontWeight: { default: '700', tablet: '500', mobile: '400' } },
+  };
 
   it('un valore responsive completo (default+tablet+mobile) sopravvive intatto a POST → GET → PATCH → GET, e a database', async () => {
     const manager = await seedAuth(AppUserRoles.Manager, 'roundtrip');
 
-    // 1) POST: creo una Pagina con una section i cui quattro breakpoint di
-    // `styleSpaceBefore`/`stylePadding` sono tutti valorizzati.
+    // 1) POST: creo una Pagina con un container v2 il cui `layout` (intero
+    // oggetto responsive) e il cui `heading` figlio (`typography`, stateful +
+    // responsive per campo) sono entrambi valorizzati sui tre breakpoint.
     const createRes = await authedRequest('post', '/api/v1/app/pages', manager)
       .send({
         title: 'Pagina round-trip responsive',
@@ -139,22 +158,19 @@ describe('PagesController (e2e) — round-trip di props di stile responsive (ADR
           version: 1,
           blocks: [
             {
-              id: 'sec-1',
-              type: 'section',
-              v: 1,
-              props: {
-                styleSpaceBefore: RESPONSIVE_ENVELOPE,
-                stylePadding: { default: 'sm', tablet: 'md' }, // "mobile" opzionale: assente di proposito
-              },
+              id: 'cont-1',
+              type: 'container',
+              v: 2,
+              props: { layout: LAYOUT_RESPONSIVE_VALUE },
               children: [
                 {
                   id: 'head-1',
                   type: 'heading',
-                  v: 1,
+                  v: 2,
                   props: {
                     level: 'h2',
                     text: 'Titolo',
-                    styleFontWeight: { default: 'bold', tablet: 'medium', mobile: 'regular' },
+                    typography: TYPOGRAPHY_RESPONSIVE_VALUE,
                   },
                   children: [],
                 },
@@ -166,25 +182,17 @@ describe('PagesController (e2e) — round-trip di props di stile responsive (ADR
       .expect(201);
 
     const guid = createRes.body.guid as string;
-    expect(createRes.body.draftContent.blocks[0].props.styleSpaceBefore).toEqual(
-      RESPONSIVE_ENVELOPE,
+    expect(createRes.body.draftContent.blocks[0].props.layout).toEqual(LAYOUT_RESPONSIVE_VALUE);
+    expect(createRes.body.draftContent.blocks[0].children[0].props.typography).toEqual(
+      TYPOGRAPHY_RESPONSIVE_VALUE,
     );
-    expect(createRes.body.draftContent.blocks[0].children[0].props.styleFontWeight).toEqual({
-      default: 'bold',
-      tablet: 'medium',
-      mobile: 'regular',
-    });
 
     // 2) GET: rilettura via API, nessun breakpoint perso né troncato.
     const getRes = await authedRequest('get', `/api/v1/app/pages/${guid}`, manager).expect(200);
     const readBlocks = getRes.body.draftContent.blocks as Array<Record<string, unknown>>;
-    expect((readBlocks[0].props as Record<string, unknown>).styleSpaceBefore).toEqual(
-      RESPONSIVE_ENVELOPE,
+    expect((readBlocks[0].props as Record<string, unknown>).layout).toEqual(
+      LAYOUT_RESPONSIVE_VALUE,
     );
-    expect((readBlocks[0].props as Record<string, unknown>).stylePadding).toEqual({
-      default: 'sm',
-      tablet: 'md',
-    });
 
     // 3) PATCH: rimando esattamente il body ricevuto dal GET (stesso pattern di
     // `pages-blocks.e2e-spec.ts`) e verifico che il giro non abbia alterato nulla.
@@ -193,8 +201,8 @@ describe('PagesController (e2e) — round-trip di props di stile responsive (ADR
       .expect(200);
 
     const patchedBlocks = patchRes.body.draftContent.blocks as Array<Record<string, unknown>>;
-    expect((patchedBlocks[0].props as Record<string, unknown>).styleSpaceBefore).toEqual(
-      RESPONSIVE_ENVELOPE,
+    expect((patchedBlocks[0].props as Record<string, unknown>).layout).toEqual(
+      LAYOUT_RESPONSIVE_VALUE,
     );
 
     // 4) Nuova GET: identico anche dopo un secondo giro di lettura.
@@ -202,8 +210,8 @@ describe('PagesController (e2e) — round-trip di props di stile responsive (ADR
       200,
     );
     const finalBlocks = finalGetRes.body.draftContent.blocks as Array<Record<string, unknown>>;
-    expect((finalBlocks[0].props as Record<string, unknown>).styleSpaceBefore).toEqual(
-      RESPONSIVE_ENVELOPE,
+    expect((finalBlocks[0].props as Record<string, unknown>).layout).toEqual(
+      LAYOUT_RESPONSIVE_VALUE,
     );
     expect(
       (
@@ -211,8 +219,8 @@ describe('PagesController (e2e) — round-trip di props di stile responsive (ADR
           string,
           unknown
         >
-      ).styleFontWeight,
-    ).toEqual({ default: 'bold', tablet: 'medium', mobile: 'regular' });
+      ).typography,
+    ).toEqual(TYPOGRAPHY_RESPONSIVE_VALUE);
 
     // 5) Verifica diretta a database, non solo sulla risposta HTTP: il `jsonb`
     // persistito porta i tre breakpoint intatti, non solo ciò che l'API restituisce.
@@ -220,8 +228,8 @@ describe('PagesController (e2e) — round-trip di props di stile responsive (ADR
     const row = await db.query.pageEntity.findFirst({ where: eq(pageEntity.guid, guid) });
     const persistedBlocks = (row!.draftContent as { blocks: Array<Record<string, unknown>> })
       .blocks;
-    expect((persistedBlocks[0].props as Record<string, unknown>).styleSpaceBefore).toEqual(
-      RESPONSIVE_ENVELOPE,
+    expect((persistedBlocks[0].props as Record<string, unknown>).layout).toEqual(
+      LAYOUT_RESPONSIVE_VALUE,
     );
   });
 

@@ -124,3 +124,33 @@
   border-radius: 50%;
   background-color: var(--mantine-color-orange-6);
 }
+
+/*
+ * Swatch di sistema cliccabile del Global Kit (`ColorField`, `kind: 'colorRef'`, ADR-77):
+ * stesso vocabolario visivo di `.colorTokenSwatch` sopra, ma interattivo (cursore, stato
+ * selezionato) — le due voci non sono state fuse perché `.colorTokenSwatch` resta un'anteprima
+ * passiva dentro `.colorTokenOption` (già un `<button>` a sua volta), mentre qui il pallino
+ * stesso è l'elemento cliccabile.
+ */
+.colorSwatchButton {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--mantine-radius-sm);
+  border: 1px solid var(--mantine-color-gray-4);
+  cursor: pointer;
+  padding: 0;
+}
+
+.colorSwatchButton:hover {
+  border-color: var(--mantine-color-blue-5);
+}
+
+.colorSwatchButtonActive {
+  outline: 2px solid var(--mantine-color-blue-6);
+  outline-offset: 1px;
+}
+
+[data-mantine-color-scheme='dark'] .colorSwatchButton {
+  border-color: var(--mantine-color-dark-3);
+}

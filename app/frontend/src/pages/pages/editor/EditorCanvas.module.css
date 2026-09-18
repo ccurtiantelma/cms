@@ -15,9 +15,10 @@
   Da quando il canvas è portato dentro `iframe.contentDocument` (`IframeCanvas.tsx`),
   `.viewportContainer` non è più un antenato raggiungibile per il containment CSS — vive in un
   altro documento — quindi il containment va ridichiarato qui, sull'elemento più esterno
-  dell'albero portato: la sua larghezza risolta è comunque quella simulata dal Viewport
-  Switcher (768px/375px/fluida), perché è l'elemento `<iframe>` stesso, nel documento padre, a
-  essere ridimensionato da `.viewportTablet`/`.viewportMobile`/`.viewportDesktop`.
+  dell'albero portato: la sua larghezza risolta è comunque quella simulata dal Breakpoint
+  Switcher (larghezza esatta in px per ogni breakpoint non fluido, o fluida per `'default'`),
+  perché è l'elemento `<iframe>` stesso, nel documento padre, a essere ridimensionato da
+  `.viewportDesktop`/`.viewportFramed`.
 */
 .canvasRoot {
   width: 100%;

@@ -20,6 +20,7 @@ import { MigratableBlockNode } from '../../blocks/migration/block-migration.type
 import { BlockTreeValidatorService } from '../../blocks/validator/block-tree-validator.service';
 import { ValidatableBlockNode } from '../../blocks/validator/validatable-node.types';
 import { BlockPropSanitizerService } from '../../common/sanitizer/block-prop-sanitizer.service';
+import { CssTreeSanitizerService } from '../../common/sanitizer/css-tree-sanitizer.service';
 import {
   detectRasterMimeType,
   readRasterDimensions,
@@ -342,9 +343,7 @@ function buildFooterBlocks(): BlockNode[] {
               type: 'richText',
               v: 1,
               props: {
-                html:
-                  '<p>© 2026  ' +
-                  '| email: info@antelma.it</p>',
+                html: '<p>© 2026  ' + '| email: info@antelma.it</p>',
                 styleFontSize: { default: 'sm' },
                 styleTextColorCustom: '#ffffff',
               },
@@ -414,7 +413,7 @@ function buildPersistableContentTree(blocks: BlockNode[]): ContentTree {
     );
   }
 
-  const sanitizer = new BlockPropSanitizerService();
+  const sanitizer = new BlockPropSanitizerService(new CssTreeSanitizerService());
   const sanitized = sanitizer.sanitizeTree(
     migration.blocks as ValidatableBlockNode[],
     DEFAULT_BLOCK_REGISTRY,

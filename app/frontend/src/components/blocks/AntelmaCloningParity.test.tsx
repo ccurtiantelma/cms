@@ -53,19 +53,35 @@ describe('AntelmaCloningParity — pagina "Antelma Contatti" (F13-03)', () => {
     expect(consoleError).not.toHaveBeenCalled();
   });
 
-  describe('Hero Section — sfondo immagine e overlay (ADR-50)', () => {
-    it('applica immagine di sfondo, posizione/dimensione e overlay colore+opacità separati', () => {
+  /**
+   * Canvas Style Bridge (Sub-Task S2.1b): `data-canvas-style-id` deve raggiungere ogni tipo di
+   * blocco foglia dell'albero reale, non solo `container` (già coperto da
+   * `Container.test.tsx`) — `heading`/`richText`/`button` qui, `image` in `Image.test.tsx`
+   * (questa fixture non ne contiene uno).
+   */
+  it('ogni blocco foglia (heading/richText/button) porta data-canvas-style-id con il proprio id', () => {
+    const { html } = renderTree();
+
+    expect(html).toContain('data-canvas-style-id="hero-heading"');
+    expect(html).toContain('data-canvas-style-id="footer-info-text"');
+    expect(html).toContain('data-canvas-style-id="form-phone-cta"');
+  });
+
+  /**
+   * `container` v2 (ADR-82) non rende più `background-image`/`background-color`/`opacity`
+   * inline: `Container.tsx` § commento di testa li rimanda esplicitamente al "Runtime Style
+   * Bridge" (`generateCanvasCss.ts`), il cui `SUPPORTED_KINDS` esclude `'background'` (debito
+   * dichiarato in ADR-82 § "Conseguenze"). Le asserzioni sotto verificano quindi solo ciò che
+   * questo dispatcher produce davvero oggi: il contenuto testuale e `data-canvas-style-id`
+   * (l'aggancio che il Bridge userà quando implementerà `'background'`) — non più CSS inline
+   * che nessun componente scrive.
+   */
+  describe('Hero Section — sfondo immagine e overlay (ADR-50, migrato a background v2 ADR-82)', () => {
+    it('applica il selettore del Runtime Style Bridge sulla radice e renderizza il contenuto', () => {
       const { html } = renderTree();
       const heroHtml = sectionHtmlByIndex(html, 0);
       expect(heroHtml).toContain('RICHIEDI UN CONTATTO ANTELMA');
-
-      expect(heroHtml).toContain('background-image:url(');
-      expect(heroHtml).toContain('a1b2c3d4e5f60001');
-      expect(heroHtml).toContain('background-position:center center');
-      expect(heroHtml).toContain('background-size:cover');
-      expect(heroHtml).toContain('background-color:#0c2340');
-      expect(heroHtml).toContain('opacity:0.6');
-      expect(heroHtml).not.toContain('rgba(');
+      expect(heroHtml).toContain('data-canvas-style-id="hero-section"');
     });
 
     it('il titolo hero è centrato e bianco (nessun h1: riservato al template del consumer HTML)', () => {
@@ -78,15 +94,12 @@ describe('AntelmaCloningParity — pagina "Antelma Contatti" (F13-03)', () => {
     });
   });
 
-  describe('Sub-Footer CTA Section — sfondo immagine e overlay (ADR-50)', () => {
-    it('applica lo stesso motore sfondo/overlay con colore e opacità propri della sezione', () => {
+  describe('Sub-Footer CTA Section — sfondo immagine e overlay (ADR-50, migrato a background v2 ADR-82)', () => {
+    it('applica il selettore del Runtime Style Bridge sulla radice e renderizza il contenuto', () => {
       const { html } = renderTree();
       const ctaHtml = sectionHtmlByIndex(html, 2);
 
-      expect(ctaHtml).toContain('background-image:url(');
-      expect(ctaHtml).toContain('a1b2c3d4e5f60002');
-      expect(ctaHtml).toContain('background-color:#051329');
-      expect(ctaHtml).toContain('opacity:0.8');
+      expect(ctaHtml).toContain('data-canvas-style-id="subfooter-cta-section"');
       expect(ctaHtml).toContain('<h3');
       // L'apostrofo è escapato da React in output (`&#x27;`), mai un apostrofo letterale.
       expect(ctaHtml).toContain('RIMANI IN CONNESSIONE CON L');
@@ -136,12 +149,16 @@ describe('AntelmaCloningParity — pagina "Antelma Contatti" (F13-03)', () => {
   });
 
   describe('Footer Section — 4 colonne e barra di copyright (F15-02)', () => {
-    it('applica la classe a 4 colonne, full-width e renderizza le quattro colonne editoriali', () => {
+    it('applica il selettore del Runtime Style Bridge e renderizza le quattro colonne editoriali', () => {
       const { html } = renderTree();
       const footerHtml = sectionHtmlByIndex(html, 3);
 
-      expect(footerHtml).toContain('columns_default_4');
-      expect(footerHtml).toContain('contentWidth_full-width');
+      // `columns_default_4`/`contentWidth_full-width` erano classi CSS Module di
+      // `Section.module.css` (v1): `container` v2 non le produce più, la griglia a 4 colonne
+      // vive nella prop `layout` (kind: 'layout'), non ancora resa da alcun componente (vedi
+      // il commento di testa di `Container.tsx`/`generateCanvasCss.ts`) — stesso principio
+      // già applicato sopra per Hero/Sub-Footer CTA.
+      expect(footerHtml).toContain('data-canvas-style-id="footer-section"');
       expect(footerHtml).toContain('ANTELMA');
       expect(footerHtml).toContain('Partita Iva e Codice Fiscale');
       expect(footerHtml).toContain('GRUPPO ANTELMA');

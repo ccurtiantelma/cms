@@ -38,6 +38,14 @@
  * fine — esattamente il difetto che questo confronto elimina. Un cambio genuino dall'esterno
  * (undo/redo, cambio di pagina, contenuto ri-sanitizzato dal server dopo il salvataggio)
  * resta scritto normalmente, perché in quei casi il DOM e la prop divergono davvero.
+ *
+ * `id` (Canvas Style Bridge, Sub-Task S2.1b): `node.id` strutturale, portato come
+ * `data-canvas-style-id` sull'elemento radice — stesso pattern già in uso da `Container.tsx`
+ * (vedi il suo commento di testa), qui esteso al widget foglia perché il CSS generato da
+ * `generateCanvasCss.ts` per un nodo `heading` deve poter colpire un elemento DOM reale,
+ * esattamente come già avviene per `container`. Opzionale (a differenza dell'`id` di
+ * `Container.tsx`, obbligatorio lì): `undefined` produce un `data-canvas-style-id` assente dal
+ * DOM (React omette l'attributo quando il valore è `undefined`), mai la stringa `"undefined"`.
  */
 import { useLayoutEffect, useRef, type CSSProperties } from 'react';
 import styles from './Heading.module.css';
@@ -54,6 +62,8 @@ function isTextAlign(value: unknown): value is 'left' | 'center' | 'right' | 'ju
 }
 
 interface HeadingProps {
+  /** Vedi il commento di testa del file, paragrafo `id`. */
+  id?: string;
   level: 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
   text: string;
   styleSpaceBefore?: unknown;
@@ -80,6 +90,7 @@ interface HeadingProps {
 }
 
 export default function Heading({
+  id,
   level: Level,
   text,
   styleSpaceBefore,
@@ -151,6 +162,7 @@ export default function Heading({
         className={className}
         style={resolvedInlineStyle}
         data-placeholder={isCanvasPreview ? placeholder : undefined}
+        data-canvas-style-id={id}
       >
         {text}
       </Level>
@@ -182,6 +194,7 @@ export default function Heading({
       contentEditable
       suppressContentEditableWarning
       data-placeholder={placeholder}
+      data-canvas-style-id={id}
       onInput={(event) => onTextInput?.(event.currentTarget.textContent ?? '')}
       onBlur={(event) => onTextChange?.(event.currentTarget.textContent ?? '')}
       onKeyDown={(event) => {

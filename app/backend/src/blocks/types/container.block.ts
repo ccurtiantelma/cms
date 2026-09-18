@@ -1,194 +1,212 @@
 import { BlockDefinition } from '../block-definition.types';
+import { migrateContainerV1ToV2 } from '../migrations/migrate-container-v1-to-v2';
 
 /**
- * `container` — sesto tipo del registro (ADR-39, approvata 2026-08-27):
- * contenitore generico a layout flex, nesting ricorsivo (`children.allow:
- * '*'`, incluso container-in-container). `display` accetta solo `'flex'` in
- * questo round — nessun `'grid'` (ADR-39 § 2 punto 1, emendamento in sede di
- * approvazione): senza `gridTemplateColumns`/`gridTemplateRows` un valore
- * `grid` produrrebbe solo una griglia auto-flow a una colonna implicita, non
- * un layout Grid reale. Nessuna prop di stile (`styleBorder`/`styleShadow`/
- * `styleSpaceBefore`/`styleSpaceAfter`) in questo round — layout puro
- * (ADR-39 § 2, "Alternative scartate"). Spaziatura per lato (padding/margin)
- * aggiunta da ADR-41, il "secondo step" che ADR-39 § 2 aveva rimandato
- * esplicitamente — stessa forma di `section` (ADR-33 § 4).
+ * `container` v2 — contenitore unificato Grid/Flex (ADR-82 § "Decisione"
+ * punto 1, `docs/SPEC-propkind-v2.md` § 4.1): sostituisce integralmente il
+ * ruolo di `section` come contenitore principale di pagina (ADR-82 §
+ * "Contesto"). `container` v1 (`display: 'flex'` soltanto, nessuna prop di
+ * stile) resta uno scalino della catena di migrazione
+ * (`migrateContainerV1ToV2`, `blocks/migrations/migrate-container-v1-to-v2.ts`),
+ * permanente per ADR-21 § 3.5 — non riscritto qui, solo superato da `v: 2`.
+ *
+ * Tutte le prop sono opzionali (nessun requisito le rende obbligatorie,
+ * stesso principio di `container` v1): `children.allow: '*'` invariato,
+ * nesting libero incluso `container` dentro `container` (ADR-82 § "Decisione"
+ * punto 1, ultimo bullet).
  */
 export const containerBlock: BlockDefinition = {
   type: 'container',
-  v: 1,
+  v: 2,
   props: {
-    display: {
+    tag: {
       kind: 'enum',
       required: false,
-      values: ['flex'],
-      default: 'flex',
+      values: ['div', 'section', 'header', 'footer', 'article', 'aside', 'nav', 'main'],
+      default: 'div',
     },
-    flexDirection: {
-      kind: 'enum',
+    layout: {
+      kind: 'layout',
       required: false,
       responsive: true,
-      values: ['row', 'row-reverse', 'column', 'column-reverse'],
-      default: { default: 'row' },
     },
-    justifyContent: {
+    contentWidth: {
       kind: 'enum',
       required: false,
-      responsive: true,
-      values: ['flex-start', 'flex-end', 'center', 'space-between', 'space-around', 'space-evenly'],
-      default: { default: 'flex-start' },
+      values: ['boxed', 'full'],
+      default: 'boxed',
     },
-    alignItems: {
-      kind: 'enum',
-      required: false,
-      responsive: true,
-      values: ['stretch', 'flex-start', 'center', 'flex-end'],
-      default: { default: 'stretch' },
-    },
-    wrap: {
-      kind: 'enum',
-      required: false,
-      responsive: true,
-      values: ['nowrap', 'wrap'],
-      default: { default: 'nowrap' },
-    },
-    gap: {
-      kind: 'enum',
-      required: false,
-      responsive: true,
-      values: ['none', 'sm', 'md', 'lg'],
-      default: { default: 'none' },
-    },
-    styleFlexBasis: {
-      kind: 'unitValue',
-      required: false,
-      units: ['%'],
-      min: 0,
-      max: 100,
-    },
-    styleBackgroundColor: { kind: 'color', required: false },
-    styleColor: { kind: 'color', required: false },
-    backgroundColor: { kind: 'color', required: false },
-    color: { kind: 'color', required: false },
-    stylePaddingTop: {
-      kind: 'enum',
-      required: false,
-      responsive: true,
-      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
-      default: { default: '0' },
-    },
-    stylePaddingRight: {
-      kind: 'enum',
-      required: false,
-      responsive: true,
-      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
-      default: { default: '0' },
-    },
-    stylePaddingBottom: {
-      kind: 'enum',
-      required: false,
-      responsive: true,
-      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
-      default: { default: '0' },
-    },
-    stylePaddingLeft: {
-      kind: 'enum',
-      required: false,
-      responsive: true,
-      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
-      default: { default: '0' },
-    },
-    styleMarginTop: {
-      kind: 'enum',
-      required: false,
-      responsive: true,
-      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
-      default: { default: '0' },
-    },
-    styleMarginRight: {
-      kind: 'enum',
-      required: false,
-      responsive: true,
-      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
-      default: { default: '0' },
-    },
-    styleMarginBottom: {
-      kind: 'enum',
-      required: false,
-      responsive: true,
-      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
-      default: { default: '0' },
-    },
-    styleMarginLeft: {
-      kind: 'enum',
-      required: false,
-      responsive: true,
-      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
-      default: { default: '0' },
-    },
-    styleWidth: {
+    boxedWidth: {
       kind: 'unitValue',
       required: false,
       units: ['px', '%'],
       min: 0,
       max: 4000,
     },
-    styleHeight: {
+    minHeight: {
       kind: 'unitValue',
       required: false,
-      units: ['px', '%'],
+      units: ['px', 'vh'],
       min: 0,
-      max: 4000,
+      max: 2000,
     },
-    customCssClass: {
+    overflow: {
+      kind: 'enum',
+      required: false,
+      values: ['visible', 'hidden', 'auto'],
+      default: 'visible',
+    },
+    background: {
+      kind: 'background',
+      required: false,
+      stateful: true,
+    },
+    border: {
+      kind: 'border',
+      required: false,
+      stateful: true,
+    },
+    radius: {
+      kind: 'radius',
+      required: false,
+    },
+    shadow: {
+      kind: 'shadow',
+      required: false,
+      stateful: true,
+    },
+    padding: {
+      kind: 'spacing',
+      required: false,
+      target: 'padding',
+      units: ['px', '%', 'em', 'rem'],
+      min: 0,
+      max: 500,
+      responsive: true,
+    },
+    margin: {
+      kind: 'spacing',
+      required: false,
+      target: 'margin',
+      units: ['px', '%', 'em', 'rem'],
+      min: 0,
+      max: 500,
+      responsive: true,
+    },
+    position: {
+      kind: 'position',
+      required: false,
+      responsive: true,
+    },
+    transform: {
+      kind: 'transform',
+      required: false,
+      stateful: true,
+      responsive: true,
+    },
+    opacity: {
+      kind: 'number',
+      required: false,
+      min: 0,
+      max: 1,
+    },
+    filter: {
+      kind: 'filter',
+      required: false,
+      stateful: true,
+      responsive: true,
+    },
+    link: {
+      kind: 'link',
+      required: false,
+    },
+    animation: {
+      kind: 'animation',
+      required: false,
+    },
+    motion: {
+      kind: 'motion',
+      required: false,
+    },
+    shapeDividerTop: {
+      kind: 'shapeDivider',
+      required: false,
+    },
+    shapeDividerBottom: {
+      kind: 'shapeDivider',
+      required: false,
+    },
+    htmlId: {
+      kind: 'htmlId',
+      required: false,
+    },
+    cssClass: {
       kind: 'cssClassName',
       required: false,
     },
-    customElementId: {
-      kind: 'htmlId',
+    attributes: {
+      kind: 'attributes',
+      required: false,
+    },
+    css: {
+      kind: 'css',
+      required: false,
+      maxLength: 5000,
+    },
+    hideOn: {
+      kind: 'hideOn',
       required: false,
     },
   },
   children: { allow: '*' },
-  migrations: [],
+  migrations: [migrateContainerV1ToV2],
   enabled: true,
   meta: {
     label: 'Contenitore',
     category: 'layout',
     icon: 'box-align-top',
     props: {
-      display: { label: 'Layout', tab: 'style', order: 1 },
-      flexDirection: { label: 'Direzione', tab: 'style', order: 2 },
-      justifyContent: { label: 'Allineamento orizzontale', tab: 'style', order: 3 },
-      alignItems: { label: 'Allineamento verticale', tab: 'style', order: 4 },
-      wrap: { label: 'A capo', tab: 'style', order: 5 },
-      gap: { label: 'Spaziatura', tab: 'style', order: 6 },
-      styleFlexBasis: { label: 'Larghezza', tab: 'style', order: 7 },
-      styleBackgroundColor: { label: 'Colore di sfondo', tab: 'style', order: 12 },
-      styleColor: { label: 'Colore testo', tab: 'style', order: 13 },
-      backgroundColor: { label: 'Colore di sfondo (fallback)', tab: 'style', order: 14 },
-      color: { label: 'Colore testo (fallback)', tab: 'style', order: 15 },
-      stylePaddingTop: { label: 'Padding superiore', tab: 'style', order: 8 },
-      stylePaddingRight: { label: 'Padding destro', tab: 'style', order: 9 },
-      stylePaddingBottom: { label: 'Padding inferiore', tab: 'style', order: 10 },
-      stylePaddingLeft: { label: 'Padding sinistro', tab: 'style', order: 11 },
-      styleMarginTop: { label: 'Margine superiore', tab: 'style', order: 12 },
-      styleMarginRight: { label: 'Margine destro', tab: 'style', order: 13 },
-      styleMarginBottom: { label: 'Margine inferiore', tab: 'style', order: 14 },
-      styleMarginLeft: { label: 'Margine sinistro', tab: 'style', order: 15 },
-      styleWidth: { label: 'Larghezza personalizzata', tab: 'style', order: 18 },
-      styleHeight: { label: 'Altezza personalizzata', tab: 'style', order: 19 },
-      customCssClass: {
-        label: 'Classe CSS personalizzata',
-        tab: 'advanced',
-        order: 16,
-        help: 'Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore.',
-      },
-      customElementId: {
+      tag: { label: 'Tag HTML', tab: 'advanced', order: 1 },
+      layout: { label: 'Layout (Flex/Grid)', tab: 'style', order: 2 },
+      contentWidth: { label: 'Larghezza contenuto', tab: 'style', order: 3 },
+      boxedWidth: { label: 'Larghezza massima', tab: 'style', order: 4 },
+      minHeight: { label: 'Altezza minima', tab: 'style', order: 5 },
+      overflow: { label: 'Overflow', tab: 'style', order: 6 },
+      background: { label: 'Sfondo', tab: 'style', order: 7 },
+      border: { label: 'Bordo', tab: 'style', order: 8 },
+      radius: { label: 'Raggio angoli', tab: 'style', order: 9 },
+      shadow: { label: 'Ombra', tab: 'style', order: 10 },
+      padding: { label: 'Padding', tab: 'style', order: 11 },
+      margin: { label: 'Margine', tab: 'style', order: 12 },
+      position: { label: 'Posizionamento', tab: 'advanced', order: 13 },
+      transform: { label: 'Trasformazione', tab: 'advanced', order: 14 },
+      opacity: { label: 'Opacità', tab: 'style', order: 15 },
+      filter: { label: 'Filtro', tab: 'style', order: 16 },
+      link: { label: 'Link', tab: 'content', order: 17 },
+      animation: { label: 'Animazione', tab: 'advanced', order: 18 },
+      motion: { label: 'Effetti di scorrimento', tab: 'advanced', order: 19 },
+      shapeDividerTop: { label: 'Divisore forma (superiore)', tab: 'style', order: 20 },
+      shapeDividerBottom: { label: 'Divisore forma (inferiore)', tab: 'style', order: 21 },
+      htmlId: {
         label: 'ID elemento personalizzato',
         tab: 'advanced',
-        order: 17,
+        order: 22,
         help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
       },
+      cssClass: {
+        label: 'Classe CSS personalizzata',
+        tab: 'advanced',
+        order: 23,
+        help: 'Una o più classi separate da spazio: solo lettere, numeri, trattino, underscore.',
+      },
+      attributes: { label: 'Attributi HTML personalizzati', tab: 'advanced', order: 24 },
+      css: {
+        label: 'CSS personalizzato',
+        tab: 'advanced',
+        order: 25,
+        help: 'Sanitizzazione avanzata rimandata ad ADR-78 (non ancora firmata).',
+      },
+      hideOn: { label: 'Nascondi su breakpoint', tab: 'advanced', order: 26 },
     },
   },
 };

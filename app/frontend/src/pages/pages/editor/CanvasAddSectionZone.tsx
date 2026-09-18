@@ -59,7 +59,11 @@ export default function CanvasAddSectionZone({
       if (result.ok) {
         insertSubtreeAction(parentId, parentId === null ? rootBlocksCount : index, result.subtree);
       } else {
-        notifications.show({ color: 'red', title: 'Importazione non riuscita', message: result.error });
+        notifications.show({
+          color: 'red',
+          title: 'Importazione non riuscita',
+          message: result.error,
+        });
       }
     };
     reader.readAsText(file);

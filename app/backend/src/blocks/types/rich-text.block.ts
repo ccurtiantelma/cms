@@ -1,13 +1,18 @@
 import { BlockDefinition } from '../block-definition.types';
+import { migrateRichTextV1ToV2 } from '../migrations/migrate-rich-text-v1-to-v2';
 
 /**
- * `richText` — frammento di testo formattato (SPEC-F02-blocchi.md § 3.4).
- * `html` usa il profilo `basic` (ADR-20/ADR-21 § 4); la sanitizzazione vera
- * e propria è T3, fuori scope qui. Stringa vuota ammessa. Foglia.
+ * `richText` `v: 2` (ADR-81 § "Decisione" punto 1/2): stessa tabella di
+ * `heading` (`color`, `typography`, `margin`, `hideOn`). Le quattro prop
+ * "fallback" `styleBackgroundColor`/`styleColor`/`backgroundColor`/`color`
+ * (kind `color`, mai menzionate da alcuna ADR firmata) sono rimosse in
+ * questo bump: scelta di design di questo Sub-Task, segnalata nel resoconto
+ * finale (`migrate-rich-text-v1-to-v2.ts` per i dettagli). `html` invariato.
+ * Foglia (`children.allow: []`).
  */
 export const richTextBlock: BlockDefinition = {
   type: 'richText',
-  v: 1,
+  v: 2,
   props: {
     html: {
       kind: 'richText',
@@ -29,33 +34,18 @@ export const richTextBlock: BlockDefinition = {
       values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
       default: { default: 'none' },
     },
-    styleTextColor: {
-      kind: 'enum',
+    color: {
+      kind: 'colorRef',
       required: false,
       responsive: true,
-      values: ['default', 'muted', 'accent', 'inverse'],
-      default: { default: 'default' },
+      stateful: true,
+      cssProperty: 'color',
     },
-    styleFontSize: {
-      kind: 'enum',
+    typography: {
+      kind: 'typography',
       required: false,
       responsive: true,
-      values: ['sm', 'md', 'lg', 'xl'],
-      default: { default: 'md' },
-    },
-    styleFontWeight: {
-      kind: 'enum',
-      required: false,
-      responsive: true,
-      values: ['regular', 'medium', 'bold'],
-      default: { default: 'regular' },
-    },
-    styleFontFamily: {
-      kind: 'enum',
-      required: false,
-      responsive: true,
-      values: ['default', 'inter', 'roboto', 'playfair', 'montserrat', 'monospace'],
-      default: { default: 'default' },
+      stateful: true,
     },
     styleLayer: {
       kind: 'enum',
@@ -63,35 +53,9 @@ export const richTextBlock: BlockDefinition = {
       values: ['base', 'raised', 'overlay', 'top'],
       default: 'base',
     },
-    styleHideDesktop: {
-      kind: 'boolean',
+    hideOn: {
+      kind: 'hideOn',
       required: false,
-      default: false,
-    },
-    styleHideTablet: {
-      kind: 'boolean',
-      required: false,
-      default: false,
-    },
-    styleHideMobile: {
-      kind: 'boolean',
-      required: false,
-      default: false,
-    },
-    styleTextColorCustom: {
-      kind: 'color',
-      required: false,
-    },
-    styleBackgroundColor: { kind: 'color', required: false },
-    styleColor: { kind: 'color', required: false },
-    backgroundColor: { kind: 'color', required: false },
-    color: { kind: 'color', required: false },
-    styleFontSizeCustom: {
-      kind: 'unitValue',
-      required: false,
-      units: ['px', '%', 'em', 'rem'],
-      min: 1,
-      max: 200,
     },
     styleBorder: {
       kind: 'border',
@@ -109,37 +73,18 @@ export const richTextBlock: BlockDefinition = {
       kind: 'htmlId',
       required: false,
     },
-    styleMarginTop: {
-      kind: 'unitValue',
+    margin: {
+      kind: 'spacing',
       required: false,
-      units: ['px', '%'],
+      target: 'margin',
+      units: ['px', '%', 'em', 'rem'],
       min: 0,
       max: 500,
-    },
-    styleMarginRight: {
-      kind: 'unitValue',
-      required: false,
-      units: ['px', '%'],
-      min: 0,
-      max: 500,
-    },
-    styleMarginBottom: {
-      kind: 'unitValue',
-      required: false,
-      units: ['px', '%'],
-      min: 0,
-      max: 500,
-    },
-    styleMarginLeft: {
-      kind: 'unitValue',
-      required: false,
-      units: ['px', '%'],
-      min: 0,
-      max: 500,
+      responsive: true,
     },
   },
   children: { allow: [] },
-  migrations: [],
+  migrations: [migrateRichTextV1ToV2],
   enabled: true,
   meta: {
     label: 'Testo',
@@ -149,30 +94,10 @@ export const richTextBlock: BlockDefinition = {
       html: { label: 'Contenuto', order: 1 },
       styleSpaceBefore: { label: 'Spazio prima', tab: 'style', order: 2 },
       styleSpaceAfter: { label: 'Spazio dopo', tab: 'style', order: 3 },
-      styleTextColor: { label: 'Colore testo', tab: 'style', order: 4 },
-      styleFontSize: { label: 'Dimensione testo', tab: 'style', order: 5 },
-      styleFontWeight: { label: 'Spessore testo', tab: 'style', order: 6 },
-      styleFontFamily: { label: 'Famiglia Font', tab: 'style', order: 8 },
+      color: { label: 'Colore testo', tab: 'style', order: 4 },
+      typography: { label: 'Tipografia', tab: 'style', order: 5 },
       styleLayer: { label: 'Livello di sovrapposizione', tab: 'advanced', order: 9 },
-      styleHideDesktop: { label: 'Nascondi su Desktop', tab: 'advanced', order: 10 },
-      styleHideTablet: { label: 'Nascondi su Tablet', tab: 'advanced', order: 11 },
-      styleHideMobile: { label: 'Nascondi su Mobile', tab: 'advanced', order: 12 },
-      styleTextColorCustom: {
-        label: 'Colore testo personalizzato',
-        tab: 'style',
-        order: 13,
-        help: 'Colore libero (esadecimale). Ha priorità su "Colore testo" se impostato.',
-      },
-      styleBackgroundColor: { label: 'Colore di sfondo', tab: 'style', order: 19 },
-      styleColor: { label: 'Colore testo', tab: 'style', order: 20 },
-      backgroundColor: { label: 'Colore di sfondo (fallback)', tab: 'style', order: 21 },
-      color: { label: 'Colore testo (fallback)', tab: 'style', order: 22 },
-      styleFontSizeCustom: {
-        label: 'Dimensione testo personalizzata',
-        tab: 'style',
-        order: 14,
-        help: 'Valore libero con unità. Ha priorità su "Dimensione testo" se impostato.',
-      },
+      hideOn: { label: 'Nascondi su breakpoint', tab: 'advanced', order: 10 },
       styleBorder: { label: 'Bordo', tab: 'style', order: 15 },
       styleShadow: { label: 'Ombra', tab: 'style', order: 16 },
       customCssClass: {
@@ -187,10 +112,7 @@ export const richTextBlock: BlockDefinition = {
         order: 18,
         help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
       },
-      styleMarginTop: { label: 'Margine superiore', tab: 'style', order: 19 },
-      styleMarginRight: { label: 'Margine destro', tab: 'style', order: 20 },
-      styleMarginBottom: { label: 'Margine inferiore', tab: 'style', order: 21 },
-      styleMarginLeft: { label: 'Margine sinistro', tab: 'style', order: 22 },
+      margin: { label: 'Margine', tab: 'style', order: 19 },
     },
   },
 };

@@ -150,13 +150,16 @@ describe('PagesController — creazione da Template (e2e, DB/Redis reali)', () =
       const blocks = res.body.draftContent.blocks as BlockNodeLike[];
 
       // Struttura: hero-section (heading, richText, button) + two-columns-section (2x richText),
-      // stessa forma di `landingPageBlueprintBlocks` nel registro.
+      // stessa forma di `landingPageBlueprintBlocks` nel registro — con
+      // `type: 'container'` al posto di `'section'`: la migrazione di
+      // identità cross-type di ADR-82 riscrive ogni nodo `section` letto
+      // (compreso il contenuto generato da blueprint) prima della risposta.
       expect(collectShape(blocks)).toEqual([
-        { type: 'section', childCount: 3 },
+        { type: 'container', childCount: 3 },
         { type: 'heading', childCount: 0 },
         { type: 'richText', childCount: 0 },
         { type: 'button', childCount: 0 },
-        { type: 'section', childCount: 2 },
+        { type: 'container', childCount: 2 },
         { type: 'richText', childCount: 0 },
         { type: 'richText', childCount: 0 },
       ]);
@@ -184,8 +187,9 @@ describe('PagesController — creazione da Template (e2e, DB/Redis reali)', () =
 
       const blocks = res.body.draftContent.blocks as BlockNodeLike[];
 
+      // `type: 'container'` al posto di `'section'`: vedi nota sopra (ADR-82).
       expect(collectShape(blocks)).toEqual([
-        { type: 'section', childCount: 3 },
+        { type: 'container', childCount: 3 },
         { type: 'heading', childCount: 0 },
         { type: 'image', childCount: 0 },
         { type: 'richText', childCount: 0 },

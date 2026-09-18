@@ -188,8 +188,24 @@ describe('PagesController (e2e) — round-trip lettura/scrittura di contenuto pr
       const returnedBlocks = (
         getRes.body.draftContent as { blocks: Array<Record<string, unknown>> }
       ).blocks;
-      expect(returnedBlocks[0].v).toBe(1);
-      expect(returnedBlocks[0].props).toEqual({ html: 'contenuto pre-F02' });
+      // `richText` è `v: 2` nel registro corrente (ADR-81, round R1 "parità
+      // Elementor Pro"): un nodo pre-F02 senza `v` (trattato come `v: 1`,
+      // ADR-21 § 1) migra a v2 in lettura, con `color`/`typography`/`margin`/
+      // `hideOn` popolate dai default sicuri della migrazione.
+      expect(returnedBlocks[0].v).toBe(2);
+      expect(returnedBlocks[0].props).toEqual({
+        html: 'contenuto pre-F02',
+        color: { normal: { default: { ref: 'text' } } },
+        typography: {
+          normal: {
+            fontSize: { default: { value: 16, unit: 'px' } },
+            fontWeight: { default: '400' },
+            fontFamily: { default: { family: 'inter', source: 'system' } },
+          },
+        },
+        margin: { default: { top: 0, right: 0, bottom: 0, left: 0, unit: 'px', linked: true } },
+        hideOn: [],
+      });
 
       const rowAfterGet = await db.query.pageEntity.findFirst({ where: eq(pageEntity.guid, guid) });
       expect(
@@ -212,8 +228,20 @@ describe('PagesController (e2e) — round-trip lettura/scrittura di contenuto pr
       const patchedBlocks = (
         patchRes.body.draftContent as { blocks: Array<Record<string, unknown>> }
       ).blocks;
-      expect(patchedBlocks[0].v).toBe(1);
-      expect(patchedBlocks[0].props).toEqual({ html: 'contenuto pre-F02' });
+      expect(patchedBlocks[0].v).toBe(2);
+      expect(patchedBlocks[0].props).toEqual({
+        html: 'contenuto pre-F02',
+        color: { normal: { default: { ref: 'text' } } },
+        typography: {
+          normal: {
+            fontSize: { default: { value: 16, unit: 'px' } },
+            fontWeight: { default: '400' },
+            fontFamily: { default: { family: 'inter', source: 'system' } },
+          },
+        },
+        margin: { default: { top: 0, right: 0, bottom: 0, left: 0, unit: 'px', linked: true } },
+        hideOn: [],
+      });
 
       // Verifica a database, non solo sulla risposta HTTP: la scrittura reale
       // ha persistito `v` sul nodo (la pipeline di scrittura lo richiede).
@@ -223,7 +251,7 @@ describe('PagesController (e2e) — round-trip lettura/scrittura di contenuto pr
       const persistedAfterPatch = (
         rowAfterPatch!.draftContent as { blocks: Array<Record<string, unknown>> }
       ).blocks;
-      expect(persistedAfterPatch[0].v).toBe(1);
+      expect(persistedAfterPatch[0].v).toBe(2);
     });
   });
 

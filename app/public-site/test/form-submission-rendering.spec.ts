@@ -52,8 +52,9 @@ function pageWithoutForm(): PublicPageDto {
 }
 
 /**
- * Pagina con un `form` dentro un `section` (composizione reale, ADR-46 §
- * Impatto: "non ammesso a radice") — un campo `text` e il pulsante di invio.
+ * Pagina con un `form` dentro un `container` (composizione reale, ADR-46 §
+ * Impatto: "non ammesso a radice"; `container` è il contenitore attivo da ADR-82,
+ * `section` è deprecato) — un campo `text` e il pulsante di invio.
  */
 function pageWithForm(formKey: string): PublicPageDto {
   return {
@@ -65,8 +66,8 @@ function pageWithForm(formKey: string): PublicPageDto {
       blocks: [
         {
           id: 'section-1',
-          type: 'section',
-          v: 1,
+          type: 'container',
+          v: 2,
           props: {},
           children: [
             {

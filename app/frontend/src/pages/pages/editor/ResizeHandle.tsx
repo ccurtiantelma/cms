@@ -4,8 +4,10 @@
  * SPEC-F04-super-elementor.md § 4.2). Generalizza il gesto già esistente per
  * `container.styleFlexBasis` (`components/ContainerResizeHandle.tsx` +
  * `handleWidthResizePointerDown/Move/Up/Cancel` in `EditorBlockWrapper.tsx`, **non toccati**
- * da questo file) alle nuove props `styleWidth`/`styleHeight` (`container`/`image`) e ai
- * quattro margini per lato (`button`/`heading`/`richText`/`image`).
+ * da questo file) alle props `boxedWidth`/`minHeight` di `container` `v: 2`
+ * (`ADR-82-container-unificato-grid-flex.md` § "Decisione" punto 1, sostituiscono le
+ * `styleWidth`/`styleHeight` di `container` `v: 1`) e ai quattro margini per lato
+ * (`button`/`heading`/`richText`/`image`).
  *
  * A differenza di `ContainerResizeHandle.tsx` (puramente presentazionale: riceve gli handler
  * del gesto già pronti da `EditorBlockWrapper.tsx`, che possiede il gesto), questo
@@ -24,7 +26,12 @@
  * `updateBlockPropsAction` — **nessuna azione nuova** nello store per questo meccanismo
  * (ADR-71 § "Decisione" punto 5, ultimo capoverso).
  */
-import { useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import { Text } from '@mantine/core';
 import {
   useBlockEditorStore,
@@ -50,16 +57,21 @@ export interface ResizeHandleProps {
   blockId: string;
   propName: ResizeHandlePropName;
   axis: ResizeHandleAxis;
-  /** Dal `PropSpec` dichiarato nel registro, mai un valore hardcoded nel componente (§ 4.2). */
+  /**
+   * Dal `PropSpec` dichiarato nel registro, mai un valore hardcoded nel componente (§ 4.2).
+   * Non più un 2-tuple fisso: `container.minHeight` (`ADR-82` § "Decisione" punto 1) dichiara
+   * `px`/`vh`, di cui questa maniglia sa pilotare solo `px` (`RESIZE_HANDLE_UNITS`) — il
+   * chiamante può quindi risolvere un array di una sola unità.
+   */
   min: number;
   max: number;
-  units: readonly ['px', '%'];
+  units: readonly ResizeHandleUnit[];
 }
 
 /** Etichetta leggibile per l'`aria-label`, indicizzata sul nome della prop pilotata. */
 const PROP_LABELS: Record<ResizeHandlePropName, string> = {
-  styleWidth: 'larghezza',
-  styleHeight: 'altezza',
+  boxedWidth: 'larghezza',
+  minHeight: 'altezza',
   styleMarginTop: 'margine superiore',
   styleMarginBottom: 'margine inferiore',
   styleMarginLeft: 'margine sinistro',
@@ -68,8 +80,8 @@ const PROP_LABELS: Record<ResizeHandlePropName, string> = {
 
 /** Famiglia di colore CSS (`--resize-handle-color`, `ResizeHandle.module.css`): dimensione vs spaziatura. */
 const PROP_COLOR: Record<ResizeHandlePropName, string> = {
-  styleWidth: '#0ca678',
-  styleHeight: '#0ca678',
+  boxedWidth: '#0ca678',
+  minHeight: '#0ca678',
   styleMarginTop: '#f08c00',
   styleMarginBottom: '#f08c00',
   styleMarginLeft: '#f08c00',
@@ -90,7 +102,14 @@ interface ResizeDragState {
   lastValue: number;
 }
 
-export default function ResizeHandle({ blockId, propName, axis, min, max, units }: ResizeHandleProps) {
+export default function ResizeHandle({
+  blockId,
+  propName,
+  axis,
+  min,
+  max,
+  units,
+}: ResizeHandleProps) {
   const node = useNodeById(blockId);
   const updateBlockPropsAction = useBlockEditorStore((state) => state.updateBlockPropsAction);
   const setPropResizePreview = useBlockEditorStore((state) => state.setPropResizePreview);
@@ -158,7 +177,8 @@ export default function ResizeHandle({ blockId, propName, axis, min, max, units 
    */
   function handlePointerUp(event: ReactPointerEvent<HTMLDivElement>): void {
     const handleEl = event.currentTarget;
-    if (handleEl.hasPointerCapture(event.pointerId)) handleEl.releasePointerCapture(event.pointerId);
+    if (handleEl.hasPointerCapture(event.pointerId))
+      handleEl.releasePointerCapture(event.pointerId);
     const drag = dragRef.current;
     dragRef.current = null;
     setIsResizing(false);
@@ -175,7 +195,8 @@ export default function ResizeHandle({ blockId, propName, axis, min, max, units 
    */
   function handlePointerCancel(event: ReactPointerEvent<HTMLDivElement>): void {
     const handleEl = event.currentTarget;
-    if (handleEl.hasPointerCapture(event.pointerId)) handleEl.releasePointerCapture(event.pointerId);
+    if (handleEl.hasPointerCapture(event.pointerId))
+      handleEl.releasePointerCapture(event.pointerId);
     dragRef.current = null;
     setIsResizing(false);
     clearPropResizePreview();
@@ -213,7 +234,12 @@ export default function ResizeHandle({ blockId, propName, axis, min, max, units 
     >
       <span className={styles.grip} aria-hidden="true" />
       {isResizing && preview !== null && (
-        <Text size="xs" fw={600} className={styles.badge} data-testid={`resize-handle-badge-${propName}`}>
+        <Text
+          size="xs"
+          fw={600}
+          className={styles.badge}
+          data-testid={`resize-handle-badge-${propName}`}
+        >
           {formatResizeBadge(preview.value, preview.unit)}
         </Text>
       )}

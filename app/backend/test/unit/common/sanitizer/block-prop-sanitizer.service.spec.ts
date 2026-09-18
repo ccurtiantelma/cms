@@ -1,4 +1,5 @@
 import { BlockPropSanitizerService } from '../../../../src/common/sanitizer/block-prop-sanitizer.service';
+import { CssTreeSanitizerService } from '../../../../src/common/sanitizer/css-tree-sanitizer.service';
 import {
   BASIC_SANITIZE_OPTIONS,
   INLINE_SANITIZE_OPTIONS,
@@ -38,7 +39,7 @@ describe('BlockPropSanitizerService (unit) — sanitizzazione per kind (SPEC-F02
   let sanitizer: BlockPropSanitizerService;
 
   beforeEach(() => {
-    sanitizer = new BlockPropSanitizerService();
+    sanitizer = new BlockPropSanitizerService(new CssTreeSanitizerService());
   });
 
   // ─── richText — profilo "basic" ─────────────────────────────────────────
@@ -415,7 +416,7 @@ describe('BlockPropSanitizerService (unit) — sanitizzazione per kind (SPEC-F02
       // Importa il modulo DOPO il mock, per usare la versione mockata.
       const { BlockPropSanitizerService: MockedService } =
         await import('../../../../src/common/sanitizer/block-prop-sanitizer.service');
-      const mockedSanitizer = new MockedService();
+      const mockedSanitizer = new MockedService(new CssTreeSanitizerService());
 
       expect(() =>
         mockedSanitizer.sanitizeTree(

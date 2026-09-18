@@ -22,39 +22,61 @@ function node(overrides: Partial<MigratableBlockNode>): MigratableBlockNode {
   };
 }
 
-describe('motore di migrazione — cinque tipi reali (tutti v:1, catena vuota)', () => {
-  const realDefinitions: BlockDefinition[] = [
-    sectionBlock,
+describe('motore di migrazione — quattro tipi foglia reali migrati a v:2 (ADR-81, round R1 "parità Elementor Pro", Sub-Task S1.4)', () => {
+  const leafDefinitionsV2: BlockDefinition[] = [
     headingBlock,
     richTextBlock,
     imageBlock,
     buttonBlock,
   ];
 
-  it.each(realDefinitions)(
-    '$type: passa attraverso senza trasformazioni, v assente ⇒ 1',
+  it.each(leafDefinitionsV2)(
+    '$type: props v1 vuote ⇒ v2 con default sicuri, v assente ⇒ migrato a v2',
     (definition) => {
-      const props = { foo: 'bar' };
-      const input = node({ type: definition.type, props });
+      const input = node({ type: definition.type, props: {} });
 
       const { node: migrated, unsupported } = migrateBlockNode(input, DEFAULT_BLOCK_REGISTRY);
 
       expect(unsupported).toBeUndefined();
-      expect(migrated.v).toBe(1);
-      expect(migrated.props).toEqual(props);
+      expect(migrated.v).toBe(2);
+      // Nessuna prop v1 sostituita sopravvive (ADR-81 § "Decisione" punto 3).
+      expect(migrated.props).not.toHaveProperty('styleTextColor');
+      expect(migrated.props).not.toHaveProperty('styleFontSize');
+      expect(migrated.props).not.toHaveProperty('styleHideDesktop');
     },
   );
 
-  it('albero con i cinque tipi reali: migrateBlockTree non produce errori', () => {
-    const tree: MigratableBlockNode[] = realDefinitions.map((definition, index) =>
+  it('heading: props v1 vuote producono color/typography/margin/hideOn con default sicuri', () => {
+    const input = node({ type: 'heading', props: {} });
+    const { node: migrated, unsupported } = migrateBlockNode(input, DEFAULT_BLOCK_REGISTRY);
+
+    expect(unsupported).toBeUndefined();
+    expect(migrated.v).toBe(2);
+    expect(migrated.props.color).toEqual({ normal: { default: { ref: 'text' } } });
+    expect(migrated.props.margin).toEqual({
+      default: { top: 0, right: 0, bottom: 0, left: 0, unit: 'px', linked: true },
+    });
+    expect(migrated.props.hideOn).toEqual([]);
+  });
+
+  it('button: href v1 assente produce link.href "/" (default sicuro, mai un valore che fa fallire la validazione)', () => {
+    const input = node({ type: 'button', props: { label: 'Vai' } });
+    const { node: migrated, unsupported } = migrateBlockNode(input, DEFAULT_BLOCK_REGISTRY);
+
+    expect(unsupported).toBeUndefined();
+    expect(migrated.props.link).toEqual({ href: '/', target: '_self', rel: [] });
+  });
+
+  it('albero con i quattro tipi foglia reali: migrateBlockTree non produce errori, tutti a v:2', () => {
+    const tree: MigratableBlockNode[] = leafDefinitionsV2.map((definition, index) =>
       node({ id: `n${index}`, type: definition.type, props: {} }),
     );
 
     const result = migrateBlockTree(tree, DEFAULT_BLOCK_REGISTRY);
 
     expect(result.errors).toEqual([]);
-    expect(result.blocks).toHaveLength(realDefinitions.length);
-    result.blocks.forEach((b) => expect(b.v).toBe(1));
+    expect(result.blocks).toHaveLength(leafDefinitionsV2.length);
+    result.blocks.forEach((b) => expect(b.v).toBe(2));
   });
 
   it('tipo non nel registro: passa attraverso invariato, nessun errore prodotto qui (compito del validator)', () => {
@@ -64,6 +86,51 @@ describe('motore di migrazione — cinque tipi reali (tutti v:1, catena vuota)',
 
     expect(unsupported).toBeUndefined();
     expect(migrated).toBe(input);
+  });
+});
+
+describe('motore di migrazione — stadio di identità cross-type `section` → `container` (ADR-82 § "Decisione" punto 3, round R2, Sub-Task S1.4)', () => {
+  it('un nodo {type:"section", v:1} con figli produce un container v2 coerente, figli migrati ricorsivamente', () => {
+    const sectionNode = node({
+      id: 'sec',
+      type: 'section',
+      props: { columns: '1' },
+      children: [node({ id: 'h', type: 'heading', props: { level: 'h2', text: 'Titolo' } })],
+    });
+
+    const { node: migrated, unsupported } = migrateBlockNode(sectionNode, DEFAULT_BLOCK_REGISTRY);
+
+    expect(unsupported).toBeUndefined();
+    expect(migrated.type).toBe('container');
+    expect(migrated.v).toBe(2);
+    expect(migrated.props).not.toHaveProperty('columns');
+    expect((migrated.props.layout as Record<string, unknown>).default).toMatchObject({
+      display: 'flex',
+    });
+
+    const result = migrateBlockTree([sectionNode], DEFAULT_BLOCK_REGISTRY);
+    expect(result.errors).toEqual([]);
+    expect(result.blocks[0].type).toBe('container');
+    expect(result.blocks[0].v).toBe(2);
+    expect(result.blocks[0].children[0].type).toBe('heading');
+    expect(result.blocks[0].children[0].v).toBe(2);
+  });
+
+  it('sectionBlock resta nel registro come binario morto (`enabled: false`), ma non è mai raggiunto dal validatore nella pipeline reale (migrazione sempre prima della validazione)', () => {
+    expect(sectionBlock.enabled).toBe(false);
+    expect(sectionBlock.v).toBe(1);
+    expect(sectionBlock.migrations).toEqual([]);
+  });
+
+  it('columns:"3" produce layout.display:"grid" con gridTemplateColumns a preset repeat', () => {
+    const sectionNode = node({ type: 'section', props: { columns: '3' } });
+    const { node: migrated } = migrateBlockNode(sectionNode, DEFAULT_BLOCK_REGISTRY);
+    const layout = migrated.props.layout as Record<string, unknown>;
+    expect((layout.default as Record<string, unknown>).display).toBe('grid');
+    expect((layout.default as Record<string, unknown>).gridTemplateColumns).toEqual({
+      preset: 'repeat',
+      count: 3,
+    });
   });
 });
 

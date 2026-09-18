@@ -1,15 +1,31 @@
 import { BlockDefinition } from '../block-definition.types';
 
 /**
- * `section` — l'unico contenitore del primo rilascio (ADR-21 § 5,
- * SPEC-F02-blocchi.md § 3.2). Nessuna prop non dichiarata è ammessa: qualunque prop
- * non elencata qui produce `BLOCK_PROP_NOT_DECLARED`. Non contiene se stessa — la
- * profondità è 1 per costruzione nel primo rilascio.
+ * `section` — **deprecato** (ADR-82 § "Decisione" punto 2, 2026-09-17):
+ * `container` v2 (`blocks/types/container.block.ts`) ne assume integralmente
+ * il ruolo di contenitore principale di pagina. `enabled: false` lo nasconde
+ * dalla palette (stesso meccanismo già usato dal registro per tipi non
+ * attivi) — resta nel registro, `v: 1` invariato, nessuna prop nuova: un
+ * binario morto mantenuto solo per leggibilità delle Revisioni esistenti
+ * (ADR-19, immutabilità), coerente con ADR-21 § 3.5 ("il vecchio resta nel
+ * registro, validabile in lettura, fuori dalla palette"). La migrazione
+ * `section → container` (`migrateSectionToContainer`,
+ * `blocks/migrations/migrate-section-to-container.ts`) è uno stadio di
+ * identità applicato dal motore condiviso **prima** della risoluzione del
+ * tipo (`node-migration.engine.ts`, ADR-82 § "Decisione" punto 3): nella
+ * pipeline reale un nodo `section` non raggiunge mai questo `BlockDefinition`
+ * disabilitato, perché è già stato riscritto a `{ type: 'container', v: 2 }`
+ * a monte — `migrations: []` resta invariato perché non gli serve più (non
+ * migra più sé stesso).
+ *
+ * Nessuna prop non dichiarata è ammessa: qualunque prop non elencata qui
+ * produce `BLOCK_PROP_NOT_DECLARED`. Non contiene se stessa — la profondità è
+ * 1 per costruzione nel primo rilascio.
  * `styleBackgroundType`/`styleBackgroundPosition`/`styleBackgroundSize`/
  * `styleGradientStart`/`styleGradientEnd` (ADR-50): tutte presentazione, non
  * validazione — restano dichiarate indipendentemente da quale sorgente di sfondo il
  * renderer sceglie di onorare, stesso principio di `maxWidth` sotto `contentWidth =
- * full-width` (ADR-33 § 1). Nessun bump di `v`, tutte opzionali con default.
+ * full-width` (ADR-33 § 1).
  */
 export const sectionBlock: BlockDefinition = {
   type: 'section',
@@ -247,6 +263,8 @@ export const sectionBlock: BlockDefinition = {
     // 'accordion'/'tabs'/'carousel'/'modalTrigger' aggiunti da ADR-57 § 3: i
     // quattro contenitori dei widget interattivi CSS-only, così componibili
     // dentro il contenuto di pagina senza dover passare da un `container`.
+    // 'gallery' aggiunta da `PLAN-parita-elementor-pro.md` § R4 (ventesimo
+    // tipo), stesso trattamento.
     allow: [
       'heading',
       'richText',
@@ -259,10 +277,11 @@ export const sectionBlock: BlockDefinition = {
       'tabs',
       'carousel',
       'modalTrigger',
+      'gallery',
     ],
   },
   migrations: [],
-  enabled: true,
+  enabled: false,
   meta: {
     label: 'Sezione',
     category: 'layout',

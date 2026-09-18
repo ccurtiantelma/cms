@@ -1,8 +1,9 @@
 /**
- * Component test del cambio di viewport simulato in `FullScreenEditorLayout.tsx`: il
- * click sul `ViewportSelector` della topbar deve aggiornare `activeViewport` su
- * `useBlockEditorStore` e riflettersi sulla classe CSS (quindi sul `max-width`, definito
- * in `FullScreenEditorLayout.module.css`) del contenitore che avvolge `EditorCanvas`.
+ * Component test del cambio di breakpoint simulato in `FullScreenEditorLayout.tsx` (Sub-Task
+ * "Frame WYSIWYG In-Place & Breakpoint Switcher"): il click sul `BreakpointSwitcher` della
+ * topbar deve aggiornare `activeBreakpoint` su `useBlockEditorStore` e riflettersi sulla
+ * classe/`style` inline (quindi sulla larghezza reale, definita in
+ * `FullScreenEditorLayout.module.css`) del contenitore che avvolge `IframeCanvas`.
  *
  * `getGlobalTokensApi` è mockato al confine di rete (stesso principio di
  * `LocaleSwitcher.test.tsx`): questo componente la chiama una tantum al mount per
@@ -45,64 +46,82 @@ function renderLayout() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useBlockEditorStore.setState({ activeViewport: 'desktop', globalTokens: DEFAULT_GLOBAL_TOKENS });
+  useBlockEditorStore.setState({
+    activeBreakpoint: 'default',
+    activeViewport: 'desktop',
+    globalTokens: DEFAULT_GLOBAL_TOKENS,
+  });
 });
 
-describe('FullScreenEditorLayout — cambio viewport', () => {
-  it('parte sul frame desktop', () => {
+describe('FullScreenEditorLayout — cambio breakpoint', () => {
+  it('parte sul frame default (fluido)', () => {
     const { container } = renderLayout();
 
     const frame = container.querySelector(`.${styles.viewportContainer}`);
     expect(frame).toHaveClass(styles.viewportDesktop);
-    expect(frame).toHaveAttribute('data-viewport', 'desktop');
+    expect(frame).toHaveAttribute('data-breakpoint', 'default');
   });
 
-  it('selezionare Tablet applica la classe (e quindi il max-width) del frame tablet', async () => {
+  it('selezionare Tablet applica la larghezza esatta (1024px, default di fabbrica ADR-76) del frame', async () => {
     const user = userEvent.setup();
     const { container } = renderLayout();
 
-    await user.click(screen.getByRole('button', { name: /Viewport Tablet/ }));
+    await user.click(screen.getByRole('button', { name: /Breakpoint Tablet/ }));
 
     const frame = container.querySelector(`.${styles.viewportContainer}`);
-    expect(frame).toHaveClass(styles.viewportTablet);
+    expect(frame).toHaveClass(styles.viewportFramed);
     expect(frame).not.toHaveClass(styles.viewportDesktop);
-    expect(frame).toHaveAttribute('data-viewport', 'tablet');
+    expect(frame).toHaveAttribute('data-breakpoint', 'tablet');
+    expect(frame).toHaveStyle({ width: '1024px' });
+    expect(useBlockEditorStore.getState().activeBreakpoint).toBe('tablet');
+    // Il Property Inspector (3 vie) resta coerente senza essere toccato da questo task.
     expect(useBlockEditorStore.getState().activeViewport).toBe('tablet');
   });
 
-  it('selezionare Mobile applica la classe (e quindi il max-width) del frame mobile', async () => {
+  it('selezionare Mobile applica la larghezza esatta (767px, default di fabbrica ADR-76) del frame', async () => {
     const user = userEvent.setup();
     const { container } = renderLayout();
 
-    await user.click(screen.getByRole('button', { name: /Viewport Mobile/ }));
+    await user.click(screen.getByRole('button', { name: /Breakpoint Mobile/ }));
 
     const frame = container.querySelector(`.${styles.viewportContainer}`);
-    expect(frame).toHaveClass(styles.viewportMobile);
-    expect(frame).toHaveAttribute('data-viewport', 'mobile');
+    expect(frame).toHaveClass(styles.viewportFramed);
+    expect(frame).toHaveAttribute('data-breakpoint', 'mobile');
+    expect(frame).toHaveStyle({ width: '767px' });
+    expect(useBlockEditorStore.getState().activeBreakpoint).toBe('mobile');
     expect(useBlockEditorStore.getState().activeViewport).toBe('mobile');
   });
 
-  it('tornare su Desktop ripristina il frame a piena larghezza', async () => {
+  it('tornare su Desktop ripristina il frame fluido a piena larghezza', async () => {
     const user = userEvent.setup();
-    useBlockEditorStore.setState({ activeViewport: 'mobile' });
+    useBlockEditorStore.setState({ activeBreakpoint: 'mobile', activeViewport: 'mobile' });
     const { container } = renderLayout();
 
-    await user.click(screen.getByRole('button', { name: /Viewport Desktop/ }));
+    await user.click(screen.getByRole('button', { name: /Breakpoint Desktop/ }));
 
     const frame = container.querySelector(`.${styles.viewportContainer}`);
     expect(frame).toHaveClass(styles.viewportDesktop);
-    expect(frame).toHaveAttribute('data-viewport', 'desktop');
+    expect(frame).toHaveAttribute('data-breakpoint', 'default');
   });
 
-  it('il pulsante del viewport attivo riflette la pressione via aria-pressed', async () => {
+  it('il pulsante del breakpoint attivo riflette la pressione via aria-pressed', async () => {
     const user = userEvent.setup();
     renderLayout();
 
-    const tabletButton = screen.getByRole('button', { name: /Viewport Tablet/ });
+    const tabletButton = screen.getByRole('button', { name: /Breakpoint Tablet/ });
     expect(tabletButton).toHaveAttribute('aria-pressed', 'false');
 
     await user.click(tabletButton);
 
     await waitFor(() => expect(tabletButton).toHaveAttribute('aria-pressed', 'true'));
+  });
+
+  it('mostra solo i breakpoint attivi per il sito (default di fabbrica: default/tablet/mobile, mai widescreen)', () => {
+    renderLayout();
+
+    expect(screen.getByRole('button', { name: /Breakpoint Desktop/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Breakpoint Tablet/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Breakpoint Mobile/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Breakpoint Widescreen/ })).not.toBeInTheDocument();
   });
 });

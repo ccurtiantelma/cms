@@ -6,14 +6,20 @@
  * punto in cui il nome e la forma della prop sono scritti (`EditorBlockWrapper.tsx` per il
  * gesto, `useBlockEditorStore.ts` per il commit).
  *
- * La prop di larghezza è ora dichiarata dal registro (`container.block.ts`):
+ * La prop di larghezza era dichiarata dal registro (`container.block.ts` `v: 1`):
  * `styleFlexBasis`, `kind: 'unitValue'`, unità `%` — l'unica eccezione a "container è
- * layout puro" di ADR-39 § 2 ("Alternative scartate"). {@link resolveContainerWidthSpec}
- * continua a interrogare il registro generato invece di dare `min`/`max` per scontati: il
- * validatore server-side respinge ogni prop non dichiarata con `BLOCK_PROP_NOT_DECLARED`
- * (`block-tree-validator.service.ts` § `validateProps`), quindi un intervallo scritto qui a
- * mano potrebbe divergere da quello che il backend applica davvero e produrre un `400` al
- * salvataggio pur avendo una maniglia visivamente funzionante.
+ * layout puro" di ADR-39 § 2 ("Alternative scartate"). `container` `v: 2`
+ * (`ADR-82-container-unificato-grid-flex.md` § "Decisione" punto 1) non la dichiara più: il
+ * registro non elenca `styleFlexBasis` fra le prop del `container` corrente, quindi
+ * {@link resolveContainerWidthSpec} risolve sempre a `null` sul registro reale oggi — la
+ * maniglia resta montata nel codice ma non compare mai, finché un round successivo (ADR-82
+ * § "Conseguenze": "estensione dell'handle di resize esistente a minHeight/gap", task R2
+ * T4/T5, non vincolato da questa ADR) non ripristina un equivalente. {@link
+ * resolveContainerWidthSpec} continua a interrogare il registro generato invece di dare
+ * `min`/`max` per scontati: il validatore server-side respinge ogni prop non dichiarata con
+ * `BLOCK_PROP_NOT_DECLARED` (`block-tree-validator.service.ts` § `validateProps`), quindi un
+ * intervallo scritto qui a mano potrebbe divergere da quello che il backend applica davvero e
+ * produrre un `400` al salvataggio pur avendo una maniglia visivamente funzionante.
  */
 import { BLOCK_TYPES } from '../../../types/blocks.types';
 

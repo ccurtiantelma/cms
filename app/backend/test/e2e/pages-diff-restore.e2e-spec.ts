@@ -341,7 +341,10 @@ describe('PagesController — Diff + Restore Revisioni (e2e, DB/Redis reali)', (
             children: [
               expect.objectContaining({
                 id: 'heading-1',
-                props: { level: 'h2', text: 'Titolo v1' },
+                // `objectContaining`, non uguaglianza esatta: `heading` v2
+                // (ADR-81) aggiunge `color`/`typography`/`margin`/`hideOn`
+                // in migrazione, qui non rilevanti per questa asserzione.
+                props: expect.objectContaining({ level: 'h2', text: 'Titolo v1' }),
               }),
             ],
           }),

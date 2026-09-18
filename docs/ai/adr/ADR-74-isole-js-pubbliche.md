@@ -1,10 +1,10 @@
 # ADR-74 — Isole JS pubbliche: bundle `public-runtime.js`, deroga controllata ad ADR-53
 
 ## Status
-[x] **In discussione** · [ ] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
+[ ] In discussione · [x] **Approvato** · [ ] Rifiutato · [ ] Superseded da ADR-XXX
 
 ## Data approvazione
-_In attesa di firma umana — vedi "Decisione umana" in fondo a questo documento._
+2026-09-17
 
 ## RFC di riferimento
 Nessuna RFC dedicata: ADR-74–ADR-80 sono il round **R0 — Decisioni fondative** di
@@ -180,9 +180,9 @@ lato **client**, non lato server.
 
 ## Decisione umana
 
-**Esito**: [ ] Approvato così com'è · [ ] Approvato con modifiche (vedi note) · [ ] Rifiutato ·
+**Esito**: [x] Approvato così com'è · [ ] Approvato con modifiche (vedi note) · [ ] Rifiutato ·
 [ ] Rinviato
 
-**Approvato da**: _______________ · **Data**: _______________
+**Approvato da**: marketing@antelmagroup.net · **Data**: 2026-09-17
 
-**Note**:
+**Note**: Approvazione confermata in sessione per sbloccare l'avvio del Sub-Task S1.1 (PropKind v2 & validatori NestJS).

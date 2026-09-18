@@ -22,6 +22,31 @@ describe('Image', () => {
     });
   });
 
+  /**
+   * Canvas Style Bridge (Sub-Task S2.1b, stesso principio di `Container.test.tsx`): l'attributo
+   * deve raggiungere **entrambe** le radici possibili del componente (§ commento di testa del
+   * file sorgente, paragrafo `id`), non solo quella con `mediaRef` valorizzato.
+   */
+  describe('id → data-canvas-style-id (Runtime Style Bridge)', () => {
+    it('segnaposto senza mediaRef: porta comunque data-canvas-style-id', () => {
+      render(<Image id="img-1" mediaRef="" alt="" />);
+
+      expect(document.querySelector('[data-canvas-style-id="img-1"]')).not.toBeNull();
+    });
+
+    it('<img> con mediaRef valorizzato: porta data-canvas-style-id', () => {
+      const html = renderToStaticMarkup(<Image id="img-2" mediaRef="0123456789abcdef" alt="alt" />);
+
+      expect(html).toContain('data-canvas-style-id="img-2"');
+    });
+
+    it('id assente: nessun attributo data-canvas-style-id nel markup (mai la stringa "undefined")', () => {
+      const html = renderToStaticMarkup(<Image mediaRef="0123456789abcdef" alt="alt" />);
+
+      expect(html).not.toContain('data-canvas-style-id');
+    });
+  });
+
   describe('styleSizePreset = "custom" (ADR-58)', () => {
     it('styleWidth/styleHeight in px producono width/height inline coerenti coi value dichiarati', () => {
       const html = renderToStaticMarkup(

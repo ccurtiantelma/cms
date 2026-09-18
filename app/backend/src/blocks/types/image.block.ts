@@ -1,25 +1,18 @@
 import { BlockDefinition } from '../block-definition.types';
+import { migrateImageV1ToV2 } from '../migrations/migrate-image-v1-to-v2';
 
 /**
- * `image` — immagine (SPEC-F02-blocchi.md § 3.5). `mediaRef` valida solo la
- * forma del `guid` (16 hex): nessuna verifica di esistenza, la risoluzione è
- * di F09. `alt` è l'unica prop dei cinque tipi con vincolo di non-vuoto
- * (NFR § Accessibilità). Foglia.
- *
+ * `image` `v: 2` (ADR-81 § "Decisione" punto 1/2): `styleMarginTop/Right/
+ * Bottom/Left` → `margin: spacing`, `styleHideDesktop/Tablet/Mobile` →
+ * `hideOn`. `image` non ha mai dichiarato `styleTextColor`/`styleFontSize`/
+ * `Weight`/`Family` (tabella di ADR-81 § "Decisione" punto 2 non la elenca
+ * per quella riga): nessun `color`/`typography` qui. `mediaRef`/`alt`/
  * `styleSizePreset`/`styleWidth`/`styleHeight`/`styleObjectFit`/`styleAlign`
- * (ADR-58): cinque prop opzionali e additive, nessun bump di `v` (stesso
- * principio di ADR-47). `styleSizePreset` riusa i quattro nomi di
- * `MediaTransformPreset` (`app/backend/src/files/dto/media-transform.dto.ts`,
- * ADR-49) più `full` (originale non trasformato, comportamento attuale
- * invariato, default) e `custom` (larghezza/altezza libere sotto). Nessun
- * `kind` nuovo: tutte e cinque riusano `enum`/`unitValue` già chiusi da
- * ADR-21/ADR-38. Nessuna logica cross-prop qui — il validator non ha
- * condizionali fra prop, la convenzione "`styleWidth`/`styleHeight` solo con
- * `styleSizePreset='custom'`" è responsabilità dell'editor.
+ * (ADR-58) invariati. Foglia (`children.allow: []`).
  */
 export const imageBlock: BlockDefinition = {
   type: 'image',
-  v: 1,
+  v: 2,
   props: {
     mediaRef: {
       kind: 'mediaRef',
@@ -51,20 +44,9 @@ export const imageBlock: BlockDefinition = {
       values: ['base', 'raised', 'overlay', 'top'],
       default: 'base',
     },
-    styleHideDesktop: {
-      kind: 'boolean',
+    hideOn: {
+      kind: 'hideOn',
       required: false,
-      default: false,
-    },
-    styleHideTablet: {
-      kind: 'boolean',
-      required: false,
-      default: false,
-    },
-    styleHideMobile: {
-      kind: 'boolean',
-      required: false,
-      default: false,
     },
     styleBorder: {
       kind: 'border',
@@ -114,37 +96,18 @@ export const imageBlock: BlockDefinition = {
       kind: 'htmlId',
       required: false,
     },
-    styleMarginTop: {
-      kind: 'unitValue',
+    margin: {
+      kind: 'spacing',
       required: false,
-      units: ['px', '%'],
+      target: 'margin',
+      units: ['px', '%', 'em', 'rem'],
       min: 0,
       max: 500,
-    },
-    styleMarginRight: {
-      kind: 'unitValue',
-      required: false,
-      units: ['px', '%'],
-      min: 0,
-      max: 500,
-    },
-    styleMarginBottom: {
-      kind: 'unitValue',
-      required: false,
-      units: ['px', '%'],
-      min: 0,
-      max: 500,
-    },
-    styleMarginLeft: {
-      kind: 'unitValue',
-      required: false,
-      units: ['px', '%'],
-      min: 0,
-      max: 500,
+      responsive: true,
     },
   },
   children: { allow: [] },
-  migrations: [],
+  migrations: [migrateImageV1ToV2],
   enabled: true,
   meta: {
     label: 'Immagine',
@@ -156,9 +119,7 @@ export const imageBlock: BlockDefinition = {
       styleSpaceBefore: { label: 'Spazio prima', tab: 'style', order: 3 },
       styleSpaceAfter: { label: 'Spazio dopo', tab: 'style', order: 4 },
       styleLayer: { label: 'Livello di sovrapposizione', tab: 'advanced', order: 5 },
-      styleHideDesktop: { label: 'Nascondi su Desktop', tab: 'advanced', order: 6 },
-      styleHideTablet: { label: 'Nascondi su Tablet', tab: 'advanced', order: 7 },
-      styleHideMobile: { label: 'Nascondi su Mobile', tab: 'advanced', order: 8 },
+      hideOn: { label: 'Nascondi su breakpoint', tab: 'advanced', order: 6 },
       styleBorder: { label: 'Bordo', tab: 'style', order: 9 },
       styleShadow: { label: 'Ombra', tab: 'style', order: 10 },
       styleSizePreset: { label: 'Formato predefinito', tab: 'style', order: 11 },
@@ -178,10 +139,7 @@ export const imageBlock: BlockDefinition = {
         order: 17,
         help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
       },
-      styleMarginTop: { label: 'Margine superiore', tab: 'style', order: 18 },
-      styleMarginRight: { label: 'Margine destro', tab: 'style', order: 19 },
-      styleMarginBottom: { label: 'Margine inferiore', tab: 'style', order: 20 },
-      styleMarginLeft: { label: 'Margine sinistro', tab: 'style', order: 21 },
+      margin: { label: 'Margine', tab: 'style', order: 18 },
     },
   },
 };

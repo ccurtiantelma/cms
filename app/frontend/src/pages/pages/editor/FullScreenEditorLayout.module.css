@@ -151,7 +151,7 @@
 /*
  * Canvas centrale: nessun padding/margin esterno, il canvas occupa l'intera area
  * disponibile a piena finestra (Full-Screen nativo, stile Elementor) — la simulazione
- * del viewport (`.viewportContainer`/`.viewportDesktop/Tablet/Mobile` sotto) resta
+ * del breakpoint (`.viewportContainer`/`.viewportDesktop`/`.viewportFramed` sotto) resta
  * l'unico meccanismo che limita la larghezza del contenuto, mai un padding fisso qui.
  */
 .canvasArea {
@@ -159,6 +159,17 @@
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
+  /*
+   * Sub-Task "Frame WYSIWYG In-Place & Breakpoint Switcher": rete di sicurezza contro lo
+   * scroll orizzontale (requisito esplicito del task) mentre `FullScreenEditorLayout.tsx`
+   * ricalcola `frameScale` (`ResizeObserver` via `useElementSize`, non sincrono col primo
+   * render) — il frame stesso non si restringe mai sotto la sua larghezza dichiarata
+   * (`flex-shrink: 0` su `.viewportFramed` sotto, necessario perché l'`<iframe>` reale deve
+   * restare a `frameWidthPx` per far scattare le sue vere media query), quindi senza questo
+   * l'istante fra il mount e la prima misura mostrerebbe una scrollbar orizzontale per i
+   * breakpoint più larghi dell'area (es. `widescreen`).
+   */
+  overflow-x: hidden;
   display: flex;
   justify-content: center;
   background-color: #f3f4f6;
@@ -169,7 +180,7 @@
 }
 
 /*
- * Larghezza reattiva al viewport simulato (Viewport Switcher), con transizione fluida —
+ * Larghezza reattiva al breakpoint simulato (Breakpoint Switcher), con transizione fluida —
  * governa la dimensione fisica dell'`<iframe>` del canvas (`IframeCanvas.tsx`, ADR-72),
  * unico figlio di questo contenitore da quando il canvas vive in un documento isolato.
  *
@@ -179,8 +190,8 @@
  * stesso documento. Il containment che l'anteprima responsive richiede è ridichiarato
  * dentro il documento dell'iframe stesso (`.canvasRoot`, `EditorCanvas.module.css`), la
  * cui larghezza risolta eredita comunque questa stessa larghezza simulata, perché è
- * l'elemento `<iframe>` qui dentro a essere ridimensionato da `.viewportTablet`/
- * `.viewportMobile`/`.viewportDesktop` sotto.
+ * l'elemento `<iframe>` qui dentro a essere ridimensionato da `.viewportDesktop`/
+ * `.viewportFramed` (più lo `style` inline di `frameWidthPx`) sotto.
  */
 .viewportContainer {
   width: 100%;
@@ -189,41 +200,45 @@
     width 0.3s ease-in-out,
     max-width 0.3s ease-in-out,
     margin 0.3s ease-in-out,
-    box-shadow 0.3s ease-in-out;
+    box-shadow 0.3s ease-in-out,
+    transform 0.3s ease-in-out;
 }
 
-/* Desktop: piena larghezza dell'area di lavoro, con un tetto oltre il quale il layout
-   pubblico stesso smette di allargarsi ulteriormente (coerente coi `maxWidth`/`contentWidth`
-   di Section, ADR-31) — non un frame, nessuna ombreggiatura. */
+/* Desktop/`'default'`: piena larghezza dell'area di lavoro, con un tetto oltre il quale il
+   layout pubblico stesso smette di allargarsi ulteriormente (coerente coi `maxWidth`/
+   `contentWidth` di Section, ADR-31) — non un frame, nessuna ombreggiatura, mai una larghezza
+   inline (`viewportFrameStyle` di `FullScreenEditorLayout.tsx` resta `undefined` per questo
+   breakpoint). */
 .viewportDesktop {
   width: 100%;
   max-width: 1280px;
 }
 
 /*
- * Tablet/Mobile: oltre alla larghezza simulata, un vero "device frame" — margine verticale
- * (lo sfondo neutro di `.canvasArea` resta visibile tutt'intorno, a fare da cornice esterna),
- * sfondo proprio e ombreggiatura, così il contenuto simulato si stacca visivamente dal resto
- * del canvas invece di confondersi con la larghezza piena del desktop.
+ * Ogni altro breakpoint attivo (`widescreen`/`laptop`/`tabletExtra`/`tablet`/`mobileExtra`/
+ * `mobile`, Sub-Task "Frame WYSIWYG In-Place & Breakpoint Switcher" — generalizza le due
+ * varianti statiche `.viewportTablet`/`.viewportMobile` di prima di questo task): un vero
+ * "device frame" — margine verticale (lo sfondo neutro di `.canvasArea` resta visibile
+ * tutt'intorno, a fare da cornice esterna), sfondo proprio e ombreggiatura, così il contenuto
+ * simulato si stacca visivamente dal resto del canvas invece di confondersi con la larghezza
+ * piena del desktop. La larghezza esatta in pixel arriva da `style` inline
+ * (`viewportFrameStyle`, `FullScreenEditorLayout.tsx`), mai da qui: nessun `max-width: 100%`
+ * come nelle due varianti statiche precedenti — l'`<iframe>` reale deve restare esattamente a
+ * `frameWidthPx` per far scattare le sue vere media query, mai ridotto dal layout flex del
+ * genitore (`flex-shrink: 0`). L'eventuale eccesso rispetto allo spazio disponibile è
+ * compensato **solo visivamente** dal `transform: scale(...)` dello stesso `style` inline
+ * (punto 4 del task) — `transform-origin` in alto e centrato, cosi la riduzione parte dal
+ * bordo superiore invece che dal centro verticale del frame.
  */
-.viewportTablet,
-.viewportMobile {
+.viewportFramed {
+  flex-shrink: 0;
+  transform-origin: top center;
   margin-block: 24px;
   background-color: var(--mantine-color-body);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.08),
     0 12px 32px rgba(0, 0, 0, 0.18);
   border-radius: 4px;
-}
-
-.viewportTablet {
-  width: 768px;
-  max-width: 100%;
-}
-
-.viewportMobile {
-  width: 375px;
-  max-width: 100%;
 }
 
 /* --- Pannello destro "Struttura/Navigator" --- */

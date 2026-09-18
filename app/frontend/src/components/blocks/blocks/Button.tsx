@@ -12,6 +12,10 @@
  * dove `editable` è sempre `undefined`, non è toccato da questo comportamento. Questo file
  * non importa Mantine né lo store dell'editor (CLAUDE.md § confine Mantine/blocchi):
  * l'unica concessione è `contentEditable` nativo, nessuna dipendenza nuova.
+ *
+ * `id` (Canvas Style Bridge, Sub-Task S2.1b): stesso principio di `Heading.tsx` (vedi il suo
+ * commento di testa, paragrafo `id`) — `node.id` strutturale come `data-canvas-style-id`
+ * sull'elemento radice, opzionale.
  */
 import { useLayoutEffect, useRef } from 'react';
 import styles from './Button.module.css';
@@ -23,6 +27,8 @@ import {
 } from '../style-tokens';
 
 interface ButtonProps {
+  /** Vedi il commento di testa del file, paragrafo `id`. */
+  id?: string;
   label: string;
   href: string;
   styleSpaceBefore?: unknown;
@@ -44,6 +50,7 @@ interface ButtonProps {
 }
 
 export default function Button({
+  id,
   label,
   href,
   styleSpaceBefore,
@@ -90,7 +97,7 @@ export default function Button({
 
   if (!editable) {
     return (
-      <a className={className} href={href}>
+      <a className={className} href={href} data-canvas-style-id={id}>
         {label}
       </a>
     );
@@ -108,6 +115,7 @@ export default function Button({
       contentEditable
       suppressContentEditableWarning
       data-placeholder={placeholder}
+      data-canvas-style-id={id}
       onClick={(event) => {
         if (editable) event.preventDefault();
       }}

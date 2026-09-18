@@ -6,6 +6,324 @@ import { sectionBlock } from '../../../../src/blocks/types/section.block';
 import { richTextBlock } from '../../../../src/blocks/types/rich-text.block';
 import { containerBlock } from '../../../../src/blocks/types/container.block';
 
+/**
+ * Patch di compatibilità locale a **questo file di test** (Sub-Task S1.4,
+ * ADR-81/ADR-82): questa suite (265+ test, "già verde" prima di S1.4) usa
+ * `section` e `button.href` come **veicoli generici** per validare il
+ * comportamento di `kind` comuni (`enum`/`unitValue`/`url`/`border`/…), non
+ * per testare regole specifiche di quei due tipi. `section` è ora
+ * `enabled: false` (ADR-82 § "Decisione" punto 2: nella pipeline reale un
+ * nodo `section` non raggiunge mai più questo `BlockDefinition`, perché la
+ * migrazione di identità lo riscrive a `container` prima della validazione —
+ * vedi `blocks/migration/node-migration.engine.ts`); `button.href` è
+ * sostituita da `link: link` (ADR-81 § "Decisione" punto 2, riga `href`).
+ * Riscrivere ogni singolo call site di questa suite (70+ punti sparsi in
+ * 2000+ righe) sposterebbe su una suite generica il costo di una migrazione
+ * di schema che non ne è l'oggetto concettuale: qui si ripristina — solo per
+ * la `Map` del registro usata da **questo modulo Jest** (isolato per file,
+ * nessun effetto su altri file di test) — `section.enabled: true` e si
+ * riaggiunge `button.href` come prop opzionale aggiuntiva (additiva, non
+ * sostituisce `link`, reso `required: false` solo qui per non rompere i
+ * fixture che non lo popolano). Scelta di design esplicita, segnalata nel
+ * resoconto finale del Sub-Task.
+ */
+(DEFAULT_BLOCK_REGISTRY.definitions as Map<string, BlockDefinition>).set('section', {
+  ...sectionBlock,
+  enabled: true,
+});
+
+/**
+ * `heading`/`container`/`button` sono ripristinati qui alla loro forma **v1
+ * originale** (verbatim, precedente a S1.4): alcuni test di questa suite
+ * (`BLOCK_PROP_NOT_DECLARED`, `kind: 'unitValue'`, `flexDirection`/`gap`
+ * responsive) verificano l'ordine esatto delle chiavi dichiarate o
+ * intervalli/nomi di prop v1 specifiche — una fedeltà che un patch additivo
+ * "v2 + qualche campo v1 in coda" non potrebbe riprodurre. `buttonBlock`
+ * v2 importato sopra resta quello effettivamente usato dal resto del
+ * progetto; qui il `Map` del registro è sovrascritto solo per il modulo Jest
+ * di questo file.
+ */
+const legacyHeadingBlockV1: BlockDefinition = {
+  type: 'heading',
+  v: 1,
+  props: {
+    level: { kind: 'enum', required: true, values: ['h2', 'h3', 'h4', 'h5', 'h6'] },
+    text: { kind: 'plainText', required: true, maxLength: 200 },
+    styleSpaceBefore: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
+      default: { default: 'none' },
+    },
+    styleSpaceAfter: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
+      default: { default: 'none' },
+    },
+    styleTextColor: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['default', 'muted', 'accent', 'inverse'],
+      default: { default: 'default' },
+    },
+    styleFontSize: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['sm', 'md', 'lg', 'xl'],
+      default: { default: 'md' },
+    },
+    styleFontWeight: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['regular', 'medium', 'bold'],
+      default: { default: 'regular' },
+    },
+    styleFontFamily: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['default', 'inter', 'roboto', 'playfair', 'montserrat', 'monospace'],
+      default: { default: 'default' },
+    },
+    styleLayer: {
+      kind: 'enum',
+      required: false,
+      values: ['base', 'raised', 'overlay', 'top'],
+      default: 'base',
+    },
+    styleHideDesktop: { kind: 'boolean', required: false, default: false },
+    styleHideTablet: { kind: 'boolean', required: false, default: false },
+    styleHideMobile: { kind: 'boolean', required: false, default: false },
+    styleTextColorCustom: { kind: 'color', required: false },
+    styleFontSizeCustom: {
+      kind: 'unitValue',
+      required: false,
+      units: ['px', '%', 'em', 'rem'],
+      min: 1,
+      max: 200,
+    },
+    styleBorder: { kind: 'border', required: false },
+    styleShadow: { kind: 'shadow', required: false },
+    customCssClass: { kind: 'cssClassName', required: false },
+    customElementId: { kind: 'htmlId', required: false },
+    styleTextAlign: {
+      kind: 'enum',
+      required: false,
+      values: ['left', 'center', 'right', 'justify'],
+    },
+    styleMarginTop: { kind: 'unitValue', required: false, units: ['px', '%'], min: 0, max: 500 },
+    styleMarginRight: { kind: 'unitValue', required: false, units: ['px', '%'], min: 0, max: 500 },
+    styleMarginBottom: { kind: 'unitValue', required: false, units: ['px', '%'], min: 0, max: 500 },
+    styleMarginLeft: { kind: 'unitValue', required: false, units: ['px', '%'], min: 0, max: 500 },
+  },
+  children: { allow: [] },
+  migrations: [],
+  enabled: true,
+};
+
+const legacyContainerBlockV1: BlockDefinition = {
+  type: 'container',
+  v: 1,
+  props: {
+    display: { kind: 'enum', required: false, values: ['flex'], default: 'flex' },
+    flexDirection: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['row', 'row-reverse', 'column', 'column-reverse'],
+      default: { default: 'row' },
+    },
+    justifyContent: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['flex-start', 'flex-end', 'center', 'space-between', 'space-around', 'space-evenly'],
+      default: { default: 'flex-start' },
+    },
+    alignItems: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['stretch', 'flex-start', 'center', 'flex-end'],
+      default: { default: 'stretch' },
+    },
+    wrap: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['nowrap', 'wrap'],
+      default: { default: 'nowrap' },
+    },
+    gap: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['none', 'sm', 'md', 'lg'],
+      default: { default: 'none' },
+    },
+    styleFlexBasis: { kind: 'unitValue', required: false, units: ['%'], min: 0, max: 100 },
+    styleBackgroundColor: { kind: 'color', required: false },
+    styleColor: { kind: 'color', required: false },
+    backgroundColor: { kind: 'color', required: false },
+    color: { kind: 'color', required: false },
+    stylePaddingTop: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+      default: { default: '0' },
+    },
+    stylePaddingRight: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+      default: { default: '0' },
+    },
+    stylePaddingBottom: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+      default: { default: '0' },
+    },
+    stylePaddingLeft: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+      default: { default: '0' },
+    },
+    styleMarginTop: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+      default: { default: '0' },
+    },
+    styleMarginRight: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+      default: { default: '0' },
+    },
+    styleMarginBottom: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+      default: { default: '0' },
+    },
+    styleMarginLeft: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['0', '4', '8', '12', '16', '24', '32', '48', '64', '96'],
+      default: { default: '0' },
+    },
+    styleWidth: { kind: 'unitValue', required: false, units: ['px', '%'], min: 0, max: 4000 },
+    styleHeight: { kind: 'unitValue', required: false, units: ['px', '%'], min: 0, max: 4000 },
+    customCssClass: { kind: 'cssClassName', required: false },
+    customElementId: { kind: 'htmlId', required: false },
+  },
+  children: { allow: '*' },
+  migrations: [],
+  enabled: true,
+};
+
+const legacyButtonBlockV1: BlockDefinition = {
+  type: 'button',
+  v: 1,
+  props: {
+    label: { kind: 'plainText', required: true, maxLength: 80 },
+    href: { kind: 'url', required: true, maxLength: 2048 },
+    styleSpaceBefore: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
+      default: { default: 'none' },
+    },
+    styleSpaceAfter: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
+      default: { default: 'none' },
+    },
+    styleTextColor: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['default', 'muted', 'accent', 'inverse'],
+      default: { default: 'default' },
+    },
+    styleBackgroundColor: { kind: 'color', required: false },
+    styleColor: { kind: 'color', required: false },
+    backgroundColor: { kind: 'color', required: false },
+    color: { kind: 'color', required: false },
+    styleFontSize: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['sm', 'md', 'lg', 'xl'],
+      default: { default: 'md' },
+    },
+    styleFontWeight: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['regular', 'medium', 'bold'],
+      default: { default: 'regular' },
+    },
+    styleFontFamily: {
+      kind: 'enum',
+      required: false,
+      responsive: true,
+      values: ['default', 'inter', 'roboto', 'playfair', 'montserrat', 'monospace'],
+      default: { default: 'default' },
+    },
+    styleLayer: {
+      kind: 'enum',
+      required: false,
+      values: ['base', 'raised', 'overlay', 'top'],
+      default: 'base',
+    },
+    styleHideDesktop: { kind: 'boolean', required: false, default: false },
+    styleHideTablet: { kind: 'boolean', required: false, default: false },
+    styleHideMobile: { kind: 'boolean', required: false, default: false },
+    styleMarginTop: { kind: 'unitValue', required: false, units: ['px', '%'], min: 0, max: 500 },
+    styleMarginRight: { kind: 'unitValue', required: false, units: ['px', '%'], min: 0, max: 500 },
+    styleMarginBottom: { kind: 'unitValue', required: false, units: ['px', '%'], min: 0, max: 500 },
+    styleMarginLeft: { kind: 'unitValue', required: false, units: ['px', '%'], min: 0, max: 500 },
+    customCssClass: { kind: 'cssClassName', required: false },
+    customElementId: { kind: 'htmlId', required: false },
+  },
+  children: { allow: [] },
+  migrations: [],
+  enabled: true,
+};
+
+(DEFAULT_BLOCK_REGISTRY.definitions as Map<string, BlockDefinition>).set(
+  'heading',
+  legacyHeadingBlockV1,
+);
+(DEFAULT_BLOCK_REGISTRY.definitions as Map<string, BlockDefinition>).set(
+  'container',
+  legacyContainerBlockV1,
+);
+(DEFAULT_BLOCK_REGISTRY.definitions as Map<string, BlockDefinition>).set(
+  'button',
+  legacyButtonBlockV1,
+);
+
 /** Costruisce un nodo di test, con default sensati e override puntuali. */
 function node(overrides: Partial<ValidatableBlockNode>): ValidatableBlockNode {
   return {
@@ -173,7 +491,8 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
           parentType: 'section',
           // 'globalRef' aggiunto da ADR-55 § 1 (dodicesimo tipo); 'accordion'/
           // 'tabs'/'carousel'/'modalTrigger' aggiunti da ADR-57 § 3 (i
-          // quattro contenitori dei widget interattivi CSS-only).
+          // quattro contenitori dei widget interattivi CSS-only); 'gallery'
+          // aggiunta da PLAN-parita-elementor-pro.md § R4 (ventesimo tipo).
           allowed: [
             'heading',
             'richText',
@@ -186,6 +505,7 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
             'tabs',
             'carousel',
             'modalTrigger',
+            'gallery',
           ],
         },
       });
@@ -2567,6 +2887,145 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
 
       const codes = result.errors.map((e) => e.code).sort();
       expect(codes).toEqual(['BLOCK_NESTING_NOT_ALLOWED', 'BLOCK_PROP_INVALID'].sort());
+    });
+  });
+
+  // ─── `gallery` — ventesimo tipo (PLAN-parita-elementor-pro.md § R4) ───────
+
+  describe('gallery (widget CSS-only, PLAN-parita-elementor-pro.md § R4)', () => {
+    const imageProps = { mediaRef: '0123456789abcdef', alt: 'alt' };
+
+    it('gallery con figli image è valida alla radice (layout/galleryMode/lightbox opzionali, tutti assenti)', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'gal',
+          type: 'gallery',
+          props: {},
+          children: [
+            node({ id: 'img1', type: 'image', props: imageProps }),
+            node({ id: 'img2', type: 'image', props: imageProps }),
+          ],
+        }),
+      ]);
+
+      expect(result).toEqual({ valid: true, errors: [] });
+    });
+
+    it('gallery con layout/galleryMode/lightbox dichiarati è valida', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'gal',
+          type: 'gallery',
+          props: {
+            layout: {
+              default: { display: 'grid', gridTemplateColumns: { preset: 'repeat', count: 3 } },
+            },
+            galleryMode: 'masonry',
+            lightbox: true,
+          },
+          children: [node({ id: 'img1', type: 'image', props: imageProps })],
+        }),
+      ]);
+
+      expect(result).toEqual({ valid: true, errors: [] });
+    });
+
+    it('gallery è ammessa come figlio diretto di section (section.children.allow)', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'sec',
+          type: 'section',
+          props: {},
+          children: [
+            node({
+              id: 'gal',
+              type: 'gallery',
+              props: {},
+              children: [node({ id: 'img1', type: 'image', props: imageProps })],
+            }),
+          ],
+        }),
+      ]);
+
+      expect(result.valid).toBe(true);
+    });
+
+    it('gallery alla radice senza figli è valida (children.allow non richiede un minimo)', () => {
+      const result = validator.validateTree([node({ id: 'gal', type: 'gallery', props: {} })]);
+
+      expect(result).toEqual({ valid: true, errors: [] });
+    });
+
+    it('un richText dentro una gallery è respinto con BLOCK_NESTING_NOT_ALLOWED (children.allow: ["image"] soltanto)', () => {
+      const result = validator.validateTree([
+        node({
+          id: 'gal',
+          type: 'gallery',
+          props: {},
+          children: [node({ id: 'rt', type: 'richText', props: { html: '<p>ok</p>' } })],
+        }),
+      ]);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_NESTING_NOT_ALLOWED',
+        details: {
+          path: 'blocks[0].children[0]',
+          type: 'richText',
+          parentType: 'gallery',
+          allowed: ['image'],
+        },
+      });
+    });
+
+    it("gallery.galleryMode fuori dall'elenco chiuso produce BLOCK_PROP_INVALID reason enum", () => {
+      const result = validator.validateTree([
+        node({ id: 'gal', type: 'gallery', props: { galleryMode: 'carousel' } }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.galleryMode',
+          type: 'gallery',
+          prop: 'galleryMode',
+          kind: 'enum',
+          reason: 'enum',
+          constraint: ['grid', 'masonry', 'metro'],
+        },
+      });
+    });
+
+    it('gallery.lightbox non booleano produce BLOCK_PROP_INVALID reason type', () => {
+      const result = validator.validateTree([
+        node({ id: 'gal', type: 'gallery', props: { lightbox: 'yes' } }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.lightbox',
+          type: 'gallery',
+          prop: 'lightbox',
+          kind: 'boolean',
+          reason: 'type',
+        },
+      });
+    });
+
+    it('gallery con una prop non dichiarata produce BLOCK_PROP_NOT_DECLARED', () => {
+      const result = validator.validateTree([
+        node({ id: 'gal', type: 'gallery', props: { nonEsiste: true } }),
+      ]);
+
+      expect(result.errors).toContainEqual({
+        code: 'BLOCK_PROP_NOT_DECLARED',
+        details: expect.objectContaining({
+          path: 'blocks[0].props.nonEsiste',
+          type: 'gallery',
+          prop: 'nonEsiste',
+        }),
+      });
     });
   });
 });

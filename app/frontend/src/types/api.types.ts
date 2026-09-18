@@ -608,6 +608,59 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/app/settings/global-kit': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Global Kit del sito (default di fabbrica se mai salvato) */
+    get: operations['SettingsController_getGlobalKit'];
+    /** Salva il Global Kit (Manager+ o Admin+ a seconda dei campi toccati, registrato su audit log) */
+    put: operations['SettingsController_updateGlobalKit'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/settings/breakpoints': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Breakpoint responsive configurabili (default di fabbrica se mai salvati) */
+    get: operations['SettingsController_getBreakpoints'];
+    /** Salva i breakpoint responsive configurabili (Admin+ only, registrato su audit log) */
+    put: operations['SettingsController_updateBreakpoints'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/public/global-kit.css': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** CSS compilato del Global Kit corrente (nessuna autenticazione) */
+    get: operations['GlobalKitPublicController_getGlobalKitCss'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/health': {
     parameters: {
       query?: never;
@@ -2265,6 +2318,221 @@ export interface components {
       typography: components['schemas']['GlobalTokensTypographyDto'];
       /** @description Spaziatura base di sito */
       spacing: components['schemas']['GlobalTokensSpacingDto'];
+    };
+    GlobalColorEntryDto: {
+      /** @description Id: uno dei 4 riservati (primary|secondary|text|accent) o guid16 custom. Assente su un'entry nuova: generato dal backend. */
+      id?: string;
+      /** @description Etichetta visibile, libera */
+      label: string;
+      /** @description Valore hex ('#rgb'|'#rrggbb'|'#rrggbbaa') */
+      value: string;
+      /** @description Derivato dal backend: true solo per i 4 id riservati */
+      system: boolean;
+    };
+    TypographyValueDto: {
+      /** @description Famiglia (ColorRef-like: { ref } oppure { family, source }) */
+      fontFamily?: Record<string, never>;
+      /** @description Dimensione carattere ({ value, unit }, 1-400) */
+      fontSize?: Record<string, never>;
+      /** @enum {string} */
+      fontWeight?:
+        '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900' | 'normal' | 'bold';
+      /** @enum {string} */
+      textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+      /** @enum {string} */
+      fontStyle?: 'normal' | 'italic' | 'oblique';
+      /** @enum {string} */
+      textDecoration?: 'none' | 'underline' | 'overline' | 'line-through';
+      /** @description Altezza riga ({ value, unit }: 'em' 0-10, 'px' 0-200) */
+      lineHeight?: Record<string, never>;
+      /** @description Spaziatura lettere ({ value, unit }, -20-50) */
+      letterSpacing?: Record<string, never>;
+      /** @description Spaziatura parole ({ value, unit }, -20-100) */
+      wordSpacing?: Record<string, never>;
+    };
+    GlobalFontEntryDto: {
+      /** @description Id: uno dei 4 riservati (primary|secondary|text|accent) o guid16 custom. Assente su un'entry nuova: generato dal backend. */
+      id?: string;
+      /** @description Etichetta visibile, libera */
+      label: string;
+      /** @description Blocco tipografico (SPEC-PROPKIND-V2-DETAILS.md § 3) */
+      typography: components['schemas']['TypographyValueDto'];
+      /** @description Derivato dal backend: true solo per i 4 id riservati */
+      system: boolean;
+    };
+    ThemeBodyStyleDto: {
+      typography: components['schemas']['TypographyValueDto'];
+      /** @description ColorRefValue */
+      color: Record<string, never>;
+      /** @description ColorRefValue */
+      background: Record<string, never>;
+    };
+    ElementStyleDto: {
+      typography: components['schemas']['TypographyValueDto'];
+      /** @description ColorRefValue */
+      color: Record<string, never>;
+    };
+    StatefulColorRefDto: {
+      /** @description ColorRefValue di stato "normal" */
+      normal: Record<string, never>;
+      /** @description ColorRefValue di stato "hover" (ADR-75) */
+      hover?: Record<string, never>;
+    };
+    ThemeLinkStyleDto: {
+      color: components['schemas']['StatefulColorRefDto'];
+    };
+    ThemeBorderValueDto: {
+      /** @description Spessore in px */
+      width: number;
+      /** @enum {string} */
+      style: 'solid' | 'dashed' | 'dotted' | 'none';
+      /** @description ColorRefValue */
+      color: Record<string, never>;
+    };
+    ThemeRadiusValueDto: {
+      tl: number;
+      tr: number;
+      br: number;
+      bl: number;
+      /** @enum {string} */
+      unit: 'px' | '%';
+      linked: boolean;
+    };
+    ThemeButtonStyleDto: {
+      typography: components['schemas']['TypographyValueDto'];
+      background: components['schemas']['StatefulColorRefDto'];
+      color: components['schemas']['StatefulColorRefDto'];
+      border: components['schemas']['ThemeBorderValueDto'];
+      radius: components['schemas']['ThemeRadiusValueDto'];
+    };
+    ThemeShadowValueDto: {
+      x: number;
+      y: number;
+      blur: number;
+      spread: number;
+      /** @description ColorRefValue */
+      color: Record<string, never>;
+    };
+    ThemeImageStyleDto: {
+      border: components['schemas']['ThemeBorderValueDto'];
+      radius: components['schemas']['ThemeRadiusValueDto'];
+      shadow: components['schemas']['ThemeShadowValueDto'];
+    };
+    ThemeFormFieldsStyleDto: {
+      border: components['schemas']['ThemeBorderValueDto'];
+      radius: components['schemas']['ThemeRadiusValueDto'];
+      /** @description ColorRefValue */
+      color: Record<string, never>;
+      /** @description ColorRefValue */
+      background: Record<string, never>;
+    };
+    ThemeStyleDto: {
+      body?: components['schemas']['ThemeBodyStyleDto'];
+      h1?: components['schemas']['ElementStyleDto'];
+      h2?: components['schemas']['ElementStyleDto'];
+      h3?: components['schemas']['ElementStyleDto'];
+      h4?: components['schemas']['ElementStyleDto'];
+      h5?: components['schemas']['ElementStyleDto'];
+      h6?: components['schemas']['ElementStyleDto'];
+      link?: components['schemas']['ThemeLinkStyleDto'];
+      button?: components['schemas']['ThemeButtonStyleDto'];
+      image?: components['schemas']['ThemeImageStyleDto'];
+      formFields?: components['schemas']['ThemeFormFieldsStyleDto'];
+    };
+    UnitValueDto: {
+      value: number;
+      /** @enum {string} */
+      unit: 'px' | '%' | 'em' | 'rem' | 'vw' | 'vh';
+    };
+    SpacingValueDto: {
+      top: number;
+      right: number;
+      bottom: number;
+      left: number;
+      /** @enum {string} */
+      unit: 'px' | '%' | 'em' | 'rem' | 'vw' | 'vh';
+      linked: boolean;
+    };
+    LayoutSettingsDto: {
+      contentWidth: components['schemas']['UnitValueDto'];
+      widgetSpace: components['schemas']['UnitValueDto'];
+      /** @enum {string} */
+      pageTitleSelector: 'h1' | 'none';
+      defaultContainerPadding: components['schemas']['SpacingValueDto'];
+    };
+    LightboxSettingsDto: {
+      enabled: boolean;
+      /** @description ColorRefValue */
+      bgColor: Record<string, never>;
+      /** @description ColorRefValue */
+      uiColor: Record<string, never>;
+      showTitle: boolean;
+      showDescription: boolean;
+      zoom: boolean;
+      share: boolean;
+    };
+    CustomFontFileDto: {
+      /** @description mediaRef guid16 del file woff2 */
+      woff2: string;
+    };
+    CustomFontEntryDto: {
+      /** @description Guid16, assente su un'entry nuova: generato dal backend. */
+      id?: string;
+      family: string;
+      files: components['schemas']['CustomFontFileDto'][];
+      weights: ('100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900')[];
+    };
+    CustomIconEntryDto: {
+      /** @description Guid16, assente su un'entry nuova: generato dal backend. */
+      id?: string;
+      /** @description mediaRef guid16 dello SVG (sanitizzato DOMPurify, ADR-80 § 10) */
+      svgMediaRef: string;
+      label: string;
+    };
+    CustomCodeEntryDto: {
+      /** @description Guid16, assente su un'entry nuova: generato dal backend. */
+      id?: string;
+      /** @enum {string} */
+      location: 'head' | 'bodyStart' | 'bodyEnd';
+      priority: number;
+      /** @description Nessuna sanitizzazione HTML: Admin+ è l'unico controllo (ADR-78) */
+      code: string;
+      /** @description ConditionsValue (SPEC-propkind-v2.md § 3.19), forma non validata a questo livello */
+      conditions: Record<string, never>;
+    };
+    GlobalKitDto: {
+      colors: components['schemas']['GlobalColorEntryDto'][];
+      fonts: components['schemas']['GlobalFontEntryDto'][];
+      themeStyle: components['schemas']['ThemeStyleDto'];
+      layout: components['schemas']['LayoutSettingsDto'];
+      lightbox: components['schemas']['LightboxSettingsDto'];
+      customFonts: components['schemas']['CustomFontEntryDto'][];
+      customIcons: components['schemas']['CustomIconEntryDto'][];
+      customCode: components['schemas']['CustomCodeEntryDto'][];
+    };
+    BreakpointConfigDto: {
+      /** @description Se il breakpoint è attivo per il sito */
+      active: boolean;
+      /** @description Soglia px (max-width): tutte le chiavi tranne widescreen */
+      maxWidth?: number;
+      /** @description Soglia px (min-width): solo widescreen */
+      minWidth?: number;
+    };
+    BreakpointsDto: {
+      /** @description Sempre attivo, nessuna soglia — presente solo per simmetria di forma */
+      default: Record<string, never>;
+      /** @description min-width, default 2400px */
+      widescreen: components['schemas']['BreakpointConfigDto'];
+      /** @description max-width, default 1366px */
+      laptop: components['schemas']['BreakpointConfigDto'];
+      /** @description max-width, default 1200px */
+      tabletExtra: components['schemas']['BreakpointConfigDto'];
+      /** @description max-width, default 1024px, attivo di default */
+      tablet: components['schemas']['BreakpointConfigDto'];
+      /** @description max-width, default 880px */
+      mobileExtra: components['schemas']['BreakpointConfigDto'];
+      /** @description max-width, default 767px, attivo di default */
+      mobile: components['schemas']['BreakpointConfigDto'];
     };
     UnreadCountDto: {
       /**
@@ -4376,6 +4644,143 @@ export interface operations {
       };
       /** @description Ruolo inferiore ad Admin */
       403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SettingsController_getGlobalKit: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Global Kit corrente */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GlobalKitDto'];
+        };
+      };
+    };
+  };
+  SettingsController_updateGlobalKit: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Global Kit salvato */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GlobalKitDto'];
+        };
+      };
+      /** @description Payload non valido (schema, system, limiti) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Ruolo inferiore ad Admin per themeStyle/layout/customCode, o inferiore a Manager per l'intera rotta */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Rimozione di un id colore/font system esistente */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SettingsController_getBreakpoints: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Breakpoint correnti */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BreakpointsDto'];
+        };
+      };
+    };
+  };
+  SettingsController_updateBreakpoints: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BreakpointsDto'];
+      };
+    };
+    responses: {
+      /** @description Breakpoint salvati */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BreakpointsDto'];
+        };
+      };
+      /** @description Payload non valido */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Ruolo inferiore ad Admin */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  GlobalKitPublicController_getGlobalKitCss: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Foglio di stile :root + regole di tema + @font-face */
+      200: {
         headers: {
           [name: string]: unknown;
         };

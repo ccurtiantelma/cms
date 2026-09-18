@@ -17,6 +17,7 @@ import {
   IconHeading,
   IconInputSearch,
   IconLayoutBoard,
+  IconLayoutGrid,
   IconPhoto,
   IconPlus,
   IconSend,
@@ -44,6 +45,7 @@ const UNCATEGORIZED = 'Altro';
  */
 const ICON_MAP: Record<string, Icon> = {
   'layout-board': IconLayoutBoard,
+  'layout-grid': IconLayoutGrid,
   heading: IconHeading,
   'align-left': IconAlignLeft,
   photo: IconPhoto,

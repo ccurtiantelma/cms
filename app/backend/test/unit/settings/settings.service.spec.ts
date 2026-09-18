@@ -2,6 +2,7 @@ import { SettingsService, DEFAULT_THEME_CONFIG } from '../../../src/settings/set
 import { DbService } from '../../../src/db/db.service';
 import { AuditLogService } from '../../../src/common/audit-log.service';
 import { ExportService } from '../../../src/export/export.service';
+import { StaticSiteDeployer } from '../../../src/export/deploy/static-site-deployer.interface';
 import { AppUserRoles } from '../../../src/common/enums';
 import { AuthInfo } from '../../../src/common/types';
 
@@ -11,6 +12,7 @@ describe('SettingsService (unit) — updateTheme e trigger di rebuild full-site 
   let valuesMock: jest.Mock;
   let auditLogService: { log: jest.Mock };
   let exportService: { enqueueFullSiteExport: jest.Mock };
+  let deployer: { write: jest.Mock; remove: jest.Mock };
 
   const authInfo: AuthInfo = {
     userId: 1,
@@ -31,11 +33,16 @@ describe('SettingsService (unit) — updateTheme e trigger di rebuild full-site 
 
     auditLogService = { log: jest.fn().mockResolvedValue(undefined) };
     exportService = { enqueueFullSiteExport: jest.fn().mockResolvedValue(undefined) };
+    deployer = {
+      write: jest.fn().mockResolvedValue(undefined),
+      remove: jest.fn().mockResolvedValue(undefined),
+    };
 
     settingsService = new SettingsService(
       dbService,
       auditLogService as unknown as AuditLogService,
       exportService as unknown as ExportService,
+      deployer as unknown as StaticSiteDeployer,
     );
   });
 

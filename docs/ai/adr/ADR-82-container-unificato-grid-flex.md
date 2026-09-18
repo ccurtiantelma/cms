@@ -1,10 +1,10 @@
 # ADR-82 — Container unificato: deprecazione di `section`, `container` v2 (Grid 12 colonne, Flexbox, min-height, shape divider, tag semantici)
 
 ## Status
-[x] **In discussione** · [ ] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
+[ ] In discussione · [x] **Approvato** · [ ] Rifiutato · [ ] Superseded da ADR-XXX
 
 ## Data approvazione
-_In attesa di firma umana — vedi "Decisione umana" in fondo a questo documento._
+2026-09-17
 
 ## RFC di riferimento
 Nessuna RFC dedicata: round **R2 — Container unico, grid, position** di
@@ -240,3 +240,14 @@ contare la pagina stessa).
   (fuori scope del validatore backend, che continua ad accettare `section` in lettura per `ADR-21`
   § 3.7) — verificato con un test e2e che la palette dell'editor non offre più `section` come blocco
   inseribile.
+
+---
+
+## Decisione umana
+
+**Esito**: [x] Approvato così com'è · [ ] Approvato con modifiche (vedi note) · [ ] Rifiutato ·
+[ ] Rinviato
+
+**Approvato da**: marketing@antelmagroup.net · **Data**: 2026-09-17
+
+**Note**: Nessuna.

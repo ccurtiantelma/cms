@@ -2,19 +2,22 @@ import { BadRequestException } from '@nestjs/common';
 
 /**
  * Numero massimo di nodi per albero, radice inclusa, a ogni profondità
- * (SPEC-F02-blocchi.md § 1.1). Derivato senza margine da NFR § Volumi di
- * riferimento («limite 500»): alzarlo non è un tuning, è una revisione
- * dell'NFR.
+ * (SPEC-F02-blocchi.md § 1.1). Innalzato a 1500 per Container v2 Grid/Flex
+ * nidificato (ADR-82 § "Decisione" punto 5): un `container` v2 con Grid 12
+ * colonne e nesting libero (colonna → container → colonna → card → icon-box)
+ * rende insufficiente il limite storico di 500. Si allenta soltanto, mai si
+ * stringe: nessun contenuto esistente diventa non valido.
  */
-export const MAX_NODES = 500;
+export const MAX_NODES = 1500;
 
 /**
  * Profondità massima dell'albero, radice a profondità 1 (SPEC-F02-blocchi.md
- * § 1.2). **Arbitrario e dichiarato tale**: margine per due generazioni
- * future di contenitori, non derivato dal registro (gira prima che il
- * registro sia consultato).
+ * § 1.2). Innalzato a 8 per Container v2 Grid/Flex nidificato (ADR-82 §
+ * "Decisione" punto 5): un layout realistico a più livelli (sezione → riga →
+ * colonna → card → icon-box) tocca già profondità 5 prima di qualunque
+ * nesting `container`-in-`container` aggiuntivo richiesto dal gap analysis.
  */
-export const MAX_DEPTH = 5;
+export const MAX_DEPTH = 8;
 
 /**
  * Dimensione massima, in byte UTF-8, della serializzazione JSON

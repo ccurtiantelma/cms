@@ -1,12 +1,14 @@
 import { Body, Controller, Get, Put, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
-import { GuardAdmin, GuardSuperAdmin } from '../auth/guard';
+import { GuardAdmin, GuardManager, GuardSuperAdmin } from '../auth/guard';
 import { SettingsService } from './settings.service';
 import { ThemeConfigDto } from './dto/theme-config.dto';
 import { MultilingualConfigDto } from './dto/multilingual-config.dto';
 import { RevisionsRetentionDto } from './dto/revisions-retention.dto';
 import { GlobalTokensDto } from './dto/global-tokens.dto';
+import { GlobalKitDto } from './dto/global-kit.dto';
+import { BreakpointsDto } from './dto/breakpoints.dto';
 import { AuthInfo } from '../common/types';
 
 /**
@@ -152,5 +154,75 @@ export class SettingsController {
   ): Promise<GlobalTokensDto> {
     const authInfo = req['authInfo'] as AuthInfo;
     return this.settingsService.updateGlobalTokens(dto, authInfo, req.ip);
+  }
+
+  /** Global Kit corrente (default di fabbrica se mai salvato). Qualunque ruolo autenticato (`SPEC-GLOBAL-KIT.md` § 2). */
+  @Get('global-kit')
+  @ApiOperation({ summary: 'Global Kit del sito (default di fabbrica se mai salvato)' })
+  @ApiResponse({ status: 200, description: 'Global Kit corrente', type: GlobalKitDto })
+  async getGlobalKit(): Promise<GlobalKitDto> {
+    return this.settingsService.getGlobalKit();
+  }
+
+  /**
+   * Salva il Global Kit (RBAC per-campo, `SPEC-GLOBAL-KIT.md` § 2): `GuardManager`
+   * è solo la soglia minima di accesso alla rotta — Manager+ per `colors`/
+   * `fonts`/`customFonts`/`customIcons`/`lightbox`, Admin+ per `themeStyle`/
+   * `layout`/`customCode` (verificato dal service, **prima** della validazione
+   * DTO). `@Body() body: Record<string, unknown>` è **deliberatamente non
+   * tipizzato con `GlobalKitDto`**: il `ValidationPipe` globale valida solo i
+   * parametri `@Body()` con un tipo di classe riconosciuto a runtime — usare un
+   * tipo strutturale qui salta quella validazione automatica, permettendo al
+   * service di eseguire il gate RBAC sul body grezzo e solo *poi* invocare
+   * esplicitamente lo stesso `ValidationPipe` (vedi `SettingsService.
+   * updateGlobalKit`).
+   */
+  @Put('global-kit')
+  @UseGuards(GuardManager)
+  @ApiOperation({
+    summary:
+      'Salva il Global Kit (Manager+ o Admin+ a seconda dei campi toccati, registrato su audit log)',
+  })
+  @ApiResponse({ status: 200, description: 'Global Kit salvato', type: GlobalKitDto })
+  @ApiResponse({ status: 400, description: 'Payload non valido (schema, system, limiti)' })
+  @ApiResponse({
+    status: 403,
+    description:
+      "Ruolo inferiore ad Admin per themeStyle/layout/customCode, o inferiore a Manager per l'intera rotta",
+  })
+  @ApiResponse({ status: 409, description: 'Rimozione di un id colore/font system esistente' })
+  async updateGlobalKit(
+    @Body() body: Record<string, unknown>,
+    @Req() req: Request,
+  ): Promise<GlobalKitDto> {
+    const authInfo = req['authInfo'] as AuthInfo;
+    return this.settingsService.updateGlobalKit(body, authInfo, req.ip);
+  }
+
+  /** Breakpoint configurabili correnti (default di fabbrica se mai salvati, ADR-76). */
+  @Get('breakpoints')
+  @ApiOperation({
+    summary: 'Breakpoint responsive configurabili (default di fabbrica se mai salvati)',
+  })
+  @ApiResponse({ status: 200, description: 'Breakpoint correnti', type: BreakpointsDto })
+  async getBreakpoints(): Promise<BreakpointsDto> {
+    return this.settingsService.getBreakpoints();
+  }
+
+  /** Salva i breakpoint configurabili (Admin+, audit logged, ADR-76 § "Conseguenze"). */
+  @Put('breakpoints')
+  @UseGuards(GuardAdmin)
+  @ApiOperation({
+    summary: 'Salva i breakpoint responsive configurabili (Admin+ only, registrato su audit log)',
+  })
+  @ApiResponse({ status: 200, description: 'Breakpoint salvati', type: BreakpointsDto })
+  @ApiResponse({ status: 400, description: 'Payload non valido' })
+  @ApiResponse({ status: 403, description: 'Ruolo inferiore ad Admin' })
+  async updateBreakpoints(
+    @Body() dto: BreakpointsDto,
+    @Req() req: Request,
+  ): Promise<BreakpointsDto> {
+    const authInfo = req['authInfo'] as AuthInfo;
+    return this.settingsService.updateBreakpoints(dto, authInfo, req.ip);
   }
 }

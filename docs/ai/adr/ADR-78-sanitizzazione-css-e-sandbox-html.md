@@ -1,10 +1,10 @@
 # ADR-78 — Deroga controllata a "nessun CSS/HTML utente": `kind: 'css'` via AST (`css-tree`) e `kind: 'html'` in sandbox `<iframe>`
 
 ## Status
-[x] **In discussione** · [ ] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
+[ ] **In discussione** · [x] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
 
 ## Data approvazione
-_In attesa di firma umana — vedi "Decisione umana" in fondo a questo documento._
+2026-09-18 — vedi "Decisione umana" in fondo a questo documento.
 
 ## RFC di riferimento
 Nessuna RFC dedicata (round R0, vedi ADR-74 § "RFC di riferimento"). Riferimento sostanziale:
@@ -181,9 +181,14 @@ il principio) né "vietato" (bloccherebbe la parità dichiarata dal committente 
 
 ## Decisione umana
 
-**Esito**: [ ] Approvato così com'è · [ ] Approvato con modifiche (vedi note) · [ ] Rifiutato ·
+**Esito**: [x] Approvato così com'è · [ ] Approvato con modifiche (vedi note) · [ ] Rifiutato ·
 [ ] Rinviato
 
-**Approvato da**: _______________ · **Data**: _______________
+**Approvato da**: marketing@antelmagroup.net · **Data**: 2026-09-18
 
-**Note**:
+**Note**: Approvazione raccolta in sessione Claude Code a supporto dell'implementazione del
+Sub-Task S5.1 (Hardening Backend, Server-Side CSS-Tree Sanitization & Tree-Shaking Purge).
+Nessun plan tracciato in `docs/ai/plans/` per S5.1 al momento dell'approvazione — vedi
+`docs/ai/INDEX.md` per l'assenza di riferimento; l'implementazione copre solo il perimetro
+`kind: 'css'` (punti 1-6 e 9-10 della Decisione sopra), non il perimetro `kind: 'html'`
+(punti 7-8), non richiesto da questo sub-task.

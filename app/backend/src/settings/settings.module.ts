@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { SettingsController } from './settings.controller';
+import { GlobalKitPublicController } from './global-kit-public.controller';
 import { SettingsService } from './settings.service';
 import { DbModule } from '../db/db.module';
 import { ExportModule } from '../export/export.module';
@@ -12,11 +13,17 @@ import { ExportModule } from '../export/export.module';
  * `ExportModule` (RFC-44 Decisione 3) porta `ExportService`: `updateTheme`
  * accoda un full-site rebuild dopo ogni salvataggio del tema. Nessun ciclo:
  * `ExportModule` non dipende da `SettingsModule` (`PagesModule` importa
- * entrambi indipendentemente).
+ * entrambi indipendentemente). `ExportModule` esporta anche
+ * `STATIC_SITE_DEPLOYER` (S1.3): `SettingsService.updateGlobalKit` lo inietta
+ * per scrivere `global-kit.<hash>.css` sincronicamente (`SPEC-GLOBAL-KIT.md` §
+ * 3 punto 6). `GlobalKitPublicController` (`GET public/global-kit.css`) è
+ * anonimo per costruzione (prefisso `public/*path`, escluso da
+ * `AuthMiddleware` in `app.module.ts`), registrato qui perché condivide
+ * `SettingsService`/il compilatore con `SettingsController`.
  */
 @Module({
   imports: [DbModule, ExportModule],
-  controllers: [SettingsController],
+  controllers: [SettingsController, GlobalKitPublicController],
   providers: [SettingsService],
   exports: [SettingsService],
 })

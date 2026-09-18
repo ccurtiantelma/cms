@@ -334,6 +334,27 @@ describe('useBlockEditorStore — hover del canvas, selezione e viewport', () =>
     expect(state().activeViewport).toBe('desktop');
   });
 
+  it("setActiveBreakpoint commuta fra i 7 nomi e deriva activeViewport (3 vie) per l'ispettore", () => {
+    expect(state().activeBreakpoint).toBe('default');
+    expect(state().activeViewport).toBe('desktop');
+
+    state().setActiveBreakpoint('tabletExtra');
+    expect(state().activeBreakpoint).toBe('tabletExtra');
+    expect(state().activeViewport).toBe('tablet');
+
+    state().setActiveBreakpoint('mobileExtra');
+    expect(state().activeBreakpoint).toBe('mobileExtra');
+    expect(state().activeViewport).toBe('mobile');
+
+    state().setActiveBreakpoint('widescreen');
+    expect(state().activeBreakpoint).toBe('widescreen');
+    expect(state().activeViewport).toBe('desktop');
+
+    state().setActiveBreakpoint('default');
+    expect(state().activeBreakpoint).toBe('default');
+    expect(state().activeViewport).toBe('desktop');
+  });
+
   it('initTree azzera anche hoveredBlockId', () => {
     state().setHoveredBlock('head-1');
 
@@ -695,14 +716,15 @@ describe('useBlockEditorStore — duplicateNodeAction', () => {
   });
 
   it('rifiuta la duplicazione che supererebbe MAX_NODES: avviso, albero invariato, nessuna voce in history', () => {
-    // 500 nodi di radice (= CONTENT_TREE_LIMITS.maxNodes): un duplicato in più li porterebbe a 501.
-    const cinquecentoNodi = Array.from({ length: 499 }, (_, i) =>
+    // 1500 nodi di radice (= CONTENT_TREE_LIMITS.maxNodes, ADR-82 § "Decisione" punto 5): un
+    // duplicato in più li porterebbe a 1501.
+    const millecinquecentoNodi = Array.from({ length: 1499 }, (_, i) =>
       node(`n-${i}`, 'heading', { level: 'h2', text: 'x' }),
     );
     const daDuplicare = node('dup-me', 'heading', { level: 'h2', text: 'y' });
-    useBlockEditorStore.getState().initTree([...cinquecentoNodi, daDuplicare]);
+    useBlockEditorStore.getState().initTree([...millecinquecentoNodi, daDuplicare]);
     const treeBefore = state().tree;
-    expect(treeBefore).toHaveLength(500);
+    expect(treeBefore).toHaveLength(1500);
 
     state().duplicateNodeAction('dup-me');
 
@@ -798,13 +820,14 @@ describe('useBlockEditorStore — insertSubtreeAction', () => {
   });
 
   it('rifiuta l’inserimento che supererebbe MAX_NODES: avviso, albero invariato, nessuna voce in history', () => {
-    // 499 nodi di radice + il preset di 3 nodi (section + 2 figli) = 502, oltre il limite di 500.
-    const cinquecentoNodi = Array.from({ length: 499 }, (_, i) =>
+    // 1499 nodi di radice + il preset di 3 nodi (section + 2 figli) = 1502, oltre il limite di
+    // 1500 (ADR-82 § "Decisione" punto 5).
+    const millequattrocentonovantanoveNodi = Array.from({ length: 1499 }, (_, i) =>
       node(`n-${i}`, 'heading', { level: 'h2', text: 'x' }),
     );
-    useBlockEditorStore.getState().initTree(cinquecentoNodi);
+    useBlockEditorStore.getState().initTree(millequattrocentonovantanoveNodi);
     const treeBefore = state().tree;
-    expect(treeBefore).toHaveLength(499);
+    expect(treeBefore).toHaveLength(1499);
 
     state().insertSubtreeAction(null, treeBefore.length, presetSubtree());
 

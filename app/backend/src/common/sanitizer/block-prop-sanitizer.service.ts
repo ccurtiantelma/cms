@@ -9,6 +9,7 @@ import {
   BLOCK_COLOR_PROP_NAMES,
   INLINE_SANITIZE_OPTIONS,
 } from './block-sanitize-profiles.config';
+import { CssTreeSanitizerService } from './css-tree-sanitizer.service';
 
 /**
  * Vero per un carattere di controllo C0 o DEL (code point 0x7f), esclusi tab
@@ -70,6 +71,13 @@ export interface BlockTreeSanitizationResult {
 export class BlockPropSanitizerService {
   private readonly logger = new Logger(BlockPropSanitizerService.name);
 
+  /**
+   * Inietta il sanitizzatore AST dedicato a `kind: 'css'` (ADR-78, Sub-Task S5.1).
+   *
+   * @param cssTreeSanitizer Sanitizzatore AST per `kind: 'css'`.
+   */
+  constructor(private readonly cssTreeSanitizer: CssTreeSanitizerService) {}
+
   /** Sanitizza un intero albero di blocchi radice. Non muta l'input: ritorna una copia. */
   sanitizeTree(
     blocks: ValidatableBlockNode[],
@@ -108,6 +116,7 @@ export class BlockPropSanitizerService {
           propName,
           `${path}.props.${propName}`,
           node.type,
+          node.id,
           errors,
         );
       }
@@ -126,6 +135,7 @@ export class BlockPropSanitizerService {
     propName: string,
     path: string,
     type: string,
+    nodeId: string,
     errors: BlockValidationError[],
   ): unknown {
     if (typeof value !== 'string') {
@@ -157,6 +167,32 @@ export class BlockPropSanitizerService {
       // responsabilità di `url` — questo stadio non ripassa il valore da
       // `sanitize-html` e non lo rivalida, lo restituisce invariato.
       return value;
+    }
+
+    if (spec.kind === 'css') {
+      // `css` (SPEC-propkind-v2.md § 3.15, ADR-78 approvata 2026-09-18,
+      // Sub-Task S5.1): parsing AST + auto-scoping + allowlist proprietà via
+      // `CssTreeSanitizerService`, mai una riparazione parziale — su
+      // fallimento si segnala l'errore e si ritorna il valore originale non
+      // modificato (stesso pattern di `checkMaxLength`: il chiamante rifiuta
+      // l'intero salvataggio con 400, non persiste mai un valore diverso da
+      // quello scritto né un valore parzialmente sanitizzato).
+      const outcome = this.cssTreeSanitizer.sanitizeUserCss(value, nodeId);
+      if (outcome.failure) {
+        errors.push({
+          code: 'BLOCK_PROP_INVALID',
+          details: {
+            path,
+            type,
+            prop: propName,
+            kind: 'css',
+            reason: outcome.failure.reason,
+            detail: outcome.failure.detail,
+          },
+        });
+        return value;
+      }
+      return outcome.css;
     }
 
     // Altri `kind` (`number`, `boolean`, `enum`, `mediaRef`, `pageRef`,

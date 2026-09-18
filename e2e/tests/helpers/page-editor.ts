@@ -68,34 +68,29 @@ export async function createPageFromUi(
   }
   await drawer.getByRole('button', { name: 'Salva' }).click();
 
-  // `?tab=content` in coda: comportamento applicativo reale osservato dopo la creazione
-  // (non più il solo `/pages/{guid}` di quando questo helper è stato scritto) — la regex
-  // e l'estrazione del guid tollerano la query string invece di dipendere dalla forma
-  // esatta dell'URL post-navigazione.
-  await expect(page).toHaveURL(/\/pages\/[0-9a-f]{16}(\?.*)?$/);
-  const guid = page.url().match(/\/pages\/([0-9a-f]{16})/)?.[1] as string;
-  await expect(page.getByRole('heading', { name: title })).toBeVisible();
+  // Da ADR-54 la creazione instrada direttamente sulla rotta isolata
+  // `/studio/:guid` (`PagePages.tsx`, navigate(`/studio/${created.guid}`)), non più
+  // su `/pages/{guid}?tab=content`: quella scheda "Contenuto" non esiste più.
+  await expect(page).toHaveURL(/\/studio\/[0-9a-f]{16}(\?.*)?$/);
+  const guid = page.url().match(/\/studio\/([0-9a-f]{16})/)?.[1] as string;
+  // Da ADR-54 la chrome dell'editor non mostra più il titolo come intestazione visibile
+  // (`PagePageDetail.tsx`, che lo faceva, non monta più l'editor): `Toolbar.tsx` lo porta
+  // solo come `aria-label` del proprio `<header>` (ruolo implicito "banner", verificato sul
+  // DOM reale — non annidato in `article`/`section`), l'unica traccia accessibile rimasta.
+  await expect(page.getByRole('banner', { name: title })).toBeVisible();
   return guid;
 }
 
 /**
- * Apre la scheda "Contenuto" del dettaglio, dove vive l'editor. Non è una rotta
- * separata: l'editor è il modo in cui si guarda il contenuto della Pagina.
- *
- * Salta il click se la scheda è già quella attiva: da quando è attiva monta
- * `FullScreenEditorLayout` (`position: fixed; inset: 0`, ADR-32), che copre l'intera
- * viewport — `Tabs.List` incluso, perché la sua fascia orizzontale coincide con quella
- * del canvas sottostante e non può essere sollevata sopra l'overlay senza intercettare a
- * sua volta i click sui blocchi (verificato in E2E: la stessa `Tabs.List` sollevata
- * bloccava i trigger di inserimento del canvas). Un secondo `click()` su una
- * scheda già selezionata non cambierebbe comunque stato — è ridondante, e qui l'unico
- * segno visibile del problema: evitarlo elimina la sola chiamata che lo richiederebbe.
+ * Attende che l'editor sia pronto. Da ADR-54 non è più una scheda "Contenuto" dentro il
+ * dettaglio: `createPageFromUi` atterra già sulla rotta isolata `/studio/:guid`
+ * (`PageStudio.tsx`), che monta `BlockEditorPanel`/`FullScreenEditorLayout` senza
+ * condizioni, senza `Tabs` da selezionare (`PagePageDetail.tsx` ha perso la scheda
+ * "Contenuto" insieme al montaggio dell'editor, ADR-54 § "Decisione"). Il nome resta per
+ * non toccare ogni call site esistente: il comportamento è ora "attendi che l'editor sia
+ * montato", non più "seleziona una scheda".
  */
 export async function openContentTab(page: Page): Promise<void> {
-  const tab = page.getByRole('tab', { name: 'Contenuto' });
-  if ((await tab.getAttribute('aria-selected')) !== 'true') {
-    await tab.click();
-  }
   await expect(saveButton(page)).toBeVisible();
 }
 

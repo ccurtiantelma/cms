@@ -911,6 +911,100 @@ paths:
         log)
       tags:
         - Settings
+  /api/v1/app/settings/global-kit:
+    get:
+      operationId: SettingsController_getGlobalKit
+      parameters: []
+      responses:
+        '200':
+          description: Global Kit corrente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalKitDto'
+      security:
+        - access-token: []
+      summary: Global Kit del sito (default di fabbrica se mai salvato)
+      tags:
+        - Settings
+    put:
+      operationId: SettingsController_updateGlobalKit
+      parameters: []
+      responses:
+        '200':
+          description: Global Kit salvato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalKitDto'
+        '400':
+          description: Payload non valido (schema, system, limiti)
+        '403':
+          description: >-
+            Ruolo inferiore ad Admin per themeStyle/layout/customCode, o
+            inferiore a Manager per l'intera rotta
+        '409':
+          description: Rimozione di un id colore/font system esistente
+      security:
+        - access-token: []
+      summary: >-
+        Salva il Global Kit (Manager+ o Admin+ a seconda dei campi toccati,
+        registrato su audit log)
+      tags:
+        - Settings
+  /api/v1/app/settings/breakpoints:
+    get:
+      operationId: SettingsController_getBreakpoints
+      parameters: []
+      responses:
+        '200':
+          description: Breakpoint correnti
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BreakpointsDto'
+      security:
+        - access-token: []
+      summary: Breakpoint responsive configurabili (default di fabbrica se mai salvati)
+      tags:
+        - Settings
+    put:
+      operationId: SettingsController_updateBreakpoints
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BreakpointsDto'
+      responses:
+        '200':
+          description: Breakpoint salvati
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BreakpointsDto'
+        '400':
+          description: Payload non valido
+        '403':
+          description: Ruolo inferiore ad Admin
+      security:
+        - access-token: []
+      summary: >-
+        Salva i breakpoint responsive configurabili (Admin+ only, registrato su
+        audit log)
+      tags:
+        - Settings
+  /api/v1/public/global-kit.css:
+    get:
+      operationId: GlobalKitPublicController_getGlobalKitCss
+      parameters: []
+      responses:
+        '200':
+          description: Foglio di stile :root + regole di tema + @font-face
+      summary: CSS compilato del Global Kit corrente (nessuna autenticazione)
+      tags:
+        - Public Global Kit
   /api/v1/health:
     get:
       operationId: HealthController_check
@@ -3900,6 +3994,555 @@ components:
         - palette
         - typography
         - spacing
+    GlobalColorEntryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          description: >-
+            Id: uno dei 4 riservati (primary|secondary|text|accent) o guid16
+            custom. Assente su un'entry nuova: generato dal backend.
+        label:
+          type: string
+          description: Etichetta visibile, libera
+          maxLength: 60
+        value:
+          type: string
+          description: Valore hex ('#rgb'|'#rrggbb'|'#rrggbbaa')
+        system:
+          type: boolean
+          description: 'Derivato dal backend: true solo per i 4 id riservati'
+      required:
+        - label
+        - value
+        - system
+    TypographyValueDto:
+      type: object
+      properties:
+        fontFamily:
+          type: object
+          description: 'Famiglia (ColorRef-like: { ref } oppure { family, source })'
+        fontSize:
+          type: object
+          description: Dimensione carattere ({ value, unit }, 1-400)
+        fontWeight:
+          type: string
+          enum:
+            - '100'
+            - '200'
+            - '300'
+            - '400'
+            - '500'
+            - '600'
+            - '700'
+            - '800'
+            - '900'
+            - normal
+            - bold
+        textTransform:
+          type: string
+          enum:
+            - none
+            - uppercase
+            - lowercase
+            - capitalize
+        fontStyle:
+          type: string
+          enum:
+            - normal
+            - italic
+            - oblique
+        textDecoration:
+          type: string
+          enum:
+            - none
+            - underline
+            - overline
+            - line-through
+        lineHeight:
+          type: object
+          description: 'Altezza riga ({ value, unit }: ''em'' 0-10, ''px'' 0-200)'
+        letterSpacing:
+          type: object
+          description: Spaziatura lettere ({ value, unit }, -20-50)
+        wordSpacing:
+          type: object
+          description: Spaziatura parole ({ value, unit }, -20-100)
+    GlobalFontEntryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          description: >-
+            Id: uno dei 4 riservati (primary|secondary|text|accent) o guid16
+            custom. Assente su un'entry nuova: generato dal backend.
+        label:
+          type: string
+          description: Etichetta visibile, libera
+          maxLength: 60
+        typography:
+          description: Blocco tipografico (SPEC-PROPKIND-V2-DETAILS.md § 3)
+          allOf:
+            - $ref: '#/components/schemas/TypographyValueDto'
+        system:
+          type: boolean
+          description: 'Derivato dal backend: true solo per i 4 id riservati'
+      required:
+        - label
+        - typography
+        - system
+    ThemeBodyStyleDto:
+      type: object
+      properties:
+        typography:
+          $ref: '#/components/schemas/TypographyValueDto'
+        color:
+          type: object
+          description: ColorRefValue
+        background:
+          type: object
+          description: ColorRefValue
+      required:
+        - typography
+        - color
+        - background
+    ElementStyleDto:
+      type: object
+      properties:
+        typography:
+          $ref: '#/components/schemas/TypographyValueDto'
+        color:
+          type: object
+          description: ColorRefValue
+      required:
+        - typography
+        - color
+    StatefulColorRefDto:
+      type: object
+      properties:
+        normal:
+          type: object
+          description: ColorRefValue di stato "normal"
+        hover:
+          type: object
+          description: ColorRefValue di stato "hover" (ADR-75)
+      required:
+        - normal
+    ThemeLinkStyleDto:
+      type: object
+      properties:
+        color:
+          $ref: '#/components/schemas/StatefulColorRefDto'
+      required:
+        - color
+    ThemeBorderValueDto:
+      type: object
+      properties:
+        width:
+          type: number
+          description: Spessore in px
+        style:
+          type: string
+          enum:
+            - solid
+            - dashed
+            - dotted
+            - none
+        color:
+          type: object
+          description: ColorRefValue
+      required:
+        - width
+        - style
+        - color
+    ThemeRadiusValueDto:
+      type: object
+      properties:
+        tl:
+          type: number
+        tr:
+          type: number
+        br:
+          type: number
+        bl:
+          type: number
+        unit:
+          type: string
+          enum:
+            - px
+            - '%'
+        linked:
+          type: boolean
+      required:
+        - tl
+        - tr
+        - br
+        - bl
+        - unit
+        - linked
+    ThemeButtonStyleDto:
+      type: object
+      properties:
+        typography:
+          $ref: '#/components/schemas/TypographyValueDto'
+        background:
+          $ref: '#/components/schemas/StatefulColorRefDto'
+        color:
+          $ref: '#/components/schemas/StatefulColorRefDto'
+        border:
+          $ref: '#/components/schemas/ThemeBorderValueDto'
+        radius:
+          $ref: '#/components/schemas/ThemeRadiusValueDto'
+      required:
+        - typography
+        - background
+        - color
+        - border
+        - radius
+    ThemeShadowValueDto:
+      type: object
+      properties:
+        x:
+          type: number
+        'y':
+          type: number
+        blur:
+          type: number
+        spread:
+          type: number
+        color:
+          type: object
+          description: ColorRefValue
+      required:
+        - x
+        - 'y'
+        - blur
+        - spread
+        - color
+    ThemeImageStyleDto:
+      type: object
+      properties:
+        border:
+          $ref: '#/components/schemas/ThemeBorderValueDto'
+        radius:
+          $ref: '#/components/schemas/ThemeRadiusValueDto'
+        shadow:
+          $ref: '#/components/schemas/ThemeShadowValueDto'
+      required:
+        - border
+        - radius
+        - shadow
+    ThemeFormFieldsStyleDto:
+      type: object
+      properties:
+        border:
+          $ref: '#/components/schemas/ThemeBorderValueDto'
+        radius:
+          $ref: '#/components/schemas/ThemeRadiusValueDto'
+        color:
+          type: object
+          description: ColorRefValue
+        background:
+          type: object
+          description: ColorRefValue
+      required:
+        - border
+        - radius
+        - color
+        - background
+    ThemeStyleDto:
+      type: object
+      properties:
+        body:
+          $ref: '#/components/schemas/ThemeBodyStyleDto'
+        h1:
+          $ref: '#/components/schemas/ElementStyleDto'
+        h2:
+          $ref: '#/components/schemas/ElementStyleDto'
+        h3:
+          $ref: '#/components/schemas/ElementStyleDto'
+        h4:
+          $ref: '#/components/schemas/ElementStyleDto'
+        h5:
+          $ref: '#/components/schemas/ElementStyleDto'
+        h6:
+          $ref: '#/components/schemas/ElementStyleDto'
+        link:
+          $ref: '#/components/schemas/ThemeLinkStyleDto'
+        button:
+          $ref: '#/components/schemas/ThemeButtonStyleDto'
+        image:
+          $ref: '#/components/schemas/ThemeImageStyleDto'
+        formFields:
+          $ref: '#/components/schemas/ThemeFormFieldsStyleDto'
+    UnitValueDto:
+      type: object
+      properties:
+        value:
+          type: number
+        unit:
+          type: string
+          enum:
+            - px
+            - '%'
+            - em
+            - rem
+            - vw
+            - vh
+      required:
+        - value
+        - unit
+    SpacingValueDto:
+      type: object
+      properties:
+        top:
+          type: number
+        right:
+          type: number
+        bottom:
+          type: number
+        left:
+          type: number
+        unit:
+          type: string
+          enum:
+            - px
+            - '%'
+            - em
+            - rem
+            - vw
+            - vh
+        linked:
+          type: boolean
+      required:
+        - top
+        - right
+        - bottom
+        - left
+        - unit
+        - linked
+    LayoutSettingsDto:
+      type: object
+      properties:
+        contentWidth:
+          $ref: '#/components/schemas/UnitValueDto'
+        widgetSpace:
+          $ref: '#/components/schemas/UnitValueDto'
+        pageTitleSelector:
+          type: string
+          enum:
+            - h1
+            - none
+        defaultContainerPadding:
+          $ref: '#/components/schemas/SpacingValueDto'
+      required:
+        - contentWidth
+        - widgetSpace
+        - pageTitleSelector
+        - defaultContainerPadding
+    LightboxSettingsDto:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        bgColor:
+          type: object
+          description: ColorRefValue
+        uiColor:
+          type: object
+          description: ColorRefValue
+        showTitle:
+          type: boolean
+        showDescription:
+          type: boolean
+        zoom:
+          type: boolean
+        share:
+          type: boolean
+      required:
+        - enabled
+        - bgColor
+        - uiColor
+        - showTitle
+        - showDescription
+        - zoom
+        - share
+    CustomFontFileDto:
+      type: object
+      properties:
+        woff2:
+          type: string
+          description: mediaRef guid16 del file woff2
+      required:
+        - woff2
+    CustomFontEntryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          description: 'Guid16, assente su un''entry nuova: generato dal backend.'
+        family:
+          type: string
+          maxLength: 60
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomFontFileDto'
+        weights:
+          type: array
+          items:
+            type: string
+            enum:
+              - '100'
+              - '200'
+              - '300'
+              - '400'
+              - '500'
+              - '600'
+              - '700'
+              - '800'
+              - '900'
+      required:
+        - family
+        - files
+        - weights
+    CustomIconEntryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          description: 'Guid16, assente su un''entry nuova: generato dal backend.'
+        svgMediaRef:
+          type: string
+          description: mediaRef guid16 dello SVG (sanitizzato DOMPurify, ADR-80 § 10)
+        label:
+          type: string
+          maxLength: 60
+      required:
+        - svgMediaRef
+        - label
+    CustomCodeEntryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          description: 'Guid16, assente su un''entry nuova: generato dal backend.'
+        location:
+          type: string
+          enum:
+            - head
+            - bodyStart
+            - bodyEnd
+        priority:
+          type: number
+          minimum: 0
+          maximum: 100
+        code:
+          type: string
+          maxLength: 20000
+          description: 'Nessuna sanitizzazione HTML: Admin+ è l''unico controllo (ADR-78)'
+        conditions:
+          type: object
+          description: >-
+            ConditionsValue (SPEC-propkind-v2.md § 3.19), forma non validata a
+            questo livello
+      required:
+        - location
+        - priority
+        - code
+        - conditions
+    GlobalKitDto:
+      type: object
+      properties:
+        colors:
+          maxItems: 34
+          type: array
+          items:
+            $ref: '#/components/schemas/GlobalColorEntryDto'
+        fonts:
+          maxItems: 24
+          type: array
+          items:
+            $ref: '#/components/schemas/GlobalFontEntryDto'
+        themeStyle:
+          $ref: '#/components/schemas/ThemeStyleDto'
+        layout:
+          $ref: '#/components/schemas/LayoutSettingsDto'
+        lightbox:
+          $ref: '#/components/schemas/LightboxSettingsDto'
+        customFonts:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomFontEntryDto'
+        customIcons:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomIconEntryDto'
+        customCode:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomCodeEntryDto'
+      required:
+        - colors
+        - fonts
+        - themeStyle
+        - layout
+        - lightbox
+        - customFonts
+        - customIcons
+        - customCode
+    BreakpointConfigDto:
+      type: object
+      properties:
+        active:
+          type: boolean
+          description: Se il breakpoint è attivo per il sito
+        maxWidth:
+          type: number
+          description: 'Soglia px (max-width): tutte le chiavi tranne widescreen'
+        minWidth:
+          type: number
+          description: 'Soglia px (min-width): solo widescreen'
+      required:
+        - active
+    BreakpointsDto:
+      type: object
+      properties:
+        default:
+          type: object
+          description: Sempre attivo, nessuna soglia — presente solo per simmetria di forma
+        widescreen:
+          description: min-width, default 2400px
+          allOf:
+            - $ref: '#/components/schemas/BreakpointConfigDto'
+        laptop:
+          description: max-width, default 1366px
+          allOf:
+            - $ref: '#/components/schemas/BreakpointConfigDto'
+        tabletExtra:
+          description: max-width, default 1200px
+          allOf:
+            - $ref: '#/components/schemas/BreakpointConfigDto'
+        tablet:
+          description: max-width, default 1024px, attivo di default
+          allOf:
+            - $ref: '#/components/schemas/BreakpointConfigDto'
+        mobileExtra:
+          description: max-width, default 880px
+          allOf:
+            - $ref: '#/components/schemas/BreakpointConfigDto'
+        mobile:
+          description: max-width, default 767px, attivo di default
+          allOf:
+            - $ref: '#/components/schemas/BreakpointConfigDto'
+      required:
+        - default
+        - widescreen
+        - laptop
+        - tabletExtra
+        - tablet
+        - mobileExtra
+        - mobile
     UnreadCountDto:
       type: object
       properties:

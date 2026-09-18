@@ -1,12 +1,26 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  ValidationPipe,
+} from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import { DbService } from '../db/db.service';
 import { appSettingEntity } from '../db/schema';
 import { AuditLogService } from '../common/audit-log.service';
 import { AppConstants } from '../common/app-constants';
+import { AppUserRoles } from '../common/enums';
 import { AuthInfo } from '../common/types';
 import { Utils } from '../common/utils';
 import { ExportService } from '../export/export.service';
+import {
+  STATIC_SITE_DEPLOYER,
+  StaticSiteDeployer,
+} from '../export/deploy/static-site-deployer.interface';
 import {
   ThemeConfigDto,
   ThemeLengthUnit,
@@ -18,6 +32,14 @@ import {
 import { MultilingualConfigDto } from './dto/multilingual-config.dto';
 import { RevisionsRetentionDto } from './dto/revisions-retention.dto';
 import { GlobalTokensDto } from './dto/global-tokens.dto';
+import {
+  CustomCodeEntryDto,
+  GlobalColorEntryDto,
+  GlobalFontEntryDto,
+  GlobalKitDto,
+} from './dto/global-kit.dto';
+import { BreakpointsDto } from './dto/breakpoints.dto';
+import { compileGlobalKitCss } from './global-kit-css.compiler';
 
 /** Chiave della riga di `app_settings` che contiene il tema globale (ADR-4). */
 export const THEME_SETTING_KEY = 'theme';
@@ -231,6 +253,103 @@ export const DEFAULT_GLOBAL_TOKENS: GlobalTokensDto = {
   },
 };
 
+/** Chiave della riga di `app_settings` che contiene il Global Kit (ADR-77, SPEC-GLOBAL-KIT.md). */
+export const GLOBAL_KIT_SETTING_KEY = 'global_kit';
+
+/** Chiave della riga di `app_settings` che contiene i breakpoint configurabili (ADR-76). */
+export const BREAKPOINTS_SETTING_KEY = 'breakpoints';
+
+/**
+ * Default di fabbrica del Global Kit (`SPEC-GLOBAL-KIT.md` § "Criteri di
+ * verifica": "4 colori/4 font system con valori hardcoded, il resto vuoto").
+ * I valori esadecimali e le soglie di `layout`/`lightbox` **non** sono fissati
+ * da `SPEC-GLOBAL-KIT.md`/`ADR-77` a un valore preciso (solo la forma dello
+ * schema lo è): scelta implementativa ragionevole di questo Sub-Task,
+ * distinta dal precursore `DEFAULT_GLOBAL_TOKENS` (risorsa diversa, ADR-77 §
+ * "ADR di riferimento" — `global_tokens` non è deprecata da questo cambio).
+ */
+export const DEFAULT_GLOBAL_KIT: GlobalKitDto = {
+  colors: [
+    { id: 'primary', label: 'Primario', value: '#1971c2', system: true },
+    { id: 'secondary', label: 'Secondario', value: '#868e96', system: true },
+    { id: 'text', label: 'Testo', value: '#212529', system: true },
+    { id: 'accent', label: 'Accento', value: '#f76707', system: true },
+  ],
+  fonts: [
+    {
+      id: 'primary',
+      label: 'Primario',
+      typography: {
+        fontFamily: { family: 'inter', source: 'system' },
+        fontSize: { value: 16, unit: 'px' },
+      },
+      system: true,
+    },
+    {
+      id: 'secondary',
+      label: 'Secondario',
+      typography: {
+        fontFamily: { family: 'inter', source: 'system' },
+        fontSize: { value: 14, unit: 'px' },
+      },
+      system: true,
+    },
+    {
+      id: 'text',
+      label: 'Testo',
+      typography: {
+        fontFamily: { family: 'inter', source: 'system' },
+        fontSize: { value: 16, unit: 'px' },
+      },
+      system: true,
+    },
+    {
+      id: 'accent',
+      label: 'Accento',
+      typography: {
+        fontFamily: { family: 'inter', source: 'system' },
+        fontSize: { value: 16, unit: 'px' },
+      },
+      system: true,
+    },
+  ],
+  themeStyle: {},
+  layout: {
+    contentWidth: { value: 1140, unit: 'px' },
+    widgetSpace: { value: 20, unit: 'px' },
+    pageTitleSelector: 'h1',
+    defaultContainerPadding: { top: 0, right: 0, bottom: 0, left: 0, unit: 'px', linked: true },
+  },
+  lightbox: {
+    enabled: true,
+    bgColor: '#000000',
+    uiColor: '#ffffff',
+    showTitle: true,
+    showDescription: true,
+    zoom: true,
+    share: true,
+  },
+  customFonts: [],
+  customIcons: [],
+  customCode: [],
+};
+
+/**
+ * Default di fabbrica di `app_settings.breakpoints` (`ADR-76-breakpoints-
+ * configurabili.md` § "Decisione" punto 1, tabella): `tablet`+`mobile` attivi,
+ * le altre 4 chiavi no — preserva senza migrazione il comportamento a 3
+ * chiavi già cablato prima di ADR-76.
+ */
+export const DEFAULT_BREAKPOINTS: BreakpointsDto = {
+  default: {},
+  widescreen: { active: false, minWidth: 2400 },
+  laptop: { active: false, maxWidth: 1366 },
+  tabletExtra: { active: false, maxWidth: 1200 },
+  tablet: { active: true, maxWidth: 1024 },
+  mobileExtra: { active: false, maxWidth: 880 },
+  mobile: { active: true, maxWidth: 767 },
+};
+
 /** Le 11 chiavi colore del contratto storico (v1/v2), prima dei colori per titolo introdotti in v3. */
 interface LegacySchemeTokens {
   pageBg: string;
@@ -434,12 +553,17 @@ export class SettingsService {
   /**
    * Inietta l'accesso al DB, l'audit log per i salvataggi del tema e il
    * produttore dell'export statico (RFC-44 Decisione 3: ogni salvataggio del
-   * tema accoda un full-site rebuild).
+   * tema accoda un full-site rebuild). `StaticSiteDeployer` (S1.3,
+   * `SPEC-GLOBAL-KIT.md` § 3 punto 6) è iniettato per scrivere
+   * `global-kit.<hash>.css` sincronicamente a ogni `PUT app/settings/global-kit`
+   * riuscito — mai `node:fs` diretto, stesso adapter già vincolante per
+   * `ExportProcessor`.
    */
   constructor(
     private readonly db: DbService,
     private readonly auditLogService: AuditLogService,
     private readonly exportService: ExportService,
+    @Inject(STATIC_SITE_DEPLOYER) private readonly deployer: StaticSiteDeployer,
   ) {}
 
   /**
@@ -789,4 +913,260 @@ export class SettingsService {
     );
     return dto;
   }
+
+  // ─── Global Kit (S1.3, `SPEC-GLOBAL-KIT.md`, `ADR-77-global-kit-schema.md`) ──
+
+  /**
+   * Global Kit corrente: la riga `key='global_kit'` se presente e attiva,
+   * altrimenti il seed di default (`SPEC-GLOBAL-KIT.md` § 2: "seed di default
+   * lazy... senza scrivere nulla finché non arriva un PUT").
+   */
+  async getGlobalKit(): Promise<GlobalKitDto> {
+    const row = await this.db.db.query.appSettingEntity.findFirst({
+      where: and(
+        eq(appSettingEntity.key, GLOBAL_KIT_SETTING_KEY),
+        eq(appSettingEntity.isActive, true),
+      ),
+    });
+    if (!row) {
+      return DEFAULT_GLOBAL_KIT;
+    }
+    return row.value as GlobalKitDto;
+  }
+
+  /**
+   * Salva (sostituzione integrale, nessun `PATCH` parziale — `SPEC-GLOBAL-KIT.md`
+   * § 2) il Global Kit e rigenera `global-kit.css`. RBAC **per-campo**
+   * (`SPEC-GLOBAL-KIT.md` § 1 vincolo 6 / § 2): il controller passa il body
+   * **grezzo**, non ancora passato dal `ValidationPipe` globale (che gira solo
+   * su parametri `@Body()` tipizzati con una classe DTO riconosciuta) — così
+   * questo metodo può confrontare i campi Admin-only contro il valore corrente
+   * e lanciare `403` **prima** di invocare la validazione DTO, esattamente
+   * come richiesto dal criterio di verifica ("customCode da un ruolo Manager è
+   * rifiutato con 403 prima della validazione DTO").
+   *
+   * @param rawBody Body HTTP grezzo (`unknown`, non ancora validato).
+   * @param authInfo Identità/ruolo del chiamante.
+   * @param ip Indirizzo IP per l'audit log.
+   */
+  async updateGlobalKit(rawBody: unknown, authInfo: AuthInfo, ip?: string): Promise<GlobalKitDto> {
+    const current = await this.getGlobalKit();
+    const bodyRecord = isPlainObject(rawBody) ? rawBody : {};
+
+    if (authInfo.role > AppUserRoles.Admin) {
+      // Manager (o ruolo meno privilegiato che comunque supera GuardManager sul
+      // controller): ammesso solo se il body non altera themeStyle/layout/
+      // customCode rispetto al valore corrente (SPEC-GLOBAL-KIT.md § 2).
+      const touchesAdminOnlyFields =
+        !deepEqualJson(bodyRecord.themeStyle, current.themeStyle) ||
+        !deepEqualJson(bodyRecord.layout, current.layout) ||
+        !deepEqualJson(bodyRecord.customCode, current.customCode);
+      if (touchesAdminOnlyFields) {
+        throw new ForbiddenException(
+          "Permessi insufficienti: 'themeStyle'/'layout'/'customCode' richiedono ruolo Admin o superiore.",
+        );
+      }
+    }
+
+    // Validazione DTO manuale (stesso ValidationPipe globale di main.ts),
+    // invocata qui — dopo il gate RBAC sopra, mai prima.
+    const pipe = new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    });
+    const dto = (await pipe.transform(rawBody, {
+      type: 'body',
+      metatype: GlobalKitDto,
+    })) as GlobalKitDto;
+
+    // Id guid16 generati dal backend per le entry custom nuove (mai accettato
+    // dal client, SPEC-GLOBAL-KIT.md § 1 vincolo 1) — dopo la validazione DTO,
+    // che ha già verificato la coerenza di `system` con `id` possibilmente assente.
+    dto.colors = this.assignGeneratedTokenIds(dto.colors);
+    dto.fonts = this.assignGeneratedTokenIds(dto.fonts);
+    dto.customFonts = dto.customFonts.map((entry) =>
+      entry.id ? entry : { ...entry, id: Utils.randomString(16) },
+    );
+    dto.customIcons = dto.customIcons.map((entry) =>
+      entry.id ? entry : { ...entry, id: Utils.randomString(16) },
+    );
+    dto.customCode = dto.customCode.map((entry): CustomCodeEntryDto =>
+      entry.id ? entry : { ...entry, id: Utils.randomString(16) },
+    );
+
+    // 409: rimozione di un'entry system esistente (ADR-77 § "Conformità": "409
+    // o validazione DTO, a scelta dell'implementazione" — qui 409, per il
+    // criterio di verifica esplicito di questo Sub-Task).
+    this.assertNoSystemEntryRemoved(current.colors, dto.colors, 'colors');
+    this.assertNoSystemEntryRemoved(current.fonts, dto.fonts, 'fonts');
+
+    await this.db.db
+      .insert(appSettingEntity)
+      .values({
+        guid: Utils.randomString(16),
+        key: GLOBAL_KIT_SETTING_KEY,
+        value: dto,
+        createdBy: authInfo.userId,
+        updatedBy: authInfo.userId,
+      })
+      .onConflictDoUpdate({
+        target: appSettingEntity.key,
+        set: {
+          value: dto,
+          isActive: true,
+          updatedAt: new Date(),
+          updatedBy: authInfo.userId,
+        },
+      });
+
+    // Rigenerazione sincrona, nella stessa richiesta (SPEC-GLOBAL-KIT.md § 2:
+    // "accoda esclusivamente la rigenerazione di global-kit.css... nessun job
+    // enqueueFullSiteExport"). Mai `this.exportService.enqueueFullSiteExport()`
+    // qui, a differenza di `updateTheme`.
+    await this.regenerateGlobalKitCssFile(dto);
+
+    this.logger.log(`Global Kit aggiornato (userId=${authInfo.userId}).`);
+    await this.auditLogService.log(
+      authInfo.userId,
+      'settings.globalKit.update',
+      'app_settings',
+      GLOBAL_KIT_SETTING_KEY,
+      JSON.stringify(dto),
+      authInfo.impersonatedBy,
+      ip,
+    );
+    return dto;
+  }
+
+  /**
+   * Compila e scrive `global-kit.<hash>.css` sulla superficie statica
+   * (`SPEC-GLOBAL-KIT.md` § 3 punto 6), fingerprint del contenuto
+   * (`createHash('sha256')`, stesso schema di `ExportProcessor`). Consumato
+   * dalla pipeline di export statico; `GET public/global-kit.css` **non**
+   * dipende da questo file (vedi `GlobalKitPublicController`, generato live
+   * ad ogni richiesta — motivazione nel JSDoc di quel controller).
+   */
+  private async regenerateGlobalKitCssFile(dto: GlobalKitDto): Promise<void> {
+    const css = compileGlobalKitCss(dto);
+    const hash = createHash('sha256').update(css).digest('hex').slice(0, 16);
+    await this.deployer.write(`assets/global-kit.${hash}.css`, css);
+  }
+
+  /** Assegna un guid16 generato dal backend alle entry custom senza `id` (mai accettato dal client, § 1 vincolo 1). */
+  private assignGeneratedTokenIds<T extends { id?: string }>(entries: T[]): T[] {
+    return entries.map((entry) => (entry.id ? entry : { ...entry, id: Utils.randomString(16) }));
+  }
+
+  /** `409` se un id `system` presente nel valore corrente non compare più nel nuovo array (ADR-77 § "Conformità"). */
+  private assertNoSystemEntryRemoved(
+    currentEntries: Array<GlobalColorEntryDto | GlobalFontEntryDto>,
+    nextEntries: Array<GlobalColorEntryDto | GlobalFontEntryDto>,
+    label: string,
+  ): void {
+    const nextIds = new Set(nextEntries.map((e) => e.id));
+    const removedSystemIds = currentEntries
+      .filter((e) => e.system && e.id && !nextIds.has(e.id))
+      .map((e) => e.id);
+    if (removedSystemIds.length > 0) {
+      throw new ConflictException(
+        `${label}: rimozione non ammessa per gli id system esistenti (${removedSystemIds.join(', ')}).`,
+      );
+    }
+  }
+
+  // ─── Breakpoints (S1.3, `ADR-76-breakpoints-configurabili.md`) ────────────
+
+  /**
+   * Breakpoint correnti: la riga `key='breakpoints'` se presente e attiva,
+   * altrimenti il default di fabbrica (ADR-76 § "Decisione" punto 1: tablet+
+   * mobile attivi).
+   */
+  async getBreakpoints(): Promise<BreakpointsDto> {
+    const row = await this.db.db.query.appSettingEntity.findFirst({
+      where: and(
+        eq(appSettingEntity.key, BREAKPOINTS_SETTING_KEY),
+        eq(appSettingEntity.isActive, true),
+      ),
+    });
+    if (!row) {
+      return DEFAULT_BREAKPOINTS;
+    }
+    return row.value as BreakpointsDto;
+  }
+
+  /**
+   * Salva (upsert sulla chiave univoca) i breakpoint configurabili e registra
+   * l'operazione su audit log. Admin+ only (guard sul controller, ADR-76 §
+   * "Conseguenze").
+   */
+  async updateBreakpoints(
+    dto: BreakpointsDto,
+    authInfo: AuthInfo,
+    ip?: string,
+  ): Promise<BreakpointsDto> {
+    await this.db.db
+      .insert(appSettingEntity)
+      .values({
+        guid: Utils.randomString(16),
+        key: BREAKPOINTS_SETTING_KEY,
+        value: dto,
+        createdBy: authInfo.userId,
+        updatedBy: authInfo.userId,
+      })
+      .onConflictDoUpdate({
+        target: appSettingEntity.key,
+        set: {
+          value: dto,
+          isActive: true,
+          updatedAt: new Date(),
+          updatedBy: authInfo.userId,
+        },
+      });
+
+    this.logger.log(`Breakpoint aggiornati (userId=${authInfo.userId}).`);
+    await this.auditLogService.log(
+      authInfo.userId,
+      'settings.breakpoints.update',
+      'app_settings',
+      BREAKPOINTS_SETTING_KEY,
+      JSON.stringify(dto),
+      authInfo.impersonatedBy,
+      ip,
+    );
+    return dto;
+  }
+}
+
+/** `true` se `value` è un oggetto plain (non array, non null) — stesso identico uso dei validatori del registro blocchi. */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Confronto strutturale via serializzazione a chiavi ordinate: sufficiente per
+ * `GlobalKitValue` (dati `jsonb` semplici, nessuna `Date`/funzione), evita di
+ * aggiungere una dipendenza di deep-equal solo per questo confronto
+ * (`docs/constitution.md`, nessuna nuova dipendenza npm senza necessità).
+ */
+function deepEqualJson(a: unknown, b: unknown): boolean {
+  return canonicalJsonStringify(a) === canonicalJsonStringify(b);
+}
+
+function canonicalJsonStringify(value: unknown): string {
+  return JSON.stringify(sortKeysDeep(value));
+}
+
+function sortKeysDeep(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(sortKeysDeep);
+  }
+  if (isPlainObject(value)) {
+    const sorted: Record<string, unknown> = {};
+    for (const key of Object.keys(value).sort()) {
+      sorted[key] = sortKeysDeep(value[key]);
+    }
+    return sorted;
+  }
+  return value;
 }

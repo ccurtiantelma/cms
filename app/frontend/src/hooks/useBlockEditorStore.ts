@@ -46,13 +46,23 @@ import {
   type ColumnRatioValue,
 } from '../pages/pages/editor/column-resize.utils';
 import type { ResizeHandleUnit } from '../pages/pages/editor/resize-handle.utils';
-import { BLOCK_TYPES, CONTENT_TREE_LIMITS, ENVELOPE_VERSION } from '../types/blocks.types';
+import {
+  BLOCK_TYPES,
+  CONTENT_TREE_LIMITS,
+  ENVELOPE_VERSION,
+  type ResponsiveBreakpointName,
+} from '../types/blocks.types';
 import {
   compileTokensToCss,
   GLOBAL_TOKENS_CANVAS_SCOPE_CLASS,
   GLOBAL_TOKENS_STYLE_TAG_ID,
   type GlobalTokens,
 } from '../libs/globalTokensCompiler';
+import {
+  DEFAULT_BREAKPOINTS_DTO,
+  resolveActiveBreakpoints,
+  type ResolvedBreakpoint,
+} from '../libs/breakpoints';
 import { createGlobalSection } from '../services/global-sections.service';
 import type { GlobalSectionRecord } from '../types/global-sections.types';
 import { fetchMediaMetadata, requestImageTransform } from '../services/media.service';
@@ -184,6 +194,24 @@ function isDirty(state: BlockEditorState): boolean {
 /** Viewport simulato dal Viewport Switcher dell'editor full-screen (`FullScreenEditorLayout`). */
 export type EditorViewport = 'desktop' | 'tablet' | 'mobile';
 
+/**
+ * Deriva il viewport a 3 vie dell'ispettore di proprietà (`EditorViewport`, envelope
+ * `{default,tablet,mobile}`, `breakpointKey()` in `inspector/inspector.utils.ts`) dal
+ * breakpoint a 7 vie del `BreakpointSwitcher` del canvas (`ResponsiveBreakpointName`,
+ * ADR-76-breakpoints-configurabili.md). Funzione pura e riusabile — Sub-Task "Frame WYSIWYG
+ * In-Place & Breakpoint Switcher": l'ispettore non è stato esteso a 7 breakpoint in questo
+ * task (fuori scope, un task successivo), quindi `setActiveBreakpoint` la richiama per
+ * tenere `activeViewport` coerente col bucket giusto senza toccare l'ispettore.
+ * `mobile`/`mobileExtra` → `'mobile'`, `tablet`/`tabletExtra` → `'tablet'`,
+ * `default`/`laptop`/`widescreen` → `'desktop'` (nessuna soglia più larga del desktop
+ * nell'envelope a 3 vie).
+ */
+export function viewportForBreakpoint(name: ResponsiveBreakpointName): EditorViewport {
+  if (name === 'mobile' || name === 'mobileExtra') return 'mobile';
+  if (name === 'tablet' || name === 'tabletExtra') return 'tablet';
+  return 'desktop';
+}
+
 /** Scheda attiva della sidebar sinistra dell'editor full-screen (`EditorSidebar`). */
 export type EditorSidebarTab = 'widgets' | 'structure' | 'properties' | 'page' | 'history';
 
@@ -242,6 +270,19 @@ interface BlockEditorState {
    * né i breakpoint effettivi del rendering pubblico.
    */
   activeViewport: EditorViewport;
+  /**
+   * Breakpoint a 7 vie (ADR-76) che il canvas full-screen sta simulando ORA
+   * (`BreakpointSwitcher.tsx`) — governa il ridimensionamento fisico dell'`<iframe>` del
+   * canvas (`FullScreenEditorLayout.tsx`), un pixel reale, non una classe CSS finta. Distinto
+   * da {@link activeBreakpoints} (plurale, sotto): quello è l'elenco di QUALI breakpoint sono
+   * attivi per il sito, questo è il singolo breakpoint fra quelli attivi che lo switcher sta
+   * mostrando in questo momento. Distinto anche da {@link activeViewport} (3 vie, solo
+   * l'ispettore di proprietà): `setActiveBreakpoint` sotto aggiorna entrambi in un colpo solo
+   * (vedi {@link viewportForBreakpoint}), così l'ispettore resta coerente senza essere esteso
+   * a 7 vie in questo task. Default `'default'`: il canvas parte a piena larghezza fluida,
+   * stesso comportamento storico di `activeViewport: 'desktop'`.
+   */
+  activeBreakpoint: ResponsiveBreakpointName;
   /** Il pannello "Struttura/Navigator" dell'editor full-screen è aperto. */
   isStructurePanelOpen: boolean;
   /**
@@ -318,6 +359,17 @@ interface BlockEditorState {
    */
   globalTokens: GlobalTokens | null;
   /**
+   * Breakpoint responsive attivi per il sito (ADR-76-breakpoints-configurabili.md), già
+   * risolti (`resolveActiveBreakpoints()`, `libs/breakpoints.ts`) con `'default'` sempre
+   * incluso per primo. Consumato da `IframeCanvas.tsx` per `generateCanvasCss()`
+   * (`components/blocks/generateCanvasCss.ts`, round R2 "parità Elementor Pro"). Default di
+   * fabbrica (`tablet`/`mobile` attivi) finché `hydrateActiveBreakpoints` non li sostituisce
+   * con la lettura reale di `GET app/settings/breakpoints` — mai un canvas senza anteprima
+   * responsive nel frattempo, stesso principio di `globalTokens` ma con un default non-`null`
+   * (i breakpoint hanno un comportamento di fabbrica sensato, i Global Design Tokens no).
+   */
+  activeBreakpoints: ResolvedBreakpoint[];
+  /**
    * Ridimensionamento di un `container` in corso (E03), oppure `null` a riposo. Stato
    * **visivo ed effimero**: nessun comando sulla history mentre il puntatore si muove —
    * un'unica voce di undo/redo viene registrata al rilascio, da
@@ -365,6 +417,13 @@ interface BlockEditorState {
   selectNode: (id: string | null) => void;
   /** Cambia il viewport simulato nel canvas dell'editor full-screen. */
   setActiveViewport: (viewport: EditorViewport) => void;
+  /**
+   * Cambia il breakpoint a 7 vie che il canvas full-screen sta simulando
+   * (`BreakpointSwitcher.tsx`) e deriva/imposta anche {@link BlockEditorState.activeViewport}
+   * con {@link viewportForBreakpoint}, cosi l'ispettore di proprietà (3 vie) resta coerente
+   * col bucket giusto senza essere toccato da questo task.
+   */
+  setActiveBreakpoint: (breakpoint: ResponsiveBreakpointName) => void;
   /** Apre/chiude il pannello "Struttura/Navigator" dell'editor full-screen. */
   setStructurePanelOpen: (opened: boolean) => void;
   /** Alterna l'apertura del pannello "Struttura/Navigator". */
@@ -492,6 +551,13 @@ interface BlockEditorState {
    */
   hydrateGlobalTokens: (tokens: GlobalTokens) => void;
   /**
+   * Idrata i breakpoint responsive attivi da `GET app/settings/breakpoints`
+   * (`getBreakpointsApi`/`resolveActiveBreakpoints`, `services/settings.service.ts` +
+   * `libs/breakpoints.ts`), stesso principio non-annullabile di {@link hydrateGlobalTokens}:
+   * caricamento di stato dal server, mai un'azione utente sulla history undo/redo.
+   */
+  hydrateActiveBreakpoints: (breakpoints: ResolvedBreakpoint[]) => void;
+  /**
    * Aggiorna l'ampiezza visiva del `container` `id` durante il trascinamento della maniglia.
    * Non tocca l'albero e non tocca la history: e' un'anteprima, e una voce di undo per pixel
    * mosso renderebbe Ctrl+Z inutilizzabile.
@@ -602,10 +668,16 @@ function compileOrEmpty(tokens: GlobalTokens | null): string {
 
 const CLEAN_SAVE_POINT: SavePoint = { depth: 0, top: null };
 
+/** Default di fabbrica (ADR-76 § "Decisione" punto 1): `tablet`/`mobile` attivi, calcolato una
+ * sola volta al caricamento del modulo — vedi {@link BlockEditorState.activeBreakpoints}. */
+const DEFAULT_ACTIVE_BREAKPOINTS: ResolvedBreakpoint[] =
+  resolveActiveBreakpoints(DEFAULT_BREAKPOINTS_DTO);
+
 export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   tree: [],
   selectedId: null,
   activeViewport: 'desktop',
+  activeBreakpoint: 'default',
   isStructurePanelOpen: false,
   isSidebarOpen: true,
   activeSidebarTab: 'widgets',
@@ -619,6 +691,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   hoveredId: null,
   hoveredBlockId: null,
   globalTokens: null,
+  activeBreakpoints: DEFAULT_ACTIVE_BREAKPOINTS,
   containerResize: null,
   columnResize: null,
   propResizePreview: null,
@@ -658,6 +731,9 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
     set(id !== null ? { selectedId: id, activeSidebarTab: 'properties' } : { selectedId: id }),
 
   setActiveViewport: (viewport) => set({ activeViewport: viewport }),
+
+  setActiveBreakpoint: (breakpoint) =>
+    set({ activeBreakpoint: breakpoint, activeViewport: viewportForBreakpoint(breakpoint) }),
 
   setStructurePanelOpen: (opened) => set({ isStructurePanelOpen: opened }),
 
@@ -1095,6 +1171,10 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
     set({ globalTokens: tokens });
   },
 
+  hydrateActiveBreakpoints: (breakpoints) => {
+    set({ activeBreakpoints: breakpoints });
+  },
+
   setContainerResizePreview: (id, percent) =>
     set((state) => {
       // Nessun `set` a valore identico: un `pointermove` che non sposta abbastanza da
@@ -1255,6 +1335,13 @@ export function useActiveViewport(): EditorViewport {
   return useBlockEditorStore((state) => state.activeViewport);
 }
 
+/** Selettore granulare: solo il breakpoint a 7 vie simulato ORA nel canvas full-screen
+ * (vedi {@link BlockEditorState.activeBreakpoint}), distinto da {@link useActiveBreakpoints}
+ * (plurale — l'elenco di quali sono attivi per il sito). */
+export function useActiveBreakpoint(): ResponsiveBreakpointName {
+  return useBlockEditorStore((state) => state.activeBreakpoint);
+}
+
 /** Selettore granulare: solo lo stato di apertura del pannello "Struttura/Navigator". */
 export function useIsStructurePanelOpen(): boolean {
   return useBlockEditorStore((state) => state.isStructurePanelOpen);
@@ -1339,6 +1426,11 @@ export function useHasUnsavedChanges(): boolean {
 /** Selettore granulare: solo i Global Design Tokens correnti (`null` se non ancora impostati in questa sessione). */
 export function useGlobalTokens(): GlobalTokens | null {
   return useBlockEditorStore((state) => state.globalTokens);
+}
+
+/** Selettore granulare: solo i breakpoint responsive attivi (vedi {@link BlockEditorState.activeBreakpoints}). */
+export function useActiveBreakpoints(): ResolvedBreakpoint[] {
+  return useBlockEditorStore((state) => state.activeBreakpoints);
 }
 
 /**

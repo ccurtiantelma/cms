@@ -24,6 +24,7 @@ import { DbService } from '../../src/db/db.service';
 import { RedisService } from '../../src/redis/redis.service';
 import { AuditLogService } from '../../src/common/audit-log.service';
 import { ExportService } from '../../src/export/export.service';
+import { STATIC_SITE_DEPLOYER } from '../../src/export/deploy/static-site-deployer.interface';
 import { AllExceptionsFilter } from '../../src/common/filters/all-exceptions.filter';
 import { AppConstants } from '../../src/common/app-constants';
 import { AppUserRoles } from '../../src/common/enums';
@@ -193,6 +194,17 @@ describe('SettingsController (integration)', () => {
         {
           provide: ExportService,
           useValue: { enqueueFullSiteExport: jest.fn().mockResolvedValue(undefined) },
+        },
+        // `SettingsService` dipende da `StaticSiteDeployer` da S1.3 (`SPEC-GLOBAL-KIT.md`
+        // § 3 punto 6, `updateGlobalKit` scrive `global-kit.<hash>.css`): mock
+        // obbligatorio, nessuna scrittura reale su disco in questa suite (che non
+        // esercita le rotte Global Kit — coperte da `test/e2e/global-kit.e2e-spec.ts`).
+        {
+          provide: STATIC_SITE_DEPLOYER,
+          useValue: {
+            write: jest.fn().mockResolvedValue(undefined),
+            remove: jest.fn().mockResolvedValue(undefined),
+          },
         },
       ],
     }).compile();

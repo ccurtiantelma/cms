@@ -179,14 +179,15 @@ describe('container figlio vuoto: nessun vincolo di altezza minima nel consumer 
 
     // Nel markup reale (non nel foglio di CSS critico, vedi {@link extractMain}) il
     // `container` vuoto è comunque presente (non omesso), solo senza vincoli di altezza: un
-    // `<div>` con la sola classe di base, nessun attributo `style`, nessuna classe
-    // riconducibile all'affordance di editing `.emptyContainer` o al segnaposto
-    // `.contentPlaceholder`.
+    // `<div>` con la classe di base e `data-canvas-style-id` (Container.tsx, ADR-82: bersaglio
+    // del Runtime Style Bridge, emesso sia in editor sia sul sito pubblico — non un secondo
+    // `id` strutturale), nessun attributo `style`, nessuna classe riconducibile all'affordance
+    // di editing `.emptyContainer` o al segnaposto `.contentPlaceholder`.
     expect(main).not.toMatch(/min-height/i);
     expect(main).not.toMatch(/emptyContainer/);
     expect(main).not.toMatch(/contentPlaceholder/);
     expect(main).not.toContain('style=');
-    expect(main).toMatch(/<div class="[^"]*container[^"]*"><\/div>/);
+    expect(main).toMatch(/<div class="[^"]*container[^"]*" data-canvas-style-id="[^"]*"><\/div>/);
   });
 
   /**

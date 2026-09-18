@@ -18,7 +18,13 @@
  * destra — richiesta esplicita del task di riportarli lì dal fondo di questa sidebar.
  */
 import { Tabs, Text, Tooltip } from '@mantine/core';
-import { IconAdjustments, IconHistory, IconListTree, IconSettings, IconStack2 } from '@tabler/icons-react';
+import {
+  IconAdjustments,
+  IconHistory,
+  IconListTree,
+  IconSettings,
+  IconStack2,
+} from '@tabler/icons-react';
 import {
   useActiveSidebarTab,
   useBlockEditorStore,

@@ -19,6 +19,7 @@ import { tabPanelBlock } from './types/tab-panel.block';
 import { carouselBlock } from './types/carousel.block';
 import { carouselSlideBlock } from './types/carousel-slide.block';
 import { modalTriggerBlock } from './types/modal-trigger.block';
+import { galleryBlock } from './types/gallery.block';
 
 /**
  * Tipi ammessi come nodo di **radice** dell'albero. Dichiarato qui e mai
@@ -32,7 +33,10 @@ import { modalTriggerBlock } from './types/modal-trigger.block';
  * `accordion`/`tabs`/`carousel`/`modalTrigger` (ADR-57 § Decisione punto 1):
  * i quattro contenitori dei widget interattivi CSS-only, stesso trattamento
  * di `navMenu` — le tre voci (`accordionItem`/`tabPanel`/`carouselSlide`)
- * non vi compaiono mai, stesso trattamento di `navMenuItem`.
+ * non vi compaiono mai, stesso trattamento di `navMenuItem`. `gallery`
+ * (`PLAN-parita-elementor-pro.md` § R4, ventesimo tipo) segue lo stesso
+ * trattamento dei quattro contenitori CSS-only sopra: nessun tipo-figlio
+ * dedicato da escludere (i suoi figli sono `image`, già in radice a sé).
  */
 export const ROOT_ALLOWED: readonly string[] = [
   'section',
@@ -47,16 +51,18 @@ export const ROOT_ALLOWED: readonly string[] = [
   'tabs',
   'carousel',
   'modalTrigger',
+  'gallery',
 ];
 
 /**
  * I cinque tipi approvati uno per uno da ADR-21 § 5, più `container`
  * (sesto tipo, ADR-39), `form`/`form-field`/`form-submit` (settimo/ottavo/
  * nono tipo, ADR-46 § 1), `navMenu`/`navMenuItem` (decimo/undicesimo tipo,
- * ADR-52 § 1), `globalRef` (dodicesimo tipo, ADR-55 § 1) e i sette widget
+ * ADR-52 § 1), `globalRef` (dodicesimo tipo, ADR-55 § 1), i sette widget
  * interattivi CSS-only `accordion`/`accordionItem`/`tabs`/`tabPanel`/
  * `carousel`/`carouselSlide`/`modalTrigger` (tredicesimo–diciannovesimo
- * tipo, ADR-57 § Decisione punto 1) — diciannove tipi in tutto. Tutti a
+ * tipo, ADR-57 § Decisione punto 1) e `gallery` (ventesimo tipo,
+ * `PLAN-parita-elementor-pro.md` § R4) — venti tipi in tutto. Tutti a
  * `v: 1`, `enabled: true`, nessun `minRole`, nessun `deprecated`
  * (PLAN-F02 T2).
  */
@@ -80,6 +86,7 @@ const BLOCK_DEFINITIONS: readonly BlockDefinition[] = [
   carouselBlock,
   carouselSlideBlock,
   modalTriggerBlock,
+  galleryBlock,
 ];
 
 /** Registro dei tipi, indicizzato per `type`. Fonte di verità del backend (ADR-21 § 2). */
@@ -99,7 +106,7 @@ export interface BlockRegistry {
   rootAllowed: readonly string[];
 }
 
-/** Registro di produzione: i diciannove tipi approvati (ADR-21 § 5, ADR-39, ADR-46 § 1, ADR-52 § 1, ADR-55 § 1, ADR-57 § Decisione punto 1). */
+/** Registro di produzione: i venti tipi approvati (ADR-21 § 5, ADR-39, ADR-46 § 1, ADR-52 § 1, ADR-55 § 1, ADR-57 § Decisione punto 1, `PLAN-parita-elementor-pro.md` § R4 per `gallery`). */
 export const DEFAULT_BLOCK_REGISTRY: BlockRegistry = {
   definitions: BLOCK_REGISTRY,
   rootAllowed: ROOT_ALLOWED,

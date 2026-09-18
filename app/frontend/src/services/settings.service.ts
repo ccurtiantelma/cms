@@ -11,6 +11,7 @@ import api from './api';
 import type { ThemeConfig } from '../theme';
 import type { components } from '../types/api.types';
 import type { GlobalTokens } from '../libs/globalTokensCompiler';
+import type { BreakpointsDto } from '../libs/breakpoints';
 
 const SETTINGS_PREFIX = 'app/settings';
 
@@ -95,4 +96,15 @@ export function toGlobalTokensDto(tokens: GlobalTokens): GlobalTokensDto {
     typography: tokens.typography,
     spacing: tokens.spacing,
   };
+}
+
+/**
+ * Legge i breakpoint responsive configurabili del sito (ADR-76-breakpoints-configurabili.md,
+ * `docs/openapi.yaml` § `/app/settings/breakpoints`) — default di fabbrica se mai salvati.
+ * Aperto a ogni ruolo autenticato: serve al canvas dell'editor (`generateCanvasCss()`) per
+ * sapere quali breakpoint sono attivi, non solo alla modifica in Site Settings.
+ */
+export async function getBreakpointsApi(): Promise<BreakpointsDto> {
+  const { data } = await api.get<BreakpointsDto>(`${SETTINGS_PREFIX}/breakpoints`);
+  return data;
 }

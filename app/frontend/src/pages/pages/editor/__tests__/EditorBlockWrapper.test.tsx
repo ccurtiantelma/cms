@@ -151,9 +151,9 @@ describe('EditorBlockWrapper — nessuna toolbar contestuale galleggiante (T-ele
 /**
  * Hover overlay e toolbar di selezione (F04d-02). I due stati portano segnali distinti,
  * mai sovrapposti sullo stesso blocco: hover **senza** selezione mostra solo il badge
- * nome (`.hoverBadge`, icona + `meta.label`); la toolbar di cinque controlli
- * (`BlockHoverOverlay.tsx` — trascina/seleziona genitore/duplica/modifica/elimina) è
- * montata **solo** su `isSelected`. Gli handler del wrapper usano `onMouseOver`/
+ * nome (`.hoverBadge`, icona + `meta.label`); la toolbar di sette controlli base
+ * (`BlockHoverOverlay.tsx` — aggiungi sopra/trascina/seleziona genitore/duplica/modifica/
+ * elimina/aggiungi sotto) è montata **solo** su `isSelected`. Gli handler del wrapper usano `onMouseOver`/
  * `onMouseOut` (non `onMouseEnter`/`onMouseLeave`, che in React non attraversano mai il
  * bubbling — `stopPropagation()` lì sarebbe un no-op, vedi il commento di testa di
  * `EditorBlockWrapper.tsx`): `fireEvent.mouseOver`/`mouseOut` sono quindi gli eventi
@@ -217,7 +217,7 @@ describe('EditorBlockWrapper — hover overlay e toolbar di selezione (F04d-02)'
     expect(badges[0]).toHaveTextContent('Titolo');
   });
 
-  it('blocco selezionato: la toolbar con i cinque controlli compare, il badge nome resta assente', () => {
+  it('blocco selezionato: la toolbar con i sette controlli base compare, il badge nome resta assente', () => {
     const heading = node('h-1', 'heading', { level: 'h2', text: 'Testo' });
     useBlockEditorStore.getState().initTree([heading]);
     useBlockEditorStore.getState().selectNode('h-1');
@@ -234,6 +234,12 @@ describe('EditorBlockWrapper — hover overlay e toolbar di selezione (F04d-02)'
     expect(screen.getByRole('button', { name: 'Duplica il blocco Titolo' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Modifica il blocco Titolo' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Elimina il blocco Titolo' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Aggiungi blocco sopra Titolo' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Aggiungi blocco sotto Titolo' }),
+    ).toBeInTheDocument();
     expect(container.querySelector(`.${styles.hoverBadge}`)).not.toBeInTheDocument();
   });
 
@@ -305,6 +311,26 @@ describe('EditorBlockWrapper — hover overlay e toolbar di selezione (F04d-02)'
     // non in coda: il figlio preesistente resta il secondo, non il primo.
     expect(updatedSection?.children[0]?.id).not.toBe('h-1');
     expect(updatedSection?.children[1]?.id).toBe('h-1');
+  });
+
+  it('"+" sotto apre la palette e inserisce un blocco dopo questo nodo (controllo speculare)', async () => {
+    const user = userEvent.setup();
+    const child = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
+    const section = node('sec-1', 'section', { columns: { default: '1' } }, [child]);
+    useBlockEditorStore.getState().initTree([section]);
+    useBlockEditorStore.getState().selectNode('h-1');
+
+    renderWithProviders(<EditorBlockWrapper id="sec-1" />);
+
+    await user.click(screen.getByRole('button', { name: 'Aggiungi blocco sotto Titolo' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Titolo' }));
+
+    const updatedSection = findNode(useBlockEditorStore.getState().tree, 'sec-1');
+    expect(updatedSection?.children).toHaveLength(2);
+    // Il nuovo blocco è inserito **dopo** il nodo originale (`location.index + 1`), non
+    // prima: il figlio preesistente resta il primo, non il secondo.
+    expect(updatedSection?.children[0]?.id).toBe('h-1');
+    expect(updatedSection?.children[1]?.id).not.toBe('h-1');
   });
 });
 

@@ -9,8 +9,17 @@
  * `container-resize.utils.ts` resta invariato e non viene sostituito da questo file: la
  * maniglia esistente continua a leggerlo. Questo modulo serve `ResizeHandle.tsx`, il nuovo
  * componente generico collegato in aggiunta (ADR-71, task T4/T6 dell'esito RFC-F04e, `SPEC-F04-super-elementor.md`
- * § 4.2/4.3), per le nuove props `styleWidth`/`styleHeight` (`container`/`image`) e i quattro
- * margini per lato (`button`/`heading`/`richText`/`image`).
+ * § 4.2/4.3), per le props `unitValue` di ridimensionamento diretto e i quattro margini per
+ * lato (`button`/`heading`/`richText`/`image`).
+ *
+ * `ADR-82-container-unificato-grid-flex.md` § "Decisione" punto 1 sostituisce, per
+ * `container` `v: 2`, le vecchie `styleWidth`/`styleHeight` con `boxedWidth`/`minHeight`
+ * (stesso `kind: 'unitValue'`, intervalli e unità propri — `boxedWidth` resta `px`/`%`,
+ * `minHeight` dichiara `px`/`vh`: quest'ultima non pilotabile da questa maniglia, che si ferma
+ * a `RESIZE_HANDLE_UNITS`, quindi `resolveResizePropSpec('container', 'minHeight')` risolve a
+ * sole unità `px`). `image` continua a dichiarare `styleWidth`/`styleHeight` invariate (prop
+ * proprie, non toccate da `ADR-82`) ma resta comunque esclusa da ogni maniglia trascinabile in
+ * quanto widget foglia (`ADR-73`, vedi sotto).
  */
 import { BLOCK_TYPES } from '../../../types/blocks.types';
 
@@ -24,10 +33,14 @@ export const RESIZE_HANDLE_UNITS = ['px', '%'] as const;
 /** Una delle due unità pilotabili da una maniglia (vedi {@link RESIZE_HANDLE_UNITS}). */
 export type ResizeHandleUnit = (typeof RESIZE_HANDLE_UNITS)[number];
 
-/** Nome di una delle sei props coperte da questo round (ADR-71 § "Decisione" punto 3). */
+/**
+ * Nome di una delle sei props coperte da questo round (ADR-71 § "Decisione" punto 3).
+ * `boxedWidth`/`minHeight`: prop di `container` `v: 2` (`ADR-82` § "Decisione" punto 1,
+ * sostituiscono le `styleWidth`/`styleHeight` di `container` `v: 1`).
+ */
 export type ResizeHandlePropName =
-  | 'styleWidth'
-  | 'styleHeight'
+  | 'boxedWidth'
+  | 'minHeight'
   | 'styleMarginTop'
   | 'styleMarginBottom'
   | 'styleMarginLeft'
@@ -100,7 +113,7 @@ export function resolveResizePropSpec(
  * stesso è una scelta di linguaggio visivo dell'editor, non dello schema — stesso principio
  * del punto 5, prima frase). `1`: muoversi nel verso positivo delle coordinate del viewport
  * (destra per l'orizzontale, basso per il verticale) allarga il valore — comportamento del
- * lato "finale" di un box (`styleWidth`/`styleHeight`, stesso verso della maniglia esistente
+ * lato "finale" di un box (`boxedWidth`/`minHeight`, stesso verso della maniglia esistente
  * di `container.styleFlexBasis`; `styleMarginBottom`/`styleMarginRight`, dove trascinare la
  * maniglia più lontano dal blocco, cioè verso il basso/destra, allarga quel margine). `-1`:
  * verso opposto, per i lati "iniziali" del box (`styleMarginTop`/`styleMarginLeft`, dove

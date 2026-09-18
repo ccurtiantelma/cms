@@ -13,7 +13,9 @@ export function HistoryPanel(): JSX.Element {
   const restoreHistory = useBlockEditorStore((state) => state.restoreHistory);
 
   return history.length === 0 ? (
-    <Text size="sm" c="dimmed">Nessuna azione nella cronologia.</Text>
+    <Text size="sm" c="dimmed">
+      Nessuna azione nella cronologia.
+    </Text>
   ) : (
     <ScrollArea h="100%">
       <Stack gap="xs">
@@ -34,7 +36,9 @@ export function HistoryPanel(): JSX.Element {
                 <ThemeIcon size="sm" variant={current ? 'filled' : 'light'}>
                   <IconPoint size={12} />
                 </ThemeIcon>
-                <Text size="sm" fw={current ? 600 : 400} ta="left">{entry.label}</Text>
+                <Text size="sm" fw={current ? 600 : 400} ta="left">
+                  {entry.label}
+                </Text>
               </Group>
             </Button>
           );

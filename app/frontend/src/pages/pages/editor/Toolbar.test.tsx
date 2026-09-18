@@ -13,8 +13,8 @@ import Toolbar, { type ToolbarProps } from './Toolbar';
 const baseProps: ToolbarProps = {
   pageTitle: 'Chi siamo',
   backHref: '/pages/a1b2c3d4e5f6a7b8',
-  viewport: 'desktop',
-  onViewportChange: vi.fn(),
+  activeBreakpoint: 'default',
+  onBreakpointChange: vi.fn(),
   canUndo: false,
   canRedo: false,
   onUndo: vi.fn(),

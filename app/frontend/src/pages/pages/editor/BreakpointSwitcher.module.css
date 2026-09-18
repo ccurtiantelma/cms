@@ -1,0 +1,33 @@
+/*
+ * Pillola dentro la topbar azzurrina (`Toolbar.module.css`) — stesso stile di
+ * `ViewportSelector.module.css` (successore diretto, Sub-Task "Frame WYSIWYG In-Place &
+ * Breakpoint Switcher"), qui esteso da 3 a N pulsanti (uno per breakpoint attivo).
+ * `--mantine-color-body` per lo sfondo: si adatta da solo a light/dark mode, sempre in
+ * contrasto leggibile contro l'azzurrino della barra.
+ */
+.root {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  background: var(--mantine-color-body);
+  border-radius: 20px;
+  padding: 2px 8px;
+}
+
+.root :global(.mantine-ActionIcon-root) {
+  --ai-color: var(--mantine-primary-color-filled);
+  --ai-hover-color: var(--mantine-primary-color-filled);
+}
+
+.root :global(.mantine-ActionIcon-root:hover) {
+  background: var(--mantine-primary-color-light-hover);
+}
+
+/* Icona attiva: unico accento a colore pieno della pillola, stesso blu primario del tema. */
+.root :global(.mantine-ActionIcon-root[data-variant='filled']) {
+  --ai-bg: var(--mantine-primary-color-filled);
+  --ai-hover: var(--mantine-primary-color-filled-hover);
+  --ai-color: var(--mantine-color-white);
+  --ai-hover-color: var(--mantine-color-white);
+}

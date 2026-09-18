@@ -1,10 +1,10 @@
 # ADR-81 — Migrazione PropKind v1→v2 per i widget legacy: strategia difensiva senza breaking change
 
 ## Status
-[x] **In discussione** · [ ] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
+[ ] In discussione · [x] **Approvato** · [ ] Rifiutato · [ ] Superseded da ADR-XXX
 
 ## Data approvazione
-_In attesa di firma umana — vedi "Decisione umana" in fondo a questo documento._
+2026-09-17
 
 ## RFC di riferimento
 Nessuna RFC dedicata: round **R1 — Stile completo** di `docs/PLAN-parita-elementor-pro.md`, § T2.
@@ -174,9 +174,9 @@ non l'assenza di un cambio di schema.
 
 ## Decisione umana
 
-**Esito**: [ ] Approvato così com'è · [ ] Approvato con modifiche (vedi note) · [ ] Rifiutato ·
+**Esito**: [x] Approvato così com'è · [ ] Approvato con modifiche (vedi note) · [ ] Rifiutato ·
 [ ] Rinviato
 
-**Approvato da**: _______________ · **Data**: _______________
+**Approvato da**: marketing@antelmagroup.net · **Data**: 2026-09-17
 
-**Note**:
+**Note**: Nessuna.

@@ -4,6 +4,7 @@ import { DbService } from '../../../src/db/db.service';
 import { AuditLogService } from '../../../src/common/audit-log.service';
 import { BlockTreeValidatorService } from '../../../src/blocks/validator/block-tree-validator.service';
 import { BlockPropSanitizerService } from '../../../src/common/sanitizer/block-prop-sanitizer.service';
+import { CssTreeSanitizerService } from '../../../src/common/sanitizer/css-tree-sanitizer.service';
 import { ExportService } from '../../../src/export/export.service';
 import { DEFAULT_BLOCK_REGISTRY } from '../../../src/blocks/block-registry';
 import { ENVELOPE_VERSION } from '../../../src/blocks/migration/envelope-migration.engine';
@@ -100,7 +101,7 @@ describe('GlobalSectionsService (unit) — ADR-55', () => {
       { db: dbMock } as unknown as DbService,
       auditLogService as unknown as AuditLogService,
       new BlockTreeValidatorService(),
-      new BlockPropSanitizerService(),
+      new BlockPropSanitizerService(new CssTreeSanitizerService()),
       exportService as unknown as ExportService,
       DEFAULT_BLOCK_REGISTRY,
     );

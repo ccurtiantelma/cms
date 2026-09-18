@@ -46,6 +46,7 @@ import TabPanelBlock from './blocks/TabPanelBlock';
 import CarouselBlock, { resolveCarouselTransition } from './blocks/CarouselBlock';
 import CarouselSlideBlock from './blocks/CarouselSlideBlock';
 import ModalTriggerBlock from './blocks/ModalTriggerBlock';
+import GalleryBlock from './blocks/GalleryBlock';
 
 const KNOWN_TYPES = new Map(BLOCK_TYPES.map((descriptor) => [descriptor.type, descriptor]));
 
@@ -117,7 +118,14 @@ export default function BlockRenderer({
 }: BlockRendererProps) {
   const descriptor = KNOWN_TYPES.get(node.type);
 
-  if (!descriptor || !descriptor.enabled) {
+  // `enabled: false` (es. `section`, ADR-82 § "Decisione" punto 2) significa "fuori dalla
+  // palette d'inserimento" — già applicato indipendentemente da `BlockPalette.tsx`/
+  // `WidgetPalette.tsx` (entrambi filtrano su `descriptor.enabled`) — non "non renderizzabile".
+  // Un tipo deprecato resta nel registro apposta per restare leggibile nelle Revisioni/Pagine
+  // già pubblicate (ADR-21 § 3.5/§ 3.7: "il vecchio resta nel registro, validabile in
+  // lettura... mai un albero mutilato del nodo incompatibile"): un secondo gate qui
+  // silenzierebbe proprio il contenuto che quell'invariante impone di continuare a servire.
+  if (!descriptor) {
     return null;
   }
 
@@ -181,10 +189,11 @@ function renderNode(
     case 'container':
       // Segnaposto "Area Contenuto Pagina" del Template Editor (Site Templates): un
       // `container` reale e già valido nello schema, riconosciuto solo dalla sua prop
-      // `customElementId` (mai un settimo tipo di blocco, mai l'`id` strutturale del nodo —
-      // vedi il commento di testa di `ContentPlaceholderBlock.tsx`). Early-check additivo,
-      // nessun'altra modifica a questo dispatcher.
-      if (node.props.customElementId === CONTENT_AREA_BLOCK_ID) {
+      // `htmlId` (rinominata da `customElementId` di `container` v1 in `container` v2,
+      // ADR-82 § "Decisione" punto 4 — mai un settimo tipo di blocco, mai l'`id` strutturale
+      // del nodo — vedi il commento di testa di `ContentPlaceholderBlock.tsx`). Early-check
+      // additivo, nessun'altra modifica a questo dispatcher.
+      if (node.props.htmlId === CONTENT_AREA_BLOCK_ID) {
         return (
           <ContentPlaceholderBlock>
             {node.children.map((child) => (
@@ -200,17 +209,15 @@ function renderNode(
       }
       return (
         <Container
-          display={node.props.display}
-          flexDirection={node.props.flexDirection}
-          justifyContent={node.props.justifyContent}
-          alignItems={node.props.alignItems}
-          wrap={node.props.wrap}
-          gap={node.props.gap}
-          styleFlexBasis={node.props.styleFlexBasis}
-          styleBackgroundColor={node.props.styleBackgroundColor}
-          styleColor={node.props.styleColor}
-          customCssClass={node.props.customCssClass}
-          customElementId={node.props.customElementId}
+          id={node.id}
+          tag={node.props.tag}
+          contentWidth={node.props.contentWidth}
+          boxedWidth={node.props.boxedWidth}
+          minHeight={node.props.minHeight}
+          overflow={node.props.overflow}
+          opacity={node.props.opacity}
+          htmlId={node.props.htmlId}
+          cssClass={node.props.cssClass}
         >
           {node.children.map((child) => (
             <BlockRenderer
@@ -227,6 +234,7 @@ function renderNode(
       const text = node.props.text;
       return (
         <Heading
+          id={node.id}
           level={isHeadingLevel(level) ? level : 'h2'}
           text={typeof text === 'string' ? text : ''}
           styleSpaceBefore={node.props.styleSpaceBefore}
@@ -252,6 +260,7 @@ function renderNode(
       const html = node.props.html;
       return (
         <RichText
+          id={node.id}
           html={typeof html === 'string' ? html : ''}
           styleSpaceBefore={node.props.styleSpaceBefore}
           styleSpaceAfter={node.props.styleSpaceAfter}
@@ -275,6 +284,7 @@ function renderNode(
       const alt = node.props.alt;
       return (
         <Image
+          id={node.id}
           mediaRef={typeof mediaRef === 'string' ? mediaRef : ''}
           alt={typeof alt === 'string' ? alt : ''}
           styleSpaceBefore={node.props.styleSpaceBefore}
@@ -296,6 +306,7 @@ function renderNode(
       const href = node.props.href;
       return (
         <Button
+          id={node.id}
           label={typeof label === 'string' ? label : ''}
           href={typeof href === 'string' ? href : ''}
           styleSpaceBefore={node.props.styleSpaceBefore}
@@ -496,6 +507,28 @@ function renderNode(
             <BlockRenderer key={child.id} node={child} />
           ))}
         </CarouselSlideBlock>
+      );
+    case 'gallery':
+      // Mirror di `case 'container'` (senza il ramo speciale "Area Contenuto Pagina", non
+      // pertinente qui): nessuna prop derivata, i figli sono nodi `image` ordinari ricorsi
+      // genericamente — vedi il commento di testa di `GalleryBlock.tsx`.
+      return (
+        <GalleryBlock
+          id={node.id}
+          galleryMode={node.props.galleryMode}
+          lightbox={node.props.lightbox}
+          customCssClass={node.props.customCssClass}
+          customElementId={node.props.customElementId}
+        >
+          {node.children.map((child) => (
+            <BlockRenderer
+              key={child.id}
+              node={child}
+              formSubmission={formSubmission}
+              resolvePageUrl={resolvePageUrl}
+            />
+          ))}
+        </GalleryBlock>
       );
     case 'modalTrigger': {
       const triggerLabel = node.props.triggerLabel;

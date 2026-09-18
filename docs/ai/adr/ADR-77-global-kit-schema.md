@@ -1,10 +1,10 @@
 # ADR-77 — Schema `app_settings.global_kit` e compilazione dei token in CSS Custom Properties
 
 ## Status
-[x] **In discussione** · [ ] Approvato · [ ] Rifiutato · [ ] Superseded da ADR-XXX
+[ ] In discussione · [x] **Approvato** · [ ] Rifiutato · [ ] Superseded da ADR-XXX
 
 ## Data approvazione
-_In attesa di firma umana — vedi "Decisione umana" in fondo a questo documento._
+2026-09-17
 
 ## RFC di riferimento
 Nessuna RFC dedicata (round R0, vedi ADR-74 § "RFC di riferimento"). Riferimento sostanziale:
@@ -162,9 +162,9 @@ dove vive il valore finale di un `colorRef`, e chi lo scrive.
 
 ## Decisione umana
 
-**Esito**: [ ] Approvato così com'è · [ ] Approvato con modifiche (vedi note) · [ ] Rifiutato ·
+**Esito**: [x] Approvato così com'è · [ ] Approvato con modifiche (vedi note) · [ ] Rifiutato ·
 [ ] Rinviato
 
-**Approvato da**: _______________ · **Data**: _______________
+**Approvato da**: marketing@antelmagroup.net · **Data**: 2026-09-17
 
-**Note**:
+**Note**: Approvazione confermata in sessione per sbloccare l'avvio del Sub-Task S1.1 (PropKind v2 & validatori NestJS).

@@ -1,23 +1,26 @@
 import { BlockDefinition } from '../block-definition.types';
+import { migrateButtonV1ToV2 } from '../migrations/migrate-button-v1-to-v2';
 
 /**
- * `button` — pulsante/link (SPEC-F02-blocchi.md § 3.6). `href` ammette solo
- * `http`/`https`/`mailto`/root-relative (una sola barra iniziale); nessuna
- * prop di rendering (`variant`, `size`, `icon`). Foglia.
+ * `button` `v: 2` (ADR-81 § "Decisione" punto 1/2): `href: url` →
+ * `link: link` (ancora obbligatoria, stesso principio di `href` v1), più la
+ * stessa tabella `color`/`typography`/`margin`/`hideOn` di `heading`/
+ * `richText`. Le quattro prop "fallback" `styleBackgroundColor`/`styleColor`/
+ * `backgroundColor`/`color` sono rimosse (stesso motivo di `richText`,
+ * `migrate-button-v1-to-v2.ts`). `label` invariata. Foglia.
  */
 export const buttonBlock: BlockDefinition = {
   type: 'button',
-  v: 1,
+  v: 2,
   props: {
     label: {
       kind: 'plainText',
       required: true,
       maxLength: 80,
     },
-    href: {
-      kind: 'url',
+    link: {
+      kind: 'link',
       required: true,
-      maxLength: 2048,
     },
     styleSpaceBefore: {
       kind: 'enum',
@@ -33,37 +36,18 @@ export const buttonBlock: BlockDefinition = {
       values: ['none', 'xs', 'sm', 'md', 'lg', 'xl'],
       default: { default: 'none' },
     },
-    styleTextColor: {
-      kind: 'enum',
+    color: {
+      kind: 'colorRef',
       required: false,
       responsive: true,
-      values: ['default', 'muted', 'accent', 'inverse'],
-      default: { default: 'default' },
+      stateful: true,
+      cssProperty: 'color',
     },
-    styleBackgroundColor: { kind: 'color', required: false },
-    styleColor: { kind: 'color', required: false },
-    backgroundColor: { kind: 'color', required: false },
-    color: { kind: 'color', required: false },
-    styleFontSize: {
-      kind: 'enum',
+    typography: {
+      kind: 'typography',
       required: false,
       responsive: true,
-      values: ['sm', 'md', 'lg', 'xl'],
-      default: { default: 'md' },
-    },
-    styleFontWeight: {
-      kind: 'enum',
-      required: false,
-      responsive: true,
-      values: ['regular', 'medium', 'bold'],
-      default: { default: 'regular' },
-    },
-    styleFontFamily: {
-      kind: 'enum',
-      required: false,
-      responsive: true,
-      values: ['default', 'inter', 'roboto', 'playfair', 'montserrat', 'monospace'],
-      default: { default: 'default' },
+      stateful: true,
     },
     styleLayer: {
       kind: 'enum',
@@ -71,48 +55,18 @@ export const buttonBlock: BlockDefinition = {
       values: ['base', 'raised', 'overlay', 'top'],
       default: 'base',
     },
-    styleHideDesktop: {
-      kind: 'boolean',
+    hideOn: {
+      kind: 'hideOn',
       required: false,
-      default: false,
     },
-    styleHideTablet: {
-      kind: 'boolean',
+    margin: {
+      kind: 'spacing',
       required: false,
-      default: false,
-    },
-    styleHideMobile: {
-      kind: 'boolean',
-      required: false,
-      default: false,
-    },
-    styleMarginTop: {
-      kind: 'unitValue',
-      required: false,
-      units: ['px', '%'],
+      target: 'margin',
+      units: ['px', '%', 'em', 'rem'],
       min: 0,
       max: 500,
-    },
-    styleMarginRight: {
-      kind: 'unitValue',
-      required: false,
-      units: ['px', '%'],
-      min: 0,
-      max: 500,
-    },
-    styleMarginBottom: {
-      kind: 'unitValue',
-      required: false,
-      units: ['px', '%'],
-      min: 0,
-      max: 500,
-    },
-    styleMarginLeft: {
-      kind: 'unitValue',
-      required: false,
-      units: ['px', '%'],
-      min: 0,
-      max: 500,
+      responsive: true,
     },
     customCssClass: {
       kind: 'cssClassName',
@@ -124,7 +78,7 @@ export const buttonBlock: BlockDefinition = {
     },
   },
   children: { allow: [] },
-  migrations: [],
+  migrations: [migrateButtonV1ToV2],
   enabled: true,
   meta: {
     label: 'Pulsante',
@@ -132,21 +86,14 @@ export const buttonBlock: BlockDefinition = {
     icon: 'hand-click',
     props: {
       label: { label: 'Etichetta', order: 1 },
-      href: { label: 'Link', order: 2 },
+      link: { label: 'Link', order: 2 },
       styleSpaceBefore: { label: 'Spazio prima', tab: 'style', order: 3 },
       styleSpaceAfter: { label: 'Spazio dopo', tab: 'style', order: 4 },
-      styleTextColor: { label: 'Colore testo', tab: 'style', order: 5 },
-      styleBackgroundColor: { label: 'Colore di sfondo', tab: 'style', order: 15 },
-      styleColor: { label: 'Colore testo personalizzato', tab: 'style', order: 16 },
-      backgroundColor: { label: 'Colore di sfondo (fallback)', tab: 'style', order: 17 },
-      color: { label: 'Colore testo (fallback)', tab: 'style', order: 18 },
-      styleFontSize: { label: 'Dimensione testo', tab: 'style', order: 6 },
-      styleFontWeight: { label: 'Spessore testo', tab: 'style', order: 7 },
-      styleFontFamily: { label: 'Famiglia Font', tab: 'style', order: 8 },
+      color: { label: 'Colore testo', tab: 'style', order: 5 },
+      typography: { label: 'Tipografia', tab: 'style', order: 6 },
       styleLayer: { label: 'Livello di sovrapposizione', tab: 'advanced', order: 9 },
-      styleHideDesktop: { label: 'Nascondi su Desktop', tab: 'advanced', order: 10 },
-      styleHideTablet: { label: 'Nascondi su Tablet', tab: 'advanced', order: 11 },
-      styleHideMobile: { label: 'Nascondi su Mobile', tab: 'advanced', order: 12 },
+      hideOn: { label: 'Nascondi su breakpoint', tab: 'advanced', order: 10 },
+      margin: { label: 'Margine', tab: 'style', order: 15 },
       customCssClass: {
         label: 'Classe CSS personalizzata',
         tab: 'advanced',
@@ -159,10 +106,6 @@ export const buttonBlock: BlockDefinition = {
         order: 14,
         help: 'Solo lettere, numeri, trattino, underscore — nessuno spazio.',
       },
-      styleMarginTop: { label: 'Margine superiore', tab: 'style', order: 15 },
-      styleMarginRight: { label: 'Margine destro', tab: 'style', order: 16 },
-      styleMarginBottom: { label: 'Margine inferiore', tab: 'style', order: 17 },
-      styleMarginLeft: { label: 'Margine sinistro', tab: 'style', order: 18 },
     },
   },
 };

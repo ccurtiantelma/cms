@@ -1,0 +1,57 @@
+/*
+ * `gallery` (`PLAN-parita-elementor-pro.md` § R4): il layout di base (colonne/spaziatura,
+ * `display: flex`/`grid` + `gap`) è generato dal Runtime Style Bridge
+ * (`../generateCanvasCss.ts`) via `layout` sullo stesso elemento radice
+ * (`[data-canvas-style-id]`) — questo file **non ridichiara mai** `display`/`gap`, solo le
+ * regole aggiuntive per gli algoritmi `masonry`/`metro` selezionati via `data-gallery-mode`,
+ * entrambe CSS-only (nessun runtime JS, coerente con la nota "CSS-only" di R4).
+ *
+ * `[data-gallery-mode="grid"]` (default, `GalleryBlock.tsx`): nessuna regola propria in
+ * questo file — l'intera disposizione a griglia uniforme arriva da `layout`.
+ */
+.gallery {
+  position: relative;
+  min-width: 0;
+}
+
+/*
+ * `masonry`: tecnica CSS multi-colonna (`columns`), l'unica disposizione "a cascata"
+ * ottenibile senza JavaScript — `break-inside: avoid` sui figli diretti (i nodi `image`
+ * renderizzati da `BlockRenderer.tsx`/`EditorBlockWrapper.tsx`) evita che una figura venga
+ * spezzata a metà fra una colonna e la successiva.
+ */
+[data-gallery-mode='masonry'] {
+  columns: 3 16rem;
+  column-gap: 1rem;
+}
+
+[data-gallery-mode='masonry'] > * {
+  break-inside: avoid;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 48em) {
+  [data-gallery-mode='masonry'] {
+    columns: 2 12rem;
+  }
+}
+
+/*
+ * `metro`: variante a dimensioni miste sopra la griglia di base (`layout` deve avere
+ * `display: grid` perché queste regole abbiano effetto — coerente con l'essere "sopra"
+ * quella griglia, non un suo sostituto, vedi il commento di testa di `gallery.block.ts`).
+ * `grid-auto-flow: dense` richiude i vuoti lasciati dalle celle allargate; un paio di
+ * regole `nth-child` bastano per una resa "a mosaico" senza un algoritmo runtime.
+ */
+[data-gallery-mode='metro'] {
+  grid-auto-flow: dense;
+}
+
+[data-gallery-mode='metro'] > *:nth-child(3n + 1) {
+  grid-column: span 2;
+}
+
+[data-gallery-mode='metro'] > *:nth-child(4n + 2) {
+  grid-row: span 2;
+}

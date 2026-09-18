@@ -48,17 +48,17 @@ import { useThemeColorStore } from '../../../../hooks/useThemeColor';
 import { resolveMediaSrc } from '../../../../components/blocks/media-url';
 import RichTextFieldEditor from '../RichTextFieldEditor';
 import { ThemeEditorColorPicker } from '../../../../components/theme-editor/ThemeEditorColorPicker';
+import BorderField from './BorderField';
+import ShadowField from './ShadowField';
+import ColorField from './ColorField';
+import TypographyField from './TypographyField';
+import SpacingField from './SpacingField';
+import LayoutField from './LayoutField';
 import {
-  BORDER_RADIUS_RANGE,
-  BORDER_STYLE_OPTIONS,
-  BORDER_WIDTH_RANGE,
   CONTAINER_FLEX_SEGMENTED_PROPS,
   CSS_CLASS_NAME_MAX_LENGTH,
   HTML_ID_MAX_LENGTH,
   MULTILINE_THRESHOLD,
-  SHADOW_BLUR_RANGE,
-  SHADOW_OFFSET_RANGE,
-  SHADOW_SPREAD_RANGE,
   SPACING_SLIDER_PROPS,
   VIEWPORT_LABELS,
   asString,
@@ -74,9 +74,13 @@ import styles from './inspector.module.css';
 /**
  * Icona per ciascun valore di `flexDirection` (ADR-39, "Conseguenza": "nuovi controlli
  * Mantine ... con overlay responsive"): frecce che rappresentano l'asse principale del
- * flex layout — l'unico dei quattro controlli `CONTAINER_FLEX_SEGMENTED_PROPS` con una
- * mappatura icona/valore univoca e senza ambiguità (a differenza di `justifyContent`/
- * `alignItems`/`wrap`, dove un'icona per opzione aggiungerebbe rumore senza chiarezza).
+ * flex layout. `flexDirection` non è più dichiarata da nessun tipo del registro dopo
+ * `ADR-82-container-unificato-grid-flex.md` § "Decisione" punto 1 (consolidata dentro
+ * `layout: layout` su `container` `v: 2`) — questa mappa non ha più un token da risolvere
+ * finché un editor dedicato per `kind: 'layout'` non la riusa (task successivo, ADR-82 §
+ * "Conseguenze"), ma resta innocua: {@link CONTAINER_FLEX_SEGMENTED_PROPS} oggi contiene
+ * solo `justifyContent`/`alignItems` (vive su `section`), per cui il lookup qui sotto
+ * risolve sempre a `undefined` e i segmenti restano senza icona.
  */
 const FLEX_DIRECTION_ICON: Record<string, Icon> = {
   row: IconArrowRight,
@@ -631,206 +635,73 @@ export default function PropField({
       );
     }
 
-    case 'border': {
-      // ADR-38 § 3: 4 campi fissi (`width/style/color/radius`), intervalli non configurabili
-      // dalla prop. Il raggio resta un solo valore, non un campo per angolo: il registro
-      // approvato dichiara `radius: number` — quattro campi per-angolo verrebbero respinti
-      // dal validator (`hasOnlyKeys`) a ogni salvataggio con un 400.
-      const objectValue =
-        value && typeof value === 'object' && !Array.isArray(value)
-          ? (value as { width?: unknown; style?: unknown; color?: unknown; radius?: unknown })
-          : {};
-      const currentWidth = typeof objectValue.width === 'number' ? objectValue.width : 0;
-      const currentStyle =
-        typeof objectValue.style === 'string' &&
-        (BORDER_STYLE_OPTIONS as readonly string[]).includes(objectValue.style)
-          ? objectValue.style
-          : 'solid';
-      const currentColor = typeof objectValue.color === 'string' ? objectValue.color : '#000000';
-      const currentRadius = typeof objectValue.radius === 'number' ? objectValue.radius : 0;
-      const write = (
-        patch: Partial<{ width: number; style: string; color: string; radius: number }>,
-      ) =>
-        onSetAndCommit({
-          width: currentWidth,
-          style: currentStyle,
-          color: currentColor,
-          radius: currentRadius,
-          ...patch,
-        });
+    // `border`/`shadow` (ADR-38 § 3/§ 4): estratti in componenti dedicati (Sub-Task S2.3) per
+    // poter aggiungere il supporto stateful (ADR-75) senza gonfiare ulteriormente questo
+    // `switch` — il comportamento scalare resta identico byte-per-byte a prima dell'estrazione
+    // (stesse etichette, stessi intervalli, stesso canale `onSetAndCommit`).
+    case 'border':
       return (
-        <Stack gap="xs">
-          <Text size="sm" fw={500}>
-            {label}
-            {required && (
-              <Text component="span" c="red" inherit>
-                {' '}
-                *
-              </Text>
-            )}
-          </Text>
-          <Group grow align="flex-end" wrap="nowrap">
-            <Select
-              label={`${label} — Stile`}
-              allowDeselect={false}
-              comboboxProps={{ zIndex: 1100 }}
-              data={[...BORDER_STYLE_OPTIONS]}
-              value={currentStyle}
-              onChange={(next) => write({ style: next ?? currentStyle })}
-            />
-            <ThemeEditorColorPicker
-              label={`${label} — Colore`}
-              value={currentColor}
-              aria-label={`${label} — Colore`}
-              onChange={(next) => write({ color: next })}
-            />
-          </Group>
-          <div>
-            <Text size="xs" c="dimmed" mb={4}>
-              Spessore ({currentWidth}px)
-            </Text>
-            <Slider
-              min={BORDER_WIDTH_RANGE[0]}
-              max={BORDER_WIDTH_RANGE[1]}
-              value={currentWidth}
-              label={(next) => `${next}px`}
-              thumbLabel={`${label} — Spessore`}
-              onChange={(next) => write({ width: next })}
-            />
-          </div>
-          <div>
-            {/* Un solo controllo di raggio, non quattro per-angolo: vedi il commento sopra. */}
-            <Text size="xs" c="dimmed" mb={4}>
-              Raggio ({currentRadius}px)
-            </Text>
-            <Slider
-              min={BORDER_RADIUS_RANGE[0]}
-              max={BORDER_RADIUS_RANGE[1]}
-              value={currentRadius}
-              label={(next) => `${next}px`}
-              thumbLabel={`${label} — Raggio`}
-              onChange={(next) => write({ radius: next })}
-            />
-          </div>
-          {error && (
-            <Text size="xs" c="red">
-              {error}
-            </Text>
-          )}
-        </Stack>
+        <BorderField
+          prop={prop}
+          value={value}
+          propsMeta={propsMeta}
+          onSetAndCommit={onSetAndCommit}
+        />
       );
-    }
 
-    case 'shadow': {
-      // ADR-38 § 4: 5 campi fissi, intervalli non configurabili dalla prop. Stessa forma per
-      // box-shadow e text-shadow — nessun campo che le distingua nello schema: è il renderer
-      // ad applicarla secondo il tipo di blocco, nessun toggle "Box/Text" qui (non
-      // scriverebbe nulla di validato).
-      const objectValue =
-        value && typeof value === 'object' && !Array.isArray(value)
-          ? (value as {
-              x?: unknown;
-              y?: unknown;
-              blur?: unknown;
-              spread?: unknown;
-              color?: unknown;
-            })
-          : {};
-      const currentX = typeof objectValue.x === 'number' ? objectValue.x : 0;
-      const currentY = typeof objectValue.y === 'number' ? objectValue.y : 0;
-      const currentBlur = typeof objectValue.blur === 'number' ? objectValue.blur : 0;
-      const currentSpread = typeof objectValue.spread === 'number' ? objectValue.spread : 0;
-      const currentColor = typeof objectValue.color === 'string' ? objectValue.color : '#000000';
-      const write = (
-        patch: Partial<{ x: number; y: number; blur: number; spread: number; color: string }>,
-      ) =>
-        onSetAndCommit({
-          x: currentX,
-          y: currentY,
-          blur: currentBlur,
-          spread: currentSpread,
-          color: currentColor,
-          ...patch,
-        });
+    case 'shadow':
       return (
-        <Stack gap="xs">
-          <Text size="sm" fw={500}>
-            {label}
-            {required && (
-              <Text component="span" c="red" inherit>
-                {' '}
-                *
-              </Text>
-            )}
-          </Text>
-          <ThemeEditorColorPicker
-            label={`${label} — Colore`}
-            value={currentColor}
-            aria-label={`${label} — Colore`}
-            onChange={(next) => write({ color: next })}
-          />
-          <Group grow>
-            <div>
-              <Text size="xs" c="dimmed" mb={4}>
-                Offset X ({currentX}px)
-              </Text>
-              <Slider
-                min={SHADOW_OFFSET_RANGE[0]}
-                max={SHADOW_OFFSET_RANGE[1]}
-                value={currentX}
-                label={(next) => `${next}px`}
-                thumbLabel={`${label} — Offset X`}
-                onChange={(next) => write({ x: next })}
-              />
-            </div>
-            <div>
-              <Text size="xs" c="dimmed" mb={4}>
-                Offset Y ({currentY}px)
-              </Text>
-              <Slider
-                min={SHADOW_OFFSET_RANGE[0]}
-                max={SHADOW_OFFSET_RANGE[1]}
-                value={currentY}
-                label={(next) => `${next}px`}
-                thumbLabel={`${label} — Offset Y`}
-                onChange={(next) => write({ y: next })}
-              />
-            </div>
-          </Group>
-          <div>
-            <Text size="xs" c="dimmed" mb={4}>
-              Sfocatura ({currentBlur}px)
-            </Text>
-            <Slider
-              min={SHADOW_BLUR_RANGE[0]}
-              max={SHADOW_BLUR_RANGE[1]}
-              value={currentBlur}
-              label={(next) => `${next}px`}
-              thumbLabel={`${label} — Sfocatura`}
-              onChange={(next) => write({ blur: next })}
-            />
-          </div>
-          <div>
-            <Text size="xs" c="dimmed" mb={4}>
-              Diffusione ({currentSpread}px)
-            </Text>
-            <Slider
-              min={SHADOW_SPREAD_RANGE[0]}
-              max={SHADOW_SPREAD_RANGE[1]}
-              value={currentSpread}
-              label={(next) => `${next}px`}
-              thumbLabel={`${label} — Diffusione`}
-              onChange={(next) => write({ spread: next })}
-            />
-          </div>
-          {error && (
-            <Text size="xs" c="red">
-              {error}
-            </Text>
-          )}
-        </Stack>
+        <ShadowField
+          prop={prop}
+          value={value}
+          propsMeta={propsMeta}
+          onSetAndCommit={onSetAndCommit}
+        />
       );
-    }
+
+    // I quattro kind v2 di questo Sub-Task (S2.3): ciascuno delega a un componente dedicato in
+    // questa stessa cartella, mai una seconda implementazione locale della cascata stato/
+    // breakpoint (`inspector.utils.ts`, sezione "PropKind v2"). `colorRef`/`typography` sono
+    // già in uso da `heading`/`richText`/`button`; `spacing`/`layout` da `container`.
+    case 'colorRef':
+      return (
+        <ColorField
+          prop={prop}
+          value={value}
+          propsMeta={propsMeta}
+          onSetAndCommit={onSetAndCommit}
+        />
+      );
+
+    case 'typography':
+      return (
+        <TypographyField
+          prop={prop}
+          value={value}
+          propsMeta={propsMeta}
+          onSetAndCommit={onSetAndCommit}
+        />
+      );
+
+    case 'spacing':
+      return (
+        <SpacingField
+          prop={prop}
+          value={value}
+          propsMeta={propsMeta}
+          onSetAndCommit={onSetAndCommit}
+        />
+      );
+
+    case 'layout':
+      return (
+        <LayoutField
+          prop={prop}
+          value={value}
+          propsMeta={propsMeta}
+          onSetAndCommit={onSetAndCommit}
+        />
+      );
 
     case 'cssClassName':
     case 'htmlId':

@@ -25,6 +25,15 @@ import { DEFAULT_THEME_CONFIG } from '../../../theme';
  * Tipo sintetico che copre i sette `kind` in un blocco solo, aggiunto **in coda** ai
  * cinque tipi veri del registro generato. I tipi reali restano quelli approvati (ADR-21):
  * nessun test qui finge che esista un sesto tipo di blocco nel prodotto.
+ *
+ * `colore` (`kind: 'color'`): dopo `ADR-81-migrazione-propkind-v1-v2.md` § "Decisione" punto
+ * 2 il solo tipo reale che dichiara ancora `kind: 'color'` (non `colorRef`) è `section` v1,
+ * con **sette** campi omonimi sullo stesso tab (`styleBackgroundColor`/`styleColor`/
+ * `backgroundColor`/`color` più tre di sfondo ADR-50) — il pulsante "Colori del tema" ha
+ * `aria-label` statico, non parametrico sul campo, quindi `getByRole` su `section` sarebbe
+ * ambiguo. Un solo campo sintetico isolato, stesso principio già in uso per `quantita`, evita
+ * l'ambiguità senza introdurre un `aria-label` dedicato per campo (fuori scopo di questa
+ * migrazione, il componente non lo dichiara).
  */
 const SYNTHETIC_TYPE = {
   type: 'kindProbe',
@@ -35,6 +44,7 @@ const SYNTHETIC_TYPE = {
     { name: 'flag', kind: 'boolean', required: false },
     { name: 'quantita', kind: 'number', required: false },
     { name: 'descrizione', kind: 'plainText', required: false, maxLength: 5000 },
+    { name: 'colore', kind: 'color', required: false },
   ],
   meta: { label: 'Sonda dei kind', category: 'test' },
 } as const;
@@ -192,9 +202,11 @@ describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
     const styleTab = screen.getByRole('tab', { name: 'Stile' });
     await user.click(styleTab);
 
+    // `styleTextColor`/`styleFontSize`/`styleFontWeight` v1 sono consolidate da
+    // `ADR-81-migrazione-propkind-v1-v2.md` § "Decisione" punto 2 in `color: colorRef` e
+    // `typography: typography` (un solo campo composito, non tre etichette separate).
     expect(screen.getByText('Colore testo')).toBeInTheDocument();
-    expect(screen.getByText('Dimensione testo')).toBeInTheDocument();
-    expect(screen.getByText('Spessore testo')).toBeInTheDocument();
+    expect(screen.getByText('Tipografia')).toBeInTheDocument();
   });
 
   it('modificare il controllo desktop di una prop responsive lascia intatti tablet e mobile', async () => {
@@ -336,48 +348,16 @@ describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
   });
 
   /**
-   * Stesso invariante T8, sul ramo `SegmentedControl` di `container`
-   * (`CONTAINER_FLEX_SEGMENTED_PROPS`, `inspector.utils.ts`): il controllo scrive `{
-   * ...envelope, [breakpointKey]: next }`, mai una sovrascrittura dell'intero oggetto — qui
-   * verificato su `flexDirection`, una delle quattro props del set (`justifyContent`/
-   * `alignItems`/`wrap` condividono lo stesso ramo di `PropField.tsx`).
+   * `container.flexDirection` non esiste più: `ADR-82-container-unificato-grid-flex.md` §
+   * "Decisione" punto 1 consolida `display`/`flexDirection`/`justifyContent`/`alignItems`/
+   * `wrap`/`gap` di `container` `v: 1` in un solo campo composito `layout: layout`
+   * (responsive sull'intero oggetto). L'invariante "il controllo scrive `{ ...envelope,
+   * [breakpointKey]: next }`" resta comunque coperto sullo stesso ramo `SegmentedControl` di
+   * `PropField.tsx` dal test `section.alignItems` sopra (`CONTAINER_FLEX_SEGMENTED_PROPS`
+   * oggi contiene solo `justifyContent`/`alignItems`, vive su `section`) — un editor dedicato
+   * per `kind: 'layout'` che ripristini una maniglia equivalente per `container` è un task
+   * successivo (ADR-82 § "Conseguenze"), non coperto da questa migrazione.
    */
-  it('container.flexDirection (SegmentedControl): modificare il controllo desktop lascia intatti tablet e mobile', async () => {
-    const user = userEvent.setup();
-    renderInspectorWith(
-      node('cont-flex', 'container', {
-        flexDirection: { default: 'row', tablet: 'column', mobile: 'column-reverse' },
-      }),
-    );
-
-    const rowReverseRadio = screen.getByRole('radio', { name: 'row-reverse' });
-    await user.click(rowReverseRadio);
-
-    expect(propsInStore('cont-flex').flexDirection).toEqual({
-      default: 'row-reverse',
-      tablet: 'column',
-      mobile: 'column-reverse',
-    });
-  });
-
-  it('container.flexDirection (SegmentedControl): con lo Switcher su Tablet scrive solo la chiave tablet', async () => {
-    const user = userEvent.setup();
-    useBlockEditorStore.getState().setActiveViewport('tablet');
-    renderInspectorWith(
-      node('cont-flex-tablet', 'container', {
-        flexDirection: { default: 'row', mobile: 'column-reverse' },
-      }),
-    );
-
-    const columnRadio = screen.getByRole('radio', { name: 'column' });
-    await user.click(columnRadio);
-
-    expect(propsInStore('cont-flex-tablet').flexDirection).toEqual({
-      default: 'row',
-      tablet: 'column',
-      mobile: 'column-reverse',
-    });
-  });
 });
 
 /**
@@ -525,10 +505,13 @@ describe('PropertyInspector — i sette kind del registro', () => {
   });
 
   it('url → TextInput con avviso UX sugli schemi ammessi, che non blocca la scrittura', async () => {
+    // `button.href` non esiste più dopo `ADR-81-migrazione-propkind-v1-v2.md` § "Decisione"
+    // punto 2 (`href (url) → link: link`): `navMenuItem.url`, tipo estraneo a questa
+    // migrazione (ADR-52), resta l'unico `kind: 'url'` reale nel registro.
     const user = userEvent.setup();
-    renderInspectorWith(node('b-1', 'button', { label: 'Vai', href: '' }));
+    renderInspectorWith(node('nmi-1', 'navMenuItem', { label: 'Voce', url: '' }));
 
-    const input = screen.getByRole('textbox', { name: 'Link' });
+    const input = screen.getByRole('textbox', { name: 'URL' });
     expect(input.tagName).toBe('INPUT');
     expect(input).toHaveAttribute('maxlength', '2048');
 
@@ -537,14 +520,14 @@ describe('PropertyInspector — i sette kind del registro', () => {
 
     expect(screen.getByText(/Ammessi: http\(s\):\/\//i)).toBeInTheDocument();
     // La validazione client è solo UX: il valore arriva in store, l'autorità è il 400 del server.
-    expect(propsInStore('b-1').href).toBe('javascript:alert(1)');
+    expect(propsInStore('nmi-1').url).toBe('javascript:alert(1)');
 
     await user.clear(input);
     await user.type(input, 'https://esempio.it/contatti');
     await user.tab();
 
     expect(screen.queryByText(/Ammessi: http\(s\):\/\//i)).not.toBeInTheDocument();
-    expect(propsInStore('b-1').href).toBe('https://esempio.it/contatti');
+    expect(propsInStore('nmi-1').url).toBe('https://esempio.it/contatti');
   });
 
   it('mediaRef vuoto → miniatura placeholder e pulsante "Scegli Immagine", nessun campo digitabile', () => {
@@ -613,9 +596,12 @@ describe('PropertyInspector — i sette kind del registro', () => {
   });
 
   it('color → il picker scrive l\'hex risolto del colore di tema, mai un riferimento "var(...)"', async () => {
+    // `heading` non dichiara più alcuna prop `kind: 'color'` dopo `ADR-81-migrazione-
+    // propkind-v1-v2.md` § "Decisione" punto 2 (`styleTextColor`/`styleTextColorCustom` →
+    // `color: colorRef`): il campo sintetico `colore` isola il caso senza l'ambiguità dei
+    // sette campi omonimi di `section` (vedi il commento di testa di `SYNTHETIC_TYPE`).
     const user = userEvent.setup();
-    renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
-    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+    renderInspectorWith(node('k-1', 'kindProbe', { flag: false, quantita: 0, descrizione: '' }));
 
     const tokenPicker = screen.getByRole('button', { name: 'Colori del tema' });
     expect(tokenPicker).toBeEnabled();
@@ -629,43 +615,48 @@ describe('PropertyInspector — i sette kind del registro', () => {
     );
     await user.click(primaryOption);
 
-    expect(propsInStore('h-1').styleTextColorCustom).toBe(DEFAULT_THEME_CONFIG.colors.primary);
+    expect(propsInStore('k-1').colore).toBe(DEFAULT_THEME_CONFIG.colors.primary);
   });
 });
 
 describe('PropertyInspector — i cinque kind di ADR-38 (unitValue/border/shadow/cssClassName/htmlId)', () => {
+  // `heading.styleFontSizeCustom` non esiste più dopo `ADR-81-migrazione-propkind-v1-v2.md`
+  // § "Decisione" punto 2 (consolidata dentro `typography: typography`, un campo composito
+  // non più un `unitValue` a sé stante): `container.boxedWidth` (`ADR-82-container-
+  // unificato-grid-flex.md` § "Decisione" punto 1, sostituisce `styleWidth` di `container`
+  // `v: 1`) resta `kind: 'unitValue'` reale, con `min`/`max`/`units` dichiarati dal registro
+  // — stesso ramo di `PropField.tsx`, solo il tipo/prop di comodo cambia.
   it("unitValue → NumberInput scrive { value, unit }, preservando l'unità corrente", async () => {
     const user = userEvent.setup();
-    renderInspectorWith(node('h-1', 'heading', { level: 'h2', text: 'Titolo' }));
-
+    renderInspectorWith(node('cont-1', 'container', {}));
+    // `container.link` è `tab: 'content'` (ADR-82 § "Decisione" punto 1): a differenza di
+    // `heading` usato prima di questa migrazione, `container` ha una scheda "Contenuto" e
+    // parte da lì, non da "Stile".
     await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
-    const label = 'Dimensione testo personalizzata';
+    const label = 'Larghezza massima';
     const numberInput = screen.getByRole('textbox', { name: `${label} — Valore` });
     await user.clear(numberInput);
     await user.type(numberInput, '24');
 
-    expect(propsInStore('h-1').styleFontSizeCustom).toEqual({ value: 24, unit: 'px' });
+    expect(propsInStore('cont-1').boxedWidth).toEqual({ value: 24, unit: 'px' });
   });
 
   it('unitValue → il Select unità scrive solo `unit`, preservando `value`', async () => {
     const user = userEvent.setup();
     renderInspectorWith(
-      node('h-1', 'heading', {
-        level: 'h2',
-        text: 'Titolo',
-        styleFontSizeCustom: { value: 18, unit: 'px' },
+      node('cont-1', 'container', {
+        boxedWidth: { value: 18, unit: 'px' },
       }),
     );
-
     await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
-    const label = 'Dimensione testo personalizzata';
+    const label = 'Larghezza massima';
     const unitSelect = screen.getByRole('textbox', { name: `${label} — Unità` });
     await user.click(unitSelect);
-    await user.click(screen.getByRole('option', { name: 'rem' }));
+    await user.click(screen.getByRole('option', { name: '%' }));
 
-    expect(propsInStore('h-1').styleFontSizeCustom).toEqual({ value: 18, unit: 'rem' });
+    expect(propsInStore('cont-1').boxedWidth).toEqual({ value: 18, unit: '%' });
   });
 
   it('border → il Select stile scrive i 4 campi fissi, mai un valore libero', async () => {
@@ -874,6 +865,22 @@ describe('PropertyInspector — obbligatorietà e cambio di selezione', () => {
 });
 
 describe('PropertyInspector — copertura del registro reale', () => {
+  /**
+   * `ADR-81-migrazione-propkind-v1-v2.md`/`ADR-82-container-unificato-grid-flex.md`
+   * consolidano `heading`/`richText`/`image`/`button` `v: 2` e introducono `container` `v: 2`
+   * con 16 `kind` mai apparsi prima in un tipo approvato: `colorRef`, `typography`,
+   * `spacing`, `layout`, `background`, `radius`, `position`, `transform`, `filter`, `link`,
+   * `animation`, `motion`, `shapeDivider`, `attributes`, `css`, `hideOn`. Il registro reale
+   * passa così da 14 a 31 `kind` in uso — questo file continua a esercitare solo i 14 kind
+   * storici con un caso di rendering/interazione verificato (vedi i `describe` sopra):
+   * costruire un editor dedicato per ciascuno dei 16 nuovi `kind` (Grid/Flex per `layout`,
+   * multi-tipo per `background`, ecc.) è un task successivo dichiarato fuori scopo da
+   * `ADR-82` § "Conseguenze" ("L'inspector frontend guadagna un Grid editor visuale...",
+   * task R2 T4/T5 e oltre) — non una decisione che questa migrazione può inventare.
+   * `PropField.tsx` non esplode su un `kind` sconosciuto (ricade sul `case 'plainText'`
+   * di default, § commento di testa del file), quindi il rendering non si rompe, ma non è
+   * un editor corretto per quei 16 kind: il gap resta esplicito qui, non nascosto.
+   */
   it('ogni kind dichiarato dai tipi approvati è coperto da un caso di questo file', () => {
     const kindsNelRegistro = new Set(
       BLOCK_TYPES.filter(
@@ -884,55 +891,85 @@ describe('PropertyInspector — copertura del registro reale', () => {
         .map((prop) => prop.kind),
     );
 
-    // `boolean` è in uso reale da ADR-37 (styleHideDesktop/Tablet/Mobile). `border`,
-    // `cssClassName`, `htmlId`, `shadow`, `unitValue` sono in uso reale da ADR-38
-    // (`styleBorder`/`styleShadow`/`customCssClass`/`customElementId`/`styleFontSizeCustom`).
-    // `number` è in uso reale da ADR-47 (`section.styleOverlayOpacity`): non è più l'unico
-    // kind assente dai tipi approvati, non c'è più bisogno del tipo sintetico per coprirlo.
-    // `pageRef` è in uso reale da ADR-52 (`navMenuItem.pageGuid`). `globalSectionRef` è in
-    // uso reale da ADR-55 (`globalRef.globalSectionGuid`, dodicesimo tipo, stessa forma di
-    // `pageRef` — `PropField.tsx` case `'globalSectionRef'`, nessun Picker dedicato).
     expect([...kindsNelRegistro].sort()).toEqual(
       [
-        'border',
+        'animation',
+        'attributes',
+        'background',
         'boolean',
+        'border',
         'color',
+        'colorRef',
+        'css',
         'cssClassName',
         'enum',
+        'filter',
         'globalSectionRef',
+        'hideOn',
         'htmlId',
+        'layout',
+        'link',
         'mediaRef',
+        'motion',
         'number',
         'pageRef',
         'plainText',
+        'position',
+        'radius',
         'richText',
         'shadow',
+        'shapeDivider',
+        'spacing',
+        'transform',
+        'typography',
         'unitValue',
         'url',
       ].sort(),
     );
   });
 
-  it('i quattordici kind del contratto sono tutti rappresentati fra tipi reali e sonda sintetica', () => {
+  /**
+   * `fontRef`/`gradient` restano nel contratto `BlockPropDescriptor['kind']`
+   * (`blocks.types.ts` riga 18) ma **nessun** tipo — reale o sintetico — li usa oggi: due
+   * dichiarazioni anticipate per un round successivo (non specificato da ADR-81/82), non un
+   * kind rimosso da questa migrazione. Il contratto ha quindi 33 `kind`, di cui 31 in uso.
+   */
+  it('i trentuno kind in uso oggi sono tutti rappresentati fra tipi reali e sonda sintetica', () => {
     const coperti = new Set(
       BLOCK_TYPES.flatMap((descriptor) => descriptor.props).map((prop) => prop.kind),
     );
 
     expect([...coperti].sort()).toEqual(
       [
-        'border',
+        'animation',
+        'attributes',
+        'background',
         'boolean',
+        'border',
         'color',
+        'colorRef',
+        'css',
         'cssClassName',
         'enum',
+        'filter',
         'globalSectionRef',
+        'hideOn',
         'htmlId',
+        'layout',
+        'link',
         'mediaRef',
+        'motion',
         'number',
         'pageRef',
         'plainText',
+        'position',
+        'radius',
         'richText',
         'shadow',
+        'shapeDivider',
+        'spacing',
+        'transform',
+        'typography',
         'unitValue',
         'url',
       ].sort(),
@@ -1223,5 +1260,123 @@ describe('PropertyInspector — section.styleBackgroundType (ADR-50)', () => {
 
     expect(propsInStore('sec-bg').styleBackgroundType).toBe('image');
     expect(screen.getByRole('textbox', { name: 'Posizione sfondo' })).toBeInTheDocument();
+  });
+});
+
+/**
+ * Integrazione end-to-end dei 4 kind PropKind v2 cablati da questo Sub-Task (S2.3) nello
+ * `switch` di `PropField.tsx` (`colorRef`/`typography`/`spacing`/`layout`) più l'estensione
+ * `stateful` di `border`/`shadow` (già coperti scalari sopra) — attraverso il vero
+ * `PropertyInspector`/`StyleTab`, non i field component isolati (già coperti in dettaglio da
+ * `inspector/__tests__/*.test.tsx`): qui si verifica solo che lo smistamento per `kind` sia
+ * quello giusto e che la scrittura raggiunga davvero lo store attraverso l'intera catena
+ * `PropField` → `onSetAndCommit` → `updateBlockPropsAction`.
+ */
+describe('PropertyInspector — integrazione PropKind v2 (Sub-Task S2.3)', () => {
+  it('heading.color (colorRef, stateful+responsive): clic su uno swatch di sistema scrive { ref } sul ramo normal/default', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('h-color', 'heading', { level: 'h2', text: 'Titolo' }));
+
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+    await user.click(screen.getByRole('button', { name: 'Colore di sistema: Primario' }));
+
+    expect(propsInStore('h-color').color).toEqual({ normal: { default: { ref: 'primary' } } });
+  });
+
+  it('heading.typography (responsive per campo): scrivere fontWeight non tocca gli altri campi già presenti', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(
+      node('h-typo', 'heading', {
+        level: 'h2',
+        text: 'Titolo',
+        typography: { normal: { fontSize: { default: { value: 32, unit: 'px' } } } },
+      }),
+    );
+
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+    const weightSelect = screen.getByRole('textbox', { name: 'Tipografia — Spessore' });
+    await user.click(weightSelect);
+    await user.click(screen.getByRole('option', { name: '700' }));
+
+    expect(propsInStore('h-typo').typography).toEqual({
+      normal: {
+        fontSize: { default: { value: 32, unit: 'px' } },
+        fontWeight: { default: '700' },
+      },
+    });
+  });
+
+  it('container.padding (spacing, responsive sull\'intero oggetto): attivare "linked" preserva i 4 valori numerici correnti', async () => {
+    // Interazione a singolo clic (`ActionIcon`), non digitazione su `NumberInput`: la
+    // correttezza della scrittura per-lato/unità è già verificata in dettaglio, con callback
+    // mockata, da `SpacingField.test.tsx` — qui basta provare che lo smistamento `case
+    // 'spacing'` di `PropField.tsx` raggiunga davvero lo store attraverso l'inspector vero.
+    const user = userEvent.setup();
+    renderInspectorWith(
+      node('cont-padding', 'container', {
+        padding: { default: { top: 8, right: 12, bottom: 8, left: 12, unit: 'px', linked: false } },
+      }),
+    );
+
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+    await user.click(screen.getByRole('button', { name: 'Padding — Sincronizza lati' }));
+
+    expect(propsInStore('cont-padding').padding).toEqual({
+      default: { top: 8, right: 12, bottom: 8, left: 12, unit: 'px', linked: true },
+    });
+  });
+
+  it('container.layout (Flex/Grid): passare a Grid scrive display "grid" sul ramo default', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('cont-layout', 'container', {}));
+
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+    await user.click(screen.getByRole('radio', { name: 'Grid' }));
+
+    expect(propsInStore('cont-layout').layout).toEqual({ default: { display: 'grid' } });
+  });
+
+  /**
+   * `container` dichiara più prop `stateful` sulla scheda Stile (`color`/`typography` non ci
+   * sono su `container`, ma `border`/`shadow`/`background`/`transform`/`filter` sì): ogni
+   * campo porta il **proprio** `StateSwitcher` indipendente (nessuna chrome condivisa, vedi
+   * il commento di testa di `StateSwitcher.tsx`), quindi più di un radio "Hover" compare
+   * insieme nella stessa scheda — questi due test isolano quello di `BorderField` scendendo
+   * dal suo `Select` univoco (`Bordo — Stile`) al proprio contenitore (`Stack` radice del
+   * componente, mai condiviso con `ShadowField`), invece di interrogare l'intera pagina.
+   */
+  function borderFieldContainer(): HTMLElement {
+    const styleSelect = screen.getByRole('textbox', { name: 'Bordo — Stile' });
+    const stack = styleSelect.closest('.mantine-Stack-root');
+    if (!(stack instanceof HTMLElement)) {
+      throw new Error('contenitore di BorderField non trovato');
+    }
+    return stack;
+  }
+
+  it('container.border (stateful, ADR-82): lo StateSwitcher Normal/Hover compare e scrive nel ramo hover', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('cont-border', 'container', {}));
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+    const borderField = borderFieldContainer();
+    expect(within(borderField).getByRole('radio', { name: 'Hover' })).toBeInTheDocument();
+
+    await user.click(within(borderField).getByRole('radio', { name: 'Hover' }));
+    const styleSelect = screen.getByRole('textbox', { name: 'Bordo — Stile' });
+    await user.click(styleSelect);
+    await user.click(screen.getByRole('option', { name: 'dashed' }));
+
+    expect(propsInStore('cont-border').border).toEqual({
+      hover: { width: 0, style: 'dashed', color: '#000000', radius: 0 },
+    });
+  });
+
+  it('heading.styleBorder (non stateful): il campo Bordo non ha un proprio StateSwitcher (nessuna prop reale lo dichiara per `heading`)', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('h-border', 'heading', { level: 'h2', text: 'Titolo' }));
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+
+    const borderField = borderFieldContainer();
+    expect(within(borderField).queryByRole('radio', { name: 'Hover' })).not.toBeInTheDocument();
   });
 });

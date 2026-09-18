@@ -39,6 +39,7 @@ const CATEGORY_BY_TYPE: Record<string, string> = {
   richText: 'Base',
   button: 'Base',
   image: 'Media',
+  gallery: 'Media',
   section: 'Struttura',
   container: 'Struttura',
   form: 'Moduli',

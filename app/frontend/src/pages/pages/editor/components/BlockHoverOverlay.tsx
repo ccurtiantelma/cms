@@ -1,11 +1,11 @@
 /**
  * Toolbar di selezione **unica** per qualunque tipo di blocco (Sezioni, Colonne, widget
- * foglia): trascina, seleziona genitore, duplica, modifica, elimina — al posto delle tre
- * varianti di chrome mutuamente esclusive per categoria che questo file sostituisce in
- * `EditorBlockWrapper.tsx`. Reversal architetturale esplicito, richiesto e autorizzato dal
- * proprietario del progetto (vedi il task che introduce questo componente): supera la
- * decisione precedente, non la ignora — quella decisione resta leggibile nella history di
- * `EditorBlockWrapper.tsx`.
+ * foglia): aggiungi sopra, trascina, seleziona genitore, duplica, modifica, elimina,
+ * aggiungi sotto — al posto delle tre varianti di chrome mutuamente esclusive per categoria
+ * che questo file sostituisce in `EditorBlockWrapper.tsx`. Reversal architetturale esplicito,
+ * richiesto e autorizzato dal proprietario del progetto (vedi il task che introduce questo
+ * componente): supera la decisione precedente, non la ignora — quella decisione resta
+ * leggibile nella history di `EditorBlockWrapper.tsx`.
  *
  * **Maniglia centrale stile Elementor Pro (RE-2, restyle T-editor-refinement).** Ancorata
  * in alto al centro del blocco (`.overlay`, `BlockHoverOverlay.module.css` — `left: 50%;
@@ -27,6 +27,14 @@
  * menu di selezione tipo già usato per i contenitori vuoti — nessuna seconda UI di scelta
  * tipo. Riceve `parentId`/`index` del nodo corrente (non del suo contenuto: l'inserimento è
  * un fratello precedente, non un figlio) dal chiamante.
+ *
+ * Ultimo controllo, "+" speculare (`BlockPalette`, stessa istanza di componente, secondo
+ * utilizzo): inserisce un blocco **sotto** questo nodo, stesso `parentId` del primo "+" ma
+ * `addAfterIndex`/`addAfterParentType` dedicati (indice successivo al nodo corrente, non
+ * l'indice del primo "+"). In coda alla `Group`, dopo Elimina e prima degli eventuali
+ * controlli opzionali (Salva Preset/Converti in Sezione Globale/Esporta JSON): l'ordine
+ * visivo resta aggiungi sopra → trascina → genitore → duplica → modifica → elimina →
+ * aggiungi sotto.
  *
  * Montata solo quando il blocco è **selezionato** (`isSelected`, mai sul solo hover): il
  * solo hover mostra invece un badge nome in alto a sinistra (`.hoverBadge`,
@@ -87,6 +95,19 @@ export interface BlockHoverOverlayProps {
    * `ROOT_ALLOWED`, stessa convenzione di `BlockPalette`/`EditorBlockWrapper.tsx` altrove.
    */
   addBeforeParentType?: string;
+  /**
+   * Contenitore/indice in cui inserire un nuovo blocco **dopo** di questo nodo (controllo
+   * speculare ad "Aggiungi Sopra", in coda alla toolbar): stesso `location.parentId` di
+   * `parentId` sopra, ma indice del fratello successivo (`location.index + 1`, calcolato dal
+   * chiamante) invece di quello del nodo corrente — altrimenti il nuovo blocco atterrerebbe
+   * prima, non dopo.
+   */
+  addAfterIndex: number;
+  /**
+   * Tipo del contenitore target dell'inserimento "+" sotto, stessa convenzione di
+   * `addBeforeParentType` sopra — `undefined` alla radice, dove vale `ROOT_ALLOWED`.
+   */
+  addAfterParentType?: string;
   /** Attributi dnd-kit del drag di questo nodo (`useDraggable`, calcolati dal wrapper chiamante). */
   attributes: DraggableAttributes;
   /** Listener dnd-kit del drag di questo nodo (`useDraggable`, calcolati dal wrapper chiamante). */
@@ -141,13 +162,15 @@ export interface BlockHoverOverlayProps {
   tone?: 'section' | 'component';
 }
 
-/** Overlay hover/selezione con i controlli comuni a ogni tipo di blocco (aggiungi sopra/trascina/genitore/duplica/modifica/elimina), più "Salva come Preset Globale"/"Converti in Sezione Globale"/"Esporta JSON" quando offerti dal chiamante. */
+/** Overlay hover/selezione con i controlli comuni a ogni tipo di blocco (aggiungi sopra/trascina/genitore/duplica/modifica/elimina/aggiungi sotto), più "Salva come Preset Globale"/"Converti in Sezione Globale"/"Esporta JSON" quando offerti dal chiamante. */
 export default function BlockHoverOverlay({
   id,
   label,
   parentId,
   addBeforeIndex,
   addBeforeParentType,
+  addAfterIndex,
+  addAfterParentType,
   attributes,
   listeners,
   anchorInside,
@@ -274,6 +297,23 @@ export default function BlockHoverOverlay({
           <IconTrash size={HANDLE_ICON_SIZE} />
         </ActionIcon>
       </Tooltip>
+
+      {/*
+        "+" speculare, ultimo controllo base: inserisce un nuovo blocco **dopo** questo nodo
+        — stesso identico `BlockPalette` del primo "+" sopra, stesso `parentId`, ma
+        `addAfterIndex`/`addAfterParentType` (indice del fratello successivo) invece di
+        `addBeforeIndex`/`addBeforeParentType`.
+      */}
+      <BlockPalette
+        parentId={parentId}
+        parentType={addAfterParentType}
+        index={addAfterIndex}
+        label={`Aggiungi blocco sotto ${label}`}
+        size={HANDLE_BUTTON_SIZE}
+        variant="transparent"
+        iconOnly
+        triggerClassName={styles.overlayButton}
+      />
 
       {onSaveAsPreset && (
         <Tooltip label="Salva come Preset Globale" withArrow>

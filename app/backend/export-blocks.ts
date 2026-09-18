@@ -30,11 +30,21 @@ interface ExportedPropDescriptor {
   profile?: string;
   nonEmpty?: boolean;
   responsive?: boolean;
-  /** Solo `kind: 'unitValue'` (ADR-38 § 2): elenco chiuso di unità ammesse per questa prop. */
+  /** Solo `kind: 'unitValue'`/`'spacing'` (ADR-38 § 2, SPEC-PROPKIND-V2-DETAILS.md § 4): elenco chiuso di unità ammesse per questa prop. */
   units?: readonly string[];
-  /** Solo `kind: 'unitValue'` (ADR-38 § 2): intervallo numerico ammesso, dichiarato dalla prop. */
+  /** Solo `kind: 'unitValue'`/`'spacing'`: intervallo numerico ammesso, dichiarato dalla prop. */
   min?: number;
   max?: number;
+  /** Modificatore d'envelope stateful (ADR-75 § "Decisione" punto 1). */
+  stateful?: boolean;
+  /** Solo `kind: 'colorRef'` (SPEC-PROPKIND-V2-DETAILS.md § 1): ammette `#RRGGBBAA` oltre a `#RGB`/`#RRGGBB`. */
+  allowAlpha?: boolean;
+  /** Solo `kind: 'colorRef'` (Addendum S1.2, SPEC-PROPKIND-V2-DETAILS.md): proprietà CSS di destinazione, letta da `toCss()`. */
+  cssProperty?: string;
+  /** Solo `kind: 'spacing'` (SPEC-PROPKIND-V2-DETAILS.md § 4 punto 1): `min` può essere negativo. */
+  allowNegative?: boolean;
+  /** Solo `kind: 'spacing'` (Addendum S1.2, SPEC-PROPKIND-V2-DETAILS.md): lato CSS di destinazione, letto da `toCss()`. */
+  target?: string;
 }
 
 interface ExportedBlockEditorPropMeta {
@@ -94,6 +104,15 @@ function exportBlocksArtifact(): void {
         ...('units' in spec ? { units: spec.units } : {}),
         ...('min' in spec ? { min: spec.min } : {}),
         ...('max' in spec ? { max: spec.max } : {}),
+        ...('stateful' in spec && spec.stateful !== undefined ? { stateful: spec.stateful } : {}),
+        ...('allowAlpha' in spec && spec.allowAlpha !== undefined
+          ? { allowAlpha: spec.allowAlpha }
+          : {}),
+        ...('cssProperty' in spec ? { cssProperty: spec.cssProperty } : {}),
+        ...('allowNegative' in spec && spec.allowNegative !== undefined
+          ? { allowNegative: spec.allowNegative }
+          : {}),
+        ...('target' in spec ? { target: spec.target } : {}),
       })),
       ...(definition.meta ? { meta: definition.meta } : {}),
     }),

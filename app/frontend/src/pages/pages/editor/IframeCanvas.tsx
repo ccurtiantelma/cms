@@ -48,6 +48,21 @@
  * di Mantine — l'isolamento richiesto è esplicito (CLAUDE.md § Regola Mantine — i componenti
  * dei blocchi non importano Mantine; qui lo stesso principio si applica all'intero documento
  * isolato, non solo ai singoli componenti di blocco).
+ *
+ * **Pipeline 4/4 — CSS dei valori liberi PropKind v2** (round R2 "parità Elementor Pro",
+ * `components/blocks/generateCanvasCss.ts`): `colorRef`/`fontRef`/`typography`/`spacing`/
+ * `radius`/`gradient`/`position`/`transform`/`filter`/`layout` non sono esprimibili con le
+ * classi CSS Module statiche di `style-tokens.ts` (valori liberi, non token di un enum chiuso)
+ * — questo tag, ricalcolato a ogni cambio dell'albero o dei breakpoint attivi, li applica ai
+ * nodi del canvas via il nuovo attributo `data-canvas-style-id`, portato dalla radice del
+ * componente di contenuto (oggi solo `Container.tsx`, round R2) — deviazione dichiarata dal
+ * selettore `[data-block="<id>"]` di `SPEC-PROPKIND-V2-DETAILS.md` § 10 (pensato per il
+ * consumer HTML pubblico) e distinto da `data-block-id` (`EditorBlockWrapper.tsx`, un livello
+ * di annidamento più esterno) — vedi il commento di testa di `generateCanvasCss.ts` per il
+ * dettaglio. **Nessun `data-nonce`**: nessun meccanismo CSP/nonce
+ * esiste oggi nell'admin editor (verificato sull'intero repository — l'unico nonce esistente è
+ * quello di `app/public-site`, ADR-74, dominio pubblico distinto); un attributo placeholder
+ * senza un meccanismo di verifica reale sarebbe sicurezza finta, non introdotta qui.
  */
 import {
   forwardRef,
@@ -61,11 +76,17 @@ import {
 import { createPortal } from 'react-dom';
 import { Alert } from '@mantine/core';
 import { IconAlertTriangle } from '@tabler/icons-react';
-import { applyGlobalTokensToDocument, useGlobalTokens } from '../../../hooks/useBlockEditorStore';
+import {
+  applyGlobalTokensToDocument,
+  useActiveBreakpoints,
+  useGlobalTokens,
+  useRootBlocks,
+} from '../../../hooks/useBlockEditorStore';
 import { useThemeColorStore } from '../../../hooks/useThemeColor';
 import { compileTokensToCss } from '../../../libs/globalTokensCompiler';
 import { GLOBAL_TOKENS_CANVAS_SCOPE_CLASS } from '../../../libs/globalTokensCompiler';
 import { generateThemeCss, THEME_STYLE_TAG_ID } from '../../../utils/theme-css.utils';
+import { generateCanvasCss } from '../../../components/blocks/generateCanvasCss';
 import styles from './IframeCanvas.module.css';
 
 /** Id del contenitore del `srcDoc` — stesso contratto letterale di SPEC-F04-super-elementor.md §1.1. */
@@ -73,6 +94,9 @@ const CANVAS_ROOT_ID = 'canvas-root';
 
 /** Id del tag `<style>` che ospita i CSS Module di progetto nell'head dell'iframe. */
 const BLOCK_TOKEN_STYLE_TAG_ID = 'eaidos-block-token-css';
+
+/** Id del tag `<style>` che ospita il CSS dei valori liberi PropKind v2 (commento di testa, Pipeline 4/4). */
+const CANVAS_CSS_STYLE_TAG_ID = 'eaidos-canvas-styles';
 
 // `import.meta.glob` (Vite 6, nativo — nessuna dipendenza npm nuova, ADR-70 § "Decisione"
 // punto 6, invariato): raccoglie con `?inline` (stringa CSS già compilata, stesso hashing
@@ -99,8 +123,8 @@ const aggregatedBlockCss = Object.keys(blockModuleCssMap)
  * vuoto — il contenuto arriva interamente dall'albero React del documento padre via
  * `createPortal`. Il reset su `html`/`body` non è decorativo:
  * - `margin:0`: senza, il margine UA di default (8px) sfalserebbe la larghezza simulata dal
- *   Viewport Switcher (Tablet 768px/Mobile 375px, `FullScreenEditorLayout.module.css`
- *   `.viewportTablet`/`.viewportMobile`) di 16px.
+ *   Breakpoint Switcher (`FullScreenEditorLayout.module.css` `.viewportFramed`, larghezza
+ *   esatta in px dello `style` inline `viewportFrameStyle`) di 16px.
  * - `height:100%` (non `min-height:100%`, invariato — vedi nota sotto): `.canvasRoot`
  *   (`EditorCanvas.module.css`, commento in testa a `.canvasRoot`) risolve il proprio
  *   `min-height: 100%` esplicitamente "contro `html,body{height:100%}`" — una percentuale
@@ -117,7 +141,7 @@ const aggregatedBlockCss = Object.keys(blockModuleCssMap)
  *   nessun padding di default su `body`, e un elemento portato che dichiari `width: 100%`
  *   (es. `.section`/`.canvasRoot`) deve risolvere sul contenuto della cella, non
  *   aggiungerci un proprio bordo/padding sopra (`content-box` sommerebbe, sfalsando di nuovo
- *   la larghezza simulata dal Viewport Switcher come per il margine sopra).
+ *   la larghezza simulata dal Breakpoint Switcher come per il margine sopra).
  */
 const IFRAME_SRC_DOC = `<!doctype html><html><head><style>html,body{margin:0;padding:0;box-sizing:border-box;width:100%;height:100%}</style></head><body><div id="${CANVAS_ROOT_ID}"></div></body></html>`;
 
@@ -161,6 +185,8 @@ const IframeCanvas = forwardRef<HTMLIFrameElement, IframeCanvasProps>(function I
 
   const themeConfig = useThemeColorStore((state) => state.themeConfig);
   const globalTokens = useGlobalTokens();
+  const tree = useRootBlocks();
+  const activeBreakpoints = useActiveBreakpoints();
 
   /**
    * Sull'evento `load` dell'iframe (mai prima), cerca `#canvas-root` nel `contentDocument`.
@@ -236,6 +262,21 @@ const IframeCanvas = forwardRef<HTMLIFrameElement, IframeCanvasProps>(function I
     }
     styleTag.textContent = aggregatedBlockCss;
   }, [contentDoc]);
+
+  // Pipeline 4/4 — CSS dei valori liberi PropKind v2 (commento di testa): ricalcolato a ogni
+  // cambio dell'albero (`generation` non serve qui, `tree` cambia riferimento a ogni mutazione
+  // per lo structural sharing di `block-tree.utils.ts`) o dei breakpoint attivi. Nessun
+  // `data-nonce` (commento di testa, gap CSP dichiarato).
+  useEffect(() => {
+    if (!contentDoc) return;
+    let styleTag = contentDoc.getElementById(CANVAS_CSS_STYLE_TAG_ID) as HTMLStyleElement | null;
+    if (!styleTag) {
+      styleTag = contentDoc.createElement('style');
+      styleTag.id = CANVAS_CSS_STYLE_TAG_ID;
+      contentDoc.head.appendChild(styleTag);
+    }
+    styleTag.textContent = generateCanvasCss(tree, activeBreakpoints);
+  }, [contentDoc, tree, activeBreakpoints]);
 
   return (
     <div className={styles.frameWrapper}>

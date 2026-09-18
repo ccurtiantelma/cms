@@ -17,6 +17,7 @@ import { MigratableBlockNode } from '../../blocks/migration/block-migration.type
 import { BlockTreeValidatorService } from '../../blocks/validator/block-tree-validator.service';
 import { ValidatableBlockNode } from '../../blocks/validator/validatable-node.types';
 import { BlockPropSanitizerService } from '../../common/sanitizer/block-prop-sanitizer.service';
+import { CssTreeSanitizerService } from '../../common/sanitizer/css-tree-sanitizer.service';
 
 /** Slug pubblico della pagina, root (`parentId` null), unico per `locale` (F17-01, "v1.0 Demo Showcase"). */
 const PAGE_SLUG = 'chi-siamo';
@@ -201,7 +202,7 @@ function buildPersistableContentTree(): ContentTree {
     );
   }
 
-  const sanitizer = new BlockPropSanitizerService();
+  const sanitizer = new BlockPropSanitizerService(new CssTreeSanitizerService());
   const sanitized = sanitizer.sanitizeTree(
     migration.blocks as ValidatableBlockNode[],
     DEFAULT_BLOCK_REGISTRY,
