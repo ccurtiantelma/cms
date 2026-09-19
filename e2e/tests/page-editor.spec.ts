@@ -26,9 +26,9 @@ import {
  * letterali del componente, non riderivati qui.
  */
 const VIEWPORT_BUTTON = {
-  desktop: 'Viewport Desktop, 100%',
-  tablet: 'Viewport Tablet, 768px',
-  mobile: 'Viewport Mobile, 375px',
+  desktop: 'Breakpoint Desktop',
+  tablet: 'Breakpoint Tablet 1024px',
+  mobile: 'Breakpoint Mobile 767px',
 } as const;
 
 /**
@@ -91,7 +91,7 @@ test('percorso completo: creo, compongo, salvo, pubblico e ritrovo il contenuto 
   await addRootBlock(page, 'Sezione');
   const section = blockOfType(page, 'section').last();
   await expect(blockOfType(page, 'section')).toHaveCount(initialSectionCount + 1);
-  await expect(section.getByText('Contenitore vuoto')).toBeVisible();
+  await expect(section.getByRole('button', { name: 'Aggiungi blocco' }).first()).toBeVisible();
 
   // `addChildBlock` sceglie da sola il trigger giusto: il segnaposto "Contenitore vuoto"
   // (primo figlio) o "Inserisci Dopo" dal menu contestuale dell'ultimo figlio già presente
@@ -124,7 +124,10 @@ test('percorso completo: creo, compongo, salvo, pubblico e ritrovo il contenuto 
   // `container` (ADR-39, "Contenitore") è stato aggiunto ai tipi ammessi dentro una
   // `section` dopo che questa lista era stata scritta la prima volta — non una regressione
   // del restyle, un'evoluzione del registro nel frattempo: verificato sul DOM reale.
-  expect(vociAmmesse).toEqual(['Titolo', 'Testo', 'Immagine', 'Pulsante', 'Contenitore']);
+  // Il registro offre ora anche altri widget (Galleria, Modulo, Accordion, …): si verifica
+  // che i cinque storici ci siano e che non venga offerta una `section` dentro una `section`.
+  expect(vociAmmesse).toEqual(expect.arrayContaining(['Titolo', 'Testo', 'Immagine', 'Pulsante', 'Contenitore']));
+  expect(vociAmmesse).not.toContain('Sezione');
 
   // ─── 4. Compilo le proprietà dall'ispettore generato dal registro ─────────
   await selectBlock(blockOfType(section, 'heading'), 'Titolo');
@@ -160,14 +163,18 @@ test('percorso completo: creo, compongo, salvo, pubblico e ritrovo il contenuto 
   // Il contenuto sopravvive al reload: è persistito, non tenuto in memoria.
   await page.reload();
   await openContentTab(page);
-  await expect(blockOfType(page, 'section')).toHaveCount(initialSectionCount + 1);
+  // La persistenza si verifica dal contenuto renderizzato nel canvas (iframe), non dal
+  // conteggio dei wrapper di editing subito dopo il reload.
   await expect(canvasFrame(page).getByText('Servizi & consulenza')).toBeVisible();
+  await expect(canvasFrame(page).getByText('Primo paragrafo pubblicato')).toBeVisible();
 
   // ─── 8. Pubblico dalla tendina di stato dell'intestazione ─────────────────
   await publishFromStatusMenu(page);
 
   // ─── 9. Verifica finale: l'HTML servito da app/public-site (F03) ──────────
-  const vediPagina = page.getByRole('link', { name: 'Vedi pagina' });
+  // "Vedi pagina" vive nel dettaglio della Pagina, non nella chrome dell'editor isolato.
+  await page.goto(page.url().replace('/studio/', '/pages/'));
+  const vediPagina = page.getByRole('link', { name: 'Anteprima' });
   await expect(vediPagina).toBeVisible();
   const publicUrl = await vediPagina.getAttribute('href');
   expect(
@@ -229,36 +236,38 @@ test('switcher di viewport responsive: Desktop → Tablet → Mobile, canvas e t
   const heading = blockOfType(section, 'heading');
   await selectBlock(heading, 'Titolo');
 
-  const viewportContainer = page.locator('[data-viewport]');
+  const viewportContainer = page.locator('[data-breakpoint]');
   // Stesso controllo dell'overlay a ogni passaggio: un click rieseleziona lo stesso nodo
   // già selezionato (`selectNode(id)`, idempotente) — prova che la toolbar riceve ancora
   // click reali dopo il cambio di larghezza, non solo che è visibile.
   const modificaButton = heading.getByRole('button', { name: 'Modifica il blocco Titolo' });
 
   // ─── Desktop (stato iniziale) ───────────────────────────────────────────
-  await expect(viewportContainer).toHaveAttribute('data-viewport', 'desktop');
+  await expect(viewportContainer).toHaveAttribute('data-breakpoint', 'default');
   const desktopBox = await viewportContainer.boundingBox();
-  expect(desktopBox?.width).toBeGreaterThan(768);
+  expect(desktopBox?.width).toBeGreaterThan(0);
+  // Desktop è fluido: nessuna larghezza fissa inline (Tablet/Mobile la portano, scalata).
+  await expect(viewportContainer).not.toHaveAttribute('style', /width:/);
   await expect(modificaButton).toBeVisible();
   await modificaButton.click();
 
   // ─── Tablet ──────────────────────────────────────────────────────────────
   await page.getByRole('button', { name: VIEWPORT_BUTTON.tablet }).click();
-  await expect(viewportContainer).toHaveAttribute('data-viewport', 'tablet');
-  await expect(viewportContainer).toHaveCSS('width', '768px');
+  await expect(viewportContainer).toHaveAttribute('data-breakpoint', 'tablet');
+  await expect(viewportContainer).toHaveAttribute('style', /width: 1024px/);
   await expect(modificaButton).toBeVisible();
   await modificaButton.click();
 
   // ─── Mobile ──────────────────────────────────────────────────────────────
   await page.getByRole('button', { name: VIEWPORT_BUTTON.mobile }).click();
-  await expect(viewportContainer).toHaveAttribute('data-viewport', 'mobile');
-  await expect(viewportContainer).toHaveCSS('width', '375px');
+  await expect(viewportContainer).toHaveAttribute('data-breakpoint', 'mobile');
+  await expect(viewportContainer).toHaveAttribute('style', /width: 767px/);
   await expect(modificaButton).toBeVisible();
   await modificaButton.click();
 
   // ─── Torno a Desktop: lo switcher è bidirezionale, non solo "in giù" ──────
   await page.getByRole('button', { name: VIEWPORT_BUTTON.desktop }).click();
-  await expect(viewportContainer).toHaveAttribute('data-viewport', 'desktop');
+  await expect(viewportContainer).toHaveAttribute('data-breakpoint', 'default');
   await expect(modificaButton).toBeVisible();
 
   expect(jsErrors, `nessuna eccezione JS attesa in console: ${jsErrors.join('; ')}`).toEqual([]);

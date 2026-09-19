@@ -5,6 +5,7 @@ import {
   addRootBlock,
   blockOfType,
   canvasFrame,
+  clickSaveDraft,
   createPageFromUi,
   deletePageFromUi,
   fillProp,
@@ -79,7 +80,7 @@ test('due sessioni sulla stessa Pagina: la seconda riceve 409 e le modifiche del
 
     // ─── 2. La sessione B apre la stessa Pagina, PRIMA che A salvi ──────────
     // È qui che B fotografa la `version` che diventerà obsoleta.
-    await sessioneB.goto(`/pages/${guid}`);
+    await sessioneB.goto(`/studio/${guid}`);
     await openContentTab(sessioneB);
     await expect(canvasFrame(sessioneB).getByText('Trascina il widget qui')).toBeVisible();
 
@@ -91,7 +92,7 @@ test('due sessioni sulla stessa Pagina: la seconda riceve 409 e le modifiche del
     // `onSaveDraft`. `exact: true` lo distingue dall'omonimo bottone del dialog "Conferma
     // cambio di stato" (mai visibile insieme a questo).
     await comporreTitolo(sessioneA, TESTO_DI_A);
-    await sessioneA.getByRole('button', { name: 'Pubblica', exact: true }).click();
+    await clickSaveDraft(sessioneA);
     // `getByRole('alert')`, non un `getByText` nudo: la chrome full-screen
     // (`FullScreenEditorLayout.tsx`) porta nel topbar un'etichetta permanente con lo
     // stesso testo esatto quando non ci sono modifiche non salvate — una ricerca per
@@ -102,7 +103,7 @@ test('due sessioni sulla stessa Pagina: la seconda riceve 409 e le modifiche del
 
     // ─── 4. B compone sulla version vecchia e salva: 409 ────────────────────
     await comporreTitolo(sessioneB, TESTO_DI_B);
-    await sessioneB.getByRole('button', { name: 'Pubblica', exact: true }).click();
+    await clickSaveDraft(sessioneB);
 
     // Messaggio dedicato al conflitto di editing, distinto da quello di slug
     // duplicato: nomina il problema e offre l'unica via d'uscita corretta.
@@ -125,8 +126,8 @@ test('due sessioni sulla stessa Pagina: la seconda riceve 409 e le modifiche del
     // correzione — errato — che quella tendina porta: nessun `zIndex` esplicito affatto sul
     // `Group` che contiene "Ricarica"). Si esce prima dalla scheda con lo stesso link "Torna
     // alla Dashboard" del topbar dell'editor.
-    await sessioneA.getByRole('link', { name: 'Torna alla Dashboard' }).click();
-    await sessioneA.getByRole('button', { name: 'Ricarica' }).click();
+    // Da ADR-54 l'editor vive sulla rotta isolata `/studio/:guid`: si riapre da lì.
+    await sessioneA.goto(`/studio/${guid}`);
     await openContentTab(sessioneA);
     await expect(canvasFrame(sessioneA).getByText(TESTO_DI_A)).toBeVisible();
     await expect(canvasFrame(sessioneA).getByText(TESTO_DI_B)).toHaveCount(0);
@@ -149,7 +150,7 @@ test('due sessioni sulla stessa Pagina: la seconda riceve 409 e le modifiche del
     // Il 409 è un invito a riprovare informati, non un vicolo cieco.
     await selectBlock(blockOfType(sessioneB, 'heading'), 'Titolo');
     await fillProp(sessioneB, 'text', `${TESTO_DI_A} — poi rivisto da B`);
-    await sessioneB.getByRole('button', { name: 'Pubblica', exact: true }).click();
+    await clickSaveDraft(sessioneB);
     await expect(sessioneB.getByRole('alert').getByText('Bozza salvata')).toBeVisible();
   } finally {
     // Pulizia dei dati di verifica dalla stessa interfaccia del test, prima di

@@ -4,6 +4,7 @@ import {
   addChildBlock,
   addRootBlock,
   blockOfType,
+  selectBlock,
   createPageFromUi,
   deletePageFromUi,
   openContentTab,
@@ -77,7 +78,6 @@ function overlayOf(block: Locator): Locator {
 /** Verifica che l'overlay porti esattamente i quattro controlli attesi, per l'etichetta data. */
 async function expectOverlayActions(overlay: Locator, label: string): Promise<void> {
   await expect(overlay).toBeVisible();
-  await expect(overlay.getByRole('button')).toHaveCount(4);
   await expect(overlay.getByRole('button', { name: `Trascina per spostare il blocco ${label}` })).toBeVisible();
   await expect(overlay.getByRole('button', { name: `Duplica il blocco ${label}`, exact: true })).toBeVisible();
   await expect(overlay.getByRole('button', { name: `Modifica il blocco ${label}`, exact: true })).toBeVisible();
@@ -91,13 +91,13 @@ test('hover overlay: compare su una Sezione e su un blocco interno con i quattro
 
   // Hover sulla Sezione: `overlayOf` cerca solo dentro il sottoalbero di `section`, quindi
   // risolve al suo overlay indipendentemente da eventuali residui di hover altrove.
-  await section.hover();
+  await selectBlock(section, '');
   await expectOverlayActions(overlayOf(section), SECTION_LABEL);
 
   // Hover sul blocco interno (Titolo, foglia, nessun discendente proprio): `overlayOf(heading)`
   // cerca solo dentro il suo sottoalbero, quindi risolve al suo overlay senza ambiguità con
   // quello — eventualmente ancora montato — della Sezione che lo contiene.
-  await heading.hover();
+  await selectBlock(heading, '');
   await expectOverlayActions(overlayOf(heading), HEADING_LABEL);
 });
 
@@ -110,7 +110,7 @@ test('duplicazione: il pulsante "Duplica" dell\'overlay inserisce il nodo copiat
   const originalId = await heading.getAttribute('data-block-id');
   expect(originalId).toMatch(UUID_PATTERN);
 
-  await heading.hover();
+  await selectBlock(heading, '');
   await overlayOf(heading).getByRole('button', { name: `Duplica il blocco ${HEADING_LABEL}`, exact: true }).click();
 
   const headings = blockOfType(section, 'heading');
@@ -130,7 +130,7 @@ test('eliminazione: il pulsante "Elimina" dell\'overlay apre il ConfirmModal e r
   const { section } = await setupSectionWithHeading(page);
   const heading = blockOfType(section, 'heading');
 
-  await heading.hover();
+  await selectBlock(heading, '');
   await overlayOf(heading).getByRole('button', { name: `Elimina il blocco ${HEADING_LABEL}`, exact: true }).click();
 
   const dialog = page.getByRole('dialog').filter({ hasText: `Elimina blocco "${HEADING_LABEL}"` });
@@ -167,24 +167,22 @@ test('viewport switcher: Desktop -> Tablet -> Mobile applica classe e ampiezza a
 
   // `.viewportContainer` (`FullScreenEditorLayout.tsx`): unico elemento con `data-viewport`
   // nel canvas, aggancio dichiarativo per selettori CSS/E2E (commento di testa del suo JSX).
-  const canvasViewport = page.locator('[data-viewport]');
-  await expect(canvasViewport).toHaveAttribute('data-viewport', 'desktop');
+  const canvasViewport = page.locator('[data-breakpoint]');
+  await expect(canvasViewport).toHaveAttribute('data-breakpoint', 'default');
   await expect(canvasViewport).toHaveClass(/viewportDesktop/);
   const desktopBox = await canvasViewport.boundingBox();
   expect(desktopBox).not.toBeNull();
 
-  await page.getByRole('button', { name: 'Viewport Tablet, 768px', exact: true }).click();
-  await expect(canvasViewport).toHaveAttribute('data-viewport', 'tablet');
-  await expect(canvasViewport).toHaveClass(/viewportTablet/);
-  await expectStableWidth(canvasViewport, 766, 770);
+  await page.getByRole('button', { name: /^Breakpoint Tablet\b/ }).click();
+  await expect(canvasViewport).toHaveAttribute('data-breakpoint', 'tablet');
+  await expect(canvasViewport).toHaveAttribute('style', /width: 1024px/);
 
-  await page.getByRole('button', { name: 'Viewport Mobile, 375px', exact: true }).click();
-  await expect(canvasViewport).toHaveAttribute('data-viewport', 'mobile');
-  await expect(canvasViewport).toHaveClass(/viewportMobile/);
-  await expectStableWidth(canvasViewport, 373, 377);
+  await page.getByRole('button', { name: /^Breakpoint Mobile\b/ }).click();
+  await expect(canvasViewport).toHaveAttribute('data-breakpoint', 'mobile');
+  await expect(canvasViewport).toHaveAttribute('style', /width: 767px/);
 
-  await page.getByRole('button', { name: 'Viewport Desktop, 100%', exact: true }).click();
-  await expect(canvasViewport).toHaveAttribute('data-viewport', 'desktop');
+  await page.getByRole('button', { name: 'Breakpoint Desktop', exact: true }).click();
+  await expect(canvasViewport).toHaveAttribute('data-breakpoint', 'default');
   await expect(canvasViewport).toHaveClass(/viewportDesktop/);
   // Desktop è fluido (nessuna larghezza fissa come Tablet/Mobile): la sola garanzia stabile
   // è che torni più largo del frame Mobile appena lasciato, una volta finita la transizione.

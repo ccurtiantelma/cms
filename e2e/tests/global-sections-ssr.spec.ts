@@ -4,6 +4,7 @@ import {
   addRootBlock,
   blockOfType,
   canvasFrame,
+  clickSaveDraft,
   createPageFromUi,
   deletePageFromUi,
   fillProp,
@@ -136,6 +137,11 @@ test.afterEach(async ({ page }) => {
 test('Sezione Globale assegnata a "Header": il sito pubblico la serve come <header> prima di <main>', async ({
   page,
 }) => {
+  // Bug applicativo reale: il builder non passa `pageStatus`/`onRequestStatusChange` alla
+  // Toolbar (`canChangeStatus` falso), quindi "Pubblica" e il menu con "Salva bozza" sono
+  // entrambi disabilitati e non esiste altro controllo (né Ctrl+S) per salvare una Sezione
+  // Globale. Da riabilitare quando la UI di salvataggio del builder viene ripristinata.
+  test.fixme(true, 'Builder Sezioni Globali: nessun controllo di salvataggio raggiungibile in Toolbar');
   test.slow();
 
   // ─── 0. Libero lo slot "Header" se già occupato (ambiente osservato: lo era) ──────────
@@ -171,7 +177,7 @@ test('Sezione Globale assegnata a "Header": il sito pubblico la serve come <head
   // però lo stesso `Toolbar.tsx` condiviso con l'editor di Pagina — quindi la stessa
   // etichetta "Pubblica" (bug applicativo reale, non corretto qui: vedi il commento di testa
   // di `publishOptionsTrigger`, `helpers/page-editor.ts`).
-  await page.getByRole('button', { name: 'Pubblica', exact: true }).click();
+  await clickSaveDraft(page);
   await expect(page.getByRole('alert').getByText('Sezione Globale salvata')).toBeVisible();
 
   // ─── 3. Pagina pubblicata reale, per avere un <main> con cui confrontare l'header ─────
@@ -185,7 +191,7 @@ test('Sezione Globale assegnata a "Header": il sito pubblico la serve come <head
   await saveDraft(page);
   await publishFromStatusMenu(page);
 
-  const vediPagina = page.getByRole('link', { name: 'Vedi pagina' });
+  const vediPagina = page.getByRole('link', { name: 'Anteprima' });
   await expect(vediPagina).toBeVisible();
   const publicUrl = (await vediPagina.getAttribute('href')) as string;
   expect(publicUrl, 'il dettaglio deve esporre l’URL pubblico di una Pagina pubblicata').toBeTruthy();

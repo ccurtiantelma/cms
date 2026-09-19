@@ -76,25 +76,14 @@ async function dragWidgetTileToZone(page: Page, tileLabel: string, targetZone: L
 }
 
 /**
- * Le quattro prop di direzione/allineamento flex di `container` (`flexDirection`,
- * `justifyContent`, `alignItems`, `wrap`) sono un Mantine `SegmentedControl`
- * (`inspector/PropField.tsx`, `CONTAINER_FLEX_SEGMENTED_PROPS`, ADR-39 § "Conseguenza"),
- * **non** un `Select` come le altre prop `enum` dell'ispettore — `selectProp`
- * (`helpers/page-editor.ts`) presuppone un `role="textbox"` più un `role="option"`
- * flottante, che qui non esiste: il valore corrente è un `role="radiogroup"` di `<input
- * type="radio">` etichettati (Mantine forza `role: "radiogroup"` sul contenitore). Il
- * `<label>` (etichetta visibile del valore, es. `"row"`) è fratello del `Text` dell'etichetta
- * del campo (es. `"Direzione"`) dentro lo stesso `<div>`: da quel `Text` si risale al
- * `radiogroup` che lo segue, invece di indovinare un testid assente.
+ * Le prop flex di `container` (`flexDirection`, `justifyContent`, …) sono oggi dei normali
+ * `Select` Mantine dell'ispettore (non più un `SegmentedControl`): si apre il campo per
+ * etichetta e si sceglie l'opzione, come fa `selectProp` (`helpers/page-editor.ts`) — qui
+ * con l'etichetta visibile del campo invece del nome tecnico della prop.
  */
-function segmentedFieldGroup(page: Page, fieldLabel: string): Locator {
-  return page
-    .getByText(fieldLabel, { exact: true })
-    .locator('xpath=following-sibling::*[@role="radiogroup"][1]');
-}
-
-async function selectSegmented(page: Page, fieldLabel: string, optionToken: string): Promise<void> {
-  await segmentedFieldGroup(page, fieldLabel).getByText(optionToken, { exact: true }).click();
+async function selectFlexOption(page: Page, fieldLabel: string, optionToken: string): Promise<void> {
+  await page.getByLabel(new RegExp(`— ${fieldLabel}$`)).first().click();
+  await page.getByRole('option', { name: optionToken, exact: true }).click();
 }
 
 test('drag & drop del widget Contenitore nel canvas e impostazione di flexDirection/justifyContent', async ({
@@ -142,8 +131,8 @@ test('drag & drop del widget Contenitore nel canvas e impostazione di flexDirect
   if (await styleTab.isVisible().catch(() => false)) {
     await styleTab.click();
   }
-  await selectSegmented(page, 'Direzione', 'row');
-  await selectSegmented(page, 'Allineamento orizzontale', 'space-between');
+  await selectFlexOption(page, 'Direzione', 'row');
+  await selectFlexOption(page, 'Allineamento orizzontale', 'space-between');
 
   // ─── 4. Verifica sul canvas: nessuno stile inline, solo classi CSS Module
   // (`Container.tsx`, `resolveResponsiveClassNames(tokenStyles, 'flexDirection', ...)`,
@@ -155,11 +144,12 @@ test('drag & drop del widget Contenitore nel canvas e impostazione di flexDirect
   // sorgente): individuato risalendo dal testo del segnaposto "Contenitore vuoto", unico
   // dentro quel `<div>` finché non ha figli — invariato per l'intera durata di questo test.
   // ────────────────────────────────────────────────────────────────────────────────────────
-  const flexDiv = container.getByText('Contenitore vuoto — trascina qui un blocco').locator('xpath=../..');
-  const className = await flexDiv.getAttribute('class');
-  expect(className).toBeTruthy();
-  expect(className).toMatch(/flexDirection_default_row/);
-  expect(className).toMatch(/justifyContent_default_space-between/);
+  // Il segnaposto testuale "Contenitore vuoto" non esiste più: si individua il `<div>` flex
+  // dalla classe `_container_*` di `Container.tsx` (i token `flexDirection_*` non sono più
+  // classi del nodo: l'effetto si verifica sullo stile calcolato, sotto).
+  const flexDiv = container
+    .locator('div[class*="_container_"]:not([class*="containerSelect"]):not([class*="containerDropZone"])')
+    .first();
   await expect(flexDiv).not.toHaveAttribute('style', /flex-direction|justify-content/);
 
   // Il canvas applica davvero il flex risultante: computed style, non solo la classe.

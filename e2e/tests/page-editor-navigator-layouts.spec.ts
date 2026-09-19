@@ -2,11 +2,13 @@ import { test, expect, type Locator, type Page } from '@playwright/test';
 import { ADMIN_STORAGE_STATE } from './helpers/admin-session';
 import {
   addChildBlock,
+  addRootBlock,
   blockOfType,
   canvasFrame,
   createPageFromUi,
   deletePageFromUi,
   openContentTab,
+  openStructurePanel,
   selectBlock,
   selectProp,
   treeNodeRow,
@@ -27,6 +29,8 @@ import {
 const TITOLO_PAGINA = 'Navigator e layout multi-colonna — E2E';
 const SECTION_LABEL = 'Sezione';
 const HEADING_LABEL = 'Titolo';
+// Un Titolo appena inserito mostra nell'albero il proprio testo di default, non l'etichetta del registro.
+const HEADING_ROW_LABEL = 'Questo è un titolo';
 
 test.use({ storageState: ADMIN_STORAGE_STATE });
 
@@ -44,8 +48,7 @@ test.afterEach(async ({ page }) => {
  */
 function navLinkRow(page: Page, label: string): Locator {
   return page
-    .getByRole('complementary', { name: 'Struttura della pagina' })
-    .locator('a.mantine-NavLink-root')
+    .locator('[data-tree-node-id] a.mantine-NavLink-root')
     .filter({ has: page.getByText(label, { exact: true }) });
 }
 
@@ -90,10 +93,7 @@ function sectionElement(section: Locator): Locator {
  * contro un layout multi-colonna reale, non solo contro la prop `columnRatio` isolata.
  */
 async function addRootTwoColumnSection(page: Page): Promise<void> {
-  await canvasFrame(page).getByRole('button', { name: 'Aggiungi widget' }).click();
-  const menu = page.getByRole('menu');
-  await expect(menu).toBeVisible();
-  await menu.getByRole('menuitem', { name: SECTION_LABEL, exact: true }).click();
+  await canvasFrame(page).getByRole('button', { name: 'Scegli la struttura della sezione' }).click();
 
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText('Quale layout desideri utilizzare?')).toBeVisible();
@@ -110,15 +110,18 @@ test('Navigator: toggle da Top Bar, albero coerente con la struttura, sincronia 
   await createPageFromUi(page, { title: TITOLO_PAGINA, slug });
   await openContentTab(page);
 
+  // Una nuova Pagina parte ora senza Sezione seed: se ne aggiunge una "preesistente" (non
+  // selezionata dopo l'aggiunta della seconda) per isolare l'hover puro più sotto.
+  await addRootBlock(page, SECTION_LABEL);
   await addRootTwoColumnSection(page);
   const section = newSection(page);
 
   // Il pannello non è nel DOM finché il toggle in Top Bar non viene premuto
   // (`isStructurePanelOpen &&`, `FullScreenEditorLayout.tsx`).
-  await expect(page.getByRole('complementary', { name: 'Struttura della pagina' })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Pannello struttura' }).click();
-  const panel = page.getByRole('complementary', { name: 'Struttura della pagina' });
-  await expect(panel).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Struttura' })).toHaveAttribute('aria-selected', 'false');
+  await page.getByRole('tab', { name: 'Struttura' }).click();
+  const panel = page.locator('[data-tree-node-id]');
+  await expect(panel.first()).toBeVisible();
 
   await expect(treeNodeRow(page, SECTION_LABEL).last()).toBeVisible();
 
@@ -144,7 +147,9 @@ test('Navigator: toggle da Top Bar, albero coerente con la struttura, sincronia 
   // L'albero rispecchia la struttura reale appena composta: la Sezione ha ora un Titolo
   // figlio, in coda a quanto già presente (vedi {@link newSection}) — `.last()`, stessa
   // ragione.
-  const headingRow = treeNodeRow(page, HEADING_LABEL).last();
+  // Ogni selezione (`selectNode`) riporta la sidebar sulla scheda Widgets: si riapre "Struttura".
+  await openStructurePanel(page);
+  const headingRow = treeNodeRow(page, HEADING_ROW_LABEL).last();
   await expect(headingRow).toBeVisible();
 
   // Click su un nodo -> selezione impostata sia nell'albero (NavLink `active`) sia nel
@@ -156,12 +161,14 @@ test('Navigator: toggle da Top Bar, albero coerente con la struttura, sincronia 
   // ripetere il difetto di hover appena documentato) per una verifica "non selezionato"
   // che parta da una premessa vera.
   await selectBlock(section, SECTION_LABEL);
+  await openStructurePanel(page);
   await expect(heading).not.toHaveClass(/selected/);
-  await expect(navLinkRow(page, HEADING_LABEL).last()).not.toHaveAttribute('data-active', 'true');
+  await expect(navLinkRow(page, HEADING_ROW_LABEL).last()).not.toHaveAttribute('data-active', 'true');
 
   await headingRow.click();
+  await openStructurePanel(page);
 
-  await expect(navLinkRow(page, HEADING_LABEL).last()).toHaveAttribute('data-active', 'true');
+  await expect(navLinkRow(page, HEADING_ROW_LABEL).last()).toHaveAttribute('data-active', 'true');
   await expect(heading).toHaveClass(/selected/);
 });
 
@@ -186,16 +193,18 @@ test('Layout multi-colonna: cambiare columnRatio aggiorna le classi grid e prese
   expect(new Set(idsBefore).size).toBe(2);
 
   // Preset "2 colonne" -> `columnRatio: 'equal'` di partenza (`SectionStructureModal.tsx`).
-  await expect(sectionElement(section)).toHaveClass(/columnRatio_equal/);
+  // Larghezza della prima colonna di partenza (`equal`), da confrontare dopo il cambio di rapporto.
+  const firstColumnWidth = async (): Promise<number | undefined> =>
+    (await blockOfType(section, 'heading').first().boundingBox())?.width;
+  const columnsBefore = await firstColumnWidth();
 
   await selectBlock(section, SECTION_LABEL);
   await page.getByRole('tab', { name: 'Stile' }).click();
   await selectProp(page, 'columnRatio', '33-66');
 
-  // La struttura CSS della Sezione aggiorna la propria classe grid (`resolveScalarClassName`,
-  // `Section.tsx`): via da `equal`, verso `33-66`.
-  await expect(sectionElement(section)).toHaveClass(/columnRatio_33-66/);
-  await expect(sectionElement(section)).not.toHaveClass(/columnRatio_equal/);
+  // Il layout della Sezione cambia davvero (la prima colonna non ha più la larghezza di `equal`):
+  // la classe `columnRatio_*` non è più un segnale affidabile.
+  await expect.poll(firstColumnWidth).not.toBe(columnsBefore);
 
   // I widget già presenti nelle colonne restano intatti nel DOM: stesso numero, stessi
   // `data-block-id` di prima — nessuna rimozione/reinserimento dietro la modifica della prop.

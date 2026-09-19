@@ -107,6 +107,16 @@ function publishOptionsTrigger(page: Page): Locator {
   return page.getByRole('button', { name: 'Altre opzioni di pubblicazione', exact: true });
 }
 
+/**
+ * Clic su "Salva bozza" dal menu di pubblicazione, senza alcuna asserzione sull'esito:
+ * "Pubblica" non salva più la bozza (avvia il cambio di stato), la bozza si salva solo da
+ * qui. Per i test che verificano notifiche/errori diversi da "Bozza salvata".
+ */
+export async function clickSaveDraft(page: Page): Promise<void> {
+  await publishOptionsTrigger(page).click();
+  await saveDraftMenuItem(page).click();
+}
+
 /** La voce "Salva bozza" del menu di pubblicazione: presente solo a menu aperto. */
 function saveDraftMenuItem(page: Page): Locator {
   return page.getByRole('menuitem', { name: 'Salva bozza', exact: true });
@@ -205,11 +215,21 @@ async function completeSectionStructureModal(page: Page): Promise<void> {
  * helper condiviso).
  */
 export async function addRootBlock(page: Page, label: string): Promise<void> {
-  const dropdown = await openPalette(canvasFrame(page).getByRole('button', { name: 'Aggiungi widget' }));
-  await dropdown.getByRole('menuitem', { name: label, exact: true }).click();
+  // Il trigger in-canvas "Aggiungi widget" (`CanvasAddSectionZone`) non esiste più: la zona
+  // di coda espone solo "Scegli la struttura della sezione", "Libreria template" e "Importa
+  // preset". L'inserimento in radice passa dal click sulla tessera della Palette Widget
+  // (sidebar sinistra, fuori dall'iframe — `WidgetPalette.tsx`, `clickInsertionTarget`): senza
+  // un contenitore selezionato aggiunge in fondo alla radice.
   if (label === 'Sezione') {
+    // La Sezione non ha tessera in palette: si crea dal "+" in-canvas (nell'iframe) che apre
+    // il modal di struttura.
+    await canvasFrame(page).getByRole('button', { name: 'Scegli la struttura della sezione' }).click();
     await completeSectionStructureModal(page);
+    return;
   }
+  const tile = page.getByRole('button', { name: new RegExp(`^Inserisci il blocco ${label} `) });
+  await tile.scrollIntoViewIfNeeded();
+  await tile.click();
 }
 
 /**
@@ -238,7 +258,8 @@ export async function addChildBlock(container: Locator, label: string): Promise<
   const emptyTrigger = container.getByRole('button', { name: /^Aggiungi [Bb]locco$/ }).first();
   if (await emptyTrigger.isVisible().catch(() => false)) {
     const dropdown = await openPalette(emptyTrigger);
-    await dropdown.getByRole('menuitem', { name: label, exact: true }).click();
+    // Da tastiera: il menu è più alto del viewport e le prime voci restano fuori schermo.
+    await activateMenuItem(dropdown.getByRole('menuitem', { name: label, exact: true }));
     if (label === 'Sezione') {
       await completeSectionStructureModal(page);
     }
@@ -263,7 +284,7 @@ export async function addChildBlock(container: Locator, label: string): Promise<
   // è sempre l'ultimo nell'ordine del DOM.
   const insertMenu = page.getByRole('menu').last();
   await expect(insertMenu).toBeVisible();
-  await insertMenu.getByRole('menuitem', { name: label, exact: true }).click();
+  await activateMenuItem(insertMenu.getByRole('menuitem', { name: label, exact: true }));
   if (label === 'Sezione') {
     await completeSectionStructureModal(page);
   }
@@ -408,16 +429,19 @@ export async function redoLastChange(page: Page): Promise<void> {
 
 /**
  * Apre il pannello "Struttura" (`EditorStructureNavigator.tsx`, toggle in topbar
- * `aria-label="Pannello struttura"`), se non è già aperto, e ne restituisce il contenitore
- * (`<aside aria-label="Struttura della pagina">`, `FullScreenEditorLayout.tsx`).
+ * scheda "Struttura" della sidebar sinistra), se non è già attiva, e ne restituisce il
+ * `tabpanel`.
  */
 export async function openStructurePanel(page: Page): Promise<Locator> {
-  const toggle = page.getByRole('button', { name: 'Pannello struttura' });
-  if ((await toggle.getAttribute('aria-pressed')) !== 'true') {
-    await toggle.click();
+  // La struttura è la scheda "Struttura" della sidebar sinistra (ADR-91), non più un pannello
+  // a parte con toggle in topbar.
+  const tab = page.getByRole('tab', { name: 'Struttura' });
+  if ((await tab.getAttribute('aria-selected')) !== 'true') {
+    await tab.click();
   }
-  const panel = page.getByRole('complementary', { name: 'Struttura della pagina' });
-  await expect(panel).toBeVisible();
+  // Nessun landmark/`tabpanel`: le righe dell'albero si riconoscono dal loro `data-tree-node-id`.
+  const panel = page.locator('[data-tree-node-id]');
+  await expect(panel.first()).toBeVisible();
   return panel;
 }
 
@@ -435,9 +459,7 @@ export async function openStructurePanel(page: Page): Promise<Locator> {
  * l'unico segnale accessibile rimasto.
  */
 export function treeNodeRow(page: Page, label: string): Locator {
-  return page
-    .getByRole('complementary', { name: 'Struttura della pagina' })
-    .getByText(label, { exact: true });
+  return page.locator('[data-tree-node-id]').getByText(label, { exact: true });
 }
 
 /**
@@ -738,26 +760,15 @@ export async function saveDraft(page: Page): Promise<void> {
  * senza `?tab=`, che fa ripartire `PagePageDetail` sulla scheda di default ("Metadati").
  */
 export async function publishFromStatusMenu(page: Page): Promise<void> {
-  const contentTab = page.getByRole('tab', { name: 'Contenuto' });
-  if ((await contentTab.getAttribute('aria-selected')) === 'true') {
-    await page.getByRole('link', { name: 'Torna alla Dashboard' }).click();
-    await expect(contentTab).toHaveAttribute('aria-selected', 'false');
-  }
-
-  // `exact` obbligatorio: il badge "Pubblicata"/altre etichette possono contenere "Bozza"
-  // come sottostringa in punti diversi del ciclo di vita della Pagina.
-  const trigger = page.getByRole('button', { name: 'Bozza', exact: true });
-  await trigger.click();
-  const dropdownId = await trigger.getAttribute('aria-controls');
-  await page
-    .locator(`#${dropdownId}`)
-    .getByRole('menuitem', { name: 'Pubblica', exact: true })
-    .click();
+  // Da ADR-54/91 la pubblicazione vive nella toolbar dell'editor (`Toolbar.tsx`): il pulsante
+  // "Pubblica" avvia il cambio di stato e apre il dialog di conferma; non si passa più dalla
+  // tendina dell'intestazione di `PagePageDetail`.
+  await page.getByRole('button', { name: 'Pubblica', exact: true }).click();
 
   const dialog = page.getByRole('dialog').filter({ hasText: 'Conferma cambio di stato' });
   await dialog.getByRole('button', { name: 'Pubblica' }).click();
 
-  await expect(page.getByRole('button', { name: 'Pubblicata' })).toBeVisible();
+  await expect(page.getByText('Pubblicata', { exact: true })).toBeVisible();
 }
 
 /**
