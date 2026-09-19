@@ -5,6 +5,7 @@ import {
   addChildBlock,
   addRootBlock,
   blockOfType,
+  canvasFrame,
   createPageFromUi,
   deleteBlock,
   deletePageFromUi,
@@ -78,7 +79,7 @@ test('percorso completo: creo, compongo, salvo, pubblico e ritrovo il contenuto 
 
   // ─── 2. Apro l'editor: è la scheda "Contenuto", non una rotta a parte ─────
   await openContentTab(page);
-  await expect(page.getByText('Trascina il widget qui')).toBeVisible();
+  await expect(canvasFrame(page).getByText('Trascina il widget qui')).toBeVisible();
 
   // ─── 3. Aggiungo una section in radice, con tre figli ─────────────────────
   // La Pagina appena creata non parte da un canvas vuoto: il `templateSlug` di default
@@ -160,7 +161,7 @@ test('percorso completo: creo, compongo, salvo, pubblico e ritrovo il contenuto 
   await page.reload();
   await openContentTab(page);
   await expect(blockOfType(page, 'section')).toHaveCount(initialSectionCount + 1);
-  await expect(page.getByText('Servizi & consulenza')).toBeVisible();
+  await expect(canvasFrame(page).getByText('Servizi & consulenza')).toBeVisible();
 
   // ─── 8. Pubblico dalla tendina di stato dell'intestazione ─────────────────
   await publishFromStatusMenu(page);

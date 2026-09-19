@@ -206,7 +206,7 @@ describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
     // `ADR-81-migrazione-propkind-v1-v2.md` § "Decisione" punto 2 in `color: colorRef` e
     // `typography: typography` (un solo campo composito, non tre etichette separate).
     expect(screen.getByText('Colore testo')).toBeInTheDocument();
-    expect(screen.getByText('Tipografia')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tipografia' })).toBeInTheDocument();
   });
 
   it('modificare il controllo desktop di una prop responsive lascia intatti tablet e mobile', async () => {
@@ -781,7 +781,7 @@ describe('PropertyInspector — sezioni Accordion stile Elementor', () => {
     // Il nome dell'intestazione Accordion (`Accordion.Control`, un `button`) coincide col
     // nome della sezione — `getByRole('button', ...)` la distingue dall'etichetta di
     // gruppo omonima dentro `PropField` (es. il "Bordo" del controllo composito stesso).
-    expect(screen.getByRole('button', { name: 'Tipografia & Colori' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tipografia' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Bordo' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ombra' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Spaziatura' })).toBeInTheDocument();
@@ -1294,9 +1294,11 @@ describe('PropertyInspector — integrazione PropKind v2 (Sub-Task S2.3)', () =>
     );
 
     await user.click(screen.getByRole('tab', { name: 'Stile' }));
-    const weightSelect = screen.getByRole('textbox', { name: 'Tipografia — Spessore' });
-    await user.click(weightSelect);
-    await user.click(screen.getByRole('option', { name: '700' }));
+    await user.click(
+      within(screen.getByRole('radiogroup', { name: 'Tipografia — Peso' })).getByRole('radio', {
+        name: '700',
+      }),
+    );
 
     expect(propsInStore('h-typo').typography).toEqual({
       normal: {
@@ -1339,11 +1341,10 @@ describe('PropertyInspector — integrazione PropKind v2 (Sub-Task S2.3)', () =>
   /**
    * `container` dichiara più prop `stateful` sulla scheda Stile (`color`/`typography` non ci
    * sono su `container`, ma `border`/`shadow`/`background`/`transform`/`filter` sì): ogni
-   * campo porta il **proprio** `StateSwitcher` indipendente (nessuna chrome condivisa, vedi
-   * il commento di testa di `StateSwitcher.tsx`), quindi più di un radio "Hover" compare
-   * insieme nella stessa scheda — questi due test isolano quello di `BorderField` scendendo
-   * dal suo `Select` univoco (`Bordo — Stile`) al proprio contenitore (`Stack` radice del
-   * componente, mai condiviso con `ShadowField`), invece di interrogare l'intera pagina.
+   * campo non ha più un proprio `StateSwitcher`: c'è un unico switcher Normal/Hover/Focus in
+   * testa alla scheda Stile (`EditingStateContext`, `StateSwitcher.tsx`) che governa tutti i
+   * campi stateful. `borderFieldContainer` isola comunque `BorderField` dal suo `Select`
+   * univoco (`Bordo — Stile`) per verificare che non ne monti uno proprio.
    */
   function borderFieldContainer(): HTMLElement {
     const styleSelect = screen.getByRole('textbox', { name: 'Bordo — Stile' });
@@ -1354,14 +1355,14 @@ describe('PropertyInspector — integrazione PropKind v2 (Sub-Task S2.3)', () =>
     return stack;
   }
 
-  it('container.border (stateful, ADR-82): lo StateSwitcher Normal/Hover compare e scrive nel ramo hover', async () => {
+  it('container.border (stateful, ADR-82): lo StateSwitcher di pannello Normal/Hover/Focus governa il campo e scrive nel ramo hover', async () => {
     const user = userEvent.setup();
     renderInspectorWith(node('cont-border', 'container', {}));
     await user.click(screen.getByRole('tab', { name: 'Stile' }));
     const borderField = borderFieldContainer();
-    expect(within(borderField).getByRole('radio', { name: 'Hover' })).toBeInTheDocument();
+    expect(within(borderField).queryByRole('radio', { name: 'Hover' })).not.toBeInTheDocument();
 
-    await user.click(within(borderField).getByRole('radio', { name: 'Hover' }));
+    await user.click(screen.getByRole('radio', { name: 'Hover' }));
     const styleSelect = screen.getByRole('textbox', { name: 'Bordo — Stile' });
     await user.click(styleSelect);
     await user.click(screen.getByRole('option', { name: 'dashed' }));

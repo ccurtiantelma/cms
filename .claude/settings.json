@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"console.log\\(require\\('vitest/package.json'\\).version\\)\")",
+      "Bash(cat > *)"
+    ],
+    "additionalDirectories": [
+      "/var/www/cms"
+    ]
+  }
+}

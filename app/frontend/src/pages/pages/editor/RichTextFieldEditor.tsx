@@ -23,12 +23,10 @@
  */
 import { useEffect, useState } from 'react';
 import { ActionIcon, Group, Stack, Tabs, Text, Textarea, Tooltip } from '@mantine/core';
-import { Link, RichTextEditor } from '@mantine/tiptap';
+import { RichTextEditor } from '@mantine/tiptap';
 import { useEditor } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
-import TextAlign from '@tiptap/extension-text-align';
 import { IconMaximize, IconMinimize } from '@tabler/icons-react';
+import { richTextEditorExtensions } from './rich-text-extensions';
 import styles from './RichTextFieldEditor.module.css';
 
 interface RichTextFieldEditorProps {
@@ -44,31 +42,6 @@ interface RichTextFieldEditorProps {
 }
 
 type EditorTab = 'visual' | 'code';
-
-/**
- * Estensioni Tiptap del profilo `basic` — esportate (non inline in `useEditor`) perché il test
- * di ADR-26 § 3 deve verificare esattamente questo insieme, non una copia che potrebbe
- * divergere. `@tiptap/starter-kit` v2 non registra `Link` (a differenza di v3): nessun
- * conflitto con quello di `@mantine/tiptap` qui sotto, che resta l'unico registrato.
- * heading/blockquote/code/codeBlock/horizontalRule disattivati: nessuno dei quattro tag che
- * produrrebbero è nell'allowlist del profilo `basic` (block-sanitize-profiles.config.ts) —
- * ADR-26 § 3 impone che sia la configurazione di StarterKit, non la sola toolbar, a impedirne
- * la produzione.
- */
-export const richTextEditorExtensions = [
-  StarterKit.configure({
-    heading: false,
-    blockquote: false,
-    code: false,
-    codeBlock: false,
-    horizontalRule: false,
-  }),
-  Link,
-  Underline,
-  // Solo `paragraph`: `heading` è disattivato sopra, indicarlo qui produrrebbe un riferimento
-  // a un'estensione di nodo inesistente.
-  TextAlign.configure({ types: ['paragraph'] }),
-];
 
 /** Un documento Tiptap vuoto normalizza a `<p></p>`, mai a stringa vuota — vedi `switchToCode`. */
 function isEmptyHtml(html: string): boolean {

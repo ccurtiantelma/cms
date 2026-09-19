@@ -88,6 +88,32 @@ describe('ColorField', () => {
     });
   });
 
+  it('cambiare stato in Focus scrive nel ramo focus preservando normal e hover intatti (ADR-75)', async () => {
+    const user = userEvent.setup();
+    const onSetAndCommit = vi.fn();
+    const currentValue = {
+      normal: { default: '#222222' },
+      hover: { default: '#333333' },
+    };
+    renderWithProviders(
+      <ColorField
+        prop={STATEFUL_RESPONSIVE_PROP}
+        value={currentValue}
+        propsMeta={undefined}
+        onSetAndCommit={onSetAndCommit}
+      />,
+    );
+
+    await user.click(screen.getByRole('radio', { name: 'Focus' }));
+    await user.click(screen.getByRole('button', { name: 'Colore di sistema: Secondario' }));
+
+    expect(onSetAndCommit).toHaveBeenCalledWith({
+      normal: { default: '#222222' },
+      hover: { default: '#333333' },
+      focus: { default: { ref: 'secondary' } },
+    });
+  });
+
   it('senza `prop.stateful` non mostra lo StateSwitcher Normal/Hover', () => {
     const onSetAndCommit = vi.fn();
     renderWithProviders(

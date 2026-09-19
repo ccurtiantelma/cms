@@ -79,11 +79,11 @@ beforeEach(() => {
 });
 
 describe('BlockEditorPanel — E01', () => {
-  it('mostra la scheda "Pagina" nella sidebar, accanto a "Widgets" e "Proprietà"', () => {
+  it('mostra la scheda "Pagina" nella sidebar, accanto a "Widgets" (non più "Proprietà", ADR-91: colonna destra fissa)', () => {
     renderPanel();
 
     expect(screen.getByRole('tab', { name: 'Widgets' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Proprietà' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Proprietà' })).not.toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Pagina' })).toBeInTheDocument();
   });
 

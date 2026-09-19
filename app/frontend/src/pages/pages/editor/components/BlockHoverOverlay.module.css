@@ -1,12 +1,11 @@
 /*
   Toolbar di selezione (BlockHoverOverlay.tsx): montata **solo** quando il blocco è
-  selezionato (mai sul solo hover, che mostra invece il badge nome in alto a sinistra,
-  vedi `.hoverBadge` in EditorBlockWrapper.module.css) — ancorata in alto **al centro**
-  del blocco (RE-2, restyle Elementor Pro, richiesta esplicita del task: "maniglie
-  contestuali posizionate in angolo" era il deficit da correggere), non più in un angolo.
-  `left: 50%; transform: translateX(-50%)` centra la Group indipendentemente dalla sua
-  larghezza reale (variabile: cresce con i controlli opzionali `onSaveAsPreset`/
-  `onConvertToGlobalSection`/`onExportJson`), senza bisogno di conoscerla in anticipo.
+  selezionato (mai sul solo hover, che mostra invece il badge nome separato, vedi
+  `.hoverBadge` in EditorBlockWrapper.module.css) — ancorata in alto **a sinistra** del
+  blocco (ADR-92, supera la centratura di RE-2 solo su questo punto geometrico: il resto,
+  sfondo/colore icone di T-editor-refinement, resta invariato).
+  `left: 0` allinea la Group al bordo sinistro del blocco, stessa `transform` verticale di
+  prima (`translateY(-100%)`, appoggiata sopra senza sporgere dentro).
   `position: absolute` dentro `.wrapper` (già `position: relative`): non sposta mai il
   layout del contenuto, stesso principio di ogni altro overlay di chrome in questo file.
   Il colore di sfondo **non legge più** `var(--block-level-color)`: sezioni e contenitori
@@ -18,14 +17,8 @@
 .overlay {
   position: absolute;
   top: 0;
-  left: 50%;
-  /* Ancorata esattamente al centro del bordo superiore del blocco, appoggiata sopra senza
-     sporgere dentro (T-editor-refinement, pixel-perfect Elementor): `translate(-50%,-100%)`
-     al posto del precedente `top:-14px` + `translateX(-50%)`, stesso centraggio orizzontale
-     indipendente dalla larghezza reale della barra, solo l'offset verticale cambia forma
-     (percentuale sulla propria altezza invece di un px fisso) per restare sempre a filo del
-     bordo qualunque sia l'altezza risultante da `padding`/`gap` sotto. */
-  transform: translate(-50%, -100%);
+  left: 0;
+  transform: translateY(-100%);
   z-index: 20;
   display: inline-flex;
   align-items: center;
@@ -38,6 +31,14 @@
   border: 0;
   box-shadow: none;
   pointer-events: auto;
+}
+
+/* Etichetta nome blocco (ADR-92), primo elemento della barra — stesso colore icone nero
+   #000000 di `.overlayButton` sotto, coerenza visiva sullo sfondo azzurro/verde traslucido. */
+.overlayLabel {
+  color: #000000;
+  white-space: nowrap;
+  padding: 0 2px;
 }
 
 .sectionOverlay {
@@ -53,11 +54,11 @@
   superiore del blocco è troppo vicino al confine scrollabile reale del canvas
   (`overflow-y: auto`, tipicamente il primo blocco appena sotto la Topbar), la toolbar che
   di norma sporge sopra il blocco finirebbe tagliata da quello scroll — qui si riancora
-  dentro il margine superiore del blocco stesso, `left`/`transform` invariati (resta
-  centrata, solo il `top` cambia, stesso principio di `.overlay` sopra).
+  dentro il margine superiore del blocco stesso, `left` invariato (resta a sinistra, solo
+  il `top` effettivo cambia via `transform`, stesso principio di `.overlay` sopra).
 */
 .overlayInside {
-  transform: translate(-50%, 4px);
+  transform: translateY(4px);
 }
 
 /*

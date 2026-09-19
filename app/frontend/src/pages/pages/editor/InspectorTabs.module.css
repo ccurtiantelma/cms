@@ -28,3 +28,38 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/*
+  Stile Elementor della barra schede: tipografia compatta (12px, peso 600), bordo inferiore di 2px
+  sulla scheda attiva. Solo override di token/dimensioni sulle classi Mantine.
+*/
+.root :global(.mantine-Tabs-tab) {
+  padding-block: 10px;
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 600;
+}
+
+.root :global(.mantine-Tabs-tab[data-active]) {
+  border-bottom-width: 2px;
+}
+
+/* Intestazioni Accordion: grassetto discreto, chevron a destra attenuato (default Mantine). */
+.root :global(.mantine-Accordion-control) {
+  padding-inline: var(--mantine-spacing-xs);
+  min-height: 40px;
+}
+
+.root :global(.mantine-Accordion-label) {
+  padding-block: 8px;
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
+}
+
+.root :global(.mantine-Accordion-chevron) {
+  width: 16px;
+  color: var(--mantine-color-dimmed);
+}
+
+.root :global(.mantine-Accordion-content) {
+  padding-inline: var(--mantine-spacing-xs);
+}

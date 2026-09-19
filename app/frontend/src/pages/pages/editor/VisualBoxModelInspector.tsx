@@ -52,7 +52,7 @@ import {
   responsiveEnvelope,
   VIEWPORT_LABELS,
   type PropsMeta,
-} from './PropertyInspector';
+} from './inspector/inspector.utils';
 import styles from './VisualBoxModelInspector.module.css';
 
 /** Le otto prop di spaziatura, indicizzate per nome — vedi il chiamante in `PropertyInspector.tsx`. */

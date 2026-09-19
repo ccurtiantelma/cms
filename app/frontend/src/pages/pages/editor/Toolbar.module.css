@@ -12,9 +12,9 @@
 
 .root {
   box-sizing: border-box;
-  flex: 0 0 48px;
+  flex: 0 0 52px;
   min-width: 0;
-  height: 48px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -44,7 +44,7 @@
 
 /*
  * `align-self: stretch` (non il default `center` ereditato da `.root`): questa sezione deve
- * occupare tutta l'altezza della topbar (48px), non solo quella del suo contenuto più alto,
+ * occupare tutta l'altezza della topbar (52px), non solo quella del suo contenuto più alto,
  * altrimenti `.statusGroup` sotto (anch'esso `align-self: stretch`, ma relativo a *questo*
  * contenitore) si estenderebbe solo all'altezza intrinseca degli altri pulsanti — la causa
  * del pulsante "Cambia Stato" reso più basso della barra invece che a filo.
@@ -93,9 +93,9 @@
 
 /*
  * Menu "Cambia Stato", in alto a destra della topbar (restyle Elementor): occupa tutta
- * l'altezza della barra (48px, `.root`) e resta a bordi squadrati — niente arrotondamento,
+ * l'altezza della barra (52px, `.root`) e resta a bordi squadrati — niente arrotondamento,
  * a differenza del vecchio posizionamento in fondo alla sidebar sinistra. `align-self:
- * stretch` (qui e su `.actions` sopra, insieme) lo porta davvero a 48px, non alla sola
+ * stretch` (qui e su `.actions` sopra, insieme) lo porta davvero a 52px, non alla sola
  * altezza intrinseca del pulsante Mantine; il margine negativo pari al padding orizzontale
  * di `.root` lo porta a filo del bordo destro della finestra, come il pulsante "Aggiorna" di
  * Elementor. Blu primario del tema (`--mantine-primary-color-filled`, i "tasti blu" già in

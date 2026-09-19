@@ -1,6 +1,6 @@
 /**
  * Test mandato da ADR-26 § 3: le estensioni Tiptap configurate per il WYSIWYG del rich text
- * (`richTextEditorExtensions`, esportate da `RichTextFieldEditor.tsx`) non devono poter
+ * (`richTextEditorExtensions`, esportate da `rich-text-extensions.ts`) non devono poter
  * produrre alcun tag fuori dall'allowlist del profilo `basic`. Non asserisce sulla toolbar
  * (nascondere un pulsante non basta, ADR-26 § 3): asserisce sull'insieme delle estensioni
  * effettivamente istanziate, cosa che scorciatoie da tastiera, input rule e incolla non
@@ -12,7 +12,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { Editor } from '@tiptap/core';
-import { richTextEditorExtensions } from './RichTextFieldEditor';
+import { richTextEditorExtensions } from './rich-text-extensions';
 
 /**
  * Deve combaciare con `BASIC_SANITIZE_OPTIONS.allowedTags` in

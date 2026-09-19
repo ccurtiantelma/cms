@@ -1,11 +1,13 @@
 /*
- * Sidebar sinistra dell'editor full-screen (EditorSidebar.tsx). Larghezza/bg/border sono di
- * proprietà di questo file, non di `FullScreenEditorLayout.module.css` (`.sidebar` lì è solo
- * un contenitore flex a larghezza fissa) — evita stili duplicati/in conflitto fra i due file.
+ * Colonna sinistra "Palette Widget" della shell a 3 colonne (EditorSidebar.tsx, ADR-91).
+ * Larghezza/bg/border sono di proprietà di questo file, non di
+ * `FullScreenEditorLayout.module.css` (`.sidebar` lì è solo un contenitore flex a larghezza
+ * fissa) — evita stili duplicati/in conflitto fra i due file. 300px per la parità visiva
+ * richiesta con il Design Elementor Pro (ADR-91, supera i 340px di ADR-32).
  */
 
 .root {
-  width: 340px;
+  width: 300px;
   height: 100%;
   min-height: 0;
   display: flex;

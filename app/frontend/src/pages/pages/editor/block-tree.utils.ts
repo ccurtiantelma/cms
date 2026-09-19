@@ -65,6 +65,19 @@ export function findNode(tree: readonly BlockNode[], id: string): BlockNode | un
 }
 
 /**
+ * Percorso dalla radice al nodo `id` (estremi inclusi, dal più esterno al nodo stesso).
+ * Ritorna `[]` se l'id non esiste nell'albero. Riferimenti ai nodi dell'albero, non copie.
+ */
+export function findPath(tree: readonly BlockNode[], id: string): BlockNode[] {
+  for (const node of tree) {
+    if (node.id === id) return [node];
+    const nested = findPath(node.children, id);
+    if (nested.length > 0) return [node, ...nested];
+  }
+  return [];
+}
+
+/**
  * Localizza un nodo nell'albero: genitore (`null` se è un nodo di radice), il suo indice
  * fra i fratelli diretti e il numero totale di fratelli. Ritorna `undefined` se l'id non
  * esiste nell'albero.

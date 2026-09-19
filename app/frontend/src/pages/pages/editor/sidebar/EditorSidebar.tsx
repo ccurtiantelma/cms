@@ -1,14 +1,18 @@
 /**
- * Sidebar sinistra dell'editor full-screen, stile Elementor: "Widgets" (libreria trascinabile,
- * `WidgetPalette`), "Struttura" (albero dei blocchi, `EditorStructureNavigator` — stesso
- * componente del pannello destro toggleabile di `FullScreenEditorLayout`, montato qui in più
- * senza stato duplicato) e "Proprietà" (`PropertyInspector` del blocco selezionato).
+ * Colonna sinistra "Palette Widget" della shell fullscreen a 3 colonne (ADR-91, supera ADR-32
+ * § "Decisione" punto 1 e la sidebar unica a 5 schede che questo file montava prima):
+ * "Widgets" (libreria trascinabile, `WidgetPalette`), "Struttura" (albero dei blocchi,
+ * `EditorStructureNavigator`), "Cronologia" e "Pagina" restano qui a schede — solo
+ * "Proprietà" ne è uscita, promossa a colonna destra fissa e sempre visibile
+ * (`FullScreenEditorLayout.tsx`, `.inspectorPanel`), non più una destinazione di tab.
  *
  * La scheda attiva vive in `useBlockEditorStore` (`activeSidebarTab`) e non in uno stato
  * locale: deve poter essere cambiata da fuori questo componente. Selezionare un blocco nel
- * canvas (`selectNode`) porta già la sidebar su "Proprietà" da solo — un `useState` qui
- * duplicherebbe quella decisione invece di condividerla con l'azione che la deve poter
- * scavalcare.
+ * canvas (`selectNode`) continua a scrivere `activeSidebarTab: 'properties'` — invariato,
+ * perché lo stesso store è condiviso con `BuilderSidebar.tsx` (Template Editor, dominio
+ * separato, CLAUDE.md — zero refactoring fuori scope) che quel valore lo usa ancora davvero.
+ * Qui quel valore non ha più una scheda propria: il ramo sotto lo tratta come `'widgets'`,
+ * così il click su un blocco nel canvas non lascia questa colonna su una scheda inesistente.
  *
  * `Tabs.List` senza `Tabs.Panel`: il contenuto sotto l'header è gestito a mano (un `if`
  * sulla scheda attiva), non dal meccanismo di rendering condizionale di Mantine — serve un
@@ -17,22 +21,14 @@
  * Anteprima e "Cambia Stato" non vivono qui: sono nella topbar (`Toolbar.tsx`), in alto a
  * destra — richiesta esplicita del task di riportarli lì dal fondo di questa sidebar.
  */
-import { Tabs, Text, Tooltip } from '@mantine/core';
-import {
-  IconAdjustments,
-  IconHistory,
-  IconListTree,
-  IconSettings,
-  IconStack2,
-} from '@tabler/icons-react';
+import { Tabs, Tooltip } from '@mantine/core';
+import { IconHistory, IconListTree, IconSettings, IconStack2 } from '@tabler/icons-react';
 import {
   useActiveSidebarTab,
   useBlockEditorStore,
-  useSelectedId,
   type EditorSidebarTab,
 } from '../../../../hooks/useBlockEditorStore';
 import type { PageRecord } from '../../../../types/pages.types';
-import PropertyInspector from '../PropertyInspector';
 import EditorStructureNavigator from '../EditorStructureNavigator';
 import WidgetSidebar from './WidgetSidebar';
 import PageSettingsTab from './PageSettingsTab';
@@ -60,7 +56,6 @@ export default function EditorSidebar({
 }: EditorSidebarProps): JSX.Element {
   const activeTab = useActiveSidebarTab();
   const setActiveSidebarTab = useBlockEditorStore((state) => state.setActiveSidebarTab);
-  const selectedId = useSelectedId();
 
   return (
     <div className={styles.root}>
@@ -80,11 +75,6 @@ export default function EditorSidebar({
               <IconListTree size={20} />
             </Tabs.Tab>
           </Tooltip>
-          <Tooltip label="Proprietà" openDelay={300} withinPortal>
-            <Tabs.Tab value="properties" aria-label="Proprietà">
-              <IconAdjustments size={20} />
-            </Tabs.Tab>
-          </Tooltip>
           <Tooltip label="Cronologia" openDelay={300} withinPortal>
             <Tabs.Tab value="history" aria-label="Cronologia">
               <IconHistory size={20} />
@@ -99,11 +89,7 @@ export default function EditorSidebar({
       </Tabs>
 
       <div className={styles.content}>
-        {activeTab === 'widgets' ? (
-          <div className={styles.panel}>
-            <WidgetSidebar />
-          </div>
-        ) : activeTab === 'structure' ? (
+        {activeTab === 'structure' ? (
           <div className={styles.panel}>
             <EditorStructureNavigator />
           </div>
@@ -119,15 +105,12 @@ export default function EditorSidebar({
           <div className={styles.panel}>
             <HistoryPanel />
           </div>
-        ) : selectedId === null ? (
-          <div className={styles.panel}>
-            <Text size="sm" c="dimmed" ta="center" className={styles.emptyState}>
-              Seleziona un elemento nel canvas per modificarne le proprietà.
-            </Text>
-          </div>
         ) : (
+          // `'widgets'` e `'properties'` (quest'ultimo scritto da `selectNode` alla selezione
+          // di un blocco, vedi il commento di testa): stesso pannello Widgets, "Proprietà" non
+          // ha più una scheda propria qui, vive nella colonna destra fissa.
           <div className={styles.panel}>
-            <PropertyInspector />
+            <WidgetSidebar />
           </div>
         )}
       </div>

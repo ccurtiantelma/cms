@@ -2,6 +2,7 @@ import { test, expect, type Locator, type Page } from '@playwright/test';
 import { ADMIN_STORAGE_STATE } from './helpers/admin-session';
 import {
   blockOfType,
+  canvasFrame,
   createPageFromUi,
   deletePageFromUi,
   openContentTab,
@@ -54,6 +55,8 @@ test.afterEach(async ({ page }) => {
  */
 async function dragWidgetTileToZone(page: Page, tileLabel: string, targetZone: Locator): Promise<void> {
   const tile = page.getByRole('button', { name: tileLabel });
+  await tile.scrollIntoViewIfNeeded();
+  await targetZone.scrollIntoViewIfNeeded();
   const tileBox = await tile.boundingBox();
   const zoneBox = await targetZone.boundingBox();
   if (!tileBox || !zoneBox) {
@@ -110,7 +113,7 @@ test('drag & drop del widget Contenitore nel canvas e impostazione di flexDirect
   // testo resta visibile anche ora che la Pagina appena creata non parte da un canvas vuoto:
   // il `templateSlug` di default ("empty", RFC-43) porta già una Sezione seed in radice
   // (`page-blueprints.registry.ts`).
-  await expect(page.getByText('Trascina il widget qui')).toBeVisible();
+  await expect(canvasFrame(page).getByText('Trascina il widget qui')).toBeVisible();
 
   // Con la Sezione seed già in radice, `[data-over]` risolve a più elementi (le strisce
   // `before`/`after` del suo `EditorBlockWrapper`, la sua `containerDropZone` interna, e i
@@ -121,13 +124,14 @@ test('drag & drop del widget Contenitore nel canvas e impostazione di flexDirect
   // l'ultimo `EditorBlockWrapper` — quindi resta il bersaglio corretto per "aggiungi in coda
   // alla radice", lo stesso ruolo che aveva `root-empty-dropzone` quando la radice partiva
   // davvero da zero.
-  const rootDropzone = page.locator('[data-over]').last();
+  const rootDropzone = canvasFrame(page).locator('[data-over]').last();
 
   // ─── 2. Trascino la tessera "Contenitore" della libreria widget nella drop-zone ───────
+  const initialContainerCount = await blockOfType(page, 'container').count();
   await dragWidgetTileToZone(page, 'Inserisci il blocco Contenitore', rootDropzone);
 
-  const container = blockOfType(page, 'container');
-  await expect(container).toHaveCount(1);
+  await expect(blockOfType(page, 'container')).toHaveCount(initialContainerCount + 1);
+  const container = blockOfType(page, 'container').last();
 
   // ─── 3. Ispettore: `flexDirection`/`justifyContent` vivono nella scheda "Stile" (nessuna
   // prop "Contenuto" nel registro del blocco, ADR-39 § 2 — con "Avanzato" popolata da

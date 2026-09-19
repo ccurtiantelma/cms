@@ -58,7 +58,7 @@ import {
 import { BLOCK_TYPES } from '../../../types/blocks.types';
 import { findLocation, findNode, type BlockNode } from './block-tree.utils';
 import { canDropInto } from './block-registry.utils';
-import { blockIcon } from './BlockPalette';
+import { blockIcon } from './block-icon';
 import ConfirmModal from '../../../components/ConfirmModal';
 import CanvasContextMenu from './CanvasContextMenu';
 import styles from './EditorStructureNavigator.module.css';

@@ -3,6 +3,7 @@ import { ADMIN_STORAGE_STATE } from './helpers/admin-session';
 import {
   addRootBlock,
   blockOfType,
+  canvasFrame,
   createPageFromUi,
   deletePageFromUi,
   fillProp,
@@ -156,7 +157,7 @@ test('Sezione Globale assegnata a "Header": il sito pubblico la serve come <head
 
   // ─── 2. Nel Builder: un blocco Titolo con il testo da riconoscere nell'HTML pubblico ──
   // Stessa chrome dell'editor di Pagina (`FullScreenEditorLayout`), stessi helper.
-  await expect(page.getByText('Trascina il widget qui')).toBeVisible();
+  await expect(canvasFrame(page).getByText('Trascina il widget qui')).toBeVisible();
   await addRootBlock(page, 'Titolo');
   const heading = blockOfType(page, 'heading');
   await expect(heading).toHaveCount(1);
@@ -169,7 +170,7 @@ test('Sezione Globale assegnata a "Header": il sito pubblico la serve come <head
   // `helpers/page-editor.ts` non si applica qui: cerca il testo sbagliato). Il pulsante resta
   // però lo stesso `Toolbar.tsx` condiviso con l'editor di Pagina — quindi la stessa
   // etichetta "Pubblica" (bug applicativo reale, non corretto qui: vedi il commento di testa
-  // di `saveButton`, `helpers/page-editor.ts`).
+  // di `publishOptionsTrigger`, `helpers/page-editor.ts`).
   await page.getByRole('button', { name: 'Pubblica', exact: true }).click();
   await expect(page.getByRole('alert').getByText('Sezione Globale salvata')).toBeVisible();
 

@@ -1,8 +1,11 @@
 /**
  * Chrome dell'editor visivo full-screen (PLAN-F04-editor-visivo.md, evoluzione full-screen):
- * topbar + area di lavoro a tre colonne (sidebar widget/props, canvas, pannello struttura),
- * pensata per massimizzare lo spazio dedicato al canvas, come in un editor visivo stile
- * Elementor.
+ * topbar (52px) + area di lavoro a tre colonne fisse — Palette Widget (sinistra, 300px),
+ * Canvas (centro, `flex: 1`), Property Inspector (destra, 320px, sempre montata) — pensata
+ * per massimizzare lo spazio dedicato al canvas e per la parità visiva con il Design
+ * Elementor Pro (**ADR-91**, supera ADR-32 § "Decisione" punto 1 — sidebar unica con scheda
+ * "Proprietà" — e la descrizione a 3 colonne ereditata invariata da ADR-54; autorizzazione
+ * esplicita dell'umano in sede di task, 2026-09-18, stesso pattern di ADR-54/72/73).
  *
  * **Chrome di una rotta dedicata, non un overlay.** Dopo ADR-54 questo componente è montato
  * dentro `PageStudio.tsx`, a sua volta dentro la rotta isolata `/studio/:guid`
@@ -21,8 +24,8 @@
  * dell'editor a blocchi ha bisogno di un controllo pixel-preciso sulle tre colonne che un
  * `Modal` non offre.
  *
- * **Breakpoint switcher e pannello struttura** leggono/scrivono `activeBreakpoint` e
- * `isStructurePanelOpen` di `useBlockEditorStore` direttamente (non via props): sono stato di
+ * **Breakpoint switcher e colonna Property Inspector** leggono/scrivono `activeBreakpoint` e
+ * `selectedId` di `useBlockEditorStore` direttamente (non via props): sono stato di
  * chrome dell'editor, non stato della Pagina — lo stesso motivo per cui undo/redo restano
  * qui e non in `BlockEditorPanel` (CLAUDE.md — selettori Zustand mirati, mai l'intero store).
  * `setActiveBreakpoint` deriva anche `activeViewport` (3 vie, solo il Property Inspector) —
@@ -79,14 +82,16 @@ import {
   useCanUndo,
   useIsPreviewMode,
   useIsSidebarOpen,
-  useIsStructurePanelOpen,
+  useSelectedId,
 } from '../../../hooks/useBlockEditorStore';
 import { BREAKPOINT_LABELS, type ResolvedBreakpoint } from '../../../libs/breakpoints';
 import { BLOCK_TYPES, type ResponsiveBreakpointName } from '../../../types/blocks.types';
 import type { PageRecord, PageStatus } from '../../../types/pages.types';
-import { blockIcon, defaultPropsFor } from './BlockPalette';
+import { blockIcon } from './block-icon';
+import { defaultPropsFor } from './block-registry.utils';
 import EditorSidebar from './sidebar/EditorSidebar';
 import IframeCanvas from './IframeCanvas';
+import PropertyInspector from './PropertyInspector';
 import {
   isPaletteOrigin,
   shiftRect,
@@ -140,7 +145,7 @@ function resolveFrameWidthPx(
  * stile inline della maniglia non può leggere un valore da un CSS Module, e deve restare
  * in sincrono con quei due file a mano (restyle Elementor Pro, griglia widget a 3 colonne).
  */
-const SIDEBAR_WIDTH = 340;
+const SIDEBAR_WIDTH = 300;
 
 /**
  * Legge dal payload di dnd-kit (`event.active.data.current`, valorizzato sia da
@@ -195,8 +200,6 @@ export interface FullScreenEditorLayoutProps {
   onPreview?: () => void;
   /** Stato di caricamento del pulsante "Anteprima". */
   previewLoading?: boolean;
-  /** Contenuto del pannello destro "Struttura/Navigator", visibile solo se aperto. */
-  structurePanel?: ReactNode;
   /** Contenuto del canvas centrale (l'albero di blocchi in editing). */
   children: ReactNode;
   /**
@@ -223,8 +226,9 @@ export interface FullScreenEditorLayoutProps {
 }
 
 /**
- * Layout full-screen dell'editor visivo a blocchi: topbar (60px) + area di lavoro a tre
- * colonne (sidebar widget/props, canvas reattivo al viewport simulato, pannello struttura).
+ * Layout full-screen dell'editor visivo a blocchi: topbar (52px) + area di lavoro a tre
+ * colonne fisse (Palette Widget 300px, Canvas centrale reattivo al viewport simulato,
+ * Property Inspector 320px) — ADR-91.
  */
 export default function FullScreenEditorLayout({
   pageTitle,
@@ -237,7 +241,6 @@ export default function FullScreenEditorLayout({
   templateSaving,
   onPreview,
   previewLoading,
-  structurePanel,
   children,
   onPageUpdated,
   onVersionConflict,
@@ -255,13 +258,11 @@ export default function FullScreenEditorLayout({
   const activeBreakpoint = useActiveBreakpoint();
   const activeBreakpoints = useActiveBreakpoints();
   const setActiveBreakpoint = useBlockEditorStore((state) => state.setActiveBreakpoint);
-  // Il pulsante che apriva/chiudeva questo pannello è stato rimosso dalla topbar (E01): la
-  // stessa "Struttura" è già raggiungibile dalla sidebar sinistra (`EditorSidebar`, scheda
-  // "Struttura"). `isStructurePanelOpen` resta comunque letto qui sotto — parte a `false`
-  // (default dello store) e non ha più modo di diventare `true`, quindi il pannello non
-  // monta mai — invece di rimuovere anche il markup del pannello destro, fuori scope di
-  // questo task (CLAUDE.md — solo il task corrente, zero refactoring fuori scope).
-  const isStructurePanelOpen = useIsStructurePanelOpen();
+  // Colonna destra "Property Inspector" (ADR-91): sempre montata, non più un pannello
+  // "Struttura" toggleabile — quella funzione resta raggiungibile dalla scheda "Struttura"
+  // della colonna sinistra (`EditorSidebar`). `selectedId` decide solo il contenuto (empty
+  // state vs `PropertyInspector`), mai la sua presenza nel DOM.
+  const selectedId = useSelectedId();
   const isSidebarOpen = useIsSidebarOpen();
   const toggleSidebar = useBlockEditorStore((state) => state.toggleSidebar);
   // "Anteprima Pura" (E01): il pulsante "occhio" della topbar che la attivava ora apre invece
@@ -270,8 +271,7 @@ export default function FullScreenEditorLayout({
   // di diventare `true` (nessun trigger residuo), quindi `isSidebarVisible`/`disabled`/
   // `data-preview-mode` sotto restano sempre nel loro stato "non in anteprima" — letti ancora
   // da qui invece di rimuovere il markup che dipende da loro, fuori scope di questo task
-  // (CLAUDE.md — solo il task corrente, zero refactoring fuori scope), stesso principio di
-  // `isStructurePanelOpen` sopra.
+  // (CLAUDE.md — solo il task corrente, zero refactoring fuori scope).
   const isPreviewMode = useIsPreviewMode();
   const isSidebarVisible = isSidebarOpen && !isPreviewMode;
   const undo = useBlockEditorStore((state) => state.undo);
@@ -647,11 +647,24 @@ export default function FullScreenEditorLayout({
               </div>
             </div>
 
-            {isStructurePanelOpen && (
-              <aside className={styles.structurePanel} aria-label="Struttura della pagina">
-                {structurePanel}
-              </aside>
-            )}
+            {/*
+              Colonna destra "Property Inspector" (ADR-91, supera ADR-32 § "Decisione" punto 1
+              — sidebar unica con scheda "Proprietà" — e la descrizione a 3 colonne ereditata
+              da ADR-54): larghezza fissa 320px, sempre montata, mai un pannello che appare/
+              scompare — a differenza di `.sidebar` a sinistra non è collassabile, il task non
+              lo richiede. `selectedId === null` mostra lo stesso stato vuoto che prima viveva
+              nella scheda "Proprietà" della sidebar sinistra (`EditorSidebar.tsx`, ora
+              rimossa da lì).
+            */}
+            <aside className={styles.inspectorPanel} aria-label="Proprietà dell'elemento">
+              {selectedId === null ? (
+                <Text size="sm" c="dimmed" ta="center" className={styles.inspectorEmptyState}>
+                  Seleziona un elemento nel canvas per modificarne le proprietà.
+                </Text>
+              ) : (
+                <PropertyInspector />
+              )}
+            </aside>
           </div>
         </div>
 

@@ -24,6 +24,9 @@
   width: 100%;
   min-height: 100%;
   container-type: inline-size;
+  /* Colonna flex: footer e breadcrumb restano in calce anche con pochi blocchi. */
+  display: flex;
+  flex-direction: column;
   /* Stacca la prima sezione dalla Topbar amministrativa (T-editor-refinement, richiesta
      esplicita del task): senza offset, la maniglia contestuale della prima Sezione — ora
      ancorata esattamente a filo del bordo superiore del blocco via
@@ -54,6 +57,7 @@
   indipendentemente dal tema.
 */
 .pageOuter {
+  flex: 1 0 auto;
   padding-top: var(--theme-layout-margin-top, 0px);
   padding-right: var(--theme-layout-margin-right, 0px);
   padding-bottom: var(--theme-layout-margin-bottom, 0px);

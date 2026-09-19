@@ -11,11 +11,11 @@
  * (ADR-75 § "Decisione" punto 1).
  */
 import { Group, Slider, Stack, Text } from '@mantine/core';
-import { useState } from 'react';
 import type { BlockPropDescriptor, PropStateName } from '../../../../types/blocks.types';
 import { useActiveBreakpoint } from '../../../../hooks/useBlockEditorStore';
 import { ThemeEditorColorPicker } from '../../../../components/theme-editor/ThemeEditorColorPicker';
-import StateSwitcher, { type EditableStateName } from './StateSwitcher';
+import StateSwitcher from './StateSwitcher';
+import { useEditingState } from './editingState';
 import {
   buildStatefulResponsivePropPatch,
   propLabel,
@@ -64,7 +64,7 @@ export default function ShadowField({
   const label = propLabel(prop, propsMeta);
   const required = prop.required;
   const activeBreakpoint = useActiveBreakpoint();
-  const [editingState, setEditingState] = useState<EditableStateName>('normal');
+  const { editingState, setEditingState, hasPanelSwitcher } = useEditingState();
   const state: PropStateName = prop.stateful ? editingState : 'normal';
 
   const current = readShadowValue(
@@ -88,7 +88,9 @@ export default function ShadowField({
             </Text>
           )}
         </Text>
-        {prop.stateful && <StateSwitcher value={editingState} onChange={setEditingState} />}
+        {prop.stateful && !hasPanelSwitcher && (
+          <StateSwitcher value={editingState} onChange={setEditingState} />
+        )}
       </Group>
       <ThemeEditorColorPicker
         label={`${label} — Colore`}

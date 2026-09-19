@@ -174,7 +174,7 @@ export default function Toolbar({
         {/*
           Menu "Cambia Stato" (restyle Elementor): stesso pulsante di stato/pubblicazione già
           in uso, spostato qui in alto a destra (richiesta esplicita del task — non più in
-          fondo alla sidebar sinistra). Bordi squadrati e altezza piena della topbar (48px),
+          fondo alla sidebar sinistra). Bordi squadrati e altezza piena della topbar (52px),
           flush contro il bordo destro — `.statusGroup` in `Toolbar.module.css` annulla il
           padding di `.root` con un margine negativo, invece di un secondo contenitore fuori
           da questo `header`.

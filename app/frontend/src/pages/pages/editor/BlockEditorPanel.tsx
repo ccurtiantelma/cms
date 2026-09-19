@@ -37,7 +37,6 @@ import {
 import EditorCanvas from './EditorCanvas';
 import { InvalidBlockProvider } from './EditorBlockWrapper';
 import FullScreenEditorLayout from './FullScreenEditorLayout';
-import EditorStructureNavigator from './EditorStructureNavigator';
 
 /**
  * Id stabile della notifica d'errore di salvataggio: un nuovo tentativo (riuscito o fallito)
@@ -257,7 +256,6 @@ export default function BlockEditorPanel({
         templateSaving={templateSaving}
         onPreview={onPreview}
         previewLoading={previewLoading}
-        structurePanel={<EditorStructureNavigator />}
         onPageUpdated={onPageUpdated}
         onVersionConflict={onVersionConflict}
         pageStatus={pageStatus}

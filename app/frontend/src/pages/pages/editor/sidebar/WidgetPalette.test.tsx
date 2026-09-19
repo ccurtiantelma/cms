@@ -49,10 +49,11 @@ describe('EditorSidebar', () => {
     useBlockEditorStore.getState().setActiveSidebarTab('widgets');
   });
 
-  it('mostra le schede Widgets e Proprietà', () => {
+  it('mostra le schede Widgets e Struttura (non più "Proprietà", ADR-91: colonna destra fissa)', () => {
     renderWithProviders(<EditorSidebar />);
 
     expect(screen.getByRole('tab', { name: 'Widgets' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Proprietà' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Struttura' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Proprietà' })).not.toBeInTheDocument();
   });
 });

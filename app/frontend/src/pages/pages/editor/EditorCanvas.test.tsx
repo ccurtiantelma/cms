@@ -18,6 +18,7 @@
  *   di quello stato non deve mai far perdere l'identità dei nodi DOM già montati).
  */
 import { describe, it, expect, beforeEach } from 'vitest';
+import { fireEvent } from '@testing-library/react';
 import { renderWithProviders } from '../../../test/utils';
 import {
   GLOBAL_TOKENS_CANVAS_SCOPE_CLASS,
@@ -56,5 +57,34 @@ describe('EditorCanvas — canvasTree proiettato da IframeCanvas.tsx', () => {
     // di `IframeCanvas.tsx`/dello store, non di questo componente): lo stesso nodo DOM del
     // blocco resta montato, nessun remount distruttivo.
     expect(blockNodeAfter).toBe(blockNodeBefore);
+  });
+});
+
+describe('EditorCanvas — cornice tema e breadcrumb', () => {
+  it('monta i badge THEME - HEADER/FOOTER non editabili', () => {
+    const { getByTestId } = renderWithProviders(<EditorCanvas />);
+    expect(getByTestId('theme-frame-header').textContent).toContain('THEME - HEADER');
+    expect(getByTestId('theme-frame-footer').textContent).toContain('THEME - FOOTER');
+  });
+
+  it('il breadcrumb mostra il percorso e un click su un segmento seleziona il genitore', () => {
+    useBlockEditorStore.getState().initTree([
+      {
+        id: 'c-1',
+        type: 'container',
+        props: {},
+        children: [{ id: 'h-1', type: 'heading', props: { level: 'h2', text: 'T' }, children: [] }],
+      },
+    ]);
+    useBlockEditorStore.getState().selectNode('h-1');
+    const { getByTestId } = renderWithProviders(<EditorCanvas />);
+    const bar = getByTestId('canvas-breadcrumb');
+    const buttons = bar.querySelectorAll('button');
+    expect(buttons).toHaveLength(3);
+    expect(buttons[0].textContent).toBe('Pagina');
+    fireEvent.click(buttons[1]);
+    expect(useBlockEditorStore.getState().selectedId).toBe('c-1');
+    fireEvent.click(getByTestId('canvas-breadcrumb').querySelectorAll('button')[0]);
+    expect(useBlockEditorStore.getState().selectedId).toBeNull();
   });
 });

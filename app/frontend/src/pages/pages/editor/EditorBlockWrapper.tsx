@@ -31,14 +31,15 @@
  * bordo di categoria (v. `overlayBorderClassName` sotto) più un badge nome in alto a
  * sinistra (`.hoverBadge`); la toolbar dei controlli è montata **solo** su `isSelected`.
  *
- * **Maniglia centrale (RE-2, restyle Elementor Pro).** La toolbar è tornata ad essere
- * ancorata in alto **al centro** del bordo superiore (`BlockHoverOverlay.module.css`),
- * non più in alto a destra come nel round F04d-02 sopra — richiesta esplicita del task:
- * le maniglie contestuali "posizionate in angolo" erano il deficit da correggere. Sette
- * controlli base oggi (era "sei", poi "cinque" quando questo commento fu scritto per la
- * prima volta): "+" (aggiungi sopra) e "+" speculare (aggiungi sotto) si aggiungono a
- * trascina/seleziona genitore/duplica/modifica/elimina, più i controlli opzionali (Salva
- * Preset/Converti in Sezione Globale/Esporta JSON) invariati.
+ * **Maniglia in alto a sinistra (ADR-92, supera solo l'ancoraggio di RE-2).** La toolbar era
+ * stata centrata da RE-2 ("maniglie contestuali posizionate in angolo" era il deficit da
+ * correggere allora); ADR-92 la riporta in alto a sinistra (`BlockHoverOverlay.module.css`,
+ * `.overlay`), stesso angolo del badge nome di solo-hover (`.hoverBadge` sotto) — i due non
+ * sono mai montati insieme (badge solo `isHovered && !isSelected`, toolbar solo
+ * `isSelected`). Otto controlli base oggi (etichetta nome inclusa, ADR-92): nome, "+"
+ * (aggiungi sopra) e "+" speculare (aggiungi sotto) si aggiungono a trascina/seleziona
+ * genitore/duplica/modifica/elimina, più i controlli opzionali (Salva Preset/Converti in
+ * Sezione Globale/Esporta JSON) invariati.
  *
 
  * Ogni azione che cambia la struttura passa dallo store, che la verifica contro il
@@ -137,7 +138,8 @@ import {
   resolveResponsiveClassNames,
 } from '../../../components/blocks/style-tokens';
 import ConfirmModal from '../../../components/ConfirmModal';
-import BlockPalette, { blockIcon } from './BlockPalette';
+import BlockPalette from './BlockPalette';
+import { blockIcon } from './block-icon';
 import BlockHoverOverlay from './components/BlockHoverOverlay';
 import { usePresetStore } from './usePresetStore';
 import { exportSubtreeToJson } from './utils/template-io.utils';

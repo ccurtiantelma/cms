@@ -33,63 +33,52 @@
 }
 
 /*
-  Bordo di hover/selezione — restyle Elementor Pro (RE-2, requisito esplicito del task:
-  "maniglie... poco contrasto", "manca gerarchia visiva"). Solo i **widget foglia** usano
-  ancora questo colore a due stati derivato da `var(--block-level-color)` (custom property
-  impostata da `EditorBlockWrapper.tsx`, `blockLevelColor` — qui sempre il blu dei widget
-  foglia, `#2563eb`): Sezioni/Container hanno un trattamento diverso, vedi
-  `.hoveredSectionChrome`/`.selectedSectionChrome` sotto (T-editor-refinement).
-  - `.hoveredChrome`: hover senza selezione (mai selezionato) — bordo tratteggiato,
-    distinto dalla guida statica sopra solo dal colore (quella è sempre `#cbd5e1`, questa
-    è il colore di livello). Su un widget foglia questa classe non viene mai applicata
-    oggi (`overlayBorderClassName`, `EditorBlockWrapper.tsx`: l'hover-senza-selezione è
-    riservato a `isContainerOrSection`), resta qui solo per non rompere l'API di stile
-    per un'eventuale futura estensione ai widget foglia.
-  - `.selectedChrome`: selezione attiva di un widget foglia — bordo pieno marcato più
-    ombreggiatura, "distinto chiaramente dall'hover/dashed" (richiesta esplicita del
-    task originale RE-2).
+  Bordo di hover/selezione dei **widget foglia** (ADR-92, supera solo il valore colore dello
+  schema RE-2/T-editor-refinement — quei due round restano storici in `EditorBlockWrapper.tsx`
+  per il resto). Colore fisso rosa/viola `#a435c0` per entrambi gli stati (non più derivato da
+  `var(--block-level-color)`, che resta calcolato in `EditorBlockWrapper.tsx` ma non alimenta
+  più questo bordo): `.hoveredChrome` = 1px solid, `.selectedChrome` = 2px solid + ombreggiatura
+  di enfasi — la selezione si distingue dall'hover per spessore/ombra, non più per stile
+  tratteggiato/pieno.
   Hover promosso a stato esplicito (`isHovered`, EditorBlockWrapper.tsx), niente `:hover`
   CSS nativo sul wrapper (rimosso: cadrebbe su ogni antenato del nodo puntato, il DOM di un
   figlio è geometricamente dentro quello del padre) — la classe è applicata via JS solo al
   nodo effettivamente sotto il puntatore, mai contemporaneamente ai suoi
-  antenati/discendenti. Stesso spessore (1px) di `.wrapper` a riposo: nessuna compensazione
-  di `padding` necessaria, il contenuto non trasla fra i due stati.
+  antenati/discendenti.
 */
 .hoveredChrome {
   border-width: 1px;
-  border-style: dashed;
-  border-color: var(--block-level-color, #2271b1);
+  border-style: solid;
+  border-color: #a435c0;
 }
 
 .selectedChrome {
-  border-width: 1px;
+  border-width: 2px;
   border-style: solid;
-  border-color: #86efac;
+  border-color: #a435c0;
   box-shadow:
     0 0 0 3px rgba(15, 23, 42, 0.1),
     0 8px 20px rgba(15, 23, 42, 0.12);
 }
 
 /*
-  Bordo di hover/selezione di Sezioni/Container (T-editor-refinement, pixel-perfect
-  Elementor, requisito esplicito del task — supera per queste due categorie lo schema
-  "colore di livello" di RE-2 sopra, vedi il commento di {@link overlayBorderClassName} in
-  `EditorBlockWrapper.tsx`): magenta Elementor fisso `#e0007b`, **stesso stile 1px solid**
-  sia in hover sia in selezione — non più un tratteggiato per l'hover e un pieno per la
-  selezione come per `.hoveredChrome`/`.selectedChrome` sopra (che restano invariate per i
-  soli widget foglia). La sola differenza fra i due stati qui è l'ombreggiatura di enfasi
-  sulla selezione (`.selectedSectionChrome`), non lo stile del bordo.
+  Bordo di hover/selezione di Sezioni/Container (ADR-92, supera il magenta fisso `#e0007b`
+  di T-editor-refinement — solo il valore colore, non la struttura a due categorie
+  Container/Widget). Azzurro fisso `#2271b1`: `.hoveredSectionChrome` = 1px solid,
+  `.selectedSectionChrome` = 2px solid + ombreggiatura di enfasi — stessa distinzione per
+  spessore/ombra di `.hoveredChrome`/`.selectedChrome` sopra, non più uno stile di bordo
+  diverso fra i due stati.
 */
 .hoveredSectionChrome {
   border-width: 1px;
   border-style: solid;
-  border-color: #60a5fa;
+  border-color: #2271b1;
 }
 
 .selectedSectionChrome {
-  border-width: 1px;
+  border-width: 2px;
   border-style: solid;
-  border-color: #60a5fa;
+  border-color: #2271b1;
   box-shadow:
     0 0 0 3px rgba(15, 23, 42, 0.1),
     0 8px 20px rgba(15, 23, 42, 0.12);

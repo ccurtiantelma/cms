@@ -4,6 +4,7 @@ import {
   addChildBlock,
   addRootBlock,
   blockOfType,
+  canvasFrame,
   createPageFromUi,
   deletePageFromUi,
   fillProp,
@@ -80,11 +81,11 @@ test('due sessioni sulla stessa Pagina: la seconda riceve 409 e le modifiche del
     // È qui che B fotografa la `version` che diventerà obsoleta.
     await sessioneB.goto(`/pages/${guid}`);
     await openContentTab(sessioneB);
-    await expect(sessioneB.getByText('Trascina il widget qui')).toBeVisible();
+    await expect(canvasFrame(sessioneB).getByText('Trascina il widget qui')).toBeVisible();
 
     // ─── 3. A compone e salva: la sua bozza è ora quella persistita ─────────
     // `{ name: 'Pubblica', exact: true }`, non "Salva bozza": bug applicativo reale,
-    // segnalato nel report del test engineer (vedi il commento di testa di `saveButton`,
+    // segnalato nel report del test engineer (vedi il commento di testa di `publishOptionsTrigger`,
     // `helpers/page-editor.ts`) — il pulsante che salva la bozza porta oggi l'etichetta
     // "Pubblica" (icona a dischetto), ma non pubblica nulla: `onClick` resta collegato a
     // `onSaveDraft`. `exact: true` lo distingue dall'omonimo bottone del dialog "Conferma
@@ -113,7 +114,7 @@ test('due sessioni sulla stessa Pagina: la seconda riceve 409 e le modifiche del
 
     // Nessun overwrite silenzioso *nemmeno lato client*: B tiene ancora in mano
     // il proprio lavoro non salvato, non se lo vede sostituire di soppiatto.
-    await expect(sessioneB.getByText(TESTO_DI_B)).toBeVisible();
+    await expect(canvasFrame(sessioneB).getByText(TESTO_DI_B)).toBeVisible();
 
     // ─── 5. Il lavoro di A è intatto: lo si verifica ricaricando davvero ────
     // Il bottone "Ricarica" vive nell'intestazione della Pagina (`PagePageDetail.tsx`), non
@@ -127,8 +128,8 @@ test('due sessioni sulla stessa Pagina: la seconda riceve 409 e le modifiche del
     await sessioneA.getByRole('link', { name: 'Torna alla Dashboard' }).click();
     await sessioneA.getByRole('button', { name: 'Ricarica' }).click();
     await openContentTab(sessioneA);
-    await expect(sessioneA.getByText(TESTO_DI_A)).toBeVisible();
-    await expect(sessioneA.getByText(TESTO_DI_B)).toHaveCount(0);
+    await expect(canvasFrame(sessioneA).getByText(TESTO_DI_A)).toBeVisible();
+    await expect(canvasFrame(sessioneA).getByText(TESTO_DI_B)).toHaveCount(0);
 
     // ─── 6. B ricarica dalla notifica e riparte dal contenuto vero ──────────
     await sessioneB.getByRole('button', { name: 'Ricarica la Pagina' }).click();
@@ -141,8 +142,8 @@ test('due sessioni sulla stessa Pagina: la seconda riceve 409 e le modifiche del
     await sessioneB.getByRole('alert').getByRole('button').last().click();
     await expect(sessioneB.getByRole('alert')).toHaveCount(0);
     await openContentTab(sessioneB);
-    await expect(sessioneB.getByText(TESTO_DI_A)).toBeVisible();
-    await expect(sessioneB.getByText(TESTO_DI_B)).toHaveCount(0);
+    await expect(canvasFrame(sessioneB).getByText(TESTO_DI_A)).toBeVisible();
+    await expect(canvasFrame(sessioneB).getByText(TESTO_DI_B)).toHaveCount(0);
 
     // ─── 7. Ripartita dalla version giusta, B può salvare ───────────────────
     // Il 409 è un invito a riprovare informati, non un vicolo cieco.

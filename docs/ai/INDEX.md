@@ -4,7 +4,7 @@ Istruzione vincolante per ogni agente AI: per il task corrente, apri **solo** gl
 
 | Dominio | File |
 |---|---|
-| Editor Visivo & Canvas | `docs/ai/plans/PLAN-F04-editor-visivo.md` · `docs/ai/specs/SPEC-F04-grid-responsive-engine.md` · `docs/ai/specs/SPEC-F04-super-elementor.md` · `docs/ai/rfc/RFC-F04e-super-elementor.md` · `docs/ai/rfc/RFC-F04e-bis-esito-spike-iframe.md` · `docs/ai/plans/PLAN-F04-dnd-iframe-spike.md` · `docs/ai/plans/PLAN-F04-dnd-iframe-portal-spike.md` · `docs/ai/adr/ADR-72-canvas-iframe-portal-bridge.md` · `docs/ai/adr/ADR-70-canvas-iframe-isolation-zustand-sync.md` · `docs/ai/adr/ADR-71-resize-handles-unita-dinamiche.md` · `docs/ai/adr/ADR-73-rimozione-maniglie-resize-widget-foglia.md` · `docs/ai/adr/ADR-28-libreria-drag-and-drop.md` · `docs/ai/adr/ADR-29-proprieta-di-stile-per-breakpoint.md` · `docs/ai/adr/ADR-30-metadati-editor-registro.md` |
+| Editor Visivo & Canvas | `docs/ai/plans/PLAN-F04-editor-visivo.md` · `docs/ai/specs/SPEC-F04-grid-responsive-engine.md` · `docs/ai/specs/SPEC-F04-super-elementor.md` · `docs/ai/rfc/RFC-F04e-super-elementor.md` · `docs/ai/rfc/RFC-F04e-bis-esito-spike-iframe.md` · `docs/ai/plans/PLAN-F04-dnd-iframe-spike.md` · `docs/ai/plans/PLAN-F04-dnd-iframe-portal-spike.md` · `docs/ai/adr/ADR-72-canvas-iframe-portal-bridge.md` · `docs/ai/adr/ADR-70-canvas-iframe-isolation-zustand-sync.md` · `docs/ai/adr/ADR-71-resize-handles-unita-dinamiche.md` · `docs/ai/adr/ADR-73-rimozione-maniglie-resize-widget-foglia.md` · `docs/ai/adr/ADR-91-editor-fullscreen-3-colonne-fisse.md` · `docs/ai/adr/ADR-92-overlay-in-canvas-e-palette-widget-2-colonne.md` · `docs/ai/adr/ADR-93-in-canvas-theme-frame-e-breadcrumb.md` · `docs/ai/adr/ADR-28-libreria-drag-and-drop.md` · `docs/ai/adr/ADR-29-proprieta-di-stile-per-breakpoint.md` · `docs/ai/adr/ADR-30-metadati-editor-registro.md` · `docs/ai/adr/ADR-32-navigator-editor-fullscreen.md` · `docs/ai/adr/ADR-54-editor-isolato-rotta-studio.md` |
 | Schema & Migrazione Blocchi JSON | `docs/ai/specs/SPEC-F02-blocchi.md` · `docs/ai/adr/ADR-21-schema-blocchi-versionamento.md` · `app/frontend/src/types/blocks.types.ts` |
 | Rendering & Caching Pubblico | `docs/ai/specs/SPEC-F03-superficie-pubblica.md` · `docs/ai/adr/ADR-53-air-gapped-ssg-zero-db.md` · `docs/ai/adr/ADR-63-consegna-statica-volume-nginx-isolato.md` · `docs/ai/adr/ADR-65-layout-export-su-url-pubblico.md` · `docs/ai/adr/ADR-67-eventi-di-export-e-render-riservato.md` |
 | Gestione Pagine | `docs/ai/specs/SPEC-F01-gestione-pagine.md` · `docs/ai/adr/ADR-19-revisioni-immutabili.md` · `docs/ai/adr/ADR-53-air-gapped-ssg-zero-db.md` (routing/slug, succede ad ADR-24) · `docs/ai/adr/ADR-61-retention-revisioni.md` |
@@ -17,4 +17,32 @@ Istruzione vincolante per ogni agente AI: per il task corrente, apri **solo** gl
 - `RFC-F04e-bis-esito-spike-iframe.md` (2026-09-14) è un addendum a `RFC-F04e-super-elementor.md`: riporta l'esito negativo della spike imposta da `ADR-70` § "Decisione" punto 4 (`PLAN-F04-dnd-iframe-spike.md`) e riapre solo la Decisione 1/2 di quella RFC per una nuova firma umana. `ADR-70`/`ADR-71` restano storiche e non modificate: l'esito eventuale di questo addendum produrrà, se del caso, una nuova ADR di superamento (non ancora esistente al momento di questa nota).
 - **`ADR-72-canvas-iframe-portal-bridge.md` (approvata 2026-09-14) supera `ADR-70` § "Decisione" punti 1 e 3** (canvas via `ReactDOM.createPortal` nello stesso albero React del padre, nessun secondo `createRoot`/entry point, nessun `IframeBridgeSensor`; misura cross-frame via `measuring.*.measure` di `DndContext` al suo posto). `ADR-70` resta storica e non modificata (`docs/constitution.md` § Documentation Policy): i suoi punti 2 (store Zustand), 5 (isolamento CSS) e 6 (nessuna nuova dipendenza npm) restano vincolanti identici, non riaperti da `ADR-72`. Stesso meccanismo di annotazione già usato sopra per ADR-22/ADR-23 superseded da ADR-45/ADR-53: per il dominio "Editor Visivo & Canvas", `ADR-72` è l'ADR corrente per l'architettura del canvas in iframe; `ADR-70` va letta solo per i punti 2/5/6 e per il contesto storico. `docs/ai/specs/SPEC-F04-super-elementor.md` § 1 e § 3.3/3.5 sono stati aggiornati di conseguenza in pari data.
 - **`ADR-73-rimozione-maniglie-resize-widget-foglia.md` (approvata 2026-09-16) supera parzialmente `ADR-71` § "Decisione" punto 3**: la maniglia di resize trascinabile sul canvas non si monta più per `heading`/`richText`/`image`/`button` (parità Elementor Pro, nessun widget foglia ha maniglie di resize sul canvas), restando invariata per `container`. Nessuna modifica allo schema/registro backend — solo alla logica di rendering frontend (`resolveResizePropSpec`). `ADR-71` resta storica e non riscritta per il resto (punti 1-2, 4-7 invariati).
+- **`ADR-91-editor-fullscreen-3-colonne-fisse.md` (approvata 2026-09-18) supera `ADR-32` §
+  "Decisione" punto 1** (sidebar unica a schede Widgets/Struttura/Proprietà/Cronologia/Pagina,
+  340px) **e la descrizione a 3 colonne ereditata invariata da `ADR-54`**: la shell fullscreen
+  monta ora 3 colonne fisse sempre visibili simultaneamente — Palette Widget (sinistra, 300px,
+  schede Widgets/Struttura/Cronologia/Pagina, "Proprietà" non più fra queste), Canvas (centro,
+  invariato, iframe ADR-72), Property Inspector (destra, 320px, nuova, sempre montata). `ADR-32`
+  resta storica e non riscritta per il resto (punti 2-7 invariati); `ADR-54` resta storica e non
+  riscritta (rotta isolata `/studio/:guid` invariata, tocca solo la disposizione interna delle
+  colonne). Autorizzazione raccolta in sede di task (stesso pattern di ADR-54/72/73), non da una
+  dichiarazione di "autorizzazione" nel solo prompt ricevuto — vedi ADR-91 § "Contesto" per la
+  verifica che ha preceduto la domanda.
+- **`ADR-92-overlay-in-canvas-e-palette-widget-2-colonne.md` (approvata 2026-09-18) supera
+  parzialmente lo schema colore bordo di `T-editor-refinement`/`RE-2`** (entrambi documentati
+  solo a commento in `EditorBlockWrapper.tsx`, mai una loro ADR dedicata): il bordo di
+  hover/selezione passa dal magenta fisso `#e0007b` (Sezioni/Container) e dal blu a tre
+  livelli (`blockLevelColor`, widget foglia) a due colori fissi per categoria — `#2271b1`
+  Container/Sezione, `#a435c0` Widget foglia — e l'ancoraggio della toolbar di selezione
+  (`BlockHoverOverlay.tsx`) passa da centrato a in alto a sinistra. `blockLevelColor` resta
+  calcolato invariato (tre livelli) come custom property, solo non più consumato dal bordo.
+  Stesso prompt esterno "RESTYLING VISIVO 1:1" già annotato sopra per ADR-91, terza recidiva
+  della stessa giornata — vedi ADR-92 § "Contesto" per la verifica sul codice che ha preceduto
+  la domanda esplicita all'umano.
+- **`ADR-93-in-canvas-theme-frame-e-breadcrumb.md` (2026-09-19, stato "In discussione", in attesa di
+  firma umana) documenta a posteriori** i badge fissi `THEME - HEADER`/`THEME - FOOTER` e la barra
+  breadcrumb sticky a 28px già presenti in `CanvasThemeFrame.tsx`, montati da `EditorCanvas.tsx`
+  nel documento iframe di `ADR-72`. Non supera nessuna ADR precedente: estende `ADR-72`/`ADR-91`/
+  `ADR-92` senza toccarne le decisioni. Finché non è firmata, va letta come descrittiva, non
+  vincolante.
 - **Round "R0 — Decisioni fondative" (`PLAN-parita-elementor-pro.md`) rinumerato 73–79 → 74–80.** Il piano, redatto 2026-09-16 assumendo "ultima firmata: ADR-72", assegnava a questo round i numeri 73–79. Lo stesso giorno è stata però approvata `ADR-73-rimozione-maniglie-resize-widget-foglia.md` (dominio Editor Visivo/Canvas, indipendente da questo round). Stesso principio già applicato da `ADR-53` § "Numerazione" (una ADR approvata non si riscrive, la decisione prende il primo numero libero): il round R0 occupa quindi **ADR-74–ADR-80**, tutte ancora in stato "In discussione" (nessuna ha ricevuto firma umana al momento di questa nota). `docs/PLAN-parita-elementor-pro.md` § "Riepilogo" riporta ancora la numerazione originale 73–79 e va letto con questo scarto di +1 finché non viene aggiornato in una sede propria (un piano non richiede una ADR per essere corretto, ma non si riscrive di iniziativa AI senza segnalarlo qui).

@@ -44,7 +44,6 @@ import {
 import EditorCanvas from '../pages/editor/EditorCanvas';
 import { InvalidBlockProvider } from '../pages/editor/EditorBlockWrapper';
 import FullScreenEditorLayout from '../pages/editor/FullScreenEditorLayout';
-import EditorStructureNavigator from '../pages/editor/EditorStructureNavigator';
 
 /** Builder a piena finestra dell'albero di blocchi di una Sezione Globale. */
 export default function PageGlobalSectionBuilder(): JSX.Element {
@@ -201,7 +200,6 @@ export default function PageGlobalSectionBuilder(): JSX.Element {
         hasUnsavedChanges={hasUnsavedChanges}
         saving={saving}
         onSaveDraft={() => void handleSave()}
-        structurePanel={<EditorStructureNavigator />}
       >
         <InvalidBlockProvider invalidBlockId={invalidBlockId}>
           <EditorCanvas />

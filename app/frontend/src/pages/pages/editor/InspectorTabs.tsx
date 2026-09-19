@@ -16,6 +16,7 @@
  */
 import type { ReactNode } from 'react';
 import { Tabs } from '@mantine/core';
+import { IconBrush, IconPencil, IconSettings } from '@tabler/icons-react';
 import styles from './InspectorTabs.module.css';
 
 export type InspectorTab = 'content' | 'style' | 'advanced';
@@ -29,10 +30,10 @@ export interface InspectorTabsProps {
   advanced?: ReactNode;
 }
 
-const TAB_DEFS: readonly { value: InspectorTab; label: string }[] = [
-  { value: 'content', label: 'Contenuto' },
-  { value: 'style', label: 'Stile' },
-  { value: 'advanced', label: 'Avanzato' },
+const TAB_DEFS: readonly { value: InspectorTab; label: string; icon: ReactNode }[] = [
+  { value: 'content', label: 'Contenuto', icon: <IconPencil size={14} /> },
+  { value: 'style', label: 'Stile', icon: <IconBrush size={14} /> },
+  { value: 'advanced', label: 'Avanzato', icon: <IconSettings size={14} /> },
 ];
 
 export default function InspectorTabs({
@@ -56,7 +57,7 @@ export default function InspectorTabs({
       <Tabs defaultValue={availableTabs[0].value} keepMounted={false} color="blue">
         <Tabs.List grow>
           {availableTabs.map((tab) => (
-            <Tabs.Tab key={tab.value} value={tab.value}>
+            <Tabs.Tab key={tab.value} value={tab.value} leftSection={tab.icon}>
               {tab.label}
             </Tabs.Tab>
           ))}

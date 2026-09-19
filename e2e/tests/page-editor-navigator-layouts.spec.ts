@@ -3,6 +3,7 @@ import { ADMIN_STORAGE_STATE } from './helpers/admin-session';
 import {
   addChildBlock,
   blockOfType,
+  canvasFrame,
   createPageFromUi,
   deletePageFromUi,
   openContentTab,
@@ -89,7 +90,7 @@ function sectionElement(section: Locator): Locator {
  * contro un layout multi-colonna reale, non solo contro la prop `columnRatio` isolata.
  */
 async function addRootTwoColumnSection(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Aggiungi widget' }).click();
+  await canvasFrame(page).getByRole('button', { name: 'Aggiungi widget' }).click();
   const menu = page.getByRole('menu');
   await expect(menu).toBeVisible();
   await menu.getByRole('menuitem', { name: SECTION_LABEL, exact: true }).click();

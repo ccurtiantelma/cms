@@ -52,6 +52,7 @@ import { GLOBAL_TOKENS_CANVAS_SCOPE_CLASS } from '../../../libs/globalTokensComp
 import CanvasAddSectionZone from './CanvasAddSectionZone';
 import CanvasContextMenu from './CanvasContextMenu';
 import CanvasSectionInserter from './CanvasSectionInserter';
+import { CanvasBreadcrumbBar, ThemeFrameBadge } from './CanvasThemeFrame';
 import EditorBlockWrapper from './EditorBlockWrapper';
 import styles from './EditorCanvas.module.css';
 
@@ -82,6 +83,7 @@ export default function EditorCanvas(): JSX.Element {
           sempre, coi default di fabbrica il Canvas resta visivamente invariato solo se il
           contenuto non richiede più di 1200px, stesso principio del rendering pubblico.
         */}
+        <ThemeFrameBadge area="header" />
         <div className={styles.pageOuter}>
           <div className={styles.pageBoxed}>
             {/*
@@ -121,6 +123,8 @@ export default function EditorCanvas(): JSX.Element {
             </div>
           </div>
         </div>
+        <ThemeFrameBadge area="footer" />
+        <CanvasBreadcrumbBar />
       </div>
     </CanvasContextMenu>
   );

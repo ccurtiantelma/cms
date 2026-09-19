@@ -28,13 +28,36 @@
  * leggerlo: `THEME_FONT_FAMILIES` è la whitelist di sistema più vicina realmente presente nel
  * codebase oggi.
  */
-import { Group, NumberInput, Select, Stack, Text, Tooltip } from '@mantine/core';
-import { useState } from 'react';
+import type { ReactNode } from 'react';
+import {
+  Center,
+  Group,
+  NumberInput,
+  SegmentedControl,
+  Select,
+  Stack,
+  Text,
+  Tooltip,
+  VisuallyHidden,
+} from '@mantine/core';
+import {
+  IconItalic,
+  IconLetterA,
+  IconLetterCase,
+  IconLetterCaseLower,
+  IconLetterCaseUpper,
+  IconMinus,
+  IconOverline,
+  IconSlash,
+  IconStrikethrough,
+  IconUnderline,
+} from '@tabler/icons-react';
 import type { BlockPropDescriptor, PropStateName } from '../../../../types/blocks.types';
 import { useActiveBreakpoint } from '../../../../hooks/useBlockEditorStore';
 import { THEME_FONT_FAMILIES, type ThemeFontFamilyId } from '../../../../theme-tokens';
 import { BREAKPOINT_LABELS } from '../../../../libs/breakpoints';
-import StateSwitcher, { type EditableStateName } from './StateSwitcher';
+import StateSwitcher from './StateSwitcher';
+import { useEditingState } from './editingState';
 import {
   buildTypographyFieldPatch,
   hasTypographyFieldOverride,
@@ -87,9 +110,33 @@ const FONT_WEIGHT_OPTIONS = [
   'normal',
   'bold',
 ] as const;
-const TEXT_TRANSFORM_OPTIONS = ['none', 'uppercase', 'lowercase', 'capitalize'] as const;
-const FONT_STYLE_OPTIONS = ['normal', 'italic', 'oblique'] as const;
-const TEXT_DECORATION_OPTIONS = ['none', 'underline', 'overline', 'line-through'] as const;
+
+/** Voce di un enum a icona: `hint` è il nome accessibile e il tooltip, mai solo l'icona. */
+interface IconOption {
+  value: string;
+  hint: string;
+  icon: ReactNode;
+}
+
+const ICON_SIZE = 14;
+
+const TEXT_TRANSFORM_OPTIONS: readonly IconOption[] = [
+  { value: 'none', hint: 'Nessuna trasformazione', icon: <IconMinus size={ICON_SIZE} /> },
+  { value: 'uppercase', hint: 'Maiuscolo', icon: <IconLetterCaseUpper size={ICON_SIZE} /> },
+  { value: 'lowercase', hint: 'Minuscolo', icon: <IconLetterCaseLower size={ICON_SIZE} /> },
+  { value: 'capitalize', hint: 'Iniziali maiuscole', icon: <IconLetterCase size={ICON_SIZE} /> },
+];
+const FONT_STYLE_OPTIONS: readonly IconOption[] = [
+  { value: 'normal', hint: 'Stile normale', icon: <IconLetterA size={ICON_SIZE} /> },
+  { value: 'italic', hint: 'Corsivo', icon: <IconItalic size={ICON_SIZE} /> },
+  { value: 'oblique', hint: 'Obliquo', icon: <IconSlash size={ICON_SIZE} /> },
+];
+const TEXT_DECORATION_OPTIONS: readonly IconOption[] = [
+  { value: 'none', hint: 'Nessuna decorazione', icon: <IconMinus size={ICON_SIZE} /> },
+  { value: 'underline', hint: 'Sottolineato', icon: <IconUnderline size={ICON_SIZE} /> },
+  { value: 'overline', hint: 'Sopralineato', icon: <IconOverline size={ICON_SIZE} /> },
+  { value: 'line-through', hint: 'Barrato', icon: <IconStrikethrough size={ICON_SIZE} /> },
+];
 
 export interface TypographyFieldProps {
   prop: BlockPropDescriptor;
@@ -108,7 +155,7 @@ export default function TypographyField({
 }: TypographyFieldProps): JSX.Element {
   const label = propLabel(prop, propsMeta);
   const activeBreakpoint = useActiveBreakpoint();
-  const [editingState, setEditingState] = useState<EditableStateName>('normal');
+  const { editingState, setEditingState, hasPanelSwitcher } = useEditingState();
   const state: PropStateName = prop.stateful ? editingState : 'normal';
 
   function readField(field: string): unknown {
@@ -139,8 +186,8 @@ export default function TypographyField({
    */
   function renderFieldLabel(field: string, text: string): JSX.Element {
     return (
-      <Group gap={6} wrap="nowrap" mb={4}>
-        <Text size="xs" c="dimmed">
+      <Group gap={6} wrap="nowrap" className={styles.fieldRowLabel}>
+        <Text size="sm">
           {text}
           {breakpointSuffix}
         </Text>
@@ -168,7 +215,7 @@ export default function TypographyField({
     const current = isUnitValue(raw) ? raw : undefined;
     const unit = current?.unit ?? units[0];
     return (
-      <div>
+      <div className={styles.fieldRow}>
         {renderFieldLabel(field, text)}
         <Group gap="xs" wrap="nowrap">
           <NumberInput
@@ -197,20 +244,66 @@ export default function TypographyField({
     );
   }
 
-  /** Riga di controllo per un campo enum semplice (`fontWeight`/`textTransform`/`fontStyle`/`textDecoration`). */
-  function renderEnumField(field: string, text: string, options: readonly string[]): JSX.Element {
+  /**
+   * Riga di controllo per un campo enum: `SegmentedControl` compatto (mockup di Design) al posto
+   * di un `Select`. Le voci a icona espongono `hint` come testo nascosto (nome accessibile
+   * del radio) e come tooltip; `Peso` (11 valori, troppi per una sola riga da 320px) usa etichette
+   * numeriche corte su una griglia a capo, `fullWidth` disattivato per non stirarle.
+   */
+  function renderEnumField(
+    field: string,
+    text: string,
+    options: readonly IconOption[],
+  ): JSX.Element {
     const raw = readField(field);
-    const current = typeof raw === 'string' && options.includes(raw) ? raw : null;
+    const current = typeof raw === 'string' && options.some((o) => o.value === raw) ? raw : '';
     return (
-      <div>
+      <div className={styles.fieldRow}>
         {renderFieldLabel(field, text)}
-        <Select
+        <SegmentedControl
+          size="xs"
+          fullWidth
           aria-label={`${label} — ${text}`}
-          data={[...options]}
           value={current}
-          comboboxProps={{ zIndex: 1100 }}
-          onChange={(next) => next && writeField(field, next)}
+          onChange={(next) => writeField(field, next)}
+          data={options.map((option) => ({
+            value: option.value,
+            label: (
+              <Tooltip label={option.hint} withArrow openDelay={300}>
+                <Center>
+                  {option.icon}
+                  <VisuallyHidden>{option.hint}</VisuallyHidden>
+                </Center>
+              </Tooltip>
+            ),
+          }))}
         />
+      </div>
+    );
+  }
+
+  /** Riga per `fontWeight`: pulsanti toggle compatti a capo (11 valori), stessa semantica radio. */
+  function renderWeightField(): JSX.Element {
+    const raw = readField('fontWeight');
+    const current = typeof raw === 'string' ? raw : null;
+    return (
+      <div className={styles.fieldRow}>
+        {renderFieldLabel('fontWeight', 'Peso')}
+        <div role="radiogroup" aria-label={`${label} — Peso`} className={styles.toggleGrid}>
+          {FONT_WEIGHT_OPTIONS.map((weight) => (
+            <button
+              key={weight}
+              type="button"
+              role="radio"
+              aria-checked={current === weight}
+              data-active={current === weight || undefined}
+              className={styles.toggleButton}
+              onClick={() => writeField('fontWeight', weight)}
+            >
+              {weight}
+            </button>
+          ))}
+        </div>
       </div>
     );
   }
@@ -224,10 +317,12 @@ export default function TypographyField({
         <Text size="sm" fw={500}>
           {label}
         </Text>
-        {prop.stateful && <StateSwitcher value={editingState} onChange={setEditingState} />}
+        {prop.stateful && !hasPanelSwitcher && (
+          <StateSwitcher value={editingState} onChange={setEditingState} />
+        )}
       </Group>
 
-      <div>
+      <div className={styles.fieldRow}>
         {renderFieldLabel('fontFamily', 'Famiglia')}
         <Select
           aria-label={`${label} — Famiglia`}
@@ -245,13 +340,13 @@ export default function TypographyField({
       </div>
 
       {renderUnitField('fontSize', 'Dimensione', ['px', 'em', 'rem', 'vw', '%'], 1, 400)}
-      {renderEnumField('fontWeight', 'Spessore', FONT_WEIGHT_OPTIONS)}
-      {renderUnitField('lineHeight', 'Altezza riga', ['em', 'px'], 0, 200)}
+      {renderWeightField()}
+      {renderUnitField('lineHeight', 'Interlinea', ['em', 'px'], 0, 200)}
       {renderUnitField('letterSpacing', 'Spaziatura lettere', ['px', 'em'], -20, 50)}
       {renderUnitField('wordSpacing', 'Spaziatura parole', ['px', 'em'], -20, 100)}
-      {renderEnumField('textTransform', 'Trasformazione testo', TEXT_TRANSFORM_OPTIONS)}
-      {renderEnumField('fontStyle', 'Stile carattere', FONT_STYLE_OPTIONS)}
-      {renderEnumField('textDecoration', 'Decorazione testo', TEXT_DECORATION_OPTIONS)}
+      {renderEnumField('textTransform', 'Trasforma', TEXT_TRANSFORM_OPTIONS)}
+      {renderEnumField('fontStyle', 'Stile', FONT_STYLE_OPTIONS)}
+      {renderEnumField('textDecoration', 'Decorazione', TEXT_DECORATION_OPTIONS)}
     </Stack>
   );
 }

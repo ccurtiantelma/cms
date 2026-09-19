@@ -106,7 +106,7 @@ export default function SpacingField({
   return (
     <Stack gap={6}>
       <Group gap={6} wrap="nowrap">
-        <Text size="sm" fw={500}>
+        <Text size="sm">
           {label}
           {breakpointSuffix}
         </Text>

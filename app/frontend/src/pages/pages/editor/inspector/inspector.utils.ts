@@ -165,7 +165,13 @@ function isContentAlignmentPropName(name: string): boolean {
 export const CONTENT_SECTION_ORDER = ['Testo / Media', 'Allineamento'] as const;
 
 /** Sezioni Accordion del tab "Stile" (T-inspector-elementor-parity), in ordine fisso di visualizzazione. */
-export const STYLE_SECTION_ORDER = ['Tipografia & Colori', 'Bordo', 'Ombra', 'Spaziatura'] as const;
+export const STYLE_SECTION_ORDER = [
+  'Tipografia',
+  'Colori',
+  'Bordo',
+  'Ombra',
+  'Spaziatura',
+] as const;
 
 /** Sezioni Accordion del tab "Avanzato" (T-inspector-elementor-parity), in ordine fisso di visualizzazione. */
 export const ADVANCED_SECTION_ORDER = ['Layout & Responsive', 'Attributi Custom'] as const;
@@ -192,7 +198,8 @@ export function styleSectionFor(prop: BlockPropDescriptor): (typeof STYLE_SECTIO
   if (SPACING_SLIDER_PROPS.has(prop.name) || STYLE_SPACING_SECTION_EXTRA_NAMES.has(prop.name)) {
     return 'Spaziatura';
   }
-  return 'Tipografia & Colori';
+  if (prop.kind === 'color' || prop.kind === 'colorRef') return 'Colori';
+  return 'Tipografia';
 }
 
 /**

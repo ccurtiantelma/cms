@@ -29,7 +29,7 @@
  * `PagePageDetail` traduce nel blocco colpevole. Nessun controllo di questo file blocca il
  * salvataggio — coerente con CLAUDE.md § Frontend ("validazione client solo UX").
  */
-import { useState } from 'react';
+import { createElement, useState } from 'react';
 import { ActionIcon, Alert, Group, Paper, Stack, Text, Tooltip } from '@mantine/core';
 import { IconArrowLeft, IconInfoCircle } from '@tabler/icons-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -41,7 +41,8 @@ import {
   useSelectedNode,
   useTreeGeneration,
 } from '../../../hooks/useBlockEditorStore';
-import { findLocation, type BlockNode } from './block-tree.utils';
+import { findLocation, findPath, type BlockNode } from './block-tree.utils';
+import { blockIcon } from './block-icon';
 import MediaLibraryModal from '../../../components/media/MediaLibraryModal';
 import MediaCropperModal from '../../../components/media/MediaCropperModal';
 import type { MediaFileRecord } from '../../../types/media.types';
@@ -51,21 +52,6 @@ import AdvancedTab from './inspector/AdvancedTab';
 import { MEDIA_MODAL_Z_INDEX, asString, groupPropsByTab } from './inspector/inspector.utils';
 import InspectorTabs from './InspectorTabs';
 import { usePresetStore } from './usePresetStore';
-
-// Riesportate: `VisualBoxModelInspector.tsx` le riusa (invariante protetto, vedi il suo
-// commento di testa) e non tutti i chiamanti storici sono stati aggiornati a importare
-// direttamente da `inspector/inspector.utils.ts`. Il punto di verità resta comunque quel
-// modulo — questo file si limita a passare i nomi.
-export {
-  asString,
-  breakpointKey,
-  effectiveScalarForViewport,
-  hasExplicitOverrideAtBreakpoint,
-  propLabel,
-  responsiveEnvelope,
-  VIEWPORT_LABELS,
-  type PropsMeta,
-} from './inspector/inspector.utils';
 
 interface PropertyFormProps {
   node: BlockNode;
@@ -243,6 +229,13 @@ export default function PropertyInspector(): JSX.Element {
   // solo le due azioni che servono al pulsante di ritorno, non l'intero store.
   const selectNode = useBlockEditorStore((state) => state.selectNode);
   const setActiveSidebarTab = useBlockEditorStore((state) => state.setActiveSidebarTab);
+  // Percorso radice→nodo per il sottotitolo "Contenitore › Titolo" (parità mockup Elementor).
+  const path = useBlockEditorStore(
+    useShallow((state) => (node ? findPath(state.tree, node.id) : [])),
+  );
+  const breadcrumb = path
+    .map((entry) => BLOCK_TYPES.find((type) => type.type === entry.type)?.meta?.label ?? entry.type)
+    .join(' › ');
 
   /** Deseleziona il blocco e riporta la sidebar sulla scheda "Widgets" (switch esplicito
    *  Palette↔Ispettore, di ritorno rispetto a quello automatico fatto da `selectNode`). */
@@ -276,12 +269,24 @@ export default function PropertyInspector(): JSX.Element {
                 </ActionIcon>
               </Tooltip>
             )}
-            <Text fw={700} c="dark.8">
-              {/* Intestazione "Modifica {tipo}" (parità Elementor Pro, T-elementor-parity):
-                  ogni tipo — Sezione/Contenitore/Titolo/... — legge lo stesso `meta.label`
-                  del registro, unica fonte, mai una seconda etichetta duplicata a fianco. */}
-              {descriptor ? `Modifica ${descriptor.meta?.label ?? descriptor.type}` : 'Proprietà'}
-            </Text>
+            {descriptor && (
+              <span className={styles.headerIcon} aria-hidden="true">
+                {createElement(blockIcon(descriptor.meta?.icon), { size: 22 })}
+              </span>
+            )}
+            <div className={styles.headerText}>
+              <Text fw={700} c="dark.8" lh={1.2}>
+                {/* Intestazione "Modifica {tipo}" (parità Elementor Pro, T-elementor-parity):
+                    ogni tipo — Sezione/Contenitore/Titolo/... — legge lo stesso `meta.label`
+                    del registro, unica fonte, mai una seconda etichetta duplicata a fianco. */}
+                {descriptor ? `Modifica ${descriptor.meta?.label ?? descriptor.type}` : 'Proprietà'}
+              </Text>
+              {breadcrumb && (
+                <Text size="xs" c="dimmed" truncate="end">
+                  {breadcrumb}
+                </Text>
+              )}
+            </div>
           </Group>
 
           {!node ? (

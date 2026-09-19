@@ -154,3 +154,113 @@
 [data-mantine-color-scheme='dark'] .colorSwatchButton {
   border-color: var(--mantine-color-dark-3);
 }
+
+/* Switcher Normal/Hover/Focus unico in testa alla scheda Stile, in una riquadro come nel mockup. */
+.stateBar {
+  margin-bottom: var(--mantine-spacing-sm);
+  padding: var(--mantine-spacing-xs);
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-md);
+}
+
+[data-mantine-color-scheme='dark'] .stateBar {
+  border-color: var(--mantine-color-dark-4);
+}
+
+/* Riga di campo stile Elementor: etichetta a sinistra (larghezza fissa), controllo a destra. */
+.fieldRow {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+}
+
+.fieldRowLabel {
+  flex: 0 0 96px;
+}
+
+.fieldRow > :last-child {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Indenta una riga secondaria (es. swatch di sistema) sotto la colonna del controllo. */
+.fieldRowIndent {
+  margin-left: calc(96px + var(--mantine-spacing-xs));
+}
+
+/*
+  Griglia di toggle compatti (`fontWeight`, 11 valori): pulsanti radio a capo, stesso
+  vocabolario visivo del `SegmentedControl` Mantine (bordo grigio, attivo = bianco/ombra) senza
+  la riga unica che a 320px non contiene 11 voci.
+*/
+.toggleGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.toggleButton {
+  min-width: 34px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-sm);
+  background-color: var(--mantine-color-gray-0);
+  color: var(--mantine-color-gray-7);
+  font-size: var(--mantine-font-size-xs);
+  cursor: pointer;
+}
+
+.toggleButton:hover {
+  border-color: var(--mantine-color-blue-5);
+}
+
+.toggleButton[data-active] {
+  border-color: var(--mantine-color-blue-6);
+  background-color: var(--mantine-color-white);
+  color: var(--mantine-color-blue-7);
+  font-weight: 600;
+}
+
+.toggleButton:focus-visible {
+  outline: 2px solid var(--mantine-color-blue-6);
+  outline-offset: 1px;
+}
+
+[data-mantine-color-scheme='dark'] .toggleButton {
+  border-color: var(--mantine-color-dark-4);
+  background-color: var(--mantine-color-dark-6);
+  color: var(--mantine-color-dark-1);
+}
+
+[data-mantine-color-scheme='dark'] .toggleButton[data-active] {
+  border-color: var(--mantine-color-blue-5);
+  background-color: var(--mantine-color-dark-5);
+  color: var(--mantine-color-blue-3);
+}
+
+/* Accordion dell'Inspector: riquadri separati con bordo sottile, padding e contrasto coerenti. */
+.accordion :global(.mantine-Accordion-item) {
+  border: 1px solid var(--mantine-color-gray-3);
+  background-color: var(--mantine-color-white);
+}
+
+.accordion :global(.mantine-Accordion-control) {
+  padding: 8px var(--mantine-spacing-sm);
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
+  color: var(--mantine-color-gray-8);
+}
+
+.accordion :global(.mantine-Accordion-content) {
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm) var(--mantine-spacing-sm);
+}
+
+[data-mantine-color-scheme='dark'] .accordion :global(.mantine-Accordion-item) {
+  border-color: var(--mantine-color-dark-4);
+  background-color: var(--mantine-color-dark-7);
+}
+
+[data-mantine-color-scheme='dark'] .accordion :global(.mantine-Accordion-control) {
+  color: var(--mantine-color-dark-0);
+}

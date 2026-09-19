@@ -1,7 +1,7 @@
 /**
  * Scheda "Stile" dell'ispettore (ADR-30 § 1): le props filtrate da `groupPropsByTab` per
  * `tab: 'style'`, raggruppate in sezioni Accordion stile Elementor (`groupPropsBySection`/
- * `styleSectionFor`, T-inspector-elementor-parity) — "Tipografia & Colori", "Bordo",
+ * `styleSectionFor`, T-inspector-elementor-parity) — "Tipografia", "Colori", "Bordo",
  * "Ombra", "Spaziatura`. Tutte le sezioni popolate restano aperte di default (`Accordion`
  * `multiple` + `defaultValue`).
  *
@@ -26,9 +26,12 @@
  * presentazione, mai di validazione, delle due eccezioni sopra.
  */
 import type { BlockPropDescriptor } from '../../../../types/blocks.types';
+import { useState } from 'react';
 import { Accordion } from '@mantine/core';
 import VisualBoxModelInspector from '../VisualBoxModelInspector';
 import PropField from './PropField';
+import StateSwitcher, { type EditableStateName } from './StateSwitcher';
+import { EditingStateContext } from './editingState';
 import styles from './inspector.module.css';
 import {
   asString,
@@ -67,6 +70,7 @@ export default function StyleTab({
   nodeType,
 }: PropertyTabProps): JSX.Element {
   const activeBreakpoint = breakpointKey(activeViewport);
+  const [editingState, setEditingState] = useState<EditableStateName>('normal');
 
   // ADR-50 — logica di presentazione, non di validazione (stesso principio di `maxWidth`
   // sotto `contentWidth = full-width`, ADR-33 § 1): tutte le prop restano dichiarate e
@@ -154,24 +158,34 @@ export default function StyleTab({
 
   const sections = groupPropsBySection(visibleFields, styleSectionFor, STYLE_SECTION_ORDER);
 
+  const hasStatefulField = visibleFields.some((field) => field.stateful);
+
   return (
-    <Accordion
-      multiple
-      defaultValue={sections.map((section) => section.section)}
-      variant="separated"
-    >
-      {sections.map((section) => (
-        <Accordion.Item key={section.section} value={section.section}>
-          <Accordion.Control>{section.section}</Accordion.Control>
-          <Accordion.Panel>
-            {section.section === SPACING_SECTION_NAME ? (
-              renderSpacingSection(section.items)
-            ) : (
-              <div className={styles.fieldList}>{section.items.map(renderPropField)}</div>
-            )}
-          </Accordion.Panel>
-        </Accordion.Item>
-      ))}
-    </Accordion>
+    <EditingStateContext.Provider value={{ state: editingState, setState: setEditingState }}>
+      {hasStatefulField && (
+        <div className={styles.stateBar}>
+          <StateSwitcher global value={editingState} onChange={setEditingState} />
+        </div>
+      )}
+      <Accordion
+        multiple
+        defaultValue={sections.map((section) => section.section)}
+        variant="separated"
+        className={styles.accordion}
+      >
+        {sections.map((section) => (
+          <Accordion.Item key={section.section} value={section.section}>
+            <Accordion.Control>{section.section}</Accordion.Control>
+            <Accordion.Panel>
+              {section.section === SPACING_SECTION_NAME ? (
+                renderSpacingSection(section.items)
+              ) : (
+                <div className={styles.fieldList}>{section.items.map(renderPropField)}</div>
+              )}
+            </Accordion.Panel>
+          </Accordion.Item>
+        ))}
+      </Accordion>
+    </EditingStateContext.Provider>
   );
 }

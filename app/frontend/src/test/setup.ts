@@ -8,6 +8,11 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
+// Vedi `env.FRONTEND_ROOT` in vitest.config.ts: rende i test indipendenti dalla cwd di lancio.
+if (process.env.FRONTEND_ROOT && process.cwd() !== process.env.FRONTEND_ROOT) {
+  process.chdir(process.env.FRONTEND_ROOT);
+}
+
 afterEach(() => {
   cleanup();
 });

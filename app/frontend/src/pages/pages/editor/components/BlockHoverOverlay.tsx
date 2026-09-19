@@ -42,7 +42,7 @@
  * esplicita di un round successivo del task, mai sovrapposti sullo stesso angolo del
  * blocco.
  */
-import { ActionIcon, Group, Tooltip } from '@mantine/core';
+import { ActionIcon, Group, Text, Tooltip } from '@mantine/core';
 import type { DraggableAttributes } from '@dnd-kit/core';
 import type { DraggableSyntheticListeners } from '@dnd-kit/core';
 import {
@@ -205,6 +205,16 @@ export default function BlockHoverOverlay({
       // (che lo riselezionerebbe) né al contenitore che lo ospita.
       onClick={(event) => event.stopPropagation()}
     >
+      {/*
+        Etichetta nome blocco (ADR-92): stesso testo già mostrato dal badge separato di solo
+        hover (`.hoverBadge`, `EditorBlockWrapper.tsx`) — qui perché il badge non è montato
+        durante la selezione (`isHovered && !isSelected`), lasciando la toolbar priva finora
+        di un'indicazione testuale del tipo di blocco selezionato.
+      */}
+      <Text size="xs" fw={600} className={styles.overlayLabel}>
+        {label}
+      </Text>
+
       {/*
         "+" (RE-2, primo controllo, restyle Elementor Pro): inserisce un nuovo blocco
         **prima** di questo nodo — stesso `BlockPalette` già usato per i contenitori vuoti

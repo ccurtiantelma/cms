@@ -24,12 +24,12 @@
  * compili davvero.
  */
 import { ColorInput, Group, Stack, Text, Tooltip } from '@mantine/core';
-import { useState } from 'react';
 import type { BlockPropDescriptor, PropStateName } from '../../../../types/blocks.types';
 import { useActiveBreakpoint, useGlobalTokens } from '../../../../hooks/useBlockEditorStore';
 import type { GlobalTokens } from '../../../../libs/globalTokensCompiler';
 import { BREAKPOINT_LABELS } from '../../../../libs/breakpoints';
-import StateSwitcher, { type EditableStateName } from './StateSwitcher';
+import StateSwitcher from './StateSwitcher';
+import { useEditingState } from './editingState';
 import {
   buildStatefulResponsivePropPatch,
   hasStatefulResponsiveOverride,
@@ -86,7 +86,7 @@ export default function ColorField({
   const label = propLabel(prop, propsMeta);
   const activeBreakpoint = useActiveBreakpoint();
   const globalTokens = useGlobalTokens();
-  const [editingState, setEditingState] = useState<EditableStateName>('normal');
+  const { editingState, setEditingState, hasPanelSwitcher } = useEditingState();
   const state: PropStateName = prop.stateful ? editingState : 'normal';
 
   const nakedValue = readStatefulResponsiveValue(prop, value, state, activeBreakpoint);
@@ -108,9 +108,14 @@ export default function ColorField({
 
   return (
     <Stack gap={6}>
-      <Group justify="space-between" wrap="nowrap" gap={6}>
-        <Group gap={6} wrap="nowrap">
-          <Text size="sm" fw={500}>
+      {prop.stateful && !hasPanelSwitcher && (
+        <Group justify="flex-end">
+          <StateSwitcher value={editingState} onChange={setEditingState} />
+        </Group>
+      )}
+      <div className={styles.fieldRow}>
+        <Group gap={6} wrap="nowrap" className={styles.fieldRowLabel}>
+          <Text size="sm">
             {label}
             {breakpointSuffix}
           </Text>
@@ -126,15 +131,14 @@ export default function ColorField({
             </Tooltip>
           )}
         </Group>
-        {prop.stateful && <StateSwitcher value={editingState} onChange={setEditingState} />}
-      </Group>
-      <ColorInput
-        aria-label={label}
-        value={hexValue}
-        format={prop.allowAlpha ? 'hexa' : 'hex'}
-        onChange={(next) => writeNaked(next)}
-      />
-      <Group gap={6}>
+        <ColorInput
+          aria-label={label}
+          value={hexValue}
+          format={prop.allowAlpha ? 'hexa' : 'hex'}
+          onChange={(next) => writeNaked(next)}
+        />
+      </div>
+      <Group gap={6} className={styles.fieldRowIndent}>
         {SYSTEM_COLOR_IDS.map((id) => (
           <Tooltip key={id} label={`Colore di sistema: ${SYSTEM_COLOR_LABELS[id]}`} withArrow>
             <button

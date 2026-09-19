@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from '@playwright/test';
+import { expect, type FrameLocator, type Locator, type Page } from '@playwright/test';
 import { BLOCK_TYPES } from '../../../app/frontend/src/types/blocks.types';
 
 /**
@@ -91,27 +91,47 @@ export async function createPageFromUi(
  * montato", non più "seleziona una scheda".
  */
 export async function openContentTab(page: Page): Promise<void> {
-  await expect(saveButton(page)).toBeVisible();
+  await expect(publishOptionsTrigger(page)).toBeVisible();
 }
 
 /**
- * Il pulsante che salva la bozza dell'editor full-screen (`Toolbar.tsx`).
+ * Il trigger del menu di pubblicazione dell'editor full-screen (`Toolbar.tsx`): il chevron
+ * accanto a "Pubblica", etichetta accessibile **"Altre opzioni di pubblicazione"**.
  *
- * Etichetta accessibile **"Salva Bozza"** (icona `IconDeviceFloppy`, un dischetto) —
- * verificato sul DOM reale. Il bug applicativo storicamente documentato qui (l'etichetta
- * diceva "Pubblica" mentre il pulsante salvava solo la bozza, `onPublish`/`onSaveDraft`
- * collegate alla stessa prop in `FullScreenEditorLayout.tsx`) non è più presente: il
- * pulsante ora si chiama correttamente per quello che fa. La pubblicazione vera resta,
- * invariata, quella raggiunta da {@link publishFromStatusMenu} (tendina di stato, dialog
- * "Conferma cambio di stato").
+ * "Salva bozza" non è più un pulsante diretto della toolbar: dopo il restyling è la prima
+ * voce (`role="menuitem"`, icona `IconDeviceFloppy`) di quel menu — verificato sul JSX reale
+ * di `Toolbar.tsx`. Il chevron è disabilitato finché non ci sono transizioni di stato
+ * disponibili, quindi la sua visibilità (non l'abilitazione) è il segnale "editor montato".
  */
-function saveButton(page: Page): Locator {
-  return page.getByRole('button', { name: 'Salva Bozza', exact: true });
+function publishOptionsTrigger(page: Page): Locator {
+  return page.getByRole('button', { name: 'Altre opzioni di pubblicazione', exact: true });
 }
 
-/** Il wrapper di editing di un blocco, individuato dal tipo del registro. */
+/** La voce "Salva bozza" del menu di pubblicazione: presente solo a menu aperto. */
+function saveDraftMenuItem(page: Page): Locator {
+  return page.getByRole('menuitem', { name: 'Salva bozza', exact: true });
+}
+
+/**
+ * Il canvas dell'editor vive in un `<iframe>` same-origin (ADR-72, `IframeCanvas.tsx`): ogni
+ * elemento renderizzato *dentro* il canvas (blocchi, handle di selezione, zone di rilascio,
+ * "Aggiungi widget", segnaposto "Trascina il widget qui") è irraggiungibile dai selettori
+ * `page.*` sul documento principale, e si cerca da qui. Restano sul `Page` la Top Bar, la
+ * Palette Widget, il Property Inspector e ogni popover/modal Mantine (`withinPortal`, montati
+ * nel documento padre anche quando il trigger sta nel canvas).
+ */
+export function canvasFrame(page: Page): FrameLocator {
+  return page.frameLocator('iframe');
+}
+
+/**
+ * Il wrapper di editing di un blocco, individuato dal tipo del registro. Con un `Page` cerca
+ * nel canvas in-iframe ({@link canvasFrame}); con un `Locator` (già un blocco del canvas)
+ * scopa semplicemente da lì.
+ */
 export function blockOfType(scope: Page | Locator, type: string): Locator {
-  return scope.locator(`[data-block-type="${type}"]`);
+  const root = 'goto' in scope ? canvasFrame(scope) : scope;
+  return root.locator(`[data-block-type="${type}"]`);
 }
 
 /**
@@ -185,7 +205,7 @@ async function completeSectionStructureModal(page: Page): Promise<void> {
  * helper condiviso).
  */
 export async function addRootBlock(page: Page, label: string): Promise<void> {
-  const dropdown = await openPalette(page.getByRole('button', { name: 'Aggiungi widget' }));
+  const dropdown = await openPalette(canvasFrame(page).getByRole('button', { name: 'Aggiungi widget' }));
   await dropdown.getByRole('menuitem', { name: label, exact: true }).click();
   if (label === 'Sezione') {
     await completeSectionStructureModal(page);
@@ -647,15 +667,15 @@ export async function dragBlockToZone(
   const secondaryDirection = primaryDirection === 'ArrowDown' ? 'ArrowUp' : 'ArrowDown';
 
   async function attempt(direction: 'ArrowDown' | 'ArrowUp', steps: number): Promise<boolean> {
-    const handle = page.getByRole('button', { name: handleLabel });
+    const handle = canvasFrame(page).getByRole('button', { name: handleLabel });
     await handle.focus();
     await page.keyboard.press('Space'); // afferra
 
     for (let step = 0; step < steps; step += 1) {
-      const overCount = await page.locator('[data-over="true"]').count();
+      const overZones = canvasFrame(page).locator('[data-over="true"]');
+      const overCount = await overZones.count();
       if (overCount > 0) {
-        const isTarget = await page
-          .locator('[data-over="true"]')
+        const isTarget = await overZones
           .first()
           .evaluate((el, expected) => el === expected, targetHandle);
         if (isTarget) {
@@ -690,7 +710,8 @@ export async function dragBlockToZone(
  * sopra un salvataggio già "a riposo".
  */
 export async function saveDraft(page: Page): Promise<void> {
-  await saveButton(page).click();
+  await publishOptionsTrigger(page).click();
+  await saveDraftMenuItem(page).click();
   await expect(page.getByRole('alert').getByText('Bozza salvata')).toBeVisible();
   await expect(page.getByText('Blocco non valido')).toHaveCount(0);
   await expect(page.getByText('Conflitto di editing')).toHaveCount(0);
@@ -698,7 +719,7 @@ export async function saveDraft(page: Page): Promise<void> {
 
 /**
  * Pubblica la Pagina dalla tendina di stato dell'intestazione. La transizione è
- * una sola e vive lì: l'editor non ha un proprio pulsante di pubblicazione — {@link saveButton}
+ * una sola e vive lì: l'editor non ha un proprio pulsante di pubblicazione — la voce "Salva bozza" ({@link saveDraft})
  * salva solo la bozza, non pubblica nulla.
  *
  * **Bug applicativo reale, segnalato nel report del test engineer, non corretto qui**:

@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Config Vitest separata da vite.config.ts (build) per non accoppiare la
@@ -24,6 +25,9 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
+    // Radice del workspace, per `src/test/setup.ts`: alcuni test risolvono i sorgenti con
+    // `process.cwd()`, che lanciando Vitest dalla radice del monorepo non è `app/frontend`.
+    env: { FRONTEND_ROOT: fileURLToPath(new URL('.', import.meta.url)) },
     globals: false,
     setupFiles: './src/test/setup.ts',
     css: {

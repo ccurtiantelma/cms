@@ -23,46 +23,6 @@
   background-color: var(--mantine-color-body);
 }
 
-/* --- Topbar --- */
-.topbar {
-  position: relative;
-  z-index: 2;
-  flex: 0 0 60px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--mantine-color-gray-3);
-  background-color: var(--mantine-color-body);
-}
-
-[data-mantine-color-scheme='dark'] .topbar {
-  border-bottom-color: var(--mantine-color-dark-4);
-}
-
-.topbarSection {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.pageTitle {
-  max-width: 260px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.viewportSwitcher {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
 /* --- Area di lavoro --- */
 .workArea {
   flex: 1;
@@ -94,17 +54,16 @@
   isolation: isolate;
 }
 
-/* --- Sidebar sinistra (Widgets/Proprietà) --- */
+/* --- Colonna sinistra "Palette Widget" (ADR-91) --- */
 /* Larghezza/bg/border/scroll interno sono di proprietà di `EditorSidebar.module.css`: questo
    è solo il contenitore flex a larghezza fissa dentro `.workArea`. Sempre montata nel DOM
    (vedi FullScreenEditorLayout.tsx): la transizione anima `flex-basis`, non presenza/assenza
    dell'elemento, così apertura/chiusura non scattano di colpo. */
-/* Larghezza allineata a `EditorSidebar.module.css` `.root` (340px, restyle Elementor Pro:
-   griglia widget a 3 colonne — vedi `WidgetPalette.module.css` `.grid`) e alla costante
-   `SIDEBAR_WIDTH` di `FullScreenEditorLayout.tsx`, che posiziona `.sidebarToggle` sullo
-   stesso bordo. */
+/* Larghezza allineata a `EditorSidebar.module.css` `.root` (300px, ADR-91 — parità visiva
+   Elementor Pro, supera i 340px di ADR-32) e alla costante `SIDEBAR_WIDTH` di
+   `FullScreenEditorLayout.tsx`, che posiziona `.sidebarToggle` sullo stesso bordo. */
 .sidebar {
-  flex: 0 0 340px;
+  flex: 0 0 300px;
   overflow: hidden;
   transition: flex-basis 200ms ease;
 }
@@ -172,7 +131,7 @@
   overflow-x: hidden;
   display: flex;
   justify-content: center;
-  background-color: #f3f4f6;
+  background-color: var(--mantine-color-gray-0);
 }
 
 [data-mantine-color-scheme='dark'] .canvasArea {
@@ -241,20 +200,26 @@
   border-radius: 4px;
 }
 
-/* --- Pannello destro "Struttura/Navigator" --- */
-.structurePanel {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 280px;
+/* --- Colonna destra "Property Inspector" (ADR-91) --- */
+/* A differenza del vecchio `.structurePanel` (overlay `position: absolute`, montato solo a
+   richiesta) questa colonna è un vero figlio flex di `.workArea`, sempre presente: le tre
+   colonne — Palette/Canvas/Inspector — sono simultaneamente visibili per costruzione, non
+   un pannello che scivola sopra il canvas. */
+.inspectorPanel {
+  flex: 0 0 320px;
+  overflow-y: auto;
   border-left: 1px solid var(--mantine-color-gray-3);
   background-color: var(--mantine-color-white);
-  overflow-y: auto;
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
+  display: flex;
 }
 
-[data-mantine-color-scheme='dark'] .structurePanel {
+.inspectorEmptyState {
+  width: 100%;
+  padding: 24px 16px;
+  align-self: center;
+}
+
+[data-mantine-color-scheme='dark'] .inspectorPanel {
   border-left-color: var(--mantine-color-dark-4);
   background-color: var(--mantine-color-dark-6);
 }

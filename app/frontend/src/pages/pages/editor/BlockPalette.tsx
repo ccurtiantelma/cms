@@ -9,60 +9,16 @@
  */
 import { Fragment, useState } from 'react';
 import { ActionIcon, Button, Menu, Tooltip } from '@mantine/core';
-import {
-  IconAlignLeft,
-  IconBox,
-  IconForms,
-  IconHandClick,
-  IconHeading,
-  IconInputSearch,
-  IconLayoutBoard,
-  IconLayoutGrid,
-  IconPhoto,
-  IconPlus,
-  IconSend,
-  type Icon,
-} from '@tabler/icons-react';
+import { IconPlus, type Icon } from '@tabler/icons-react';
 import { BLOCK_TYPES, type BlockTypeDescriptor } from '../../../types/blocks.types';
 import { allowedChildTypes, defaultPropsFor } from './block-registry.utils';
 import { useAuthStore } from '../../../hooks/useAuth';
 import { useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
+import { blockIcon } from './block-icon';
 import SectionStructureModal from './SectionStructureModal';
-
-// Re-esportata per compatibilità con gli import esistenti (`WidgetPalette.tsx`,
-// `EditorBlockWrapper.tsx`, `FullScreenEditorLayout.tsx`): la funzione vive in
-// `block-registry.utils.ts` (modulo neutro, vedi commento lì) da quando anche
-// `SectionStructureModal.tsx` ne ha bisogno senza importare da qui (ciclo, ADR-33 § 7).
-export { defaultPropsFor };
 
 /** Categoria mostrata per i tipi che non ne dichiarano una nel registro. */
 const UNCATEGORIZED = 'Altro';
-
-/**
- * Mappa esplicita `meta.icon` (registro backend, ADR-30 § 1) → componente Tabler. Nessun
- * import dinamico/stringa-to-component: un nome fuori da questa mappa (tipo nuovo senza
- * voce qui, o refuso nel registro) ricade sul fallback generico, mai su un crash a runtime.
- */
-const ICON_MAP: Record<string, Icon> = {
-  'layout-board': IconLayoutBoard,
-  'layout-grid': IconLayoutGrid,
-  heading: IconHeading,
-  'align-left': IconAlignLeft,
-  photo: IconPhoto,
-  'hand-click': IconHandClick,
-  forms: IconForms,
-  'input-search': IconInputSearch,
-  send: IconSend,
-};
-
-/** Icona generica per un `meta.icon` assente o non presente in {@link ICON_MAP}. */
-const FALLBACK_ICON: Icon = IconBox;
-
-/** Componente icona per il `meta.icon` di un tipo di blocco, con fallback generico. */
-export function blockIcon(iconName: string | undefined): Icon {
-  if (!iconName) return FALLBACK_ICON;
-  return ICON_MAP[iconName] ?? FALLBACK_ICON;
-}
 
 interface BlockPaletteProps {
   /** Contenitore di destinazione: `null` = radice dell'albero. */

@@ -16,11 +16,11 @@
  * dichiarasse, senza toccare questo file.
  */
 import { Group, Select, Slider, Stack, Text } from '@mantine/core';
-import { useState } from 'react';
 import type { BlockPropDescriptor, PropStateName } from '../../../../types/blocks.types';
 import { useActiveBreakpoint } from '../../../../hooks/useBlockEditorStore';
 import { ThemeEditorColorPicker } from '../../../../components/theme-editor/ThemeEditorColorPicker';
-import StateSwitcher, { type EditableStateName } from './StateSwitcher';
+import StateSwitcher from './StateSwitcher';
+import { useEditingState } from './editingState';
 import {
   BORDER_RADIUS_RANGE,
   BORDER_STYLE_OPTIONS,
@@ -71,7 +71,7 @@ export default function BorderField({
   const label = propLabel(prop, propsMeta);
   const required = prop.required;
   const activeBreakpoint = useActiveBreakpoint();
-  const [editingState, setEditingState] = useState<EditableStateName>('normal');
+  const { editingState, setEditingState, hasPanelSwitcher } = useEditingState();
   const state: PropStateName = prop.stateful ? editingState : 'normal';
 
   const current = readBorderValue(
@@ -95,7 +95,9 @@ export default function BorderField({
             </Text>
           )}
         </Text>
-        {prop.stateful && <StateSwitcher value={editingState} onChange={setEditingState} />}
+        {prop.stateful && !hasPanelSwitcher && (
+          <StateSwitcher value={editingState} onChange={setEditingState} />
+        )}
       </Group>
       <Group grow align="flex-end" wrap="nowrap">
         <Select

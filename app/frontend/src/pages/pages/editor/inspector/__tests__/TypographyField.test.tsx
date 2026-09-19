@@ -39,9 +39,7 @@ describe('TypographyField', () => {
       />,
     );
 
-    const weightSelect = screen.getByRole('textbox', { name: 'typography — Spessore' });
-    await user.click(weightSelect);
-    await user.click(screen.getByRole('option', { name: '700' }));
+    await user.click(screen.getByRole('radio', { name: '700' }));
 
     expect(onSetAndCommit).toHaveBeenCalledWith({
       normal: {
@@ -91,13 +89,40 @@ describe('TypographyField', () => {
     );
 
     await user.click(screen.getByRole('radio', { name: 'Hover' }));
-    const weightSelect = screen.getByRole('textbox', { name: 'typography — Spessore' });
-    await user.click(weightSelect);
-    await user.click(screen.getByRole('option', { name: 'bold' }));
+    await user.click(screen.getByRole('radio', { name: 'bold' }));
 
     expect(onSetAndCommit).toHaveBeenCalledWith({
       normal: { fontWeight: { default: '400' } },
       hover: { fontWeight: { default: 'bold' } },
+    });
+  });
+
+  it('Trasforma/Stile/Decorazione sono SegmentedControl e scrivono il valore scelto', async () => {
+    const user = userEvent.setup();
+    const onSetAndCommit = vi.fn();
+    renderWithProviders(
+      <TypographyField
+        prop={TYPOGRAPHY_PROP}
+        value={undefined}
+        propsMeta={undefined}
+        onSetAndCommit={onSetAndCommit}
+      />,
+    );
+
+    expect(screen.getByRole('radiogroup', { name: 'typography — Trasforma' })).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'Maiuscolo' }));
+    expect(onSetAndCommit).toHaveBeenLastCalledWith({
+      normal: { textTransform: { default: 'uppercase' } },
+    });
+
+    await user.click(screen.getByRole('radio', { name: 'Corsivo' }));
+    expect(onSetAndCommit).toHaveBeenLastCalledWith({
+      normal: { fontStyle: { default: 'italic' } },
+    });
+
+    await user.click(screen.getByRole('radio', { name: 'Sottolineato' }));
+    expect(onSetAndCommit).toHaveBeenLastCalledWith({
+      normal: { textDecoration: { default: 'underline' } },
     });
   });
 
