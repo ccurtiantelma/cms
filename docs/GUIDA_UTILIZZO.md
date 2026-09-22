@@ -47,6 +47,23 @@ npm run dev:backend          # solo NestJS (porta 3000)
 npm run dev:frontend         # solo Vite (porta 5173)
 ```
 
+**Attenzione — `app/public-site` non ha watch/HMR.** `npm run dev:public-site` (incluso in
+`npm run dev`) esegue `vite build --ssr` **una sola volta all'avvio**, poi serve
+`dist/server.js` con `node` semplice: non è un dev server con ricompilazione automatica.
+Se il processo resta acceso a lungo (giorni/sessioni), qualunque modifica a
+`app/public-site/src/**` o ai moduli condivisi che consuma (es.
+`app/frontend/src/components/blocks/generateCanvasCss.ts`, `@blocks/*`) **non si vede sulla
+porta 55000 finché non si ricompila e riavvia manualmente**:
+```bash
+npm run build --workspace=app/public-site
+# poi termina il processo `node dist/server.js` in ascolto su :55000 e riavvialo:
+npm run start --workspace=app/public-site
+```
+Sintomo tipico: uno stile/prop compilato correttamente in `generateCanvasCss.ts` (verificato
+da unit test) non compare mai nell'HTML servito da `http://localhost:55000/<slug>` — prima di
+sospettare un bug di compilazione, verificare l'mtime di `app/public-site/dist/server.js`
+contro l'ultima modifica ai sorgenti coinvolti.
+
 ### Database
 ```bash
 npm run db:generate   # genera migrazione dopo modifica di app/backend/src/db/schema.ts
@@ -233,6 +250,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 | Porta già in uso | `lsof -i :3000` (o `:5173`/`:5432`/`:6379`/`:8025`) poi `kill <PID>` |
 | Email non arrivano in dev | controlla Mailhog UI su http://localhost:8025 (SMTP finto, nessun invio reale) |
 | 401 dopo login funzionante | verifica che il cookie `rtk` sia presente (httpOnly, signed) e `COOKIE_DOMAIN` coerente con l'host usato |
+| Modifica a `app/public-site`/`generateCanvasCss.ts` non visibile su `:55000` | build stale, nessun watch — vedi nota in "Avvio" sopra: `npm run build --workspace=app/public-site` poi riavvia il processo `node dist/server.js` |
 
 ## Tabella porte
 

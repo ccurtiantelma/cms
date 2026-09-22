@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PublicSiteConfig } from './config';
@@ -111,8 +111,62 @@ function hasValidExportRenderToken(req: IncomingMessage): boolean {
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
+/**
+ * Warning best-effort in dev: `dist/server.js` è generato da `vite build --ssr`
+ * senza watch (npm run dev:public-site lo builda una volta sola all'avvio, poi
+ * serve il bundle con `node` semplice — vedi `docs/GUIDA_UTILIZZO.md` §
+ * "Avvio"). Se il processo resta acceso a lungo e i sorgenti cambiano
+ * (`src/**`, o `@blocks` = `app/frontend/src/components/blocks`, alias di
+ * `vite.config.ts`), la build in memoria diventa silenziosamente stale: nessun
+ * errore, solo output vecchio. Confronta l'mtime del bundle con l'mtime più
+ * recente fra i sorgenti coinvolti e stampa un avviso, senza mai bloccare
+ * l'avvio: `existsSync`/try-catch ovunque perché in produzione (immagine
+ * Docker) `src/` non è nemmeno copiato nel container — il controllo va
+ * semplicemente a vuoto, non è un'asserzione.
+ */
+function warnIfBuildStale(): void {
+  try {
+    const bundlePath = join(currentDir, 'server.js');
+    const bundleMtime = statSync(bundlePath).mtimeMs;
+
+    const sourceDirs = [
+      join(currentDir, '..', 'src'),
+      join(currentDir, '..', '..', 'frontend', 'src', 'components', 'blocks'),
+    ].filter((dir) => existsSync(dir));
+
+    if (sourceDirs.length === 0) return;
+
+    let newestSourceMtime = 0;
+    let newestSourceFile = '';
+    for (const dir of sourceDirs) {
+      for (const entry of readdirSync(dir, { recursive: true, withFileTypes: true })) {
+        if (!entry.isFile()) continue;
+        const filePath = join(entry.parentPath ?? (entry as unknown as { path: string }).path, entry.name);
+        const mtime = statSync(filePath).mtimeMs;
+        if (mtime > newestSourceMtime) {
+          newestSourceMtime = mtime;
+          newestSourceFile = filePath;
+        }
+      }
+    }
+
+    if (newestSourceMtime > bundleMtime) {
+      process.stderr.write(
+        `[public-site] ATTENZIONE: dist/server.js (${new Date(bundleMtime).toISOString()}) e' piu' ` +
+          `vecchio del sorgente piu' recente ${newestSourceFile} (${new Date(newestSourceMtime).toISOString()}). ` +
+          `Il processo sta servendo una build stale: esegui 'npm run build --workspace=app/public-site' ` +
+          `e riavvia (docs/GUIDA_UTILIZZO.md § Avvio).\n`,
+      );
+    }
+  } catch {
+    // Best-effort: qualunque errore qui (permessi, path inattesi) non deve mai
+    // impedire l'avvio del server pubblico.
+  }
+}
+
 const css = loadCss();
 const formSubmitScript = loadFormSubmitScript();
+warnIfBuildStale();
 
 async function handleRequest(req: IncomingMessage, res: ServerResponse, nonce: string): Promise<void> {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
