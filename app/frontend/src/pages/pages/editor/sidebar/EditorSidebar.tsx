@@ -1,28 +1,29 @@
 /**
- * Colonna sinistra "Palette Widget" della shell fullscreen a 3 colonne (ADR-91, supera ADR-32
- * § "Decisione" punto 1 e la sidebar unica a 5 schede che questo file montava prima):
- * "Widgets" (libreria trascinabile, `WidgetPalette`), "Struttura" (albero dei blocchi,
- * `EditorStructureNavigator`), "Cronologia" e "Pagina" restano qui a schede — solo
- * "Proprietà" ne è uscita, promossa a colonna destra fissa e sempre visibile
- * (`FullScreenEditorLayout.tsx`, `.inspectorPanel`), non più una destinazione di tab.
+ * Colonna sinistra della shell fullscreen (ADR-94, supera ADR-91 punti 1-2): sidebar unica a
+ * schede — "Widgets" (libreria trascinabile, `WidgetPalette`), "Struttura" (albero dei
+ * blocchi, `EditorStructureNavigator`), "Modifica" (3ª scheda, icona slider: `PropertyInspector`
+ * del blocco selezionato), "Cronologia" e "Pagina". La colonna destra dell'Inspector non
+ * esiste più: il canvas occupa tutto lo spazio a destra.
  *
  * La scheda attiva vive in `useBlockEditorStore` (`activeSidebarTab`) e non in uno stato
  * locale: deve poter essere cambiata da fuori questo componente. Selezionare un blocco nel
- * canvas (`selectNode`) continua a scrivere `activeSidebarTab: 'properties'` — invariato,
- * perché lo stesso store è condiviso con `BuilderSidebar.tsx` (Template Editor, dominio
- * separato, CLAUDE.md — zero refactoring fuori scope) che quel valore lo usa ancora davvero.
- * Qui quel valore non ha più una scheda propria: il ramo sotto lo tratta come `'widgets'`,
- * così il click su un blocco nel canvas non lascia questa colonna su una scheda inesistente.
+ * canvas (`selectNode`) scrive già `activeSidebarTab: 'properties'`, quindi il passaggio
+ * automatico alla scheda "Modifica" non richiede logica aggiuntiva qui.
  *
  * `Tabs.List` senza `Tabs.Panel`: il contenuto sotto l'header è gestito a mano (un `if`
  * sulla scheda attiva), non dal meccanismo di rendering condizionale di Mantine — serve un
  * contenitore scrollabile indipendente dall'header, che `Tabs.Panel` non offre da solo.
  *
- * Anteprima e "Cambia Stato" non vivono qui: sono nella topbar (`Toolbar.tsx`), in alto a
- * destra — richiesta esplicita del task di riportarli lì dal fondo di questa sidebar.
+ * Anteprima e "Cambia Stato" non vivono qui: sono nella topbar (`Toolbar.tsx`).
  */
 import { Tabs, Tooltip } from '@mantine/core';
-import { IconHistory, IconListTree, IconSettings, IconStack2 } from '@tabler/icons-react';
+import {
+  IconAdjustmentsHorizontal,
+  IconHistory,
+  IconListTree,
+  IconSettings,
+  IconStack2,
+} from '@tabler/icons-react';
 import {
   useActiveSidebarTab,
   useBlockEditorStore,
@@ -30,6 +31,7 @@ import {
 } from '../../../../hooks/useBlockEditorStore';
 import type { PageRecord } from '../../../../types/pages.types';
 import EditorStructureNavigator from '../EditorStructureNavigator';
+import PropertyInspector from '../PropertyInspector';
 import WidgetSidebar from './WidgetSidebar';
 import PageSettingsTab from './PageSettingsTab';
 import { HistoryPanel } from '../HistoryDrawer';
@@ -75,6 +77,11 @@ export default function EditorSidebar({
               <IconListTree size={20} />
             </Tabs.Tab>
           </Tooltip>
+          <Tooltip label="Modifica" openDelay={300} withinPortal>
+            <Tabs.Tab value="properties" aria-label="Modifica">
+              <IconAdjustmentsHorizontal size={20} />
+            </Tabs.Tab>
+          </Tooltip>
           <Tooltip label="Cronologia" openDelay={300} withinPortal>
             <Tabs.Tab value="history" aria-label="Cronologia">
               <IconHistory size={20} />
@@ -93,6 +100,10 @@ export default function EditorSidebar({
           <div className={styles.panel}>
             <EditorStructureNavigator />
           </div>
+        ) : activeTab === 'properties' ? (
+          <div className={styles.panel}>
+            <PropertyInspector />
+          </div>
         ) : activeTab === 'page' ? (
           <div className={styles.panel}>
             <PageSettingsTab
@@ -106,9 +117,6 @@ export default function EditorSidebar({
             <HistoryPanel />
           </div>
         ) : (
-          // `'widgets'` e `'properties'` (quest'ultimo scritto da `selectNode` alla selezione
-          // di un blocco, vedi il commento di testa): stesso pannello Widgets, "Proprietà" non
-          // ha più una scheda propria qui, vive nella colonna destra fissa.
           <div className={styles.panel}>
             <WidgetSidebar />
           </div>

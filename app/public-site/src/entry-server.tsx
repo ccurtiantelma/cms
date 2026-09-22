@@ -2,13 +2,16 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { components } from '@api-types';
 import type { RenderableBlockNode } from '@blocks/types';
 import type { ThemeConfigDto } from '../../frontend/src/utils/theme-css.utils';
+import type { BreakpointsDto } from '../../frontend/src/libs/breakpoints';
 import {
   fetchActiveGlobalSections,
+  fetchBreakpoints,
   fetchThemeConfig,
   resolvePageGuidsToPaths,
 } from './public-api-client';
 import { blocksOf } from './PageView';
 import { buildCriticalCss } from './critical-css';
+import { buildBlockDynamicCss } from './block-dynamic-css';
 import App from './App';
 import ErrorDocument from './ErrorDocument';
 import PreviewDocument from './PreviewDocument';
@@ -55,11 +58,13 @@ function collectNavMenuPageGuids(nodes: readonly RenderableBlockNode[]): string[
 async function buildLayoutContext(pageBlocks: readonly RenderableBlockNode[]): Promise<{
   themeConfig: ThemeConfigDto | null;
   globalSections: PublicActiveGlobalSectionsDto;
+  breakpoints: BreakpointsDto;
   resolvePageUrl: (pageGuid: string) => string | null | undefined;
 }> {
-  const [themeConfig, globalSections] = await Promise.all([
+  const [themeConfig, globalSections, breakpoints] = await Promise.all([
     fetchThemeConfig(),
     fetchActiveGlobalSections(),
+    fetchBreakpoints(),
   ]);
 
   const headerBlocks = blocksOf(globalSections.header?.content);
@@ -75,6 +80,7 @@ async function buildLayoutContext(pageBlocks: readonly RenderableBlockNode[]): P
   return {
     themeConfig,
     globalSections,
+    breakpoints,
     resolvePageUrl: (pageGuid: string) => pageUrlByGuid.get(pageGuid),
   };
 }
@@ -107,8 +113,12 @@ export async function renderPageDocument(
   nonce = '',
 ): Promise<string> {
   const pageBlocks = blocksOf(page.content);
-  const { themeConfig, globalSections, resolvePageUrl } = await buildLayoutContext(pageBlocks);
-  const criticalCss = buildCriticalCss(pageBlocks, blocksOf(globalSections.header?.content));
+  const { themeConfig, globalSections, breakpoints, resolvePageUrl } =
+    await buildLayoutContext(pageBlocks);
+  const headerBlocks = blocksOf(globalSections.header?.content);
+  const footerBlocks = blocksOf(globalSections.footer?.content);
+  const criticalCss = buildCriticalCss(pageBlocks, headerBlocks);
+  const blockDynamicCss = buildBlockDynamicCss(pageBlocks, headerBlocks, footerBlocks, breakpoints);
   return (
     DOCTYPE +
     renderToStaticMarkup(
@@ -117,6 +127,7 @@ export async function renderPageDocument(
         cssHref={cssHref}
         canonicalPath={canonicalPath}
         criticalCss={criticalCss}
+        blockDynamicCss={blockDynamicCss}
         formScriptHref={formScriptHref}
         themeConfig={themeConfig}
         globalSections={globalSections}
@@ -157,8 +168,12 @@ export async function renderPreviewDocument(
   nonce = '',
 ): Promise<string> {
   const pageBlocks = blocksOf(page.content);
-  const { themeConfig, globalSections, resolvePageUrl } = await buildLayoutContext(pageBlocks);
-  const criticalCss = buildCriticalCss(pageBlocks, blocksOf(globalSections.header?.content));
+  const { themeConfig, globalSections, breakpoints, resolvePageUrl } =
+    await buildLayoutContext(pageBlocks);
+  const headerBlocks = blocksOf(globalSections.header?.content);
+  const footerBlocks = blocksOf(globalSections.footer?.content);
+  const criticalCss = buildCriticalCss(pageBlocks, headerBlocks);
+  const blockDynamicCss = buildBlockDynamicCss(pageBlocks, headerBlocks, footerBlocks, breakpoints);
   return (
     DOCTYPE +
     renderToStaticMarkup(
@@ -166,6 +181,7 @@ export async function renderPreviewDocument(
         page={page}
         cssHref={cssHref}
         criticalCss={criticalCss}
+        blockDynamicCss={blockDynamicCss}
         formScriptHref={formScriptHref}
         themeConfig={themeConfig}
         globalSections={globalSections}

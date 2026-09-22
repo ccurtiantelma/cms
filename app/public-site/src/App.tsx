@@ -78,6 +78,15 @@ interface AppProps {
    * il foglio esterno per il contenuto sopra la piega.
    */
   criticalCss: string;
+  /**
+   * CSS dinamico per-nodo (valori liberi PropKind v2, oggi `background` — ADR-96)
+   * dell'intera Pagina + header/footer, generato da `buildBlockDynamicCss`. Iniettato
+   * come `<style>` **dopo** `<link rel="stylesheet">`: a parità di specificità
+   * (selettore attributo `[data-canvas-style-id]` contro le classi di
+   * `Container.module.css`) deve vincere sempre l'ultima regola dichiarata, stesso
+   * principio già applicato sotto per `ThemeStyleTag`.
+   */
+  blockDynamicCss: string;
   /** Isola JS di submit dei Form (F10-04) — iniettata da `PageView` solo se la Pagina ne ha bisogno. */
   formScriptHref?: string;
   /**
@@ -109,6 +118,7 @@ export default function App({
   cssHref,
   canonicalPath,
   criticalCss,
+  blockDynamicCss,
   formScriptHref,
   globalSections,
   resolvePageUrl,
@@ -148,6 +158,13 @@ export default function App({
           <style data-critical-css nonce={nonce} dangerouslySetInnerHTML={{ __html: criticalCss }} />
         ) : null}
         <link rel="stylesheet" href={cssHref} />
+        {blockDynamicCss ? (
+          <style
+            data-block-dynamic-css
+            nonce={nonce}
+            dangerouslySetInnerHTML={{ __html: blockDynamicCss }}
+          />
+        ) : null}
         <ThemeStyleTag themeConfig={themeConfig} nonce={nonce} />
       </head>
       <body>

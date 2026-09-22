@@ -1,0 +1,47 @@
+/*
+  Cornice di hover/selezione (ADR-92): overlay a sé, mai un bordo del `.wrapper`. È
+  `position: absolute` con `inset: -1px` (copre esattamente il border-box del wrapper, che ha
+  già 1px di bordo trasparente fisso) e `pointer-events: none`: fuori dal flusso, quindi
+  passare da hover a selezione (1px → 2px) non sposta di un pixel il contenuto del blocco e
+  non aggiunge padding/margin. Il click-to-select resta del wrapper.
+  Colore per livello (ADR-95): `--chrome-color` è condiviso con la barra azioni
+  (`components/BlockHoverOverlay.module.css`, stessi valori per tono).
+*/
+.chrome {
+  position: absolute;
+  inset: -1px;
+  z-index: 1;
+  box-sizing: border-box;
+  border-radius: 6px;
+  border-style: solid;
+  border-color: var(--chrome-color);
+  pointer-events: none;
+}
+
+.section {
+  --chrome-color: #7c3aed;
+}
+
+.container {
+  --chrome-color: #ea580c;
+}
+
+.widget {
+  --chrome-color: #16a34a;
+}
+
+.hover {
+  border-width: 1px;
+}
+
+.selected {
+  border-width: 2px;
+  box-shadow:
+    0 0 0 3px rgba(15, 23, 42, 0.1),
+    0 8px 20px rgba(15, 23, 42, 0.12);
+}
+
+/* "Anteprima Pura" (E01): `[data-preview-mode]` è sull'ancestor `.canvasArea`, mai una prop. */
+[data-preview-mode='true'] .chrome {
+  display: none;
+}

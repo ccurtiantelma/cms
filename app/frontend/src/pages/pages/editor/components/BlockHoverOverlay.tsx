@@ -42,7 +42,8 @@
  * esplicita di un round successivo del task, mai sovrapposti sullo stesso angolo del
  * blocco.
  */
-import { ActionIcon, Group, Text, Tooltip } from '@mantine/core';
+import { ActionIcon, Group, Tooltip } from '@mantine/core';
+import { createElement } from 'react';
 import type { DraggableAttributes } from '@dnd-kit/core';
 import type { DraggableSyntheticListeners } from '@dnd-kit/core';
 import {
@@ -53,16 +54,18 @@ import {
   IconGripVertical,
   IconPencil,
   IconTrash,
+  IconX,
   IconWorld,
 } from '@tabler/icons-react';
 import { useBlockEditorStore } from '../../../../hooks/useBlockEditorStore';
 import BlockPalette from '../BlockPalette';
+import { blockIcon } from '../block-icon';
 import styles from './BlockHoverOverlay.module.css';
 
-/** Altezza/larghezza minima condivisa da ogni pulsante della maniglia (RE-2, requisito esplicito del task: min 28px). */
-const HANDLE_BUTTON_SIZE = 28;
-/** Dimensione delle icone, proporzionata al pulsante 28px (14px su un pulsante 20px era sproporzionato in eccesso di spazio vuoto). */
-const HANDLE_ICON_SIZE = 16;
+/** Altezza/larghezza minima condivisa da ogni pulsante della maniglia (ADR-95: barra compatta, 18px). */
+const HANDLE_BUTTON_SIZE = 18;
+/** Dimensione delle icone, proporzionata al pulsante compatto da 18px (ADR-95). */
+const HANDLE_ICON_SIZE = 12;
 
 export interface BlockHoverOverlayProps {
   /** Id del nodo su cui agiscono i cinque controlli (`duplicateNodeAction`/`selectNode`). */
@@ -158,8 +161,10 @@ export interface BlockHoverOverlayProps {
    * altro tipo di blocco.
    */
   dragTooltipLabel?: string;
-  /** Aspetto della barra: trasparente per sezioni/contenitori, verde chiaro per i widget. */
-  tone?: 'section' | 'component';
+  /** Nome icona di registro (`meta.icon`): sostituisce l'etichetta testuale del tipo. */
+  iconName?: string;
+  /** Livello gerarchico: colora barra e cornice (sezione viola, contenitore arancione, widget verde, ADR-95). */
+  tone?: 'section' | 'container' | 'widget';
 }
 
 /** Overlay hover/selezione con i controlli comuni a ogni tipo di blocco (aggiungi sopra/trascina/genitore/duplica/modifica/elimina/aggiungi sotto), più "Salva come Preset Globale"/"Converti in Sezione Globale"/"Esporta JSON" quando offerti dal chiamante. */
@@ -179,7 +184,8 @@ export default function BlockHoverOverlay({
   onConvertToGlobalSection,
   onExportJson,
   dragTooltipLabel,
-  tone = 'component',
+  iconName,
+  tone = 'widget',
 }: BlockHoverOverlayProps): JSX.Element {
   const duplicateNodeAction = useBlockEditorStore((state) => state.duplicateNodeAction);
   const selectNode = useBlockEditorStore((state) => state.selectNode);
@@ -187,20 +193,17 @@ export default function BlockHoverOverlay({
 
   return (
     <Group
-      className={[
-        styles.overlay,
-        anchorInside ? styles.overlayInside : '',
-        tone === 'section' ? styles.sectionOverlay : styles.componentOverlay,
-      ]
+      className={[styles.overlay, anchorInside ? styles.overlayInside : '', styles[tone]]
         .filter(Boolean)
         .join(' ')}
-      gap={6}
+      gap={2}
       wrap="nowrap"
       // Aggancio per `EditorBlockWrapper.module.css` (`.selected:has(...) >
       // [data-block-overlay='true']`): nasconde l'overlay di un antenato quando un
       // figlio è sotto il cursore/selezionato, così le due chrome non si sovrappongono
       // mai sullo stesso angolo del canvas.
       data-block-overlay="true"
+      data-block-overlay-tone={tone}
       // Un click su un pulsante dell'overlay non deve mai risalire al wrapper del blocco
       // (che lo riselezionerebbe) né al contenitore che lo ospita.
       onClick={(event) => event.stopPropagation()}
@@ -211,9 +214,11 @@ export default function BlockHoverOverlay({
         durante la selezione (`isHovered && !isSelected`), lasciando la toolbar priva finora
         di un'indicazione testuale del tipo di blocco selezionato.
       */}
-      <Text size="xs" fw={600} className={styles.overlayLabel}>
-        {label}
-      </Text>
+      {iconName && (
+        <span className={styles.overlayIcon} aria-hidden="true">
+          {createElement(blockIcon(iconName), { size: HANDLE_ICON_SIZE, color: '#ffffff' })}
+        </span>
+      )}
 
       {/*
         "+" (RE-2, primo controllo, restyle Elementor Pro): inserisce un nuovo blocco
@@ -304,7 +309,11 @@ export default function BlockHoverOverlay({
             onDelete();
           }}
         >
-          <IconTrash size={HANDLE_ICON_SIZE} />
+          {tone === 'section' ? (
+            <IconX size={HANDLE_ICON_SIZE} />
+          ) : (
+            <IconTrash size={HANDLE_ICON_SIZE} />
+          )}
         </ActionIcon>
       </Tooltip>
 

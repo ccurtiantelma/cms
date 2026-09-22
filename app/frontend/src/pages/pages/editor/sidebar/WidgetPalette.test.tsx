@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { renderWithProviders } from '../../../../test/utils';
@@ -49,11 +49,20 @@ describe('EditorSidebar', () => {
     useBlockEditorStore.getState().setActiveSidebarTab('widgets');
   });
 
-  it('mostra le schede Widgets e Struttura (non più "Proprietà", ADR-91: colonna destra fissa)', () => {
+  it('mostra le schede Widgets, Struttura e Modifica (3ª, ADR-94)', () => {
     renderWithProviders(<EditorSidebar />);
 
-    expect(screen.getByRole('tab', { name: 'Widgets' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Struttura' })).toBeInTheDocument();
-    expect(screen.queryByRole('tab', { name: 'Proprietà' })).not.toBeInTheDocument();
+    const tabs = screen.getAllByRole('tab').map((tab) => tab.getAttribute('aria-label'));
+    expect(tabs.slice(0, 3)).toEqual(['Widgets', 'Struttura', 'Modifica']);
+  });
+
+  it('selezionare un blocco nel canvas attiva la scheda Modifica', () => {
+    useBlockEditorStore.getState().initTree([]);
+    renderWithProviders(<EditorSidebar />);
+    expect(screen.getByRole('tab', { name: 'Widgets' })).toHaveAttribute('aria-selected', 'true');
+
+    act(() => useBlockEditorStore.getState().selectNode('node-1'));
+
+    expect(screen.getByRole('tab', { name: 'Modifica' })).toHaveAttribute('aria-selected', 'true');
   });
 });

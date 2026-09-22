@@ -12,11 +12,9 @@
  * componente la legge e la scrive, non la duplica.
  */
 import {
-  ActionIcon,
   Button,
   Group,
   NumberInput,
-  Popover,
   Select,
   SegmentedControl,
   Slider,
@@ -27,7 +25,6 @@ import {
   Textarea,
   Tooltip,
 } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
 import {
   IconAlignCenter,
   IconAlignLeft,
@@ -39,17 +36,16 @@ import {
   IconCrop,
   IconPhoto,
   IconTrash,
-  IconWorld,
   type Icon,
 } from '@tabler/icons-react';
 import type { BlockPropDescriptor } from '../../../../types/blocks.types';
 import { type EditorViewport } from '../../../../hooks/useBlockEditorStore';
-import { useThemeColorStore } from '../../../../hooks/useThemeColor';
 import { resolveMediaSrc } from '../../../../components/blocks/media-url';
 import RichTextFieldEditor from '../RichTextFieldEditor';
-import { ThemeEditorColorPicker } from '../../../../components/theme-editor/ThemeEditorColorPicker';
+import ThemeColorPicker from './ThemeColorPicker';
 import BorderField from './BorderField';
 import ShadowField from './ShadowField';
+import BackgroundField from './BackgroundField';
 import ColorField from './ColorField';
 import TypographyField from './TypographyField';
 import SpacingField from './SpacingField';
@@ -66,6 +62,7 @@ import {
   hasExplicitOverrideAtBreakpoint,
   propLabel,
   responsiveEnvelope,
+  useThemeColorPresets,
   uxError,
   type PropsMeta,
 } from './inspector.utils';
@@ -182,11 +179,9 @@ export default function PropField({
   onOpenCropper,
 }: PropFieldProps): JSX.Element {
   // Letto qui in cima (regola degli hook: mai dentro un ramo dello `switch` sotto), usato solo
-  // da `case 'color'` — token picker sui colori del tema dell'installazione (Editor tema,
-  // ADR-4), la stessa fonte che veste il sito pubblicato.
-  const themeConfig = useThemeColorStore((state) => state.themeConfig);
-  const [colorTokensOpened, { toggle: toggleColorTokens, close: closeColorTokens }] =
-    useDisclosure(false);
+  // da `case 'color'` — preset "Colori del Tema" di `ThemeColorPicker`, centralizzati in
+  // `useThemeColorPresets()` (`inspector.utils.ts`).
+  const themePresets = useThemeColorPresets();
   const label = propLabel(prop, propsMeta);
   const required = prop.required || prop.nonEmpty === true;
   // Il controllo UX legge sempre uno scalare: per una prop responsive è il valore
@@ -495,74 +490,26 @@ export default function PropField({
 
     case 'color': {
       // ADR-33 § 3: non responsive, scalare puro (nessun envelope `{ default, ... }`).
-      // `ColorInput` porta già un'anteprima live (swatch nel `leftSection`, controllato
-      // dallo stesso `value`) — la validazione qui è solo UX (`uxError` sopra), il
-      // vincolo autorevole resta il pattern esadecimale validato server-side.
+      // La validazione qui è solo UX (`uxError` sopra), il vincolo autorevole resta il
+      // pattern esadecimale validato server-side.
       //
-      // Accanto al campo, un token picker sui colori del tema dell'installazione: le stesse
-      // voci che l'Editor tema espone e che vestono il sito pubblicato, così un colore
-      // scelto a mano su un blocco parte dalla tavolozza del sito invece che dal nulla.
+      // Preset "Colori del Tema" dal tema live dell'installazione (`useThemeColorPresets()`),
+      // le stesse voci che l'Editor tema espone e che vestono il sito pubblicato, così un
+      // colore scelto a mano su un blocco parte dalla tavolozza del sito invece che dal nulla.
       // Scrive **l'hex risolto corrente** del token scelto — mai `var(...)`: il validator
       // server-side di `kind: 'color'` accetta solo hex `#rgb`/`#rrggbb` (ADR-33 § 3), una
       // stringa `var(...)` farebbe fallire il salvataggio con 400. La selezione è quindi uno
       // snapshot statico del token al momento del click, non un riferimento dinamico che
       // segue future modifiche del tema.
-      const paletteTokens: ReadonlyArray<[string, string]> = [
-        ['Primario', themeConfig.colors.primary],
-        ['Secondario', themeConfig.colors.secondary],
-        ['Accento', themeConfig.colors.accent],
-        ['Testo', themeConfig.light.textPrimary],
-        ['Testo secondario', themeConfig.light.textSecondary],
-      ];
       return (
-        <Group gap="xs" align="flex-end" wrap="nowrap">
-          <ThemeEditorColorPicker
-            label={label}
-            value={asString(value) || '#000000'}
-            aria-label={label}
-            onChange={onSetAndCommit}
-          />
-          <Popover
-            opened={colorTokensOpened}
-            onClose={closeColorTokens}
-            position="bottom-end"
-            shadow="md"
-            withinPortal
-          >
-            <Popover.Target>
-              <Tooltip label="Colori del tema" withArrow>
-                <ActionIcon
-                  variant="default"
-                  size="lg"
-                  aria-label="Colori del tema"
-                  onClick={toggleColorTokens}
-                >
-                  <IconWorld size={16} />
-                </ActionIcon>
-              </Tooltip>
-            </Popover.Target>
-            <Popover.Dropdown>
-              <Stack gap={2}>
-                {paletteTokens.map(([tokenLabel, hex]) => (
-                  <button
-                    key={tokenLabel}
-                    type="button"
-                    className={styles.colorTokenOption}
-                    onClick={() => {
-                      onSetAndCommit(hex);
-                      closeColorTokens();
-                    }}
-                  >
-                    <span className={styles.colorTokenSwatch} style={{ backgroundColor: hex }} />
-                    <span>
-                      {tokenLabel} · {hex}
-                    </span>
-                  </button>
-                ))}
-              </Stack>
-            </Popover.Dropdown>
-          </Popover>
-        </Group>
+        <ThemeColorPicker
+          label={label}
+          value={asString(value) || '#000000'}
+          aria-label={label}
+          themePresets={themePresets}
+          onSelectPreset={(_, hex) => onSetAndCommit(hex)}
+          onChange={onSetAndCommit}
+        />
       );
     }
 
@@ -696,6 +643,18 @@ export default function PropField({
     case 'layout':
       return (
         <LayoutField
+          prop={prop}
+          value={value}
+          propsMeta={propsMeta}
+          onSetAndCommit={onSetAndCommit}
+        />
+      );
+
+    // `background` (ADR-96 § "Decisione" punto 1): scope `none`/`color`/`gradient`, stesso
+    // principio di estrazione in componente dedicato degli altri kind v2 sopra.
+    case 'background':
+      return (
+        <BackgroundField
           prop={prop}
           value={value}
           propsMeta={propsMeta}

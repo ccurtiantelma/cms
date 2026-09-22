@@ -1,6 +1,7 @@
 import type { components } from '@api-types';
 import { PublicSiteConfig } from './config';
 import type { ThemeConfigDto } from '../../frontend/src/utils/theme-css.utils';
+import { DEFAULT_BREAKPOINTS_DTO, type BreakpointsDto } from '../../frontend/src/libs/breakpoints';
 
 type PublicPageDto = components['schemas']['PublicPageDto'];
 type PublicActiveGlobalSectionsDto = components['schemas']['PublicActiveGlobalSectionsDto'];
@@ -88,6 +89,38 @@ export async function fetchThemeConfig(): Promise<ThemeConfigDto | null> {
   } catch (error: unknown) {
     console.error('public-site: errore di rete su theme, nessun tema applicato', error);
     return null;
+  }
+}
+
+/**
+ * Recupera i breakpoint attivi (ADR-76), necessari all'SSR per emettere le stesse media
+ * query del compilatore CSS dei blocchi (`generateCanvasCss`/`resolveActiveBreakpoints`).
+ *
+ * Chiama `GET /api/v1/public/settings/breakpoints` (`public-pages.controller.ts`),
+ * superficie pubblica anonima che riusa `SettingsService.getBreakpoints()`.
+ *
+ * Tollerante ai guasti per costruzione, come `fetchThemeConfig`: nessuna eccezione esce
+ * mai da questa funzione. In caso di errore/risposta non `200` ricade sui default di
+ * fabbrica (`DEFAULT_BREAKPOINTS_DTO`, stesso fallback usato dal Canvas prima che
+ * `GET app/settings/breakpoints` risponda) invece di un `null` propagato: a differenza
+ * del tema, senza breakpoint il CSS dinamico dei blocchi non avrebbe alcuna soglia per
+ * le prop responsive, non solo un tema meno rifinito.
+ */
+export async function fetchBreakpoints(): Promise<BreakpointsDto> {
+  const url = `${PublicSiteConfig.apiBaseUrl}/api/v1/public/settings/breakpoints`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error(
+        `public-site: breakpoints non disponibili (status ${res.status}), default di fabbrica`,
+      );
+      return DEFAULT_BREAKPOINTS_DTO;
+    }
+    return (await res.json()) as BreakpointsDto;
+  } catch (error: unknown) {
+    console.error('public-site: errore di rete su breakpoints, default di fabbrica', error);
+    return DEFAULT_BREAKPOINTS_DTO;
   }
 }
 

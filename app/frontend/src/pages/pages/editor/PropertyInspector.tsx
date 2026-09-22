@@ -43,6 +43,7 @@ import {
 } from '../../../hooks/useBlockEditorStore';
 import { findLocation, findPath, type BlockNode } from './block-tree.utils';
 import { blockIcon } from './block-icon';
+import { resolveBlockKind } from './blocks/resolve-block-kind';
 import MediaLibraryModal from '../../../components/media/MediaLibraryModal';
 import MediaCropperModal from '../../../components/media/MediaCropperModal';
 import type { MediaFileRecord } from '../../../types/media.types';
@@ -225,6 +226,9 @@ export default function PropertyInspector(): JSX.Element {
   const node = useSelectedNode();
   const generation = useTreeGeneration();
   const descriptor = node ? BLOCK_TYPES.find((entry) => entry.type === node.type) : undefined;
+  // `isSection` (ADR-82): un `container` con `props.tag === 'section'` conserva l'identità
+  // "Sezione" nel titolo anche dopo la migrazione section→container a salvataggio/reload.
+  const isSection = node ? resolveBlockKind(node, null).isSection : false;
   // Selettori mirati (mai `useBlockEditorStore()` senza selettore, CLAUDE.md § dominio CMS):
   // solo le due azioni che servono al pulsante di ritorno, non l'intero store.
   const selectNode = useBlockEditorStore((state) => state.selectNode);
@@ -277,9 +281,13 @@ export default function PropertyInspector(): JSX.Element {
             <div className={styles.headerText}>
               <Text fw={700} c="dark.8" lh={1.2}>
                 {/* Intestazione "Modifica {tipo}" (parità Elementor Pro, T-elementor-parity):
-                    ogni tipo — Sezione/Contenitore/Titolo/... — legge lo stesso `meta.label`
-                    del registro, unica fonte, mai una seconda etichetta duplicata a fianco. */}
-                {descriptor ? `Modifica ${descriptor.meta?.label ?? descriptor.type}` : 'Proprietà'}
+                    ogni tipo legge `meta.label` dal registro, tranne la Sezione — che grazie a
+                    `isSection` (ADR-82) resta "Sezione" sia pre-save (`type:'section'`) sia dopo
+                    la migrazione a `container`+`tag:'section'`, invece di seguire la label
+                    generica "Contenitore" del registro. */}
+                {descriptor
+                  ? `Modifica ${isSection ? 'Sezione' : (descriptor.meta?.label ?? descriptor.type)}`
+                  : 'Proprietà'}
               </Text>
               {breadcrumb && (
                 <Text size="xs" c="dimmed" truncate="end">

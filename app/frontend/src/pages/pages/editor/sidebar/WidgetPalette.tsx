@@ -71,27 +71,14 @@ function assignableDescriptors(roleLevel: number | undefined): BlockTypeDescript
   );
 }
 
-/** Colore d'accento per categoria (ADR-92, riallineamento rigido 1:1) — icona colorata invece
- *  del monocromo `currentColor` precedente. `Base`/`Moduli` riusano gli stessi due colori del
- *  bordo di selezione in `EditorBlockWrapper.module.css` (Container/Widget, ADR-92 § 1), le
- *  altre due categorie hanno un colore distinto proprio. Categorie fuori da questo elenco
- *  (`Altro`, `meta.category` libero) restano sul neutro `.tileIconDefault`. */
-const CATEGORY_ICON_CLASS: Record<string, string> = {
-  Base: 'tileIconBase',
-  Media: 'tileIconMedia',
-  Struttura: 'tileIconStruttura',
-  Moduli: 'tileIconModuli',
-};
-
 interface WidgetTileProps {
   descriptor: BlockTypeDescriptor;
-  category: string;
   /** Click-to-add: nessun movimento del puntatore, quindi mai un drag (vedi commento di testa). */
   onAdd: (descriptor: BlockTypeDescriptor) => void;
 }
 
 /** Una tessera trascinabile — e cliccabile — della libreria widget. */
-function WidgetTile({ descriptor, category, onAdd }: WidgetTileProps): JSX.Element {
+function WidgetTile({ descriptor, onAdd }: WidgetTileProps): JSX.Element {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `new-block:${descriptor.type}`,
     data: { type: descriptor.type, isNew: true },
@@ -120,14 +107,8 @@ function WidgetTile({ descriptor, category, onAdd }: WidgetTileProps): JSX.Eleme
       {...attributes}
       {...listeners}
     >
-      {/* Wrapper di solo stile: l'icona resta lo stesso elemento stabile di `blockIcon`
-          (nessuna modifica alla logica sopra), colore d'accento per categoria (ADR-92)
-          invece del monocromo fisso precedente. */}
-      <span
-        className={`${styles.tileIcon} ${styles[CATEGORY_ICON_CLASS[category] ?? 'tileIconDefault']}`}
-      >
-        {icon}
-      </span>
+      {/* Icona monocromatica (ADR-94): colore neutro unico, nessun accento per categoria. */}
+      <span className={styles.tileIcon}>{icon}</span>
       <Text size="xs" className={styles.tileLabel}>
         {label}
       </Text>
@@ -237,12 +218,7 @@ export default function WidgetPalette(): JSX.Element {
               <Accordion.Panel className={styles.groupPanel}>
                 <div className={styles.grid}>
                   {descriptors.map((descriptor) => (
-                    <WidgetTile
-                      key={descriptor.type}
-                      descriptor={descriptor}
-                      category={category}
-                      onAdd={handleAdd}
-                    />
+                    <WidgetTile key={descriptor.type} descriptor={descriptor} onAdd={handleAdd} />
                   ))}
                 </div>
               </Accordion.Panel>

@@ -25,6 +25,11 @@ describe('migrateSectionToContainer', () => {
     expect(result.v).toBe(2);
   });
 
+  it("imposta props.tag: 'section' (ADR-82 § \"Decisione\" punto 1, campo già approvato) per preservare l'identità semantica del nodo migrato, invece del default 'div'", () => {
+    const result = migrateSectionToContainer(sectionNode({}));
+    expect(result.props.tag).toBe('section');
+  });
+
   it('children preservato byte-per-byte (stessa referenza, nessuna migrazione qui: compito del motore per-albero)', () => {
     const child = { id: 'child', type: 'heading', v: 1, props: {}, children: [] };
     const input = sectionNode({}, [child]);

@@ -67,6 +67,21 @@ function unitValueToCss(value: UnitValueLike): string {
   return `${value.value}${value.unit}`;
 }
 
+/**
+ * Direzione flex di default quando `layout.direction` non è impostata: `row` per un contenitore
+ * che ospita altri contenitori (righe/colonne create dai preset di struttura, che non scrivono
+ * `layout`), `column` per uno che ospita widget (impilati). Il legacy `flexDirection.default`
+ * vince se presente.
+ */
+export function resolveDefaultDirection(node: {
+  props: Record<string, unknown>;
+  children: readonly { type: string }[];
+}): 'row' | 'column' {
+  const legacy = (node.props.flexDirection as { default?: unknown } | undefined)?.default;
+  if (legacy === 'row' || legacy === 'column') return legacy;
+  return node.children.some((child) => child.type === 'container') ? 'row' : 'column';
+}
+
 interface ContainerProps {
   /**
    * `node.id` strutturale — vedi il commento di testa del file. Tecnicamente opzionale solo
@@ -85,6 +100,7 @@ interface ContainerProps {
   opacity?: unknown;
   htmlId?: unknown;
   cssClass?: unknown;
+  defaultDirection?: 'row' | 'column';
 }
 
 export default function Container({
@@ -98,6 +114,7 @@ export default function Container({
   opacity,
   htmlId,
   cssClass,
+  defaultDirection,
 }: ContainerProps) {
   const resolvedTag = resolveTag(tag);
 
@@ -132,6 +149,7 @@ export default function Container({
       className,
       id: typeof htmlId === 'string' && htmlId ? htmlId : undefined,
       'data-canvas-style-id': id,
+      'data-default-direction': defaultDirection,
       style: Object.keys(style).length > 0 ? style : undefined,
     },
     children,

@@ -19,6 +19,7 @@ import { findNode, type BlockNode } from '../block-tree.utils';
 const { useBlockEditorStore } = await import('../../../../hooks/useBlockEditorStore');
 const { default: EditorBlockWrapper } = await import('../EditorBlockWrapper');
 const styles = (await import('../EditorBlockWrapper.module.css')).default;
+const chromeStyles = (await import('../blocks/BlockSelectionChrome.module.css')).default;
 
 /** Nodo di comodo con `children` sempre presente. */
 function node(
@@ -428,53 +429,43 @@ describe('EditorBlockWrapper — colore di livello di annidamento (RE-2)', () =>
 });
 
 /**
- * De-duplicazione delle guide visive (canvas overhaul, parità Elementor Pro): il wrapper
- * esterno non porta più una guida statica sempre visibile (`.containerGuide`, rimossa) —
- * quel bordo permanente su *ogni* contenitore annidato (Sezione + Container + Colonne)
- * produceva l'effetto "gabbia tripla" di bordi sovrapposti lamentato dal task. Un
- * contenitore vuoto resta comunque segnalato da un bordo tratteggiato, ma vive **solo**
- * nel segnaposto interno (`.emptyContainer`, un div distinto dal wrapper) — mai un
- * secondo bordo annidato sullo stesso confine. Il wrapper mostra un bordo di stato
- * (`.hoveredChrome`/`.selectedChrome`) solo quando l'interazione lo giustifica.
+ * Cornice di hover/selezione (ADR-92, `blocks/BlockSelectionChrome.tsx`): overlay assoluto
+ * figlio del wrapper (`[data-block-chrome]`), mai classi di bordo sul wrapper stesso — così
+ * hover/selezione non toccano il box model del contenuto. Nessuna "gabbia permanente": senza
+ * interazione l'overlay non è montato. Colore per livello (ADR-95): Sezione viola (`"section"`), Contenitore
+ * arancione (`"container"`), Widget foglia verde (`"widget"`).
  */
-describe('EditorBlockWrapper — de-duplicazione delle guide visive (canvas overhaul)', () => {
+describe('EditorBlockWrapper — cornice di hover/selezione (ADR-92/95, overlay fuori dal flusso)', () => {
   beforeEach(() => {
     useBlockEditorStore.getState().initTree([]);
     useBlockEditorStore.getState().setActiveViewport('desktop');
     useBlockEditorStore.getState().selectNode(null);
   });
 
-  it('section vuota: nessun bordo statico sul wrapper esterno, il segnaposto interno porta il proprio bordo', () => {
+  function chromeOf(wrapperEl: Element): HTMLElement | null {
+    return wrapperEl.querySelector<HTMLElement>(':scope > [data-block-chrome]');
+  }
+
+  it('section vuota e container vuoto, senza interazione: nessuna cornice, il segnaposto interno porta il proprio bordo', () => {
     const section = node('sec-empty', 'section', {}, []);
-    useBlockEditorStore.getState().initTree([section]);
-
-    const { container } = renderWithProviders(<EditorBlockWrapper id="sec-empty" />);
-    const wrapperEl = container.querySelector('[data-block-id="sec-empty"]');
-    if (!wrapperEl) throw new Error('wrapper non trovato');
-
-    expect(wrapperEl).not.toHaveClass(styles.hoveredChrome);
-    expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
-    expect(wrapperEl).not.toHaveClass(styles.hoveredSectionChrome);
-    expect(wrapperEl).not.toHaveClass(styles.selectedSectionChrome);
-    expect(wrapperEl.querySelector(`.${styles.emptyContainer}`)).toBeInTheDocument();
-  });
-
-  it('container vuoto: nessun bordo statico sul wrapper esterno, il segnaposto interno porta il proprio bordo', () => {
     const emptyContainer = node('cont-empty', 'container', {}, []);
-    useBlockEditorStore.getState().initTree([emptyContainer]);
+    useBlockEditorStore.getState().initTree([section, emptyContainer]);
 
-    const { container } = renderWithProviders(<EditorBlockWrapper id="cont-empty" />);
-    const wrapperEl = container.querySelector('[data-block-id="cont-empty"]');
-    if (!wrapperEl) throw new Error('wrapper non trovato');
-
-    expect(wrapperEl).not.toHaveClass(styles.hoveredChrome);
-    expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
-    expect(wrapperEl).not.toHaveClass(styles.hoveredSectionChrome);
-    expect(wrapperEl).not.toHaveClass(styles.selectedSectionChrome);
-    expect(wrapperEl.querySelector(`.${styles.emptyContainer}`)).toBeInTheDocument();
+    const { container } = renderWithProviders(
+      <>
+        <EditorBlockWrapper id="sec-empty" />
+        <EditorBlockWrapper id="cont-empty" />
+      </>,
+    );
+    for (const id of ['sec-empty', 'cont-empty']) {
+      const wrapperEl = container.querySelector(`[data-block-id="${id}"]`);
+      if (!wrapperEl) throw new Error('wrapper non trovato');
+      expect(chromeOf(wrapperEl)).not.toBeInTheDocument();
+      expect(wrapperEl.querySelector(`.${styles.emptyContainer}`)).toBeInTheDocument();
+    }
   });
 
-  it('container con figli, senza hover/selezione: nessuna classe di bordo sul wrapper (niente gabbia permanente)', () => {
+  it('container con figli, senza hover/selezione: nessuna cornice (niente gabbia permanente)', () => {
     const child = node('h-child', 'heading', { level: 'h2', text: 'Titolo' });
     const containerWithChild = node('cont-full', 'container', {}, [child]);
     useBlockEditorStore.getState().initTree([containerWithChild]);
@@ -483,13 +474,10 @@ describe('EditorBlockWrapper — de-duplicazione delle guide visive (canvas over
     const wrapperEl = container.querySelector('[data-block-id="cont-full"]');
     if (!wrapperEl) throw new Error('wrapper non trovato');
 
-    expect(wrapperEl).not.toHaveClass(styles.hoveredChrome);
-    expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
-    expect(wrapperEl).not.toHaveClass(styles.hoveredSectionChrome);
-    expect(wrapperEl).not.toHaveClass(styles.selectedSectionChrome);
+    expect(container.querySelector('[data-block-chrome]')).not.toBeInTheDocument();
   });
 
-  it('hover su un container (non selezionato): bordo pieno magenta Elementor di Sezione/Container (.hoveredSectionChrome, T-editor-refinement — non più tratteggiato/di livello)', () => {
+  it('hover su un container (non selezionato): cornice 1px di livello Contenitore (#ea580c)', () => {
     const emptyContainer = node('cont-1', 'container', {}, []);
     useBlockEditorStore.getState().initTree([emptyContainer]);
 
@@ -499,27 +487,29 @@ describe('EditorBlockWrapper — de-duplicazione delle guide visive (canvas over
 
     fireEvent.mouseOver(wrapperEl);
 
-    expect(wrapperEl).toHaveClass(styles.hoveredSectionChrome);
-    expect(wrapperEl).not.toHaveClass(styles.selectedSectionChrome);
-    expect(wrapperEl).not.toHaveClass(styles.hoveredChrome);
-    expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
+    const chrome = chromeOf(wrapperEl);
+    expect(chrome).toHaveAttribute('data-block-chrome', 'hover');
+    expect(chrome).toHaveAttribute('data-block-chrome-tone', 'container');
+    expect(chrome).toHaveClass(chromeStyles.hover);
+    expect(chrome).toHaveClass(chromeStyles.container);
   });
 
-  it("selezione di un container: bordo pieno magenta Elementor + ombreggiatura (.selectedSectionChrome, T-editor-refinement), stesso colore/stile solid dell'hover — la sola differenza è l'ombreggiatura", () => {
+  it('selezione di un container: cornice 2px + ombra, livello Contenitore', () => {
     const emptyContainer = node('cont-1', 'container', {}, []);
     useBlockEditorStore.getState().initTree([emptyContainer]);
     useBlockEditorStore.getState().selectNode('cont-1');
 
     const { container } = renderWithProviders(<EditorBlockWrapper id="cont-1" />);
     const wrapperEl = container.querySelector('[data-block-id="cont-1"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
 
-    expect(wrapperEl).toHaveClass(styles.selectedSectionChrome);
-    expect(wrapperEl).not.toHaveClass(styles.hoveredSectionChrome);
-    expect(wrapperEl).not.toHaveClass(styles.hoveredChrome);
-    expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
+    const chrome = chromeOf(wrapperEl);
+    expect(chrome).toHaveAttribute('data-block-chrome', 'selected');
+    expect(chrome).toHaveAttribute('data-block-chrome-tone', 'container');
+    expect(chrome).toHaveClass(chromeStyles.selected);
   });
 
-  it('hover su un widget foglia (heading, non selezionato): nessun bordo di stato (mai su hover, solo su selezione)', () => {
+  it('hover su un widget foglia (heading, non selezionato): cornice 1px di categoria Widget (#16a34a)', () => {
     const heading = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
     useBlockEditorStore.getState().initTree([heading]);
 
@@ -529,11 +519,13 @@ describe('EditorBlockWrapper — de-duplicazione delle guide visive (canvas over
 
     fireEvent.mouseOver(wrapperEl);
 
-    expect(wrapperEl).not.toHaveClass(styles.hoveredChrome);
-    expect(wrapperEl).not.toHaveClass(styles.selectedChrome);
+    const chrome = chromeOf(wrapperEl);
+    expect(chrome).toHaveAttribute('data-block-chrome', 'hover');
+    expect(chrome).toHaveAttribute('data-block-chrome-tone', 'widget');
+    expect(chrome).toHaveClass(chromeStyles.widget);
   });
 
-  it('selezione di un widget foglia (heading): bordo di livello invariato (.selectedChrome, blu), non il magenta di Sezione/Container (T-editor-refinement — richiesta esplicita: i widget foglia possono mantenere la loro logica)', () => {
+  it('selezione di un widget foglia (heading): cornice 2px di categoria Widget, non quella di Sezione/Container', () => {
     const heading = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
     useBlockEditorStore.getState().initTree([heading]);
     useBlockEditorStore.getState().selectNode('h-1');
@@ -542,9 +534,117 @@ describe('EditorBlockWrapper — de-duplicazione delle guide visive (canvas over
     const wrapperEl = container.querySelector('[data-block-id="h-1"]');
     if (!wrapperEl) throw new Error('wrapper non trovato');
 
-    expect(wrapperEl).toHaveClass(styles.selectedChrome);
-    expect(wrapperEl).not.toHaveClass(styles.selectedSectionChrome);
-    expect(wrapperEl).not.toHaveClass(styles.hoveredSectionChrome);
+    const chrome = chromeOf(wrapperEl);
+    expect(chrome).toHaveAttribute('data-block-chrome', 'selected');
+    expect(chrome).toHaveAttribute('data-block-chrome-tone', 'widget');
+    expect(chrome).not.toHaveClass(chromeStyles.section);
+  });
+
+  it('la cornice non entra nel flusso: è aria-hidden e il wrapper non riceve classi di bordo di stato', () => {
+    const heading = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
+    useBlockEditorStore.getState().initTree([heading]);
+    useBlockEditorStore.getState().selectNode('h-1');
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="h-1" />);
+    const wrapperEl = container.querySelector('[data-block-id="h-1"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
+
+    expect(chromeOf(wrapperEl)).toHaveAttribute('aria-hidden', 'true');
+    expect(wrapperEl.className.split(' ')).toEqual(
+      expect.not.arrayContaining([chromeStyles.selected, chromeStyles.hover]),
+    );
+  });
+});
+
+/**
+ * Identità "Sezione" preservata attraverso `migrate-section-to-container.ts` (ADR-82): il
+ * backend migra ogni nodo `{type:'section'}` in `{type:'container', v:2, props:{tag:'section',
+ * ...}}` al salvataggio/parsing. `resolveBlockKind` (`blocks/resolve-block-kind.ts`) deve
+ * riconoscere `props.tag === 'section'` su un `container` come equivalente a `type === 'section'`
+ * legacy: stesso tono di cornice (`data-block-chrome-tone="section"`, viola) e stesso badge —
+ * un `container` con un altro `tag` (o nessuno) resta "Contenitore" normale.
+ */
+describe('EditorBlockWrapper — identità "Sezione" preservata su container migrato (ADR-82)', () => {
+  beforeEach(() => {
+    useBlockEditorStore.getState().initTree([]);
+    useBlockEditorStore.getState().setActiveViewport('desktop');
+    useBlockEditorStore.getState().selectNode(null);
+  });
+
+  function chromeOf(wrapperEl: Element): HTMLElement | null {
+    return wrapperEl.querySelector<HTMLElement>(':scope > [data-block-chrome]');
+  }
+
+  it('container con props.tag="section" in hover: cornice di tono Sezione (viola), non Contenitore', () => {
+    const migratedSection = node('mig-sec-1', 'container', { tag: 'section' }, []);
+    useBlockEditorStore.getState().initTree([migratedSection]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="mig-sec-1" />);
+    const wrapperEl = container.querySelector('[data-block-id="mig-sec-1"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
+
+    fireEvent.mouseOver(wrapperEl);
+
+    const chrome = chromeOf(wrapperEl);
+    expect(chrome).toHaveAttribute('data-block-chrome-tone', 'section');
+    expect(chrome).toHaveClass(chromeStyles.section);
+  });
+
+  it('container con props.tag="section" selezionato: --block-level-color magenta di primo livello, come una section legacy', () => {
+    const migratedSection = node('mig-sec-2', 'container', { tag: 'section' }, []);
+    useBlockEditorStore.getState().initTree([migratedSection]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="mig-sec-2" />);
+    const wrapperEl = container.querySelector<HTMLElement>('[data-block-id="mig-sec-2"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
+
+    expect(wrapperEl.style.getPropertyValue('--block-level-color')).toBe('#e0007b');
+  });
+
+  it('container con props.tag="section" e figlio, selezionato: la toolbar offre "Salva come Preset Globale" (controllo esclusivo delle Sezioni)', () => {
+    const child = node('h-1', 'heading', { level: 'h2', text: 'Titolo' });
+    const migratedSection = node('mig-sec-3', 'container', { tag: 'section' }, [child]);
+    useBlockEditorStore.getState().initTree([migratedSection]);
+    useBlockEditorStore.getState().selectNode('mig-sec-3');
+
+    renderWithProviders(<EditorBlockWrapper id="mig-sec-3" />);
+
+    expect(
+      screen.getByRole('button', { name: /come Preset Globale$/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('container con tag="div" (o assente): resta cornice/tono Contenitore normale, nessuna identità Sezione', () => {
+    const plainContainer = node('cont-div-1', 'container', { tag: 'div' }, []);
+    useBlockEditorStore.getState().initTree([plainContainer]);
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="cont-div-1" />);
+    const wrapperEl = container.querySelector('[data-block-id="cont-div-1"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
+
+    fireEvent.mouseOver(wrapperEl);
+
+    const chrome = chromeOf(wrapperEl);
+    expect(chrome).toHaveAttribute('data-block-chrome-tone', 'container');
+    expect(chrome).not.toHaveClass(chromeStyles.section);
+
+    expect(wrapperEl.style.getPropertyValue('--block-level-color')).toBe('#0284c7');
+  });
+
+  it('container senza props.tag: comportamento identico a "div", mai trattato come Sezione', () => {
+    const plainContainer = node('cont-notag-1', 'container', {}, []);
+    useBlockEditorStore.getState().initTree([plainContainer]);
+    useBlockEditorStore.getState().selectNode('cont-notag-1');
+
+    const { container } = renderWithProviders(<EditorBlockWrapper id="cont-notag-1" />);
+    const wrapperEl = container.querySelector('[data-block-id="cont-notag-1"]');
+    if (!wrapperEl) throw new Error('wrapper non trovato');
+
+    const chrome = chromeOf(wrapperEl);
+    expect(chrome).toHaveAttribute('data-block-chrome-tone', 'container');
+    expect(
+      screen.queryByRole('button', { name: /come Preset Globale$/i }),
+    ).not.toBeInTheDocument();
   });
 });
 

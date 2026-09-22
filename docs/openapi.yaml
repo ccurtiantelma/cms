@@ -1703,6 +1703,20 @@ paths:
       summary: Restituisce la configurazione del tema per il sito pubblico
       tags:
         - Public Pages
+  /api/v1/public/settings/breakpoints:
+    get:
+      operationId: PublicPagesController_getBreakpoints
+      parameters: []
+      responses:
+        '200':
+          description: Breakpoint correnti
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BreakpointsDto'
+      summary: Restituisce i breakpoint attivi per il rendering pubblico (SSR)
+      tags:
+        - Public Pages
   /api/v1/preview/pages/{token}:
     get:
       operationId: PreviewPagesController_getByToken

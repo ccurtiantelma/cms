@@ -21,21 +21,11 @@
  * solo nel `document` padre — CLAUDE.md § Regola Mantine, isolamento CSS di ADR-72 § "Decisione"
  * punto 1/ADR-70 § "Decisione" punto 5).
  *
- * Lo stato vuoto ("nessun blocco") è anche una drop-zone (`useDroppable`, id
- * `root-empty-dropzone`, stesso schema dati `{ parentId, index }` letto da
- * `FullScreenEditorLayout.handleDragEnd`): senza un nodo già in radice non c'è nessuna
- * striscia `before`/`after` di `EditorBlockWrapper` su cui rilasciare il primo blocco. Il
- * div resta montato — solo invisibile, senza contenuto proprio — anche ad albero vuoto:
- * la resa visiva "Aggiungi sezione" ad albero vuoto è di `CanvasAddSectionZone` (i tre
- * trigger fedeli a Elementor Pro — struttura/template/widget — più il modal a due passi
- * `SectionStructureModal`). Quella stessa `CanvasAddSectionZone` resta montata anche ad
- * albero pieno, in fondo al canvas dopo l'ultimo blocco radice (`index={rootIds.length}`):
- * sempre presente come in Elementor Pro, non solo a pagina vuota (richiesta esplicita del
- * task). Le strisce `CanvasSectionInserter` fra le sezioni radice non portano invece un
- * pulsante "+" visibile (rimosso nello stesso task — nessun trigger isolato sempre visibile
- * lì), restano solo bersaglio invisibile del drag & drop; l'inserimento puntuale fra due
- * sezioni esistenti resta comunque raggiungibile dalla voce "Sezione" del menu "Inserisci
- * sopra/sotto" di ogni Section (`BlockPalette`, toolbar di `EditorBlockWrapper.tsx`).
+ * Shell di composizione (Wave 3): il rendering è delegato a moduli dichiarativi —
+ * `EditorCanvasEmptyState` (albero vuoto), `EditorCanvasRootList` (nodi radice + strisce di
+ * inserimento), `EditorCanvasDropZones` (drop-zone e "Aggiungi sezione" a livello radice),
+ * `EditorCanvasThemeFrame` (cornice THEME - HEADER/FOOTER e breadcrumb). La cornice tema è solo
+ * contesto visivo fuori flusso: non entra nell'albero dei blocchi né nel box model.
  *
  * Porta anche `GLOBAL_TOKENS_CANVAS_SCOPE_CLASS` (`libs/globalTokensCompiler.ts`): è il
  * selettore su cui `IframeCanvas.tsx` scopa, nel documento dell'iframe, sia il CSS compilato
@@ -46,85 +36,44 @@
  * della chrome amministrativa attorno, che resta sui default di fabbrica di Mantine.
  */
 import { useShallow } from 'zustand/react/shallow';
-import { useDroppable } from '@dnd-kit/core';
 import { useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
 import { GLOBAL_TOKENS_CANVAS_SCOPE_CLASS } from '../../../libs/globalTokensCompiler';
-import CanvasAddSectionZone from './CanvasAddSectionZone';
 import CanvasContextMenu from './CanvasContextMenu';
-import CanvasSectionInserter from './CanvasSectionInserter';
-import { CanvasBreadcrumbBar, ThemeFrameBadge } from './CanvasThemeFrame';
-import EditorBlockWrapper from './EditorBlockWrapper';
+import EditorCanvasEmptyState from './EditorCanvasEmptyState';
+import EditorCanvasRootList from './EditorCanvasRootList';
+import EditorCanvasThemeFrame, { CanvasBreadcrumbBar } from './EditorCanvasThemeFrame';
 import styles from './EditorCanvas.module.css';
 
 /** Superficie di editing dell'albero di blocchi della bozza corrente. */
 export default function EditorCanvas(): JSX.Element {
   const rootIds = useBlockEditorStore(useShallow((state) => state.tree.map((node) => node.id)));
   const selectNode = useBlockEditorStore((state) => state.selectNode);
-  const { setNodeRef: setEmptyDropRef, isOver: isOverEmpty } = useDroppable({
-    id: 'root-empty-dropzone',
-    data: { parentId: null, index: 0 },
-  });
 
   return (
     <CanvasContextMenu>
       <div
-        // `GLOBAL_TOKENS_CANVAS_SCOPE_CLASS` è il selettore su cui `IframeCanvas.tsx` scopa,
-        // nel documento dell'iframe, il CSS dei Global Design Tokens: mai `:root`, per non
-        // far trapelare le variabili del sito nella chrome amministrativa (sidebar, toolbar)
-        // — che comunque vive in un documento distinto (quello padre), non in questo.
+        // Selettore su cui `IframeCanvas.tsx` scopa il CSS dei Global Design Tokens: mai `:root`.
         className={`${styles.canvasRoot} ${GLOBAL_TOKENS_CANVAS_SCOPE_CLASS}`}
-        // Un click sullo sfondo deseleziona: senza, non ci sarebbe modo di tornare
-        // a "nessun blocco selezionato" una volta scelto un nodo.
+        // Un click sullo sfondo deseleziona: senza, non si tornerebbe a "nessun blocco".
         onClick={() => selectNode(null)}
       >
-        {/*
-          Wrapper "Layout" del tema (v8): stesso `.pageOuter`/`.pageBoxed` del sito pubblico
-          (`PageView.tsx`) — vedi il commento di testa di `EditorCanvas.module.css`. Applicato
-          sempre, coi default di fabbrica il Canvas resta visivamente invariato solo se il
-          contenuto non richiede più di 1200px, stesso principio del rendering pubblico.
-        */}
-        <ThemeFrameBadge area="header" />
+        <EditorCanvasThemeFrame area="header" />
+        {/* Wrapper "Layout" del tema (v8): stesso `.pageOuter`/`.pageBoxed` di `PageView.tsx`. */}
         <div className={styles.pageOuter}>
           <div className={styles.pageBoxed}>
-            {/*
-              `.blockStack` (EditorCanvas.module.css): equivalente non-Mantine di
-              `<Stack gap="sm">` — questo albero vive nel documento isolato dell'iframe
-              (`IframeCanvas.tsx`), dove il foglio di stile di Mantine (caricato solo nel
-              `document` padre) non è disponibile. `gap` legge la stessa variabile
-              `--cms-space-sm` già scritta da `generateThemeCss`/`compileTokensToCss` in quel
-              documento, coerente col resto del vocabolario dei token dei blocchi.
-            */}
+            {/* `.blockStack`: equivalente non-Mantine di `<Stack gap="sm">` (documento iframe). */}
             <div className={styles.blockStack}>
               {rootIds.length === 0 ? (
-                // Nessun contenuto visivo proprio (scelta di giudizio, vedi il commento di testa):
-                // la resa "Aggiungi sezione" è interamente di `CanvasAddSectionZone`, montata
-                // subito sotto — il div resta solo come bersaglio `useDroppable` per il primo
-                // blocco trascinato: a riposo è una striscia quasi invisibile
-                // (`EditorCanvas.module.css`), che si allarga ed evidenzia in magenta solo
-                // durante un trascinamento sopra di lei (`data-over`).
-                <>
-                  <div
-                    ref={setEmptyDropRef}
-                    className={styles.emptyDropzone}
-                    data-over={isOverEmpty}
-                  />
-                  <CanvasAddSectionZone parentId={null} index={0} />
-                </>
+                <EditorCanvasEmptyState />
               ) : (
-                <>
-                  <CanvasSectionInserter index={0} />
-                  {rootIds.flatMap((id, index) => [
-                    <EditorBlockWrapper key={id} id={id} />,
-                    <CanvasSectionInserter key={`inserter-${index + 1}`} index={index + 1} />,
-                  ])}
-                  <CanvasAddSectionZone parentId={null} index={rootIds.length} />
-                </>
+                <EditorCanvasRootList rootIds={rootIds} />
               )}
             </div>
           </div>
         </div>
-        <ThemeFrameBadge area="footer" />
         <CanvasBreadcrumbBar />
+        {/* Dopo il breadcrumb: àncora di altezza 0, il badge si disegna sopra di esso. */}
+        <EditorCanvasThemeFrame area="footer" />
       </div>
     </CanvasContextMenu>
   );

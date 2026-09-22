@@ -48,6 +48,10 @@ export default function AdvancedTab({
   const visibilityFields = new Set<string>(VISIBILITY_PROP_NAMES);
 
   const canSavePreset = (nodeType === 'section' || nodeType === 'container') && onSavePreset;
+  // Stesso check di `blocks/resolve-block-kind.ts` (ADR-82): un `container` migrato da
+  // `section` porta `draft.tag === 'section'` e conserva l'etichetta "Sezione". Non importabile
+  // 1:1 da qui: questa scheda riceve solo `nodeType`+`draft`, non un `BlockNode` completo.
+  const isSection = nodeType === 'section' || (nodeType === 'container' && draft.tag === 'section');
   /**
    * Nessun ulteriore controllo su `nodeType`/posizione qui: `onConvertToGlobalSection`
    * arriva già `undefined` da `PropertyInspector.tsx` per ogni nodo che non sia un
@@ -175,7 +179,7 @@ export default function AdvancedTab({
           opened
           onClose={() => setConvertModalOpened(false)}
           onConfirm={onConvertToGlobalSection}
-          blockLabel={nodeType === 'section' ? 'Sezione' : 'Contenitore'}
+          blockLabel={isSection ? 'Sezione' : 'Contenitore'}
         />
       )}
     </Stack>

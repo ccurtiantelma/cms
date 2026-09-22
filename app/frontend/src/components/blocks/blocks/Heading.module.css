@@ -30,7 +30,12 @@
   display: block;
   cursor: text;
   outline: none;
-  min-height: 1.5em;
+  /*
+   * Nessun `min-height` qui: `.editable` si applica non appena il titolo è **selezionato**, e
+   * un pavimento più alto dell'altezza di riga (1.5em vs ~1.2em del titolo) lo faceva crescere
+   * di ~4px al solo click (layout shift, Wave 1.1). Il titolo vuoto in editing resta alto
+   * grazie a `.editable:empty::before` sotto (`min-height: 1.2em`), che vive solo da vuoto.
+   */
 }
 
 .editable:focus {

@@ -133,7 +133,7 @@ export function ThemeEditorColorPicker({
             className={classes.trigger}
             style={{ backgroundColor: value, width: diameter, height: diameter }}
             onClick={openGrid}
-            aria-label={`${ariaLabel}: apri palette colori Mantine`}
+            aria-label={`${ariaLabel}: apri palette colori`}
           />
         </Tooltip>
 
@@ -182,7 +182,7 @@ export function ThemeEditorColorPicker({
       <Modal
         opened={gridOpened}
         onClose={closeGrid}
-        title="Palette colori Mantine"
+        title="Palette colori"
         size="lg"
         centered
       >

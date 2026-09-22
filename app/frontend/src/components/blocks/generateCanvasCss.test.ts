@@ -103,10 +103,18 @@ describe('generateCanvasCss', () => {
   });
 
   describe('kind fuori scope: ignorato silenziosamente (debito ADR-82 § "Conseguenze")', () => {
-    it('container.background (kind: background, non implementato) non produce alcuna dichiarazione, il resto sì', () => {
+    it('container.shapeDividerTop (kind: shapeDivider, non implementato) non produce alcuna dichiarazione, il resto sì', () => {
       const tree: CanvasCssNode[] = [
         leaf('cnt2', 'container', {
-          background: { type: 'color', color: '#000000' },
+          shapeDividerTop: {
+            style: 'wave',
+            color: '#000000',
+            width: { value: 100, unit: '%' },
+            height: { value: 40, unit: 'px' },
+            flip: false,
+            invert: false,
+            aboveContent: false,
+          },
           radius: { tl: 8, tr: 8, br: 8, bl: 8, unit: 'px' },
         }),
       ];
@@ -115,7 +123,6 @@ describe('generateCanvasCss', () => {
       const css = generateCanvasCss(tree, DEFAULT_ACTIVE);
 
       expect(css).not.toContain('#000000');
-      expect(css).not.toContain('background');
       expect(css).toContain('border-radius: 8px 8px 8px 8px;');
     });
 
@@ -124,6 +131,120 @@ describe('generateCanvasCss', () => {
 
       expect(() => generateCanvasCss(tree, DEFAULT_ACTIVE)).not.toThrow();
       expect(generateCanvasCss(tree, DEFAULT_ACTIVE)).toBe('');
+    });
+  });
+
+  describe('background (kind: background, ADR-96 § "Decisione" punto 3): scope none/color/gradient', () => {
+    it("type: 'none' non produce alcuna dichiarazione", () => {
+      const tree: CanvasCssNode[] = [
+        leaf('bg1', 'container', { background: { normal: { type: 'none' } } }),
+      ];
+      expect(generateCanvasCss(tree, DEFAULT_ACTIVE)).toBe('');
+    });
+
+    it("type: 'color' con valore letterale emette background-color con l'hex così com'è", () => {
+      const tree: CanvasCssNode[] = [
+        leaf('bg2', 'container', { background: { normal: { type: 'color', color: '#1b5fa8' } } }),
+      ];
+      const css = generateCanvasCss(tree, DEFAULT_ACTIVE);
+      expect(css).toBe('[data-canvas-style-id="bg2"] { background-color: #1b5fa8; }');
+    });
+
+    it("type: 'color' con { ref } emette background-color come var(--gk-color-<id>)", () => {
+      const tree: CanvasCssNode[] = [
+        leaf('bg3', 'container', {
+          background: { normal: { type: 'color', color: { ref: 'primary' } } },
+        }),
+      ];
+      const css = generateCanvasCss(tree, DEFAULT_ACTIVE);
+      expect(css).toBe(
+        '[data-canvas-style-id="bg3"] { background-color: var(--gk-color-primary); }',
+      );
+    });
+
+    it("type: 'gradient' linear emette background-image con linear-gradient (stesso output del compilatore backend)", () => {
+      const tree: CanvasCssNode[] = [
+        leaf('bg4', 'container', {
+          background: {
+            normal: {
+              type: 'gradient',
+              gradient: {
+                type: 'linear',
+                angle: 45,
+                stops: [
+                  { color: '#ffffff', at: 0 },
+                  { color: { ref: 'accent' }, at: 100 },
+                ],
+              },
+            },
+          },
+        }),
+      ];
+      const css = generateCanvasCss(tree, DEFAULT_ACTIVE);
+      expect(css).toBe(
+        '[data-canvas-style-id="bg4"] { background-image: linear-gradient(45deg, #ffffff 0%, var(--gk-color-accent) 100%); }',
+      );
+    });
+
+    it("type: 'gradient' radial emette background-image con radial-gradient (stesso output del compilatore backend)", () => {
+      const tree: CanvasCssNode[] = [
+        leaf('bg5', 'container', {
+          background: {
+            normal: {
+              type: 'gradient',
+              gradient: {
+                type: 'radial',
+                position: 'center center',
+                stops: [
+                  { color: '#000000', at: 0 },
+                  { color: '#ffffff', at: 100 },
+                ],
+              },
+            },
+          },
+        }),
+      ];
+      const css = generateCanvasCss(tree, DEFAULT_ACTIVE);
+      expect(css).toBe(
+        '[data-canvas-style-id="bg5"] { background-image: radial-gradient(at center center, #000000 0%, #ffffff 100%); }',
+      );
+    });
+
+    it("type: 'image'/'video'/'slideshow' non emettono alcuna dichiarazione (fuori scope ADR-96, stesso trattamento del backend)", () => {
+      expect(
+        generateCanvasCss(
+          [leaf('bg6', 'container', { background: { normal: { type: 'image' } } })],
+          DEFAULT_ACTIVE,
+        ),
+      ).toBe('');
+      expect(
+        generateCanvasCss(
+          [leaf('bg7', 'container', { background: { normal: { type: 'video' } } })],
+          DEFAULT_ACTIVE,
+        ),
+      ).toBe('');
+      expect(
+        generateCanvasCss(
+          [leaf('bg8', 'container', { background: { normal: { type: 'slideshow' } } })],
+          DEFAULT_ACTIVE,
+        ),
+      ).toBe('');
+    });
+
+    it('stato hover: emette un blocco separato con selettore :hover (background è stateful, ADR-75)', () => {
+      const tree: CanvasCssNode[] = [
+        leaf('bg9', 'container', {
+          background: {
+            normal: { type: 'color', color: { ref: 'primary' } },
+            hover: { type: 'color', color: '#1b5fa8' },
+          },
+        }),
+      ];
+      const css = generateCanvasCss(tree, DEFAULT_ACTIVE);
+      expect(css).toContain(
+        '[data-canvas-style-id="bg9"] { background-color: var(--gk-color-primary); }',
+      );
+      expect(css).toContain('[data-canvas-style-id="bg9"]:hover { background-color: #1b5fa8; }');
     });
   });
 

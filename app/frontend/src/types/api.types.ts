@@ -971,6 +971,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/public/settings/breakpoints': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Restituisce i breakpoint attivi per il rendering pubblico (SSR) */
+    get: operations['PublicPagesController_getBreakpoints'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/preview/pages/{token}': {
     parameters: {
       query?: never;
@@ -5619,6 +5636,26 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ThemeConfigDto'];
+        };
+      };
+    };
+  };
+  PublicPagesController_getBreakpoints: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Breakpoint correnti */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BreakpointsDto'];
         };
       };
     };

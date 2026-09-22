@@ -33,6 +33,7 @@ import {
 } from './css-declaration.types';
 import { isPlainObject } from './value-shapes.types';
 import {
+  backgroundToDeclarations,
   colorRefToDeclarations,
   filterToDeclarations,
   fontRefToDeclarations,
@@ -131,6 +132,8 @@ function valueToDeclarations(spec: PropSpec, value: unknown): CssDeclaration[] {
       return filterToDeclarations(value);
     case 'layout':
       return layoutToDeclarations(value);
+    case 'background':
+      return backgroundToDeclarations(value);
     case 'typography':
       // Percorso dedicato: vedi `resolveBreakpointDeclarations` sotto, mai
       // questo dispatcher generico "un valore per breakpoint".

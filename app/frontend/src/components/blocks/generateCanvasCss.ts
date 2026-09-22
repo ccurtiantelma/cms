@@ -17,10 +17,12 @@
  * A differenza del backend (che lancia un errore per un `kind` fuori scope, S1.2 essendo
  * consumato solo da codice server che conosce esattamente quali `kind` esistono in quel
  * momento), questo modulo **ignora silenziosamente** ogni `kind` che il compilatore backend
- * non implementa ancora (`background`, `link`, `animation`, `motion`, `attributes`, `css`,
- * `hideOn`, `shapeDivider` — debito dichiarato in ADR-82 § "Conseguenze") e ogni `kind` v1
- * (già reso da `style-tokens.ts` via classi CSS Module, mai da questo modulo): un editor
- * live non deve mai smettere di renderizzare l'anteprima per una prop non ancora coperta.
+ * non implementa ancora (`link`, `animation`, `motion`, `attributes`, `css`, `hideOn`,
+ * `shapeDivider` — debito dichiarato in ADR-82 § "Conseguenze") e ogni `kind` v1 (già reso da
+ * `style-tokens.ts` via classi CSS Module, mai da questo modulo): un editor live non deve mai
+ * smettere di renderizzare l'anteprima per una prop non ancora coperta. `background` non è più
+ * fra questi (ADR-96 § "Decisione" punto 3): implementato scope `type: 'none' | 'color' |
+ * 'gradient'`, mirror identico di `backgroundToDeclarations()` backend.
  *
  * Selettore CSS: **deviazione dichiarata** da `SPEC-PROPKIND-V2-DETAILS.md` § 10
  * (`'[data-block="<blockId>"]'`, pensato per il consumer HTML pubblico, fuori scope qui).
@@ -68,9 +70,10 @@ interface CssDeclarationBlock {
   declarations: CssDeclaration[];
 }
 
-/** I 9 `kind` PropKind v2 + `layout` (Container v2, ADR-82) effettivamente implementati dal
- * compilatore backend (`to-css.ts` § "Dispatcher"): unico punto di verità di "cosa sappiamo
- * ancora rendere" — ogni altro `kind` produce zero dichiarazioni, mai un errore. */
+/** I 9 `kind` PropKind v2 + `layout` (Container v2, ADR-82) + `background` (ADR-96 § "Decisione"
+ * punto 3, scope `none`/`color`/`gradient`) effettivamente implementati dal compilatore backend
+ * (`to-css.ts` § "Dispatcher"): unico punto di verità di "cosa sappiamo ancora rendere" — ogni
+ * altro `kind` produce zero dichiarazioni, mai un errore. */
 const SUPPORTED_KINDS = new Set<BlockPropDescriptor['kind']>([
   'colorRef',
   'fontRef',
@@ -82,6 +85,7 @@ const SUPPORTED_KINDS = new Set<BlockPropDescriptor['kind']>([
   'transform',
   'filter',
   'layout',
+  'background',
 ]);
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -179,6 +183,16 @@ interface LayoutValueShape {
   alignItems?: string;
 }
 
+/** Mirror di `BackgroundValueShape` (`value-shapes.types.ts`, backend): scope di questo modulo
+ * limitato a `type: 'none' | 'color' | 'gradient'` (ADR-96 § "Decisione" punto 3) — `image`/
+ * `video`/`slideshow` restano valori validi ma senza alcuna dichiarazione emessa, stesso
+ * trattamento del backend. */
+interface BackgroundValueShape {
+  type: 'none' | 'color' | 'gradient' | 'image' | 'video' | 'slideshow';
+  color?: ColorRefValueShape;
+  gradient?: GradientValueShape;
+}
+
 interface TypographyValueShape {
   fontFamily?: FontRefValueShape;
   fontSize?: UnitValueShape;
@@ -258,6 +272,33 @@ function gradientToDeclarations(value: unknown): CssDeclaration[] {
   }
   const positionClause = gradient.position ? `at ${gradient.position}, ` : '';
   return [{ property: 'background-image', value: `radial-gradient(${positionClause}${stopsCss})` }];
+}
+
+/**
+ * `background` → `background-color`/`background-image`, scope `type: 'none' | 'color' |
+ * 'gradient'` (ADR-96 § "Decisione" punto 3, mirror di `backgroundToDeclarations()` backend).
+ * `type: 'none'` non emette alcuna dichiarazione. `type: 'color'` riusa `colorRefValueToCss`
+ * (stessa conversione di `colorRef`) per `background-color`. `type: 'gradient'` riusa
+ * `gradientToDeclarations` per `background-image`. `type: 'image' | 'video' | 'slideshow'`
+ * restano validi per lo schema ma non emettono alcuna dichiarazione in questo round (nessuna
+ * eccezione, stesso trattamento del backend).
+ */
+function backgroundToDeclarations(value: unknown): CssDeclaration[] {
+  if (!isPlainObject(value)) return [];
+  const background = value as unknown as BackgroundValueShape;
+  switch (background.type) {
+    case 'none':
+      return [];
+    case 'color':
+      if (background.color === undefined) return [];
+      return [{ property: 'background-color', value: colorRefValueToCss(background.color) }];
+    case 'gradient':
+      if (background.gradient === undefined) return [];
+      return gradientToDeclarations(background.gradient);
+    default:
+      // 'image' | 'video' | 'slideshow': fuori scope ADR-96, nessuna dichiarazione.
+      return [];
+  }
 }
 
 /** `position` → `position` + `top`/`right`/`bottom`/`left` + `z-index` (§ 7). `'default'` → `static`. */
@@ -524,6 +565,8 @@ function valueToDeclarations(spec: BlockPropDescriptor, value: unknown): CssDecl
       return filterToDeclarations(value);
     case 'layout':
       return layoutToDeclarations(value);
+    case 'background':
+      return backgroundToDeclarations(value);
     default:
       // Fuori scope del compilatore backend (commento di testa del modulo): nessuna dichiarazione,
       // mai un errore — un `kind` non ancora implementato non deve mai rompere il canvas live.

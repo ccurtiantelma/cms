@@ -23,3 +23,10 @@ export const PUBLIC_MEDIA_BASE_URL: string =
 export function resolveMediaSrc(mediaRef: string): string {
   return `${PUBLIC_MEDIA_BASE_URL}/api/v1/public/media/${mediaRef}`;
 }
+
+/**
+ * `mediaRef` segnaposto di un'immagine appena inserita: passa la validazione di forma (16 hex,
+ * il backend non verifica l'esistenza a scrittura) ma non punta a nessun file. `Image` lo rende
+ * come riquadro "foto" senza richieste di rete; mai una vera richiesta al server media.
+ */
+export const PLACEHOLDER_MEDIA_REF = '0000000000000000';

@@ -27,7 +27,7 @@ import { BLOCK_TYPES } from '../../types/blocks.types';
 import type { RenderableBlockNode } from './types';
 import BlockErrorBoundary from './BlockErrorBoundary';
 import Section from './blocks/Section';
-import Container from './blocks/Container';
+import Container, { resolveDefaultDirection } from './blocks/Container';
 import Heading from './blocks/Heading';
 import RichText from './blocks/RichText';
 import Image from './blocks/Image';
@@ -218,6 +218,7 @@ function renderNode(
           opacity={node.props.opacity}
           htmlId={node.props.htmlId}
           cssClass={node.props.cssClass}
+          defaultDirection={resolveDefaultDirection(node)}
         >
           {node.children.map((child) => (
             <BlockRenderer

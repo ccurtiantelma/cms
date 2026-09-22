@@ -167,6 +167,26 @@ describe('PropertyInspector — nessuna selezione e tipi fuori registro', () => 
   });
 });
 
+describe('PropertyInspector — titolo "Modifica Sezione" (ADR-82, isSection)', () => {
+  it('un nodo section v1 (non ancora migrato) mostra "Modifica Sezione"', () => {
+    renderInspectorWith(node('sec-1', 'section'));
+
+    expect(screen.getByText('Modifica Sezione')).toBeInTheDocument();
+  });
+
+  it('un container v2 con tag:"section" (migrato a salvataggio/reload) mostra ancora "Modifica Sezione", non la label generica del registro', () => {
+    renderInspectorWith(node('cont-sec-1', 'container', { tag: 'section' }));
+
+    expect(screen.getByText('Modifica Sezione')).toBeInTheDocument();
+  });
+
+  it('un container v2 senza tag "section" mostra la label generica del registro ("Modifica Contenitore")', () => {
+    renderInspectorWith(node('cont-1', 'container', { tag: 'div' }));
+
+    expect(screen.getByText('Modifica Contenitore')).toBeInTheDocument();
+  });
+});
+
 describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
   it('section (nessuna prop di contenuto, solo di stile e avanzate) mostra Stile e Avanzato, mai Contenuto, con le etichette del registro', () => {
     renderInspectorWith(node('sec-1', 'section'));

@@ -419,28 +419,40 @@ function nextPlaceholderId(): string {
  * Costruisce ricorsivamente il sottoalbero `container` di una riga/cella della Griglia
  * (ADR-39): foglia → `container` vuoto (segnaposto interattivo esistente,
  * `EditorBlockWrapper.module.css` `.emptyContainer`, l'utente vi trascina widget dopo);
- * ramo → `container` con `flexDirection` sull'asse dichiarato, contenente i figli. `applyFlexBasis`
- * è `false` solo per le righe di primo livello (figlie dirette della `section`, già a piena
- * larghezza per via del suo `columns: '1'`): per ogni nodo più annidato scrive `styleFlexBasis`
- * dal `weight` dello stesso spec dell'anteprima — un'unica fonte per le due proporzioni.
+ * ramo → `container` con `flexDirection` sull'asse dichiarato, contenente i figli.
+ * `applyFlexBasis`/`node.weight` non producono più alcuna prop scritta sul nodo: `container`
+ * v2 (ADR-82) non dichiara `styleFlexBasis`, e `boxedWidth` (unica prop di larghezza rimasta
+ * sul registro) è un `max-width` centrato attivo solo quando `contentWidth === 'boxed'`
+ * (`Container.tsx`) — scriverci un peso percentuale non produceva alcuna larghezza reale in
+ * riga flex, il bug corretto qui (colonne collassate al proprio contenuto minimo invece di
+ * dividersi la riga). Il registro non espone oggi alcuna prop di peso per-colonna (ADR-82 §
+ * "Conseguenze": l'estensione dell'handle di resize a un peso dedicato è task R2 T4/T5, non
+ * ancora fatto) — le colonne di una riga si dividono quindi lo spazio in parti uguali per
+ * default CSS (`Container.module.css`/`EditorBlockWrapper.module.css`,
+ * `[data-default-direction='row'] > …`), non più per un peso autorevole scritto qui. I preset
+ * asimmetrici (33/67 ecc.) restano nell'anteprima della tessera (`renderStructureNode`, sempre
+ * proporzionale) ma producono oggi lo stesso 50/50 di un preset "equal" una volta inseriti —
+ * limite noto, non introdotto da questa funzione.
  */
-function buildCellNode(node: StructureNode, applyFlexBasis: boolean): BlockNode {
+function buildCellNode(node: StructureNode): BlockNode {
   if (!CONTAINER_DESCRIPTOR)
     throw new Error('Descrittore "container" assente dal registro blocchi.');
   const props: Record<string, unknown> = { ...defaultPropsFor(CONTAINER_DESCRIPTOR) };
-  if (applyFlexBasis) props.styleFlexBasis = { value: node.weight, unit: '%' };
 
   if (!node.children) {
     return { id: nextPlaceholderId(), type: 'container', props, children: [] };
   }
 
-  props.flexDirection = { default: node.direction ?? 'row' };
-  props.gap = { default: 'sm' };
+  // `container` v2 (ADR-82): flexDirection/gap sono consolidati in `layout` (gap `sm` = 8px).
+  const gap = { value: 8, unit: 'px' };
+  props.layout = {
+    default: { display: 'flex', direction: node.direction ?? 'row', gap: { x: gap, y: gap } },
+  };
   return {
     id: nextPlaceholderId(),
     type: 'container',
     props,
-    children: node.children.map((child) => buildCellNode(child, true)),
+    children: node.children.map((child) => buildCellNode(child)),
   };
 }
 
@@ -456,8 +468,24 @@ function buildGridSectionSubtree(preset: GridPreset): BlockNode {
       columnRatio: 'equal',
       gap: { default: 'sm' },
     },
-    children: preset.rows.map((row) => buildCellNode(row, false)),
+    children: preset.rows.map((row) => buildCellNode(row)),
   };
+}
+
+/**
+ * Righe-colonna reali di un preset piatto con più colonne: la riga `direction: 'row'` di
+ * `preset.rows`, oppure (tessera "Riga", senza anteprima a celle) N colonne uguali.
+ * `undefined` per una colonna singola, che resta la `section` piatta.
+ */
+function resolveColumnRows(preset: FlexboxPreset): readonly StructureNode[] | undefined {
+  const count = Number(preset.columns.default);
+  if (count < 2) return undefined;
+  const authored = preset.rows?.filter((row) => row.direction === 'row' && row.children);
+  if (authored?.length) return authored;
+  const weight = Math.floor(100 / count);
+  return [
+    { weight: 1, direction: 'row', children: Array.from({ length: count }, () => ({ weight })) },
+  ];
 }
 
 /** Modal di selezione del preset di struttura per una nuova `section` (ADR-33 § 7). */
@@ -500,6 +528,15 @@ export default function SectionStructureModal({
    * creato e scrollarlo in vista.
    */
   function handleSelectFlexbox(preset: FlexboxPreset): void {
+    // Più colonne = gerarchia reale Section → Row(container flex) → Column(container): ogni
+    // colonna è un nodo selezionabile e una dropzone a sé, i widget ne diventano figli
+    // (RFC-F04e Decisione 3(a): nessun tipo nuovo, si compone `container` già approvato).
+    const rows = resolveColumnRows(preset);
+    if (rows) {
+      handleSelectGrid({ id: preset.id, label: preset.label, rows });
+      return;
+    }
+
     const baseProps = SECTION_DESCRIPTOR ? defaultPropsFor(SECTION_DESCRIPTOR) : {};
     addBlockAction(parentId, 'section', index, {
       ...baseProps,

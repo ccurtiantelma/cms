@@ -13,6 +13,8 @@ interface PreviewDocumentProps {
   cssHref: string;
   /** Vedi `App.tsx` — stesso contratto di CSS critico inline (SPEC-F03 § 3.2). */
   criticalCss: string;
+  /** Vedi `App.tsx` — stesso contratto di CSS dinamico per-nodo (ADR-96). */
+  blockDynamicCss: string;
   /** Isola JS di submit dei Form (F10-04) — iniettata da `PageView` solo se la Pagina ne ha bisogno. */
   formScriptHref?: string;
   /**
@@ -43,6 +45,7 @@ export default function PreviewDocument({
   themeConfig,
   cssHref,
   criticalCss,
+  blockDynamicCss,
   formScriptHref,
   globalSections,
   resolvePageUrl,
@@ -59,6 +62,13 @@ export default function PreviewDocument({
           <style data-critical-css nonce={nonce} dangerouslySetInnerHTML={{ __html: criticalCss }} />
         ) : null}
         <link rel="stylesheet" href={cssHref} />
+        {blockDynamicCss ? (
+          <style
+            data-block-dynamic-css
+            nonce={nonce}
+            dangerouslySetInnerHTML={{ __html: blockDynamicCss }}
+          />
+        ) : null}
         <ThemeStyleTag themeConfig={themeConfig} nonce={nonce} />
       </head>
       <body>

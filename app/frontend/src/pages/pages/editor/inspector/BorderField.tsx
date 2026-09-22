@@ -18,7 +18,7 @@
 import { Group, Select, Slider, Stack, Text } from '@mantine/core';
 import type { BlockPropDescriptor, PropStateName } from '../../../../types/blocks.types';
 import { useActiveBreakpoint } from '../../../../hooks/useBlockEditorStore';
-import { ThemeEditorColorPicker } from '../../../../components/theme-editor/ThemeEditorColorPicker';
+import ThemeColorPicker from './ThemeColorPicker';
 import StateSwitcher from './StateSwitcher';
 import { useEditingState } from './editingState';
 import {
@@ -28,6 +28,7 @@ import {
   buildStatefulResponsivePropPatch,
   propLabel,
   readStatefulResponsiveValue,
+  useThemeColorPresets,
   type PropsMeta,
 } from './inspector.utils';
 
@@ -73,6 +74,7 @@ export default function BorderField({
   const activeBreakpoint = useActiveBreakpoint();
   const { editingState, setEditingState, hasPanelSwitcher } = useEditingState();
   const state: PropStateName = prop.stateful ? editingState : 'normal';
+  const themePresets = useThemeColorPresets();
 
   const current = readBorderValue(
     readStatefulResponsiveValue(prop, value, state, activeBreakpoint),
@@ -108,10 +110,12 @@ export default function BorderField({
           value={current.style}
           onChange={(next) => write({ style: next ?? current.style })}
         />
-        <ThemeEditorColorPicker
+        <ThemeColorPicker
           label={`${label} — Colore`}
           value={current.color}
           aria-label={`${label} — Colore`}
+          themePresets={themePresets}
+          onSelectPreset={(_, hex) => write({ color: hex })}
           onChange={(next) => write({ color: next })}
         />
       </Group>

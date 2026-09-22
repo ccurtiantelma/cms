@@ -33,56 +33,10 @@
 }
 
 /*
-  Bordo di hover/selezione dei **widget foglia** (ADR-92, supera solo il valore colore dello
-  schema RE-2/T-editor-refinement — quei due round restano storici in `EditorBlockWrapper.tsx`
-  per il resto). Colore fisso rosa/viola `#a435c0` per entrambi gli stati (non più derivato da
-  `var(--block-level-color)`, che resta calcolato in `EditorBlockWrapper.tsx` ma non alimenta
-  più questo bordo): `.hoveredChrome` = 1px solid, `.selectedChrome` = 2px solid + ombreggiatura
-  di enfasi — la selezione si distingue dall'hover per spessore/ombra, non più per stile
-  tratteggiato/pieno.
-  Hover promosso a stato esplicito (`isHovered`, EditorBlockWrapper.tsx), niente `:hover`
-  CSS nativo sul wrapper (rimosso: cadrebbe su ogni antenato del nodo puntato, il DOM di un
-  figlio è geometricamente dentro quello del padre) — la classe è applicata via JS solo al
-  nodo effettivamente sotto il puntatore, mai contemporaneamente ai suoi
-  antenati/discendenti.
+  Cornice di hover/selezione: non più un bordo del `.wrapper` ma un overlay assoluto
+  (`blocks/BlockSelectionChrome.module.css`, ADR-92) — il wrapper tiene un bordo trasparente
+  fisso da 1px, quindi hover/selezione non ne alterano mai il box model.
 */
-.hoveredChrome {
-  border-width: 1px;
-  border-style: solid;
-  border-color: #a435c0;
-}
-
-.selectedChrome {
-  border-width: 2px;
-  border-style: solid;
-  border-color: #a435c0;
-  box-shadow:
-    0 0 0 3px rgba(15, 23, 42, 0.1),
-    0 8px 20px rgba(15, 23, 42, 0.12);
-}
-
-/*
-  Bordo di hover/selezione di Sezioni/Container (ADR-92, supera il magenta fisso `#e0007b`
-  di T-editor-refinement — solo il valore colore, non la struttura a due categorie
-  Container/Widget). Azzurro fisso `#2271b1`: `.hoveredSectionChrome` = 1px solid,
-  `.selectedSectionChrome` = 2px solid + ombreggiatura di enfasi — stessa distinzione per
-  spessore/ombra di `.hoveredChrome`/`.selectedChrome` sopra, non più uno stile di bordo
-  diverso fra i due stati.
-*/
-.hoveredSectionChrome {
-  border-width: 1px;
-  border-style: solid;
-  border-color: #2271b1;
-}
-
-.selectedSectionChrome {
-  border-width: 2px;
-  border-style: solid;
-  border-color: #2271b1;
-  box-shadow:
-    0 0 0 3px rgba(15, 23, 42, 0.1),
-    0 8px 20px rgba(15, 23, 42, 0.12);
-}
 
 /* Nodo respinto dall'ultima validazione server-side (400 con path del colpevole). */
 .invalid,
@@ -96,7 +50,7 @@
   Nodo puntatore a una Sezione Globale (ADR-55, estende ADR-40): bordo viola pieno,
   stesso viola `#9333ea` delle Sezioni di primo livello (RE-2, "sezioni di primo livello e
   Sezioni Globali" condividono un solo colore di livello) — a differenza di
-  `.hoveredChrome`/`.selectedChrome` sopra è **sempre** visibile, non solo su hover/
+  la cornice di hover/selezione (`BlockSelectionChrome`) è **sempre** visibile, non solo su hover/
   selezione: modificarne il contenuto altrove (modulo Sezioni Globali) ha impatto su ogni
   Pagina che referenzia la stessa riga, un segnale che deve restare leggibile anche senza
   interagire col nodo. Vedi `.globalRefBadge` sotto per l'etichetta abbinata.
@@ -117,11 +71,7 @@
   (`isHovered`/`selectedId` restano invariati) — così uscire dall'anteprima ritrova
   esattamente la stessa selezione di prima.
 */
-[data-preview-mode='true'] .wrapper:focus-visible,
-[data-preview-mode='true'] .hoveredChrome,
-[data-preview-mode='true'] .selectedChrome,
-[data-preview-mode='true'] .hoveredSectionChrome,
-[data-preview-mode='true'] .selectedSectionChrome {
+[data-preview-mode='true'] .wrapper:focus-visible {
   border-color: transparent;
   outline: none;
   box-shadow: none;
@@ -290,19 +240,68 @@
   z-index: 2;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  border-radius: 0 0 4px 0;
-  background: #2271b1;
+  padding: 2px;
+  border-radius: 0 0 3px 0;
+  background: #16a34a;
   color: var(--mantine-color-white);
   pointer-events: none;
 }
 
+/* Colore per livello (ADR-95), stessi valori di cornice e barra azioni. */
+.hoverBadge[data-tone='section'] {
+  background: #7c3aed;
+}
+
+.hoverBadge[data-tone='container'] {
+  background: #ea580c;
+}
+
+/* Solo per screen reader/test: mai visibile (il badge mostra la sola icona). */
 .hoverBadgeLabel {
-  color: var(--mantine-color-white);
-  font-size: 11px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
   white-space: nowrap;
-  line-height: 1;
+}
+
+/*
+  Contorno gerarchico: il genitore del nodo selezionato (sezione per un contenitore,
+  contenitore per un widget) mostra un bordo tratteggiato grigio. Riusa il bordo trasparente
+  fisso da 1px del `.wrapper`: cambia solo il colore, nessun layout shift.
+*/
+.wrapper[data-parent-of-selected='true'] {
+  border-color: #a0aec0;
+}
+
+/* Widget foglia: occupa di default tutta la larghezza disponibile del contenitore. */
+.wrapper:not([data-block-type='container']):not([data-block-type='section']) {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/*
+ * Colonne (`container` annidati in una riga) nel canvas: stessa crescita equa di default
+ * di `Container.module.css` `.container[data-default-direction='row'] > .container` (sito
+ * pubblico), ma qui il figlio diretto del contenitore a riga non è questo `.wrapper` di
+ * chrome (`EditorBlockWrapper.tsx`) — è `.childrenArea` (`display: contents`,
+ * `BlockContainerBody.tsx`), che non genera un box ma **resta** un nodo reale del DOM: un
+ * combinatore `>` verifica la relazione DOM, non il render tree, quindi `[data-default-
+ * direction='row'] > .wrapper` non fa mai match (il genitore DOM diretto di `.wrapper` è
+ * `.childrenArea`, non il contenitore) — primo tentativo di questa regola, corretto qui
+ * inserendo `.childrenArea` nella catena. `[data-default-direction='row']` è un attributo
+ * (non una classe locale a questo modulo): attraversa il confine fra i due CSS Module senza
+ * problemi, è l'attributo che `Container.tsx` porta sul proprio elemento radice. Senza
+ * questa regola le colonne del canvas si restringevano al proprio min-content invece di
+ * dividersi la riga — il bug corretto qui, vedi il commento in `Container.module.css` per il
+ * contesto completo (ADR-82, nessuna prop di peso per-colonna nel registro oggi). Lo `style`
+ * inline di `resize.widthStyle` (`useContainerWidthResize.ts`) vince comunque su questa
+ * classe quando presente, stessa garanzia della regola gemella pubblica.
+ */
+[data-default-direction='row'] > .childrenArea > .wrapper[data-block-type='container'] {
+  flex: 1 1 0%;
+  min-width: 0;
 }
 
 /*

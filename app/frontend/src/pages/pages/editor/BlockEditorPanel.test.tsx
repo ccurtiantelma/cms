@@ -79,22 +79,23 @@ beforeEach(() => {
 });
 
 describe('BlockEditorPanel — E01', () => {
-  it('mostra la scheda "Pagina" nella sidebar, accanto a "Widgets" (non più "Proprietà", ADR-91: colonna destra fissa)', () => {
+  it('la sidebar mostra sempre la scheda "Pagina" e non monta più una colonna Inspector', () => {
+    useBlockEditorStore.setState({ selectedId: null });
     renderPanel();
 
     expect(screen.getByRole('tab', { name: 'Widgets' })).toBeInTheDocument();
-    expect(screen.queryByRole('tab', { name: 'Proprietà' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Modifica' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Pagina' })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Proprietà dell'elemento")).not.toBeInTheDocument();
   });
 
-  it('la scheda "Pagina" mostra Titolo e Slug della Pagina in editing', async () => {
+  it('la scheda "Pagina" mostra Titolo e Slug della Pagina', async () => {
     const user = userEvent.setup();
     renderPanel();
 
     await user.click(screen.getByRole('tab', { name: 'Pagina' }));
 
-    // `exact: false`: l'etichetta include l'asterisco di campo obbligatorio ("Titolo *",
-    // `withAsterisk` di Mantine) nel testo computato da Testing Library.
+    // `exact: false`: l'etichetta include l'asterisco di campo obbligatorio ("Titolo *").
     expect(screen.getByLabelText('Titolo', { exact: false })).toHaveValue('Chi siamo');
     expect(screen.getByLabelText('Slug', { exact: false })).toHaveValue('chi-siamo');
   });

@@ -40,7 +40,8 @@ describe('ColorField', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Colore di sistema: Primario' }));
+    await user.click(screen.getByRole('button', { name: 'color' }));
+    await user.click(await screen.findByRole('button', { name: /^Primario - /i }));
 
     expect(onSetAndCommit).toHaveBeenCalledWith({ normal: { default: { ref: 'primary' } } });
   });
@@ -59,7 +60,8 @@ describe('ColorField', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Colore di sistema: Accento' }));
+    await user.click(screen.getByRole('button', { name: 'color' }));
+    await user.click(await screen.findByRole('button', { name: /^Accento - /i }));
 
     expect(onSetAndCommit).toHaveBeenCalledWith({
       normal: { default: '#111111', tablet: { ref: 'accent' } },
@@ -80,7 +82,8 @@ describe('ColorField', () => {
     );
 
     await user.click(screen.getByRole('radio', { name: 'Hover' }));
-    await user.click(screen.getByRole('button', { name: 'Colore di sistema: Secondario' }));
+    await user.click(screen.getByRole('button', { name: 'color' }));
+    await user.click(await screen.findByRole('button', { name: /^Secondario - /i }));
 
     expect(onSetAndCommit).toHaveBeenCalledWith({
       normal: { default: '#222222' },
@@ -105,7 +108,8 @@ describe('ColorField', () => {
     );
 
     await user.click(screen.getByRole('radio', { name: 'Focus' }));
-    await user.click(screen.getByRole('button', { name: 'Colore di sistema: Secondario' }));
+    await user.click(screen.getByRole('button', { name: 'color' }));
+    await user.click(await screen.findByRole('button', { name: /^Secondario - /i }));
 
     expect(onSetAndCommit).toHaveBeenCalledWith({
       normal: { default: '#222222' },

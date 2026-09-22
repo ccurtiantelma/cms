@@ -13,7 +13,7 @@
 import { Group, Slider, Stack, Text } from '@mantine/core';
 import type { BlockPropDescriptor, PropStateName } from '../../../../types/blocks.types';
 import { useActiveBreakpoint } from '../../../../hooks/useBlockEditorStore';
-import { ThemeEditorColorPicker } from '../../../../components/theme-editor/ThemeEditorColorPicker';
+import ThemeColorPicker from './ThemeColorPicker';
 import StateSwitcher from './StateSwitcher';
 import { useEditingState } from './editingState';
 import {
@@ -23,6 +23,7 @@ import {
   SHADOW_BLUR_RANGE,
   SHADOW_OFFSET_RANGE,
   SHADOW_SPREAD_RANGE,
+  useThemeColorPresets,
   type PropsMeta,
 } from './inspector.utils';
 
@@ -66,6 +67,7 @@ export default function ShadowField({
   const activeBreakpoint = useActiveBreakpoint();
   const { editingState, setEditingState, hasPanelSwitcher } = useEditingState();
   const state: PropStateName = prop.stateful ? editingState : 'normal';
+  const themePresets = useThemeColorPresets();
 
   const current = readShadowValue(
     readStatefulResponsiveValue(prop, value, state, activeBreakpoint),
@@ -92,10 +94,12 @@ export default function ShadowField({
           <StateSwitcher value={editingState} onChange={setEditingState} />
         )}
       </Group>
-      <ThemeEditorColorPicker
+      <ThemeColorPicker
         label={`${label} — Colore`}
         value={current.color}
         aria-label={`${label} — Colore`}
+        themePresets={themePresets}
+        onSelectPreset={(_, hex) => write({ color: hex })}
         onChange={(next) => write({ color: next })}
       />
       <Group grow>

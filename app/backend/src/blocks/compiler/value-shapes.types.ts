@@ -149,6 +149,20 @@ export interface LayoutValueShape {
   alignItems?: string;
 }
 
+/**
+ * Valore nudo di `background` (`docs/SPEC-propkind-v2.md` § 3.7,
+ * `prop-spec.types.ts` → `BackgroundValue`), scope limitato a `type: 'none' |
+ * 'color' | 'gradient'` (ADR-96 § "Decisione" punto 2). `image`/`video`/
+ * `slideshow`/`overlay` restano validi per lo schema ma non hanno una forma
+ * dichiarata qui: `backgroundToDeclarations()` non li legge in questo round
+ * (nessuna dichiarazione emessa per quei rami, nessuna eccezione).
+ */
+export interface BackgroundValueShape {
+  type: 'none' | 'color' | 'gradient' | 'image' | 'video' | 'slideshow';
+  color?: ColorRefValueShape;
+  gradient?: GradientValueShape;
+}
+
 /** Valore nudo di `shapeDivider` (ADR-82 § "Decisione" punto 1). */
 export interface ShapeDividerValueShape {
   style: string;

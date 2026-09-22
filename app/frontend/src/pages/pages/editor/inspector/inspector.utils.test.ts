@@ -7,11 +7,39 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { BlockPropDescriptor } from '../../../../types/blocks.types';
-import { buildStatefulResponsivePropPatch, buildTypographyFieldPatch } from './inspector.utils';
+import {
+  buildStatefulResponsivePropPatch,
+  buildTypographyFieldPatch,
+  styleSectionFor,
+  UNIMPLEMENTED_PROP_KINDS,
+} from './inspector.utils';
 
 function propSpec(overrides: Partial<BlockPropDescriptor> = {}): BlockPropDescriptor {
   return { name: 'test', kind: 'colorRef', required: false, ...overrides };
 }
+
+/**
+ * ADR-96 § "Decisione" punto 1: `background` esce da `UNIMPLEMENTED_PROP_KINDS` una volta che
+ * `backgroundToDeclarations()` lo implementa (scope `none`/`color`/`gradient`). `border`/`shadow`
+ * restano invariati (ancora nessun compilatore che li legga).
+ */
+describe('UNIMPLEMENTED_PROP_KINDS (ADR-96 § "Decisione" punto 1)', () => {
+  it('non contiene più "background"', () => {
+    expect(UNIMPLEMENTED_PROP_KINDS.has('background')).toBe(false);
+  });
+
+  it('contiene ancora "border" e "shadow", invariati', () => {
+    expect(UNIMPLEMENTED_PROP_KINDS.has('border')).toBe(true);
+    expect(UNIMPLEMENTED_PROP_KINDS.has('shadow')).toBe(true);
+  });
+});
+
+describe('styleSectionFor — kind "background"', () => {
+  it('finisce nella sezione "Colori", stesso raggruppamento di color/colorRef', () => {
+    const prop = propSpec({ kind: 'background', stateful: true });
+    expect(styleSectionFor(prop)).toBe('Colori');
+  });
+});
 
 describe('buildStatefulResponsivePropPatch', () => {
   it("né stateful né responsive: il valore nudo è l'intera prop", () => {

@@ -18,6 +18,7 @@ import { canonicalizePublicPath } from './public-path.util';
 import { SettingsService } from '../settings/settings.service';
 import { GlobalTokensDto } from '../settings/dto/global-tokens.dto';
 import { ThemeConfigDto } from '../settings/dto/theme-config.dto';
+import { BreakpointsDto } from '../settings/dto/breakpoints.dto';
 
 /**
  * Superficie pubblica di lettura delle Pagine (`api/v1/public/pages`,
@@ -138,5 +139,19 @@ export class PublicPagesController {
   @ApiResponse({ status: 200, description: 'Configurazione tema corrente', type: ThemeConfigDto })
   async getThemeConfig(): Promise<ThemeConfigDto> {
     return this.settingsService.getThemeConfig();
+  }
+
+  /**
+   * Espone i breakpoint attivi (ADR-76) al sito pubblico senza autenticazione:
+   * necessari all'SSR per risolvere le stesse media query del compilatore CSS
+   * dei blocchi (`resolveActiveBreakpoints`, mirror frontend di
+   * `prop-spec.types.ts`), stesso principio di `settings/theme`.
+   */
+  @Get('settings/breakpoints')
+  @Throttle({ public: { limit: 300, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Restituisce i breakpoint attivi per il rendering pubblico (SSR)' })
+  @ApiResponse({ status: 200, description: 'Breakpoint correnti', type: BreakpointsDto })
+  async getBreakpoints(): Promise<BreakpointsDto> {
+    return this.settingsService.getBreakpoints();
   }
 }

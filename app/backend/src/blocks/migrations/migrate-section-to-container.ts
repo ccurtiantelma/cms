@@ -327,6 +327,13 @@ export function migrateSectionToContainer(node: MigratableBlockNode): Migratable
   const props = node.props ?? {};
 
   const migratedProps: Record<string, unknown> = {
+    // Un nodo `section` v1 migrato deve conservare la propria identità semantica:
+    // `container` v2 dichiara `tag: enum` con default `'div'` (ADR-82 § "Decisione"
+    // punto 1, campo già approvato, non un'estensione di schema) — la migrazione di
+    // identità imposta esplicitamente `tag: 'section'` invece di lasciare cadere sul
+    // default, cosa che renderebbe indistinguibile un container-che-era-sezione da un
+    // container qualsiasi creato ex novo.
+    tag: 'section',
     layout: migrateSectionLayout(props),
     padding: migrateSectionPadding(props),
     margin: migrateFourSidedEnumTokenSpacing(props, {

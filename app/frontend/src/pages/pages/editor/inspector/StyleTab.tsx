@@ -26,8 +26,9 @@
  * presentazione, mai di validazione, delle due eccezioni sopra.
  */
 import type { BlockPropDescriptor } from '../../../../types/blocks.types';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Accordion } from '@mantine/core';
+import UnderConstruction from '../components/UnderConstruction';
 import VisualBoxModelInspector from '../VisualBoxModelInspector';
 import PropField from './PropField';
 import StateSwitcher, { type EditableStateName } from './StateSwitcher';
@@ -40,6 +41,7 @@ import {
   SPACING_SLIDER_PROPS,
   STYLE_SECTION_ORDER,
   styleSectionFor,
+  UNIMPLEMENTED_PROP_KINDS,
 } from './inspector.utils';
 import type { PropertyTabProps } from './ContentTab';
 
@@ -93,9 +95,8 @@ export default function StyleTab({
         : fields;
 
   function renderPropField(prop: BlockPropDescriptor): JSX.Element {
-    return (
+    const field = (
       <PropField
-        key={prop.name}
         prop={prop}
         value={draft[prop.name]}
         propsMeta={propsMeta}
@@ -107,6 +108,12 @@ export default function StyleTab({
         onOpenMediaPicker={() => onOpenMediaPicker(prop.name)}
         onOpenCropper={() => onOpenCropper(prop.name)}
       />
+    );
+    // Controlli senza logica attiva (ADR-94): disabilitati con tooltip "In costruzione".
+    return UNIMPLEMENTED_PROP_KINDS.has(prop.kind) ? (
+      <UnderConstruction key={prop.name}>{field}</UnderConstruction>
+    ) : (
+      <Fragment key={prop.name}>{field}</Fragment>
     );
   }
 

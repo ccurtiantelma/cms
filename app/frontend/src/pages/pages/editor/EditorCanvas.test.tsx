@@ -67,6 +67,25 @@ describe('EditorCanvas — cornice tema e breadcrumb', () => {
     expect(getByTestId('theme-frame-footer').textContent).toContain('THEME - FOOTER');
   });
 
+  it('la cornice tema è decorazione fuori flusso: aria-hidden, senza id di blocco e senza toccare l’albero', () => {
+    useBlockEditorStore
+      .getState()
+      .initTree([
+        { id: 'h-1', type: 'heading', props: { level: 'h2', text: 'Titolo' }, children: [] },
+      ]);
+    const treeBefore = useBlockEditorStore.getState().tree;
+    const { container, getByTestId } = renderWithProviders(<EditorCanvas />);
+
+    for (const area of ['header', 'footer']) {
+      const frame = getByTestId(`theme-frame-${area}`);
+      expect(frame.closest('[aria-hidden="true"]')).not.toBeNull();
+      expect(frame.closest('[data-block-id]')).toBeNull();
+    }
+    // Solo i blocchi reali portano `data-block-id`; la cornice non ne aggiunge.
+    expect(container.querySelectorAll('[data-block-id]')).toHaveLength(1);
+    expect(useBlockEditorStore.getState().tree).toBe(treeBefore);
+  });
+
   it('il breadcrumb mostra il percorso e un click su un segmento seleziona il genitore', () => {
     useBlockEditorStore.getState().initTree([
       {

@@ -15,6 +15,7 @@
  * comando invertibile porta con sé solo i dati minimi per rifare/disfare l'operazione
  * (id, indice, props precedenti, ecc.) — mai uno snapshot completo di `tree`.
  */
+import { PLACEHOLDER_MEDIA_REF } from '../components/blocks/media-url';
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { notifications } from '@mantine/notifications';
@@ -105,7 +106,7 @@ function requestImagePresetVariantIfNeeded(
   }
   const node = findNode(tree, id);
   const mediaRef = node && typeof node.props.mediaRef === 'string' ? node.props.mediaRef : '';
-  if (!node || node.type !== 'image' || !mediaRef) return;
+  if (!node || node.type !== 'image' || !mediaRef || mediaRef === PLACEHOLDER_MEDIA_REF) return;
 
   void (async () => {
     try {

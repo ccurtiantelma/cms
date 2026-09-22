@@ -11,6 +11,7 @@
 import { ColorRefPropSpec, SpacingPropSpec } from '../prop-spec.types';
 import { CssDeclaration } from './css-declaration.types';
 import {
+  BackgroundValueShape,
   ColorRefValueShape,
   FilterValueShape,
   FontRefValueShape,
@@ -145,6 +146,45 @@ export function gradientToDeclarations(value: unknown): CssDeclaration[] {
   }
   const positionClause = gradient.position ? `at ${gradient.position}, ` : '';
   return [{ property: 'background-image', value: `radial-gradient(${positionClause}${stopsCss})` }];
+}
+
+/**
+ * `background` → `background-color`/`background-image`, scope limitato a
+ * `type: 'none' | 'color' | 'gradient'` (ADR-96 § "Decisione" punto 2).
+ * `type: 'none'` non emette alcuna dichiarazione. `type: 'color'` riusa
+ * `colorRefValueToCss` (stessa conversione di `colorRef`, § 10 punto 5) per
+ * produrre `background-color`. `type: 'gradient'` riusa
+ * `gradientToDeclarations` (stessa conversione già usata per `kind:
+ * 'gradient'`) per produrre `background-image`. `type: 'image' | 'video' |
+ * 'slideshow'` restano validi per lo schema ma non emettono alcuna
+ * dichiarazione in questo round (nessuna eccezione, branch esplicitamente non
+ * implementato — ADR-96 § "Decisione" punto 2, stesso trattamento già
+ * riservato da ADR-82 a `link`/`animation`/`motion`).
+ */
+export function backgroundToDeclarations(value: unknown): CssDeclaration[] {
+  if (!isPlainObject(value)) {
+    return [];
+  }
+  const background = value as unknown as BackgroundValueShape;
+  switch (background.type) {
+    case 'none':
+      return [];
+    case 'color':
+      if (background.color === undefined) {
+        return [];
+      }
+      return [
+        { property: 'background-color', value: colorRefValueToCss(background.color) },
+      ];
+    case 'gradient':
+      if (background.gradient === undefined) {
+        return [];
+      }
+      return gradientToDeclarations(background.gradient);
+    default:
+      // 'image' | 'video' | 'slideshow': fuori scope ADR-96, nessuna dichiarazione.
+      return [];
+  }
 }
 
 /**

@@ -23,7 +23,7 @@
  * correttamente quella variabile (`colorRefValueToCss`), in attesa che un round futuro la
  * compili davvero.
  */
-import { ColorInput, Group, Stack, Text, Tooltip } from '@mantine/core';
+import { Group, Stack, Text, Tooltip } from '@mantine/core';
 import type { BlockPropDescriptor, PropStateName } from '../../../../types/blocks.types';
 import { useActiveBreakpoint, useGlobalTokens } from '../../../../hooks/useBlockEditorStore';
 import type { GlobalTokens } from '../../../../libs/globalTokensCompiler';
@@ -37,6 +37,7 @@ import {
   readStatefulResponsiveValue,
   type PropsMeta,
 } from './inspector.utils';
+import ThemeColorPicker from './ThemeColorPicker';
 import styles from './inspector.module.css';
 
 /** I 4 id di sistema del Global Kit (ADR-77 § 2), mai cancellabili né riusabili da un custom. */
@@ -131,31 +132,20 @@ export default function ColorField({
             </Tooltip>
           )}
         </Group>
-        <ColorInput
+        <ThemeColorPicker
           aria-label={label}
           value={hexValue}
-          format={prop.allowAlpha ? 'hexa' : 'hex'}
-          onChange={(next) => writeNaked(next)}
+          activeRefId={activeRefId}
+          allowAlpha={prop.allowAlpha}
+          themePresets={SYSTEM_COLOR_IDS.map((id) => ({
+            id,
+            label: SYSTEM_COLOR_LABELS[id],
+            hex: resolveSystemHex(globalTokens, id),
+          }))}
+          onSelectPreset={(id) => writeNaked({ ref: id })}
+          onChange={(hex) => writeNaked(hex)}
         />
       </div>
-      <Group gap={6} className={styles.fieldRowIndent}>
-        {SYSTEM_COLOR_IDS.map((id) => (
-          <Tooltip key={id} label={`Colore di sistema: ${SYSTEM_COLOR_LABELS[id]}`} withArrow>
-            <button
-              type="button"
-              aria-label={`Colore di sistema: ${SYSTEM_COLOR_LABELS[id]}`}
-              aria-pressed={activeRefId === id}
-              className={
-                activeRefId === id
-                  ? `${styles.colorSwatchButton} ${styles.colorSwatchButtonActive}`
-                  : styles.colorSwatchButton
-              }
-              style={{ backgroundColor: resolveSystemHex(globalTokens, id) }}
-              onClick={() => writeNaked({ ref: id })}
-            />
-          </Tooltip>
-        ))}
-      </Group>
     </Stack>
   );
 }

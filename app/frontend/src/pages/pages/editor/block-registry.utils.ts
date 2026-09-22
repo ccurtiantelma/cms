@@ -12,6 +12,7 @@
  * L'autorità resta comunque il validatore server-side: qui si anticipa il suo verdetto per
  * non offrire un'azione che verrà respinta, mai per sostituirlo.
  */
+import { PLACEHOLDER_MEDIA_REF } from '../../../components/blocks/media-url';
 import {
   BLOCK_TYPES,
   ROOT_ALLOWED,
@@ -83,6 +84,9 @@ function defaultPropValue(prop: BlockPropDescriptor): unknown {
  */
 const FRONTEND_ONLY_PROP_DEFAULTS: Readonly<Record<string, Readonly<Record<string, unknown>>>> = {
   heading: { text: 'Questo è un titolo' },
+  richText: { html: '<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit</p>' },
+  // L'immagine non ha una prop "titolo": `alt` è il testo obbligatorio che la descrive.
+  image: { alt: 'image', mediaRef: PLACEHOLDER_MEDIA_REF },
 };
 
 /** Props iniziali di un blocco nuovo, calcolate interamente dal descrittore del registro. */

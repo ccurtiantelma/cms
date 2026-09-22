@@ -1,91 +1,103 @@
 /*
-  Toolbar di selezione (BlockHoverOverlay.tsx): montata **solo** quando il blocco è
-  selezionato (mai sul solo hover, che mostra invece il badge nome separato, vedi
-  `.hoverBadge` in EditorBlockWrapper.module.css) — ancorata in alto **a sinistra** del
-  blocco (ADR-92, supera la centratura di RE-2 solo su questo punto geometrico: il resto,
-  sfondo/colore icone di T-editor-refinement, resta invariato).
-  `left: 0` allinea la Group al bordo sinistro del blocco, stessa `transform` verticale di
-  prima (`translateY(-100%)`, appoggiata sopra senza sporgere dentro).
-  `position: absolute` dentro `.wrapper` (già `position: relative`): non sposta mai il
-  layout del contenuto, stesso principio di ogni altro overlay di chrome in questo file.
-  Il colore di sfondo **non legge più** `var(--block-level-color)`: sezioni e contenitori
-  usano una barra completamente trasparente, mentre i widget foglia ricevono una tinta
-  verde molto chiara (`.componentOverlay`). I singoli tasti restano sempre trasparenti e
-  senza bordo; la custom property resta impostata sul wrapper per il solo bordo di
-  hover/selezione dei widget foglia (vedi `EditorBlockWrapper.module.css`).
+  Toolbar di selezione (BlockHoverOverlay.tsx, ADR-95): montata **solo** a blocco selezionato,
+  ancorata in alto a sinistra e a filo del bordo di selezione (`top`/`left: -1px` = bordo esterno
+  della cornice `BlockSelectionChrome`, `inset: -1px`), alta ~20px: una linguetta compatta
+  attaccata al blocco, non un pannello fluttuante. Sfondo pieno per livello gerarchico, stessi
+  colori della cornice (`BlockSelectionChrome.module.css`): sezione viola, contenitore
+  arancione, widget verde; testo e icone bianchi.
+  `position: absolute` dentro `.wrapper` (già `position: relative`): non sposta mai il layout.
 */
 .overlay {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: -1px;
+  left: -1px;
   transform: translateY(-100%);
   z-index: 20;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 6px;
-  /* Solo gli angoli superiori arrotondati: la barra è a filo del bordo superiore del
-     blocco, deve leggersi come una linguetta attaccata ad esso, non un pillole fluttuante. */
-  border-radius: 3px 3px 0 0;
-  background: transparent;
+  gap: 2px;
+  padding: 0 2px;
   border: 0;
+  border-radius: 3px 3px 0 0;
+  background: var(--overlay-color);
+  color: #ffffff;
   box-shadow: none;
   pointer-events: auto;
 }
 
-/* Etichetta nome blocco (ADR-92), primo elemento della barra — stesso colore icone nero
-   #000000 di `.overlayButton` sotto, coerenza visiva sullo sfondo azzurro/verde traslucido. */
-.overlayLabel {
-  color: #000000;
-  white-space: nowrap;
+.section {
+  --overlay-color: #7c3aed;
+}
+
+.container {
+  --overlay-color: #ea580c;
+}
+
+.widget {
+  --overlay-color: #16a34a;
+}
+
+/*
+  Sezione: maniglia a trapezio centrata sul bordo superiore, stile Elementor Pro. Ancorata a
+  `left: 50%` e a filo del bordo (`top: -1px`); il lato lungo poggia sul bordo, quello corto è
+  in alto (`clip-path`). Il padding orizzontale extra lascia spazio alle diagonali (12px).
+*/
+.overlay.section {
+  left: 50%;
+  transform: translate(-50%, -100%);
+  padding: 0 16px;
+  border-radius: 0;
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 100%, 0 100%);
+}
+
+.overlay.section.overlayInside {
+  transform: translate(-50%, 2px);
+}
+
+/* Icona del tipo di blocco (nessuna etichetta testuale): bianca, senza padding superfluo. */
+.overlayIcon {
+  display: inline-flex;
+  align-items: center;
   padding: 0 2px;
 }
 
-.sectionOverlay {
-  background: rgba(191, 219, 254, 0.7);
-}
-
-.componentOverlay {
-  background: rgba(167, 224, 183, 0.42);
-}
-
 /*
-  Anti-clipping (EditorBlockWrapper.tsx, `overlayAnchoredInside`): quando il bordo
-  superiore del blocco è troppo vicino al confine scrollabile reale del canvas
-  (`overflow-y: auto`, tipicamente il primo blocco appena sotto la Topbar), la toolbar che
-  di norma sporge sopra il blocco finirebbe tagliata da quello scroll — qui si riancora
-  dentro il margine superiore del blocco stesso, `left` invariato (resta a sinistra, solo
-  il `top` effettivo cambia via `transform`, stesso principio di `.overlay` sopra).
+  Anti-clipping (`useOverlayAnchorInside`): a ridosso del bordo scrollabile del canvas la
+  barra si riancora dentro il blocco (`left` invariato, cambia solo `transform`).
 */
 .overlayInside {
-  transform: translateY(4px);
+  transform: translateY(2px);
 }
 
 /*
-  Ogni pulsante della maniglia è largo/alto almeno 28px (RE-2, requisito esplicito del
-  task): `size={HANDLE_BUTTON_SIZE}` sui componenti Mantine (`BlockHoverOverlay.tsx`) già
-  lo garantisce (il numero è convertito in rem, applicato a `width`/`height`/`min-width`/
-  `min-height`), `min-width`/`min-height` qui sono solo una rete di sicurezza — non un
-  secondo meccanismo di dimensionamento indipendente.
-  Icone nere (T-editor-refinement, requisito esplicito pixel-perfect del task: "TUTTE le
-  icone interne (+, drag/riordina, X, ecc.) a colore nero #000000"): sostituisce il bianco
-  fisso di RE-2, che presupponeva lo sfondo colorato pieno ora rimosso (`.overlay` sopra) —
-  nero su un fondo azzurro chiaro traslucido resta leggibile, bianco non lo sarebbe più.
-  `!important` (invariato da RE-2): `ActionIcon` di Mantine imposta il proprio colore via
-  variabile CSS interna (`--ai-color`) con una specificità che una classe locale da sola
-  non batte in modo affidabile su ogni variante — mantenuto qui, non introdotto ora.
-  I tre stati restano elencati esplicitamente (non solo `.overlayButton`): l'icona di
-  `BlockPalette` (trigger del primo controllo "+", riceve la stessa classe via
-  `triggerClassName`) usa un proprio elemento interno che potrebbe altrimenti riesporre un
-  colore diverso su `:hover`/`:focus` — nessuno stato lasciato bianco per dimenticanza.
+  Pulsanti 18px con icone SVG bianche (Tabler: outline, `fill: none` — un riempimento bianco
+  ne coprirebbe i tratti, quindi bianco su `stroke`/`color`). `!important`: `ActionIcon` di
+  Mantine imposta il colore via `--ai-color` con specificità che una classe locale non batte
+  su ogni variante; i tre stati sono elencati perché il trigger di `BlockPalette` espone un
+  proprio elemento interno.
 */
 .overlayButton,
 .overlayButton:hover,
 .overlayButton:focus {
-  min-width: 28px;
-  min-height: 28px;
-  color: #000000 !important;
+  min-width: 18px;
+  min-height: 18px;
+  color: #ffffff !important;
   background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
+}
+
+.overlayButton:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.overlayButton:disabled,
+.overlayButton[data-disabled] {
+  opacity: 0.5;
+}
+
+.overlayButton svg,
+.overlay svg {
+  stroke: #ffffff;
+  fill: none;
 }

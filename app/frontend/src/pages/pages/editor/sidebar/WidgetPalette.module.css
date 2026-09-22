@@ -92,10 +92,10 @@
   background: transparent;
 }
 
-/* Griglia a 2 colonne fisse (ADR-92, riallineamento rigido 1:1). */
+/* Griglia a 3 colonne fisse (ADR-94, supera ADR-92 § 4). */
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 
@@ -111,7 +111,7 @@
   align-items: center;
   justify-content: center;
   height: 85px;
-  padding: 12px 8px;
+  padding: 8px 4px;
   border: 1px solid #e0e0e0;
   border-radius: 6px;
   background: #ffffff;
@@ -138,29 +138,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #555d66;
-}
-
-/* Colori d'accento per categoria (ADR-92, riallineamento rigido 1:1): Base/Moduli riusano gli
-   stessi due colori del bordo di selezione in EditorBlockWrapper.module.css. */
-.tileIconBase {
-  color: #2271b1;
-}
-
-.tileIconMedia {
-  color: #00a08d;
-}
-
-.tileIconStruttura {
-  color: #f2994a;
-}
-
-.tileIconModuli {
-  color: #a435c0;
-}
-
-.tileIconDefault {
-  color: #555d66;
+  color: #4a5568;
 }
 
 .tileLabel {
@@ -183,26 +161,7 @@
 }
 
 [data-mantine-color-scheme='light'] .tileIcon {
-  color: #555d66;
-}
-
-/* Stessa specificità di `[data-mantine-color-scheme='light'] .tileIcon` sopra (ADR-92):
-   necessaria perché altrimenti quella regola, di pari specificità della sola `.tileIconBase`
-   ecc. ma successiva nel file, vincerebbe sempre sul colore d'accento per categoria. */
-[data-mantine-color-scheme='light'] .tileIconBase {
-  color: #2271b1;
-}
-
-[data-mantine-color-scheme='light'] .tileIconMedia {
-  color: #00a08d;
-}
-
-[data-mantine-color-scheme='light'] .tileIconStruttura {
-  color: #f2994a;
-}
-
-[data-mantine-color-scheme='light'] .tileIconModuli {
-  color: #a435c0;
+  color: #4a5568;
 }
 
 [data-mantine-color-scheme='dark'] .groupItem + .groupItem {
@@ -221,21 +180,4 @@
 
 [data-mantine-color-scheme='dark'] .tileIcon {
   color: #e5e7eb;
-}
-
-/* Stessa ragione di specificità della coppia sopra in modalità chiara (ADR-92). */
-[data-mantine-color-scheme='dark'] .tileIconBase {
-  color: #2271b1;
-}
-
-[data-mantine-color-scheme='dark'] .tileIconMedia {
-  color: #00a08d;
-}
-
-[data-mantine-color-scheme='dark'] .tileIconStruttura {
-  color: #f2994a;
-}
-
-[data-mantine-color-scheme='dark'] .tileIconModuli {
-  color: #a435c0;
 }

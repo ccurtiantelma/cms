@@ -1,0 +1,113 @@
+/* Cornice tema e breadcrumb in-canvas (EditorCanvasThemeFrame.tsx). Documento iframe: niente Mantine. */
+
+/*
+  Àncora in-flow di altezza 0: è l'unico nodo della cornice nel flusso e non occupa spazio
+  (nessun margine/padding), quindi non sposta né ridimensiona i nodi reali. Il badge vero si
+  disegna in `position: absolute` rispetto a lei, senza creare un nuovo containing block per il
+  resto del canvas (`.canvasRoot` non diventa `position: relative`).
+*/
+.themeFrameAnchor {
+  position: relative;
+  flex: none;
+  height: 0;
+  pointer-events: none;
+}
+
+.themeFrame {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  /* Dietro a qualunque contenuto/overlay (`.canvasRoot` è uno stacking context via
+     `container-type`): non copre mai bordi di selezione, toolbar o drop indicator. */
+  z-index: -1;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Nel margine superiore già riservato da `.canvasRoot` (50px), sopra la prima sezione. */
+.themeFrameHeader {
+  bottom: 6px;
+}
+
+/* Sopra il breadcrumb (28px), in calce al documento. */
+.themeFrameFooter {
+  bottom: 30px;
+}
+
+.themeFrameBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: #f0f2f5;
+  color: #6741d9;
+  font:
+    600 11px/1 system-ui,
+    sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.themeFrameScope {
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+.breadcrumbBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  margin-top: auto;
+  height: 28px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: #ffffff;
+  border-top: 1px solid #e9ecef;
+  font:
+    400 12px/1 system-ui,
+    sans-serif;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.breadcrumbList {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.breadcrumbItem {
+  display: inline-flex;
+  align-items: center;
+}
+
+.breadcrumbSeparator {
+  margin: 0 6px;
+  color: #adb5bd;
+}
+
+.breadcrumbSegment {
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: #495057;
+  font: inherit;
+  cursor: pointer;
+}
+
+.breadcrumbSegment:hover {
+  background: #f1f3f5;
+  color: #2271b1;
+}
+
+.breadcrumbSegment[data-current] {
+  color: #212529;
+  font-weight: 600;
+}

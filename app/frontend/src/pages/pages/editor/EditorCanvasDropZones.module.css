@@ -1,0 +1,29 @@
+/*
+  Drop-zone dello stato vuoto (`root-empty-dropzone`, EditorCanvasDropZones.tsx): la resa
+  visiva "Aggiungi sezione" è di `CanvasAddSectionZone`, quindi questo div non porta contenuto
+  proprio — a riposo è una striscia quasi invisibile (bordo trasparente, altezza minima) che
+  serve solo da bersaglio `useDroppable` per il primo blocco trascinato.
+*/
+.emptyDropzone {
+  border: 2px dashed transparent;
+  border-radius: 4px;
+  min-height: 12px;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease,
+    min-height 120ms ease;
+}
+
+/*
+  Stesso accento magenta del punto di inserimento sui blocchi esistenti
+  (`.dropZone[data-over='true']::before`, EditorBlockWrapper.module.css): un solo colore
+  "drag & drop" in tutto l'editor. Solo durante un trascinamento la striscia si allarga.
+*/
+.emptyDropzone[data-over='true'] {
+  border-style: solid;
+  border-color: #a333c8;
+  background: rgba(163, 51, 200, 0.08);
+  box-shadow: 0 0 6px 1px rgba(163, 51, 200, 0.6);
+  min-height: 48px;
+}

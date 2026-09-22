@@ -42,7 +42,7 @@ import {
   resolveLayerClassName,
   resolveResponsiveClassNames,
 } from '../style-tokens';
-import { resolveMediaSrc } from '../media-url';
+import { PLACEHOLDER_MEDIA_REF, resolveMediaSrc } from '../media-url';
 
 interface ImageProps {
   /** Vedi il commento di testa del file, paragrafo `id`. */
@@ -163,7 +163,7 @@ export default function Image({
     .filter(Boolean)
     .join(' ');
 
-  if (!mediaRef) {
+  if (!mediaRef || mediaRef === PLACEHOLDER_MEDIA_REF) {
     const placeholderClassName = [styles.placeholder, className].filter(Boolean).join(' ');
     return (
       <div
@@ -185,7 +185,9 @@ export default function Image({
           <circle cx="8.5" cy="10" r="1.6" />
           <path d="M21 16l-5.5-5.5a2 2 0 0 0-2.8 0L3 20" />
         </svg>
-        <span className={styles.placeholderText}>Clicca o trascina un&apos;immagine qui</span>
+        <span className={styles.placeholderText}>
+          {mediaRef ? 'Immagine' : "Clicca o trascina un'immagine qui"}
+        </span>
       </div>
     );
   }

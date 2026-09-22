@@ -1,0 +1,11 @@
+/* Controllo non ancora attivo (UnderConstruction.tsx, ADR-94). */
+
+.root {
+  cursor: not-allowed;
+}
+
+.content {
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
+}

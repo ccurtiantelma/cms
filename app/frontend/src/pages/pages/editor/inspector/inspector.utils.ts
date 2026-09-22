@@ -15,6 +15,19 @@ import type {
   ResponsiveBreakpointName,
 } from '../../../../types/blocks.types';
 import type { EditorViewport } from '../../../../hooks/useBlockEditorStore';
+import { useThemeColorStore } from '../../../../hooks/useThemeColor';
+import type { ThemeColorPickerPreset } from './ThemeColorPicker';
+
+/**
+ * `kind` di prop il cui controllo scrive nello store ma che nessun renderer/compilatore stile
+ * legge ancora (`generateCanvasCss.ts` li ignora, ADR-82 § "Conseguenze"): nell'inspector
+ * vanno resi disabilitati con tooltip "In costruzione" (ADR-94). Rimuovere un `kind` da qui
+ * quando il compilatore lo implementa. `background` ne è uscito (ADR-96 § "Decisione" punto 1):
+ * `backgroundToDeclarations()` lo implementa ora sia server-side (`to-css.ts`) sia nel mirror
+ * `generateCanvasCss.ts`, scope `type: 'none' | 'color' | 'gradient'`. `border`/`shadow`
+ * restano qui, invariati.
+ */
+export const UNIMPLEMENTED_PROP_KINDS: ReadonlySet<string> = new Set(['border', 'shadow']);
 
 /**
  * Schemi ammessi per `kind: 'url'`, ricalcati da `block-tree-validator.service.ts`
@@ -45,6 +58,27 @@ export const CSS_IDENTIFIER_TOKEN_PATTERN = /^[a-zA-Z_-][a-zA-Z0-9_-]{0,49}$/;
  * risoluzione è a valle, nella pipeline SSR di `app/public-site`).
  */
 export const PAGE_GUID_PATTERN = /^[0-9a-f]{16}$/;
+
+/**
+ * Le 5 voci del tema live (`useThemeColorStore`, ADR-4) usate come preset "Colori del Tema" di
+ * `ThemeColorPicker` da ogni chiamante **tranne** `ColorField.tsx` (che usa invece i 4 id di
+ * sistema del Global Kit, ADR-77 § 2 — mondo diverso, non fuso qui). Centralizza l'elenco che
+ * prima viveva duplicato/hardcoded solo dentro `PropField.tsx` `case 'color'` (`paletteTokens`):
+ * stessi 5 valori, stesse etichette, ora riusati anche da `BackgroundField.tsx`/`BorderField.tsx`/
+ * `ShadowField.tsx`. Scrive sempre l'hex risolto, mai un riferimento dinamico — stesso motivo
+ * già dichiarato nel commento di testa di `PropField.tsx` `case 'color'`: il validator
+ * server-side di `kind: 'color'` accetta solo hex.
+ */
+export function useThemeColorPresets(): ThemeColorPickerPreset[] {
+  const themeConfig = useThemeColorStore((state) => state.themeConfig);
+  return [
+    { id: 'primary', label: 'Primario', hex: themeConfig.colors.primary },
+    { id: 'secondary', label: 'Secondario', hex: themeConfig.colors.secondary },
+    { id: 'accent', label: 'Accento', hex: themeConfig.colors.accent },
+    { id: 'text', label: 'Testo', hex: themeConfig.light.textPrimary },
+    { id: 'textSecondary', label: 'Testo secondario', hex: themeConfig.light.textSecondary },
+  ];
+}
 
 /** Lunghezza massima totale di `kind: 'cssClassName'` (somma di 1-3 token, ADR-38 § 5). */
 export const CSS_CLASS_NAME_MAX_LENGTH = 100;
@@ -198,7 +232,9 @@ export function styleSectionFor(prop: BlockPropDescriptor): (typeof STYLE_SECTIO
   if (SPACING_SLIDER_PROPS.has(prop.name) || STYLE_SPACING_SECTION_EXTRA_NAMES.has(prop.name)) {
     return 'Spaziatura';
   }
-  if (prop.kind === 'color' || prop.kind === 'colorRef') return 'Colori';
+  if (prop.kind === 'color' || prop.kind === 'colorRef' || prop.kind === 'background') {
+    return 'Colori';
+  }
   return 'Tipografia';
 }
 

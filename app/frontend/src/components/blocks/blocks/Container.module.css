@@ -23,3 +23,34 @@
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+
+/* Default verticale (figli impilati): `:where` a specificità 0, così `layout.direction` del
+   Runtime Style Bridge (`[data-canvas-style-id]`) vince sempre. */
+:where(.container) {
+  flex-direction: column;
+}
+
+/* Contenitore di contenitori (righe/colonne dei preset di struttura): affiancati. */
+:where(.container[data-default-direction='row']) {
+  flex-direction: row;
+}
+
+/*
+ * Colonne (container annidati) di una riga: crescita equa di default. `container` v2
+ * (ADR-82) non dichiara più `styleFlexBasis` e non ha oggi alcuna prop di peso per-colonna
+ * (§ "Conseguenze": l'estensione dell'handle di resize a un peso dedicato è task R2 T4/T5,
+ * non ancora fatto, vedi `SectionStructureModal.tsx` `buildCellNode`) — senza questa regola
+ * ogni colonna vuota o poco piena si restringe al proprio min-content (il solo "+" del
+ * segnaposto `.emptyContainer`, `EditorBlockWrapper.module.css`) invece di dividersi la
+ * riga, il bug corretto qui. `flex: 1 1 0%` (base di dimensionamento 0, stesso pattern di
+ * `NavMenuBlock.module.css`): tutte le colonne dirette crescono in parti uguali a
+ * prescindere dal proprio contenuto. Specificità dell'attributo (non `:where`, a differenza
+ * della regola sopra): un eventuale `width`/`flex-grow` inline futuro (resize per-colonna,
+ * `useContainerWidthResize.ts` — oggi genera solo lo stile inline `widthStyle` quando una
+ * percentuale è persistita) vince comunque, perché lo `style` inline ha sempre priorità
+ * sulla classe, indipendentemente dalla specificità di quest'ultima.
+ */
+.container[data-default-direction='row'] > .container {
+  flex: 1 1 0%;
+  min-width: 0;
+}

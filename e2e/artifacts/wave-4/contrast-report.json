@@ -1,0 +1,56 @@
+[
+  {
+    "name": "titolo intestazione",
+    "fg": "rgb(201,201,201)",
+    "bg": "rgb(36,36,36)",
+    "ratio": 9.37
+  },
+  {
+    "name": "etichetta input",
+    "fg": "rgb(201,201,201)",
+    "bg": "rgb(36,36,36)",
+    "ratio": 9.37
+  },
+  {
+    "name": "testo campo (sfondo campo)",
+    "fg": "rgb(201,201,201)",
+    "bg": "rgb(46,46,46)",
+    "ratio": 8.2
+  },
+  {
+    "name": "bordo campo (non-text 3:1)",
+    "fg": "rgb(130,130,130)",
+    "bg": "rgb(36,36,36)",
+    "ratio": 4.04
+  },
+  {
+    "name": "tab attivo",
+    "fg": "rgb(201,201,201)",
+    "bg": "rgb(46,46,46)",
+    "ratio": 8.2
+  },
+  {
+    "name": "tab inattivo",
+    "fg": "rgb(201,201,201)",
+    "bg": "rgb(36,36,36)",
+    "ratio": 9.37
+  },
+  {
+    "name": "tab hover",
+    "fg": "rgb(201,201,201)",
+    "bg": "rgb(46,46,46)",
+    "ratio": 8.2
+  },
+  {
+    "name": "percorso (dimmed)",
+    "fg": "rgb(184,184,184)",
+    "bg": "rgb(36,36,36)",
+    "ratio": 7.83
+  },
+  {
+    "name": "select (testo su sfondo)",
+    "fg": "rgb(201,201,201)",
+    "bg": "rgb(46,46,46)",
+    "ratio": 8.2
+  }
+]
