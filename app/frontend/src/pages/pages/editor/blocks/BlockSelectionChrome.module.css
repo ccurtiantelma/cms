@@ -23,7 +23,8 @@
 }
 
 .container {
-  --chrome-color: #ea580c;
+  /* Stesso viola della Sezione: la Sezione non è più usata come livello a sé. */
+  --chrome-color: #7c3aed;
 }
 
 .widget {

@@ -432,8 +432,8 @@ describe('EditorBlockWrapper — colore di livello di annidamento (RE-2)', () =>
  * Cornice di hover/selezione (ADR-92, `blocks/BlockSelectionChrome.tsx`): overlay assoluto
  * figlio del wrapper (`[data-block-chrome]`), mai classi di bordo sul wrapper stesso — così
  * hover/selezione non toccano il box model del contenuto. Nessuna "gabbia permanente": senza
- * interazione l'overlay non è montato. Colore per livello (ADR-95): Sezione viola (`"section"`), Contenitore
- * arancione (`"container"`), Widget foglia verde (`"widget"`).
+ * interazione l'overlay non è montato. Colore per livello (ADR-95, Contenitore ricolorato viola come la Sezione): Sezione e Contenitore viola (`"section"`, `"container"`),
+ * Widget foglia verde (`"widget"`).
  */
 describe('EditorBlockWrapper — cornice di hover/selezione (ADR-92/95, overlay fuori dal flusso)', () => {
   beforeEach(() => {
@@ -477,7 +477,7 @@ describe('EditorBlockWrapper — cornice di hover/selezione (ADR-92/95, overlay 
     expect(container.querySelector('[data-block-chrome]')).not.toBeInTheDocument();
   });
 
-  it('hover su un container (non selezionato): cornice 1px di livello Contenitore (#ea580c)', () => {
+  it('hover su un container (non selezionato): cornice 1px di livello Contenitore (viola #7c3aed)', () => {
     const emptyContainer = node('cont-1', 'container', {}, []);
     useBlockEditorStore.getState().initTree([emptyContainer]);
 

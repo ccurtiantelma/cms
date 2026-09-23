@@ -252,8 +252,9 @@
   background: #7c3aed;
 }
 
+/* Contenitore: stesso viola della Sezione (la Sezione non è più usata come livello a sé). */
 .hoverBadge[data-tone='container'] {
-  background: #ea580c;
+  background: #7c3aed;
 }
 
 /* Solo per screen reader/test: mai visibile (il badge mostra la sola icona). */
