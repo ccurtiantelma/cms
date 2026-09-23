@@ -95,6 +95,69 @@
   background: var(--mantine-color-green-6);
 }
 
+.kpiGray {
+  background: var(--mantine-color-gray-0);
+  border-color: var(--mantine-color-gray-1);
+}
+
+.kpiGray .kpiIcon {
+  background: var(--mantine-color-gray-6);
+}
+
+.kpiYellow {
+  background: var(--mantine-color-yellow-0);
+  border-color: var(--mantine-color-yellow-1);
+}
+
+.kpiYellow .kpiIcon {
+  background: var(--mantine-color-yellow-6);
+}
+
+.kpiCyan {
+  background: var(--mantine-color-cyan-0);
+  border-color: var(--mantine-color-cyan-1);
+}
+
+.kpiCyan .kpiIcon {
+  background: var(--mantine-color-cyan-6);
+}
+
+.kpiDark {
+  background: var(--mantine-color-dark-0);
+  border-color: var(--mantine-color-dark-1);
+}
+
+.kpiDark .kpiIcon {
+  background: var(--mantine-color-dark-6);
+}
+
+.kpiBlue {
+  background: var(--mantine-color-blue-0);
+  border-color: var(--mantine-color-blue-1);
+}
+
+.kpiBlue .kpiIcon {
+  background: var(--mantine-color-blue-6);
+}
+
+.kpiRed {
+  background: var(--mantine-color-red-0);
+  border-color: var(--mantine-color-red-1);
+}
+
+.kpiRed .kpiIcon {
+  background: var(--mantine-color-red-6);
+}
+
+.kpiViolet {
+  background: var(--mantine-color-violet-0);
+  border-color: var(--mantine-color-violet-1);
+}
+
+.kpiViolet .kpiIcon {
+  background: var(--mantine-color-violet-6);
+}
+
 .kpiText {
   display: flex;
   flex-direction: column;
@@ -132,4 +195,60 @@
 
 [data-mantine-color-scheme='dark'] .kpiGreen .kpiValue {
   color: var(--mantine-color-green-2);
+}
+
+[data-mantine-color-scheme='dark'] .kpiGray {
+  border-color: var(--mantine-color-gray-8);
+}
+
+[data-mantine-color-scheme='dark'] .kpiGray .kpiValue {
+  color: var(--mantine-color-gray-2);
+}
+
+[data-mantine-color-scheme='dark'] .kpiYellow {
+  border-color: var(--mantine-color-yellow-8);
+}
+
+[data-mantine-color-scheme='dark'] .kpiYellow .kpiValue {
+  color: var(--mantine-color-yellow-2);
+}
+
+[data-mantine-color-scheme='dark'] .kpiCyan {
+  border-color: var(--mantine-color-cyan-8);
+}
+
+[data-mantine-color-scheme='dark'] .kpiCyan .kpiValue {
+  color: var(--mantine-color-cyan-2);
+}
+
+[data-mantine-color-scheme='dark'] .kpiDark {
+  border-color: var(--mantine-color-dark-8);
+}
+
+[data-mantine-color-scheme='dark'] .kpiDark .kpiValue {
+  color: var(--mantine-color-dark-2);
+}
+
+[data-mantine-color-scheme='dark'] .kpiBlue {
+  border-color: var(--mantine-color-blue-8);
+}
+
+[data-mantine-color-scheme='dark'] .kpiBlue .kpiValue {
+  color: var(--mantine-color-blue-2);
+}
+
+[data-mantine-color-scheme='dark'] .kpiRed {
+  border-color: var(--mantine-color-red-8);
+}
+
+[data-mantine-color-scheme='dark'] .kpiRed .kpiValue {
+  color: var(--mantine-color-red-2);
+}
+
+[data-mantine-color-scheme='dark'] .kpiViolet {
+  border-color: var(--mantine-color-violet-8);
+}
+
+[data-mantine-color-scheme='dark'] .kpiViolet .kpiValue {
+  color: var(--mantine-color-violet-2);
 }

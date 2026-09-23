@@ -9,11 +9,11 @@
  * L'API applica già ownership per riga (ADR-18): un `User` vede solo le
  * proprie Pagine, nessun filtro di ruolo è reimplementato qui lato client.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Badge, Button, Group, ScrollArea, Select, Stack, Text, TextInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-import { IconEye, IconFileText, IconPencil, IconRefresh, IconTrash } from '@tabler/icons-react';
+import { IconEye, IconPencil, IconRefresh, IconTrash } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { useAuthStore } from '../../hooks/useAuth';
@@ -108,6 +108,9 @@ export default function PagePages(): JSX.Element {
   const isSuperAdmin = useAuthStore((state) => state.user?.role === AppUserRoles.SuperAdmin);
   const [rebuilding, setRebuilding] = useState(false);
 
+  /** Conteggi delle pagine per stato — calcolati via query parallele. */
+  const [statusCounts, setStatusCounts] = useState<Partial<Record<PageStatus, number>>>({});
+
   /** Funzione di sistema (SuperAdmin): rigenera tutte le Pagine pubblicate del sito statico. */
   async function handleRebuildSite(): Promise<void> {
     setRebuilding(true);
@@ -166,6 +169,30 @@ export default function PagePages(): JSX.Element {
       locale: (value) => (value.trim().length === 0 ? 'Lingua obbligatoria' : null),
     },
   });
+
+  /** Carica i conteggi delle pagine per ogni stato. */
+  useEffect(() => {
+    async function loadStatusCounts(): Promise<void> {
+      try {
+        const counts = await Promise.all(
+          PAGE_STATUSES.map((status) =>
+            fetchPages({ status, i: 1, p: 1 }).then((result) => ({
+              status,
+              count: result.totalItems,
+            }))
+          )
+        );
+        const countsMap: Partial<Record<PageStatus, number>> = {};
+        counts.forEach(({ status, count }) => {
+          countsMap[status] = count;
+        });
+        setStatusCounts(countsMap);
+      } catch (err) {
+        console.error('Errore nel caricamento dei conteggi per stato', err);
+      }
+    }
+    void loadStatusCounts();
+  }, []);
 
   function openCreate(): void {
     form.setValues(EMPTY_CREATE_FORM);
@@ -305,7 +332,11 @@ export default function PagePages(): JSX.Element {
       <PageHeader
         breadcrumbs={[{ label: 'Pagine' }]}
         title="Pagine"
-        kpis={[{ value: total, label: 'Pagine', icon: IconFileText }]}
+        kpis={PAGE_STATUSES.map((status) => ({
+          value: statusCounts[status] ?? 0,
+          label: PAGE_STATUS_LABELS[status],
+          color: PAGE_STATUS_COLORS[status] as any,
+        }))}
       />
 
       <ContentCard>

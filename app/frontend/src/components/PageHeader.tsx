@@ -24,8 +24,8 @@ export interface PageHeaderKpi {
   label: string;
   /** Icona opzionale mostrata nel badge della card KPI. */
   icon?: TablerIcon;
-  /** Variante cromatica opzionale del badge KPI. */
-  color?: 'green';
+  /** Variante cromatica opzionale del badge KPI (supporta colori Mantine). */
+  color?: 'green' | 'gray' | 'yellow' | 'cyan' | 'dark' | 'blue' | 'red' | 'violet';
 }
 
 interface PageHeaderProps {
@@ -83,10 +83,11 @@ export default function PageHeader({
         <div className={classes.kpis} data-tour="page-kpis">
           {kpis.map((kpi) => {
             const Icon = kpi.icon;
+            const colorClass = kpi.color ? classes[`kpi${kpi.color.charAt(0).toUpperCase()}${kpi.color.slice(1)}`] : '';
             return (
               <div
                 key={kpi.label}
-                className={`${classes.kpi} ${kpi.color === 'green' ? classes.kpiGreen : ''}`}
+                className={`${classes.kpi} ${colorClass}`}
               >
                 {Icon && (
                   <span className={classes.kpiIcon}>
