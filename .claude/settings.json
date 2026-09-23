@@ -2,7 +2,31 @@
   "permissions": {
     "allow": [
       "Bash(node -e \"console.log\\(require\\('vitest/package.json'\\).version\\)\")",
-      "Bash(cat > *)"
+      "Bash(cat > *)",
+      "Bash(psql postgresql://cms:cms@localhost:55432/cms_db -c \"SELECT id, guid, title, status FROM pages WHERE status = 'draft' AND is_active = true ORDER BY created_at DESC LIMIT 10;\")",
+      "Bash(psql postgresql://cms:cms@localhost:55432/cms_db -c \"SELECT COUNT\\(*\\) as draft_pages FROM pages WHERE status = 'draft' AND is_active = true;\")",
+      "Bash(psql postgresql://cms:cms@localhost:55432/cms_db)",
+      "Bash(psql postgresql://cms:cms@localhost:55432/cms_db -c \"SELECT COUNT\\(*\\) as remaining_draft_pages FROM pages WHERE status = 'draft' AND is_active = true;\")",
+      "Bash(psql postgresql://cms:cms@localhost:55432/cms_db -c \"SELECT COUNT\\(*\\) as deleted_draft_pages FROM pages WHERE status = 'draft' AND is_active = false;\")",
+      "Bash(curl -s http://localhost:3000)",
+      "mcp__puppeteer__puppeteer_navigate",
+      "Bash(curl -s -o /tmp/claude-1000/-var-www-cms/5dcb62bf-df0c-42b0-bbe8-57b1e974e343/scratchpad/p.html -w \"%{http_code}\\\\n\" http://localhost:55000/test-21)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} \" \"http://localhost:55000/test-21\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:55000/test-21?preview=1\")",
+      "Bash(ps -o pid,args -p 53466)",
+      "Bash(ps -o pid,ppid,lstart,args --ppid 23000,53237)",
+      "Bash(ps -o pid,ppid,args -p 56430)",
+      "Bash(pstree -p 22914)",
+      "Bash(curl -s -o /dev/null -w \"theme %{http_code}\\\\n\" http://localhost:53000/api/v1/public/settings/theme)",
+      "Bash(pstree -p 53129)",
+      "Bash(ps -o pid,ppid,lstart,args -p 98596,98711)",
+      "Bash(pstree -ps 98596)",
+      "Bash(pstree -ps 98711)",
+      "Bash(pstree -p 22915)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} \" \"http://localhost:53000/api/v1/public/pages?path=%2Ftest-21\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} \" http://localhost:55000/test-21)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(python3 -c ' *)"
     ],
     "additionalDirectories": [
       "/var/www/cms"

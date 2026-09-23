@@ -35,7 +35,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         (es. "Ricarica la Pagina" del conflitto di editing) non sarebbero mai
         cliccabili — verificato in E2E (`page-editor-conflitto.spec.ts`).
       */}
-        <Notifications position="top-right" zIndex={1100} />
+        <Notifications position="top-left" zIndex={1100} />
         <BrowserRouter>
           <App />
         </BrowserRouter>

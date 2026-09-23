@@ -89,6 +89,22 @@ const FRONTEND_ONLY_PROP_DEFAULTS: Readonly<Record<string, Readonly<Record<strin
   image: { alt: 'image', mediaRef: PLACEHOLDER_MEDIA_REF },
 };
 
+/**
+ * Padding verticale di default di una Sezione nuova (restyle Elementor, richiesta esplicita
+ * del task): il registro backend dichiara `stylePaddingTop`/`stylePaddingBottom` a `'0'`
+ * (`blocks.types.ts`, artefatto generato — non modificabile a mano, stesso vincolo del
+ * commento di {@link FRONTEND_ONLY_PROP_DEFAULTS}), risultando in una Sezione appena creata
+ * senza alcuna altezza propria. `'48'` (48px, token `paddingTop_default_48`/
+ * `paddingBottom_default_48` già dichiarati in `style-tokens.module.css`) resta dentro la
+ * scala esistente — nessun valore fuori dall'enum del registro — ed è il valore più vicino ai
+ * 40-60px verticali di un default Elementor Pro. A differenza di
+ * {@link FRONTEND_ONLY_PROP_DEFAULTS} sopra (stringhe vuote di props obbligatorie),
+ * qui il registro ha già un default esplicito (`'0'`), quindi l'override è incondizionato per
+ * `descriptor.type === 'section'`, applicato solo alla creazione del nodo — mai una
+ * sovrascrittura di una Sezione già esistente.
+ */
+const SECTION_DEFAULT_VERTICAL_PADDING = '48';
+
 /** Props iniziali di un blocco nuovo, calcolate interamente dal descrittore del registro. */
 export function defaultPropsFor(descriptor: BlockTypeDescriptor): Record<string, unknown> {
   const props: Record<string, unknown> = {};
@@ -110,6 +126,13 @@ export function defaultPropsFor(descriptor: BlockTypeDescriptor): Record<string,
         props[name] = overrideValue;
       }
     }
+  }
+  if (descriptor.type === 'section') {
+    // Forma envelope responsive `{ default, tablet?, mobile? }` (ADR-29 § 2), stessa forma del
+    // `default` dichiarato dal registro per queste due props (`{ default: '0' }`) — mai una
+    // stringa nuda, che `resolveResponsiveClassNames` (`style-tokens.ts`) non riconoscerebbe.
+    props.stylePaddingTop = { default: SECTION_DEFAULT_VERTICAL_PADDING };
+    props.stylePaddingBottom = { default: SECTION_DEFAULT_VERTICAL_PADDING };
   }
   return props;
 }

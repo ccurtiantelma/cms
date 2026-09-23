@@ -36,7 +36,12 @@ import {
   Text,
   Tooltip,
 } from '@mantine/core';
-import { IconLink, IconLinkOff } from '@tabler/icons-react';
+import {
+  IconLayoutDistributeHorizontal,
+  IconLayoutGrid,
+  IconLink,
+  IconLinkOff,
+} from '@tabler/icons-react';
 import type { BlockPropDescriptor, BlockTypeDescriptor } from '../../../../types/blocks.types';
 import type { EditorViewport } from '../../../../hooks/useBlockEditorStore';
 import { useActiveBreakpoint, useBlockEditorStore } from '../../../../hooks/useBlockEditorStore';
@@ -190,9 +195,31 @@ export default function ContainerLayoutTab({
               </Text>
               <SegmentedControl
                 aria-label="Disposizione"
+                classNames={{
+                  root: styles.segmentedRoot,
+                  indicator: styles.segmentedIndicator,
+                  input: styles.segmentedInput,
+                  label: styles.segmentedLabel,
+                }}
                 data={[
-                  { value: 'flex', label: 'Flex' },
-                  { value: 'grid', label: 'Griglia' },
+                  {
+                    value: 'flex',
+                    label: (
+                      <Group gap={6} wrap="nowrap" justify="center">
+                        <IconLayoutDistributeHorizontal size={16} aria-hidden />
+                        <span>Flex</span>
+                      </Group>
+                    ),
+                  },
+                  {
+                    value: 'grid',
+                    label: (
+                      <Group gap={6} wrap="nowrap" justify="center">
+                        <IconLayoutGrid size={16} aria-hidden />
+                        <span>Griglia</span>
+                      </Group>
+                    ),
+                  },
                 ]}
                 value={display}
                 onChange={(next) => writeLayout({ display: next as 'flex' | 'grid' })}

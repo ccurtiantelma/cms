@@ -411,6 +411,23 @@ interface BlockEditorState {
    * sulla history undo/redo — stesso principio di `isSidebarOpen`/`isStructurePanelOpen`.
    */
   isPreviewMode: boolean;
+  /**
+   * Visibilità dei badge `THEME - HEADER`/`THEME - FOOTER` del canvas (`EditorCanvasThemeFrame.tsx`,
+   * ADR-93) — pulsante toggle in topbar, subito dopo Annulla/Ripristina. Stato di chrome
+   * puramente effimero (mai persistito, mai sulla history undo/redo), stesso principio di
+   * `isPreviewMode` sopra: non tocca l'albero della bozza né alcuna area globale reale, solo
+   * l'indicatore visivo fuori flusso nel canvas.
+   */
+  isHeaderFooterVisible: boolean;
+  /**
+   * Id del nodo `container`/`section` il cui overlay "Contorno griglia" (T-container-layout-
+   * tab, `ContainerLayoutTab.tsx`) è acceso nel canvas, `null` altrimenti — stato UI
+   * puramente effimero, mai persistito e mai sulla history undo/redo, stesso principio di
+   * `isHeaderFooterVisible`/`isPreviewMode`: non scrive alcuna prop del blocco (nessuna prop
+   * nuova nel registro backend), solo un overlay CSS editor-only letto da `Container.tsx`/
+   * `Section.tsx` con un selettore mirato per id.
+   */
+  gridOutlineNodeId: string | null;
 
   /** Inizializza l'albero da `draftContent.blocks` esistente (nessun riordino spurio: ordine e struttura conservati com'è). Azzera history e selezione. */
   initTree: (blocks: BlockNode[]) => void;
@@ -429,6 +446,8 @@ interface BlockEditorState {
   setStructurePanelOpen: (opened: boolean) => void;
   /** Alterna l'apertura del pannello "Struttura/Navigator". */
   toggleStructurePanel: () => void;
+  /** Alterna la visibilità dei badge `THEME - HEADER`/`THEME - FOOTER` nel canvas (topbar). */
+  toggleHeaderFooterVisible: () => void;
   /** Apre/chiude (monta/smonta) la sidebar sinistra "Widgets"/"Proprietà". */
   setSidebarOpen: (opened: boolean) => void;
   /** Alterna l'apertura della sidebar sinistra "Widgets"/"Proprietà". */
@@ -437,6 +456,13 @@ interface BlockEditorState {
   togglePreviewMode: () => void;
   /** Cambia la scheda attiva della sidebar sinistra ("Widgets"/"Proprietà"). */
   setActiveSidebarTab: (tab: EditorSidebarTab) => void;
+  /**
+   * Accende/spegne l'overlay "Contorno griglia" per `nodeId` (`ContainerLayoutTab.tsx`):
+   * `visible: true` scrive `nodeId`, `visible: false` lo azzera solo se coincide col nodo
+   * corrente (chiudere l'overlay di un nodo che non è più quello acceso è un no-op, mai una
+   * cancellazione di un overlay appena acceso da un altro pannello).
+   */
+  setGridOutlineVisible: (nodeId: string, visible: boolean) => void;
   /** Aggiunge un blocco `type` a `index` fra i figli di `parentId` (radice se `null`). */
   addBlockAction: (
     parentId: string | null,
@@ -669,6 +695,35 @@ function compileOrEmpty(tokens: GlobalTokens | null): string {
 
 const CLEAN_SAVE_POINT: SavePoint = { depth: 0, top: null };
 
+/** Chiavi di persistenza in `localStorage` per lo stato di chrome dell'editor (sopravvive al reload/riapertura, mai alla history undo/redo — stesso principio di `isPreviewMode`/`isSidebarOpen` come stato puramente di chrome). */
+const SIDEBAR_OPEN_STORAGE_KEY = 'editor.isSidebarOpen';
+const HEADER_FOOTER_VISIBLE_STORAGE_KEY = 'editor.isHeaderFooterVisible';
+
+/**
+ * Legge un booleano persistito in `localStorage`, con fallback al default di fabbrica quando la
+ * chiave è assente, non parsabile, o `localStorage` non è disponibile (SSR/contesti sandboxati) —
+ * mai un errore che blocca l'inizializzazione dello store.
+ */
+function readPersistedBoolean(key: string, fallback: boolean): boolean {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (raw === null) return fallback;
+    return raw === 'true';
+  } catch {
+    return fallback;
+  }
+}
+
+/** Scrive un booleano in `localStorage`, silenziosamente no-op se non disponibile (stesso principio difensivo di {@link readPersistedBoolean}). */
+function writePersistedBoolean(key: string, value: boolean): void {
+  try {
+    window.localStorage.setItem(key, String(value));
+  } catch {
+    // Storage non disponibile (quota, contesto privato, SSR): lo stato resta comunque
+    // valido in memoria per la sessione corrente, solo non sopravvive al reload.
+  }
+}
+
 /** Default di fabbrica (ADR-76 § "Decisione" punto 1): `tablet`/`mobile` attivi, calcolato una
  * sola volta al caricamento del modulo — vedi {@link BlockEditorState.activeBreakpoints}. */
 const DEFAULT_ACTIVE_BREAKPOINTS: ResolvedBreakpoint[] =
@@ -680,7 +735,7 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   activeViewport: 'desktop',
   activeBreakpoint: 'default',
   isStructurePanelOpen: false,
-  isSidebarOpen: true,
+  isSidebarOpen: readPersistedBoolean(SIDEBAR_OPEN_STORAGE_KEY, true),
   activeSidebarTab: 'widgets',
   generation: 0,
   undoStack: [],
@@ -698,6 +753,8 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   propResizePreview: null,
   styleClipboard: null,
   isPreviewMode: false,
+  isHeaderFooterVisible: readPersistedBoolean(HEADER_FOOTER_VISIBLE_STORAGE_KEY, true),
+  gridOutlineNodeId: null,
 
   initTree: (blocks) => {
     set((state) => ({
@@ -725,6 +782,9 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       // aperta: l'albero sotto di lei non esiste più.
       propResizePreview: null,
       styleClipboard: null,
+      // Stesso principio: un overlay "Contorno griglia" acceso sulla bozza precedente non ha
+      // più un nodo a cui riferirsi.
+      gridOutlineNodeId: null,
     }));
   },
 
@@ -741,13 +801,34 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
   toggleStructurePanel: () =>
     set((state) => ({ isStructurePanelOpen: !state.isStructurePanelOpen })),
 
-  setSidebarOpen: (opened) => set({ isSidebarOpen: opened }),
+  setSidebarOpen: (opened) => {
+    writePersistedBoolean(SIDEBAR_OPEN_STORAGE_KEY, opened);
+    set({ isSidebarOpen: opened });
+  },
 
-  toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+  toggleSidebar: () =>
+    set((state) => {
+      const next = !state.isSidebarOpen;
+      writePersistedBoolean(SIDEBAR_OPEN_STORAGE_KEY, next);
+      return { isSidebarOpen: next };
+    }),
 
   togglePreviewMode: () => set((state) => ({ isPreviewMode: !state.isPreviewMode })),
 
+  toggleHeaderFooterVisible: () =>
+    set((state) => {
+      const next = !state.isHeaderFooterVisible;
+      writePersistedBoolean(HEADER_FOOTER_VISIBLE_STORAGE_KEY, next);
+      return { isHeaderFooterVisible: next };
+    }),
+
   setActiveSidebarTab: (tab) => set({ activeSidebarTab: tab }),
+
+  setGridOutlineVisible: (nodeId, visible) =>
+    set((state) => {
+      if (visible) return { gridOutlineNodeId: nodeId };
+      return state.gridOutlineNodeId === nodeId ? { gridOutlineNodeId: null } : {};
+    }),
 
   addBlockAction: (parentId, type, index, defaultProps) => {
     set((state) => {
@@ -1356,6 +1437,11 @@ export function useIsSidebarOpen(): boolean {
 /** Selettore granulare: solo lo stato di "Anteprima Pura" della topbar full-screen. */
 export function useIsPreviewMode(): boolean {
   return useBlockEditorStore((state) => state.isPreviewMode);
+}
+
+/** Selettore granulare: solo la visibilità dei badge `THEME - HEADER`/`THEME - FOOTER` del canvas. */
+export function useIsHeaderFooterVisible(): boolean {
+  return useBlockEditorStore((state) => state.isHeaderFooterVisible);
 }
 
 /** Selettore granulare: solo la scheda attiva della sidebar sinistra ("Widgets"/"Proprietà"). */

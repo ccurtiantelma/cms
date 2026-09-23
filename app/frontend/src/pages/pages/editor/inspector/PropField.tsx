@@ -34,8 +34,11 @@ import {
   IconArrowRight,
   IconArrowUp,
   IconCrop,
+  IconDeviceDesktop,
   IconPhoto,
   IconTrash,
+  IconViewportNarrow,
+  IconViewportWide,
   type Icon,
 } from '@tabler/icons-react';
 import type { BlockPropDescriptor } from '../../../../types/blocks.types';
@@ -96,6 +99,16 @@ const TEXT_ALIGN_ICON: Record<string, Icon> = {
   left: IconAlignLeft,
   center: IconAlignCenter,
   right: IconAlignRight,
+};
+
+/**
+ * Icona per ciascun valore di `contentWidth` (`container`/`section` v2, ADR-82): stesso
+ * principio di {@link TEXT_ALIGN_ICON} — un viewport più stretto del contenuto (`boxed`) o
+ * a piena larghezza (`full`) ha una mappatura icona/valore universale.
+ */
+const CONTENT_WIDTH_ICON: Record<string, Icon> = {
+  boxed: IconViewportNarrow,
+  full: IconViewportWide,
 };
 
 /**
@@ -327,6 +340,58 @@ export default function PropField({
           />
         );
       }
+      // `contentWidth` (`container`/`section` v2, ADR-82): `SegmentedControl` a icone invece
+      // del `Select` generico — stesso principio di `styleAlign` sotto, ma con lo stile
+      // "selezionato = sfondo blu chiaro/testo blu" di `ContainerLayoutTab.tsx` § "Disposizione"
+      // (richiesta esplicita utente 2026-09-23, stesse classi `inspector.module.css` — nessuna
+      // classe duplicata: un solo posto definisce quell'aspetto).
+      if (prop.name === 'contentWidth') {
+        const currentValue = asString(value) || (prop.values?.[0] ?? '');
+        const segments = (prop.values ?? []).map((token) => {
+          const WidthIcon = CONTENT_WIDTH_ICON[token];
+          return {
+            value: token,
+            label: WidthIcon ? (
+              <Group gap={4} wrap="nowrap">
+                <WidthIcon size={14} aria-hidden />
+                <span>{ENUM_VALUE_LABELS[prop.name]?.[token] ?? token}</span>
+              </Group>
+            ) : (
+              token
+            ),
+          };
+        });
+        return (
+          <div>
+            <Text size="sm" fw={500} mb={4}>
+              {label}
+              {required && (
+                <Text component="span" c="red" inherit>
+                  {' '}
+                  *
+                </Text>
+              )}
+            </Text>
+            <SegmentedControl
+              fullWidth
+              classNames={{
+                root: styles.segmentedRoot,
+                indicator: styles.segmentedIndicator,
+                input: styles.segmentedInput,
+                label: styles.segmentedLabel,
+              }}
+              data={segments}
+              value={currentValue}
+              onChange={(next) => onSetAndCommit(next)}
+            />
+            {error && (
+              <Text size="xs" c="red" mt={4}>
+                {error}
+              </Text>
+            )}
+          </div>
+        );
+      }
       // `styleAlign` (ADR-58, blocco `image`): `SegmentedControl` a icone invece del `Select`
       // generico — stesso principio di `CONTAINER_FLEX_SEGMENTED_PROPS` sopra, ma per nome
       // (nessun secondo insieme di prop responsive: `styleAlign` non lo è).
@@ -538,6 +603,68 @@ export default function PropField({
         onSetAndCommit({ value: nextValue, unit: currentUnit });
       const writeUnit = (nextUnit: string) =>
         onSetAndCommit({ value: currentValue, unit: nextUnit });
+
+      // `boxedWidth`/`minHeight` (`container`/`section` v2, `ContainerLayoutTab.tsx`):
+      // riga etichetta+unità sopra, riga slider+valore sotto — stesso identico layout dello
+      // screenshot Elementor Pro allegato dall'utente (2026-09-23), diverso dal layout a riga
+      // unica sotto (Slider/NumberInput/Select) che resta lo stile di ogni altro `unitValue`
+      // del registro (padding/margin/font-size...), non toccato da questa richiesta puntuale.
+      if (prop.name === 'boxedWidth' || prop.name === 'minHeight') {
+        return (
+          <div>
+            <Group justify="space-between" align="center" wrap="nowrap" mb={4}>
+              <Group gap={4} wrap="nowrap">
+                <IconDeviceDesktop size={14} className={styles.unitFieldDeviceIcon} aria-hidden />
+                <Text size="sm" fw={500}>
+                  {label}
+                  {required && (
+                    <Text component="span" c="red" inherit>
+                      {' '}
+                      *
+                    </Text>
+                  )}
+                </Text>
+              </Group>
+              <Select
+                aria-label={`${label} — Unità`}
+                variant="unstyled"
+                className={styles.unitFieldUnitSelect}
+                data={[...units]}
+                value={currentUnit}
+                allowDeselect={false}
+                comboboxProps={{ zIndex: 1100, width: 'max-content', position: 'bottom-end' }}
+                rightSectionWidth={18}
+                onChange={(next) => writeUnit(next ?? currentUnit)}
+              />
+            </Group>
+            <Group gap="sm" align="center" wrap="nowrap">
+              <Slider
+                style={{ flex: 1 }}
+                min={min}
+                max={max}
+                value={currentValue}
+                label={(sliderValue) => `${sliderValue}${currentUnit}`}
+                thumbLabel={`${label} — Valore`}
+                onChange={writeValue}
+              />
+              <NumberInput
+                aria-label={`${label} — Valore`}
+                min={min}
+                max={max}
+                value={currentValue}
+                w={90}
+                onChange={(next) => writeValue(typeof next === 'number' ? next : currentValue)}
+              />
+            </Group>
+            {error && (
+              <Text size="xs" c="red" mt={4}>
+                {error}
+              </Text>
+            )}
+          </div>
+        );
+      }
+
       return (
         <div>
           <Text size="sm" fw={500} mb={4}>

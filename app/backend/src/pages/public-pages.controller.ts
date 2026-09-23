@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { SkipThrottle, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { Response } from 'express';
 import { PublicPagesService } from './public-pages.service';
 import { PublicPageDto } from './dto/public-page.dto';
@@ -35,6 +35,9 @@ import { BreakpointsDto } from '../settings/dto/breakpoints.dto';
 @ApiTags('Public Pages')
 @Controller('public')
 @UseGuards(ThrottlerGuard)
+// Il throttler `auth` (20/min) è per /auth/*: qui vale solo `public`, altrimenti
+// render SSR ed export (tutti da un solo IP) finiscono in 429 -> 500 sul public-site.
+@SkipThrottle({ auth: true })
 export class PublicPagesController {
   /** Inietta il service di risoluzione pubblica e il service impostazioni (Global Tokens). */
   constructor(

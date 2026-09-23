@@ -48,12 +48,15 @@ import styles from './EditorCanvas.module.css';
 export default function EditorCanvas(): JSX.Element {
   const rootIds = useBlockEditorStore(useShallow((state) => state.tree.map((node) => node.id)));
   const selectNode = useBlockEditorStore((state) => state.selectNode);
+  const isHeaderFooterVisible = useBlockEditorStore((state) => state.isHeaderFooterVisible);
 
   return (
     <CanvasContextMenu>
       <div
         // Selettore su cui `IframeCanvas.tsx` scopa il CSS dei Global Design Tokens: mai `:root`.
-        className={`${styles.canvasRoot} ${GLOBAL_TOKENS_CANVAS_SCOPE_CLASS}`}
+        // Senza badge "THEME - HEADER" (header di tema disattivato) niente più fascia riservata
+        // da 50px sopra la prima sezione (`.canvasRootNoThemeHeader`, `EditorCanvas.module.css`).
+        className={`${styles.canvasRoot} ${isHeaderFooterVisible ? '' : styles.canvasRootNoThemeHeader} ${GLOBAL_TOKENS_CANVAS_SCOPE_CLASS}`}
         // Un click sullo sfondo deseleziona: senza, non si tornerebbe a "nessun blocco".
         onClick={() => selectNode(null)}
       >

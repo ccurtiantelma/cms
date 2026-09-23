@@ -22,6 +22,9 @@ import {
   useBlockEditorStore,
   useCanRedo,
   useCanUndo,
+  useIsHeaderFooterVisible,
+  useIsPreviewMode,
+  useIsSidebarOpen,
 } from '../../../hooks/useBlockEditorStore';
 import type { PageRecord, PageStatus } from '../../../types/pages.types';
 import EditorDnDProvider from './EditorDnDProvider';
@@ -121,6 +124,14 @@ export default function FullScreenEditorLayout({
   const redo = useBlockEditorStore((state) => state.redo);
   const canUndo = useCanUndo();
   const canRedo = useCanRedo();
+  const isHeaderFooterVisible = useIsHeaderFooterVisible();
+  const toggleHeaderFooterVisible = useBlockEditorStore((state) => state.toggleHeaderFooterVisible);
+  const isPreviewMode = useIsPreviewMode();
+  // Stato reale della sidebar per il toggle in topbar (richiesta esplicita del task, non più
+  // dentro `EditorSidebarShell.tsx`): in anteprima resta sempre effettivamente nascosta, stesso
+  // calcolo `useIsSidebarOpen() && !isPreviewMode` che prima viveva in quel componente.
+  const isSidebarVisible = useIsSidebarOpen() && !isPreviewMode;
+  const toggleSidebar = useBlockEditorStore((state) => state.toggleSidebar);
   // Riferimenti imperativi condivisi da provider DnD e frame: l'`<iframe>` del canvas
   // (misura cross-frame) e `.canvasArea` (auto-scroll durante il drag).
   const iframeElRef = useRef<HTMLIFrameElement | null>(null);
@@ -141,6 +152,10 @@ export default function FullScreenEditorLayout({
         canRedo={canRedo}
         onUndo={undo}
         onRedo={redo}
+        isSidebarVisible={isSidebarVisible}
+        onToggleSidebarVisible={toggleSidebar}
+        isHeaderFooterVisible={isHeaderFooterVisible}
+        onToggleHeaderFooterVisible={toggleHeaderFooterVisible}
         hasUnsavedChanges={hasUnsavedChanges}
         saving={saving}
         onSaveDraft={onSaveDraft}

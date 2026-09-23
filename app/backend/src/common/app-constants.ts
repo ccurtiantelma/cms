@@ -81,6 +81,22 @@ export class AppConstants {
   static readonly port = parsePort(53000, process.env.PORT);
 
   static readonly databaseUrl = str('DATABASE_URL');
+  /**
+   * Dimensione massima del pool `pg` (default `node-postgres`: 10),
+   * condiviso da ogni request handler **e** dal worker BullMQ dell'export
+   * statico (`ExportProcessor` gira nello stesso processo del backend,
+   * nessun servizio worker separato — vedi `docker-compose.prod.yml`
+   * commento "backend con il worker di export"). Un full-site rebuild
+   * (accodato ad ogni salvataggio del tema, `SettingsService.updateTheme`)
+   * interroga il DB per l'intero catalogo di Pagine pubblicate mentre le
+   * richieste API ordinarie continuano ad arrivare: con un pool minimo
+   * condiviso, una di queste — inclusa `GET api/v1/preview/pages/:token`
+   * usata dall'Anteprima — può restare senza connessioni disponibili e
+   * fallire con `500` finché il rebuild non libera le proprie. Alzato a 20
+   * come margine di sicurezza; resta comunque configurabile per ambienti
+   * con limiti diversi sul server Postgres.
+   */
+  static readonly databasePoolMax = num('DATABASE_POOL_MAX', 20);
   static readonly redisUrl = str('REDIS_URL');
 
   static readonly securityKey = str('SECURITY_KEY');

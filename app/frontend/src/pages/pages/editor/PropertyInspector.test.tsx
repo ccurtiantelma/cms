@@ -188,11 +188,17 @@ describe('PropertyInspector — titolo "Modifica Sezione" (ADR-82, isSection)', 
 });
 
 describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
-  it('section (nessuna prop di contenuto, solo di stile e avanzate) mostra Stile e Avanzato, mai Contenuto, con le etichette del registro', () => {
+  it('section (nessuna prop di contenuto, solo di stile e avanzate) mostra Layout, Stile e Avanzato, mai Contenuto, con le etichette del registro', async () => {
+    // `section`/`container` (ADR-82): la prima scheda è sempre "Layout"
+    // (`ContainerLayoutTab.tsx`, T-container-layout-tab), mai "Contenuto" — anche quando,
+    // come per `section`, il registro non dichiara alcuna prop `tab: 'content'`.
+    const user = userEvent.setup();
     renderInspectorWith(node('sec-1', 'section'));
 
     expect(screen.queryByRole('tab', { name: 'Contenuto' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Layout' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Stile' })).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
     expect(screen.getByRole('tab', { name: 'Avanzato' })).toBeInTheDocument();
     expect(screen.getByText('Spazio prima')).toBeInTheDocument();
     expect(screen.getByText('Spazio dopo')).toBeInTheDocument();
@@ -236,6 +242,7 @@ describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
         styleSpaceBefore: { default: 'none', tablet: 'sm', mobile: 'lg' },
       }),
     );
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
     const select = screen.getByRole('textbox', { name: 'Spazio prima' });
     await user.click(select);
@@ -251,6 +258,7 @@ describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
   it('una prop responsive senza valore ancora scritto nasce come oggetto { default } dal registro, non uno scalare', async () => {
     const user = userEvent.setup();
     renderInspectorWith(node('sec-1', 'section'));
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
     const select = screen.getByRole('textbox', { name: 'Spazio prima' });
     expect(select).toHaveValue('none');
@@ -269,6 +277,7 @@ describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
         styleSpaceBefore: { default: 'none', mobile: 'lg' },
       }),
     );
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
     const select = screen.getByRole('textbox', { name: 'Spazio prima (Tablet)' });
     await user.click(select);
@@ -282,12 +291,14 @@ describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
   });
 
   it('con lo Switcher su Mobile il controllo mostra il valore in cascata (tablet, poi default) quando mobile non è ancora scritto', async () => {
+    const user = userEvent.setup();
     useBlockEditorStore.getState().setActiveViewport('mobile');
     renderInspectorWith(
       node('sec-1', 'section', {
         styleSpaceBefore: { default: 'none', tablet: 'sm' },
       }),
     );
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
     expect(screen.getByRole('textbox', { name: 'Spazio prima (Mobile)' })).toHaveValue('sm');
   });
@@ -306,6 +317,7 @@ describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
         columns: { default: '1', tablet: '2', mobile: '1' },
       }),
     );
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
     const select = screen.getByRole('textbox', { name: 'Colonne' });
     await user.click(select);
@@ -325,6 +337,7 @@ describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
         gap: { default: 'none', tablet: 'sm', mobile: 'lg' },
       }),
     );
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
     const select = screen.getByRole('textbox', { name: 'Spaziatura tra colonne' });
     await user.click(select);
@@ -350,6 +363,7 @@ describe('PropertyInspector — schede Contenuto/Stile (T6)', () => {
         alignItems: { default: 'stretch', tablet: 'center', mobile: 'flex-end' },
       }),
     );
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
     // `justifyContent` condivide lo stesso set di valori di `alignItems` ("flex-start" ecc.):
     // il gruppo va disambiguato risalendo dalla label "Allineamento verticale" al contenitore
@@ -399,13 +413,15 @@ describe('PropertyInspector — indicatore di override per breakpoint (RFC-F04c)
     expect(screen.queryByTestId(DOT_TESTID)).not.toBeInTheDocument();
   });
 
-  it('su Tablet il pallino compare quando la prop porta un valore esplicito per tablet (Select generico)', () => {
+  it('su Tablet il pallino compare quando la prop porta un valore esplicito per tablet (Select generico)', async () => {
+    const user = userEvent.setup();
     useBlockEditorStore.getState().setActiveViewport('tablet');
     renderInspectorWith(
       node('sec-1', 'section', {
         styleSpaceBefore: { default: 'none', tablet: 'sm' },
       }),
     );
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
     expect(screen.getByTestId(DOT_TESTID)).toBeInTheDocument();
   });
@@ -432,13 +448,15 @@ describe('PropertyInspector — indicatore di override per breakpoint (RFC-F04c)
     expect(screen.queryByTestId(DOT_TESTID)).not.toBeInTheDocument();
   });
 
-  it('ramo SegmentedControl (alignItems): il pallino segue lo stesso invariante su Tablet', () => {
+  it('ramo SegmentedControl (alignItems): il pallino segue lo stesso invariante su Tablet', async () => {
+    const user = userEvent.setup();
     useBlockEditorStore.getState().setActiveViewport('tablet');
     renderInspectorWith(
       node('sec-align', 'section', {
         alignItems: { default: 'stretch', tablet: 'center' },
       }),
     );
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
     expect(screen.getByTestId(DOT_TESTID)).toBeInTheDocument();
   });
@@ -449,7 +467,8 @@ describe('PropertyInspector — indicatore di override per breakpoint (RFC-F04c)
    * otto in `VisualBoxModelInspector` (ADR-33 § 4/ADR-41 § 5), che porta il proprio
    * indicatore d'override — stesso invariante, componente diverso.
    */
-  it('VisualBoxModelInspector (stylePaddingTop di section): il pallino segue lo stesso invariante su Mobile, solo sul lato esplicito', () => {
+  it('VisualBoxModelInspector (stylePaddingTop di section): il pallino segue lo stesso invariante su Mobile, solo sul lato esplicito', async () => {
+    const user = userEvent.setup();
     useBlockEditorStore.getState().setActiveViewport('mobile');
     renderInspectorWith(
       node('sec-padding', 'section', {
@@ -457,6 +476,7 @@ describe('PropertyInspector — indicatore di override per breakpoint (RFC-F04c)
         stylePaddingRight: { default: '0', tablet: '8' },
       }),
     );
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
     // Un solo lato porta un override esplicito su Mobile (`stylePaddingTop`): l'altro lato
     // valorizzato (`stylePaddingRight`, esplicito solo su tablet) non deve accenderne uno.
@@ -1232,8 +1252,13 @@ describe('PropertyInspector — Media Library', () => {
  * (già coperta genericamente da "i sette kind del registro" per `enum`/`color`/`mediaRef`).
  */
 describe('PropertyInspector — section.styleBackgroundType (ADR-50)', () => {
-  it('type "color" (default, nessun valore ancora scritto): niente campi di immagine o gradiente', () => {
+  // `section`/`container` (ADR-82) hanno ora sempre una prima scheda "Layout"
+  // (`ContainerLayoutTab.tsx`, T-container-layout-tab): il tab attivo di default non è più
+  // "Stile" per questi due tipi, un click esplicito è necessario prima di ogni asserzione.
+  it('type "color" (default, nessun valore ancora scritto): niente campi di immagine o gradiente', async () => {
+    const user = userEvent.setup();
     renderInspectorWith(node('sec-bg', 'section', {}));
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
     expect(screen.getByRole('textbox', { name: 'Tipo sfondo' })).toBeInTheDocument();
     expect(
@@ -1245,8 +1270,10 @@ describe('PropertyInspector — section.styleBackgroundType (ADR-50)', () => {
     expect(screen.queryByText('Colore finale gradiente')).not.toBeInTheDocument();
   });
 
-  it('type "image": compaiono media picker, posizione e dimensione; il gradiente resta nascosto', () => {
+  it('type "image": compaiono media picker, posizione e dimensione; il gradiente resta nascosto', async () => {
+    const user = userEvent.setup();
     renderInspectorWith(node('sec-bg', 'section', { styleBackgroundType: 'image' }));
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
     expect(
       screen.getByRole('button', { name: /Scegli Immagine|Sostituisci Immagine/ }),
@@ -1257,8 +1284,10 @@ describe('PropertyInspector — section.styleBackgroundType (ADR-50)', () => {
     expect(screen.queryByText('Colore finale gradiente')).not.toBeInTheDocument();
   });
 
-  it('type "gradient": compaiono i due color picker; immagine/posizione/dimensione restano nascosti', () => {
+  it('type "gradient": compaiono i due color picker; immagine/posizione/dimensione restano nascosti', async () => {
+    const user = userEvent.setup();
     renderInspectorWith(node('sec-bg', 'section', { styleBackgroundType: 'gradient' }));
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
     expect(screen.getByText('Colore iniziale gradiente')).toBeInTheDocument();
     expect(screen.getByText('Colore finale gradiente')).toBeInTheDocument();
@@ -1272,6 +1301,7 @@ describe('PropertyInspector — section.styleBackgroundType (ADR-50)', () => {
   it('passare da "color" a "image" scrive il tipo in store e fa comparire i campi immagine', async () => {
     const user = userEvent.setup();
     renderInspectorWith(node('sec-bg', 'section', { styleBackgroundType: 'color' }));
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
     expect(screen.queryByRole('textbox', { name: 'Posizione sfondo' })).not.toBeInTheDocument();
 

@@ -1,11 +1,14 @@
 /**
- * Iterazione dei nodi di livello radice: una striscia di inserimento prima di ogni sezione,
- * il wrapper di ciascun blocco e, in coda, il box "Aggiungi sezione" (sempre presente, come
- * in Elementor Pro). Riceve solo gli id: la modifica di una prop dentro una sezione non
- * ri-renderizza la lista, ma il solo `EditorBlockWrapper` interessato.
+ * Iterazione dei nodi di livello radice: una striscia di inserimento prima di ogni sezione e
+ * il wrapper di ciascun blocco. Riceve solo gli id: la modifica di una prop dentro una
+ * sezione non ri-renderizza la lista, ma il solo `EditorBlockWrapper` interessato.
+ *
+ * Il box "Aggiungi sezione" non è più in coda a questa lista (T-canvas-declutter-2): i suoi
+ * tre trigger vivono ora nella riga sticky del breadcrumb (`CanvasBreadcrumbBar`,
+ * `EditorCanvasThemeFrame.tsx`), montata una sola volta da `EditorCanvas.tsx`.
  */
 import EditorBlockWrapper from './EditorBlockWrapper';
-import { RootAddSectionZone, RootSectionInserter } from './EditorCanvasDropZones';
+import { RootSectionInserter } from './EditorCanvasDropZones';
 
 interface EditorCanvasRootListProps {
   rootIds: string[];
@@ -19,7 +22,6 @@ export default function EditorCanvasRootList({ rootIds }: EditorCanvasRootListPr
         <EditorBlockWrapper key={id} id={id} />,
         <RootSectionInserter key={`inserter-${index + 1}`} index={index + 1} />,
       ])}
-      <RootAddSectionZone index={rootIds.length} />
     </>
   );
 }

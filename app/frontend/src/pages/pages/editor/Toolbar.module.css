@@ -22,7 +22,15 @@
   padding: 0 16px;
   background: var(--mantine-primary-color-light);
   color: var(--mantine-primary-color-light-color);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  /* Stesso `border-bottom` (colore/spessore/stile) della barra breadcrumb in fondo al canvas
+     (`.breadcrumbBar` in `EditorCanvasThemeFrame.module.css`, `border-top: 1px solid #a5d8ff`):
+     le due barre — topbar amministrativa qui e breadcrumb dentro il documento isolato
+     dell'iframe (ADR-72) — devono risultare visivamente identiche (richiesta esplicita del
+     task). Stesso colore statico dichiarato lì (non una custom property Mantine): quel
+     documento non riceve le variabili `--mantine-primary-color-*` del padre, quindi l'unico
+     modo di renderle identiche è duplicare lo stesso valore fisso qui.
+     `box-shadow` precedente rimosso: un bordo sottile, non un'ombra pesante, per coerenza. */
+  border-bottom: 1px solid #a5d8ff;
   position: relative;
   z-index: 1;
 }
@@ -92,6 +100,22 @@
 }
 
 /*
+ * Pulsante toggle Header/Footer (badge `THEME - HEADER`/`THEME - FOOTER` del canvas,
+ * ADR-93): stile desaturato/opaco quando disattivo, per distinguerlo a colpo d'occhio dagli
+ * altri pulsanti sempre "attivi" (Annulla/Ripristina) — stessa `opacity` già usata sopra per
+ * `:disabled`, qui applicata a un pulsante comunque cliccabile (mai `disabled`: l'azione di
+ * riattivare deve restare sempre disponibile).
+ */
+.headerFooterToggleInactive {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+
+.headerFooterToggleInactive:hover {
+  opacity: 0.7;
+}
+
+/*
  * Menu "Cambia Stato", in alto a destra della topbar (restyle Elementor): occupa tutta
  * l'altezza della barra (52px, `.root`) e resta a bordi squadrati — niente arrotondamento,
  * a differenza del vecchio posizionamento in fondo alla sidebar sinistra. `align-self:
@@ -106,7 +130,10 @@
   align-self: stretch;
   height: 100%;
   margin: 0 -16px 0 0;
-  gap: 1px;
+  /* `gap: 0` (non più `1px`): quel pixel lasciava intravedere lo sfondo della topbar fra
+     "Pubblica" e la freccia, un bordo verticale involontario — pulsante unico e coeso
+     (richiesta esplicita del task), nessun divider fra i due segmenti del `Button.Group`. */
+  gap: 0;
 }
 
 .publishButton,
@@ -139,13 +166,24 @@
 }
 
 .statusDropdown {
-  background-color: var(--mantine-primary-color-light) !important;
-  color: #000000 !important;
+  background-color: var(--mantine-primary-color-filled) !important;
+  color: var(--mantine-color-white) !important;
   font-family: inherit;
+  border: none !important;
 }
 
 .statusDropdown :global(.mantine-Menu-item) {
-  color: #000000;
+  color: var(--mantine-color-white) !important;
+  background-color: transparent !important;
+}
+
+.statusDropdown :global(.mantine-Menu-item:hover) {
+  background-color: transparent !important;
+  color: var(--mantine-color-white) !important;
+}
+
+.statusDropdown :global(.mantine-Menu-item svg) {
+  color: var(--mantine-color-white) !important;
 }
 
 .publishButton:disabled,

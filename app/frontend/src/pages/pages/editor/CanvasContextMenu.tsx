@@ -133,7 +133,16 @@ export default function CanvasContextMenu({ children }: CanvasContextMenuProps):
   }, [insertFlow]);
 
   return (
-    <div onContextMenu={handleContextMenu}>
+    // `height: 100%` esplicito (bugfix breadcrumb sticky, ADR-93 § 3-4): senza, questo `<div>`
+    // (unico antenato fra `#canvas-root` dell'iframe — `IframeCanvas.tsx` — e `.canvasRoot` di
+    // `EditorCanvas.tsx`) resta ad altezza `auto`, interrompendo la catena percentuale su cui
+    // si basa `.canvasRoot { min-height: 100% }`: senza un'altezza *definita* qui, quel
+    // `min-height: 100%` non risolve (resta di fatto `auto`), `.canvasRoot` si ferma
+    // all'altezza del proprio contenuto e `margin-top: auto` sul breadcrumb (che dipende da
+    // spazio extra nel flex column) non ha nulla da distribuire — il breadcrumb finisce
+    // subito sotto l'ultimo blocco invece che ancorato in fondo al canvas, specialmente con
+    // poco contenuto. Stesso fix richiesto a `#canvas-root` in `IframeCanvas.tsx`.
+    <div onContextMenu={handleContextMenu} style={{ height: '100%' }}>
       <Menu opened={position !== null} onClose={close} withinPortal shadow="md">
         <Menu.Target>
           <div

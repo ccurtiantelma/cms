@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { SkipThrottle, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { plainToInstance } from 'class-transformer';
 import { Request } from 'express';
 import { FormsService } from './forms.service';
@@ -37,6 +37,9 @@ interface SubmitFormResponse {
 @ApiTags('Public Forms')
 @Controller('public/forms')
 @UseGuards(ThrottlerGuard)
+// Il throttler `auth` (20/min) è per /auth/*: qui vale solo `public`, altrimenti
+// render SSR ed export (tutti da un solo IP) finiscono in 429 -> 500 sul public-site.
+@SkipThrottle({ auth: true })
 export class PublicFormsController {
   /** Inietta il service di elaborazione degli Invii. */
   constructor(private readonly formsService: FormsService) {}

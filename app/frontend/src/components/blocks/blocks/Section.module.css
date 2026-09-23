@@ -75,6 +75,16 @@
   z-index: 1;
 }
 
+/* Overlay "Contorno griglia" (T-container-layout-tab): stesso ruolo di `.gridOutline` in
+   `Container.module.css`, vedi il suo commento — qui dentro `.content` (che porta già
+   `position: relative` sopra), mai renderizzato per `section` in pratica (vedi `Section.tsx`). */
+.gridOutline {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
 /*
  * Riga a piena larghezza dentro una griglia del footer pubblico (`<footer>`, Global
  * Section slot "footer" — ADR-40, reso da `GlobalSectionSlot` in

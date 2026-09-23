@@ -99,7 +99,12 @@ function BoxSidesRow({
             max={limits.max}
             step={THEME_UNIT_STEP[unit]}
             decimalScale={THEME_UNIT_DECIMAL_SCALE[unit]}
-            suffix={` ${unit}`}
+            rightSection={
+              <Text size="xs" c="dimmed">
+                {unit}
+              </Text>
+            }
+            rightSectionWidth={32}
             onChange={(value) => {
               const bounded = toBoundedNumber(value, limits);
               if (bounded !== null) {
@@ -154,7 +159,12 @@ export function PanelLayout({ config, updateConfig }: ThemeEditorPanelProps): JS
         max={THEME_DIMENSION_UNIT_LIMITS.pageBoxedWidth[layout.pageBoxedWidthUnit].max}
         step={THEME_UNIT_STEP[layout.pageBoxedWidthUnit]}
         decimalScale={THEME_UNIT_DECIMAL_SCALE[layout.pageBoxedWidthUnit]}
-        suffix={` ${layout.pageBoxedWidthUnit}`}
+        rightSection={
+          <Text size="xs" c="dimmed">
+            {layout.pageBoxedWidthUnit}
+          </Text>
+        }
+        rightSectionWidth={32}
         onChange={(value) => {
           const bounded = toBoundedNumber(
             value,

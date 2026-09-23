@@ -55,6 +55,12 @@ export interface ContainerBlockProps {
   htmlId?: unknown;
   cssClass?: unknown;
   defaultDirection?: 'row' | 'column';
+  /**
+   * Valore grezzo di `layout`, passato **solo** qui (non dal Runtime Style Bridge, invariato)
+   * per l'overlay editor-only "Contorno griglia" (T-container-layout-tab,
+   * `grid-outline.utils.ts`) — vedi il commento di testa di `Container.tsx`.
+   */
+  layout?: unknown;
 }
 
 /**

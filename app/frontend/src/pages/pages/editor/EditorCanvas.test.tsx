@@ -98,12 +98,14 @@ describe('EditorCanvas — cornice tema e breadcrumb', () => {
     useBlockEditorStore.getState().selectNode('h-1');
     const { getByTestId } = renderWithProviders(<EditorCanvas />);
     const bar = getByTestId('canvas-breadcrumb');
-    const buttons = bar.querySelectorAll('button');
+    // Scoped all'`<ol>` del percorso: la barra ospita anche i tre trigger "Aggiungi sezione"
+    // (`CanvasAddSectionZone`, T-canvas-declutter-2), che non sono segmenti del breadcrumb.
+    const buttons = bar.querySelectorAll('ol button');
     expect(buttons).toHaveLength(3);
     expect(buttons[0].textContent).toBe('Pagina');
     fireEvent.click(buttons[1]);
     expect(useBlockEditorStore.getState().selectedId).toBe('c-1');
-    fireEvent.click(getByTestId('canvas-breadcrumb').querySelectorAll('button')[0]);
+    fireEvent.click(getByTestId('canvas-breadcrumb').querySelectorAll('ol button')[0]);
     expect(useBlockEditorStore.getState().selectedId).toBeNull();
   });
 });

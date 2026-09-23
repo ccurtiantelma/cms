@@ -29,7 +29,7 @@
  * `PagePageDetail` traduce nel blocco colpevole. Nessun controllo di questo file blocca il
  * salvataggio — coerente con CLAUDE.md § Frontend ("validazione client solo UX").
  */
-import { createElement, useState } from 'react';
+import { useState } from 'react';
 import { ActionIcon, Alert, Group, Paper, Stack, Text, Tooltip } from '@mantine/core';
 import { IconArrowLeft, IconInfoCircle } from '@tabler/icons-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -42,14 +42,14 @@ import {
   useTreeGeneration,
 } from '../../../hooks/useBlockEditorStore';
 import { findLocation, findPath, type BlockNode } from './block-tree.utils';
-import { blockIcon } from './block-icon';
-import { resolveBlockKind } from './blocks/resolve-block-kind';
+import { getNodeLabel } from './blocks/resolve-block-kind';
 import MediaLibraryModal from '../../../components/media/MediaLibraryModal';
 import MediaCropperModal from '../../../components/media/MediaCropperModal';
 import type { MediaFileRecord } from '../../../types/media.types';
 import ContentTab from './inspector/ContentTab';
 import StyleTab from './inspector/StyleTab';
 import AdvancedTab from './inspector/AdvancedTab';
+import ContainerLayoutTab from './inspector/ContainerLayoutTab';
 import { MEDIA_MODAL_Z_INDEX, asString, groupPropsByTab } from './inspector/inspector.utils';
 import InspectorTabs from './InspectorTabs';
 import { usePresetStore } from './usePresetStore';
@@ -147,6 +147,13 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
 
   const { content, style, advanced } = groupPropsByTab(descriptor.props, propsMeta);
 
+  // `container`/`section` (ADR-82: `container` v2 attivo, `section` v1 deprecato ma ancora
+  // leggibile — stessa UI per entrambi, letta da `node.type`): la prima scheda diventa
+  // "Layout" (`ContainerLayoutTab.tsx`, T-container-layout-tab) invece di "Contenuto" —
+  // `ContentTab` non la sostituisce mai per questi due tipi, anche quando ha props popolate
+  // (oggi solo `link`, `tab: 'content'` su `container`), coerente col redesign richiesto.
+  const isContainerLikeNode = node.type === 'container' || node.type === 'section';
+
   /**
    * "Converti in Sezione Globale" (ADR-55, estende ADR-40): offerta solo su un
    * contenitore/`section` di primo livello, stessa restrizione di
@@ -211,7 +218,14 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
   return (
     <>
       <InspectorTabs
-        content={content.length > 0 ? <ContentTab fields={content} {...tabProps} /> : undefined}
+        nodeType={node.type}
+        content={
+          isContainerLikeNode ? (
+            <ContainerLayoutTab node={node} descriptor={descriptor} {...tabProps} />
+          ) : content.length > 0 ? (
+            <ContentTab fields={content} {...tabProps} />
+          ) : undefined
+        }
         style={style.length > 0 ? <StyleTab fields={style} {...tabProps} /> : undefined}
         advanced={advanced.length > 0 ? <AdvancedTab fields={advanced} {...tabProps} /> : undefined}
       />
@@ -226,19 +240,21 @@ export default function PropertyInspector(): JSX.Element {
   const node = useSelectedNode();
   const generation = useTreeGeneration();
   const descriptor = node ? BLOCK_TYPES.find((entry) => entry.type === node.type) : undefined;
-  // `isSection` (ADR-82): un `container` con `props.tag === 'section'` conserva l'identità
-  // "Sezione" nel titolo anche dopo la migrazione section→container a salvataggio/reload.
-  const isSection = node ? resolveBlockKind(node, null).isSection : false;
   // Selettori mirati (mai `useBlockEditorStore()` senza selettore, CLAUDE.md § dominio CMS):
   // solo le due azioni che servono al pulsante di ritorno, non l'intero store.
   const selectNode = useBlockEditorStore((state) => state.selectNode);
   const setActiveSidebarTab = useBlockEditorStore((state) => state.setActiveSidebarTab);
-  // Percorso radice→nodo per il sottotitolo "Contenitore › Titolo" (parità mockup Elementor).
+  // Percorso radice→nodo per il sottotitolo "Sezione › Colonna › Titolo" (parità mockup
+  // Elementor) e per il titolo "Modifica {label}": stessa `getNodeLabel` (ADR-82) del
+  // breadcrumb del canvas (`EditorCanvasThemeFrame.tsx`), unica fonte di verità per le label
+  // "Sezione"/"Colonna" — mai una label generica "Contenitore" del registro per questi due casi.
   const path = useBlockEditorStore(
     useShallow((state) => (node ? findPath(state.tree, node.id) : [])),
   );
+  const nodeParent = path.length > 1 ? path[path.length - 2] : null;
+  const nodeLabel = node ? getNodeLabel(node, nodeParent) : '';
   const breadcrumb = path
-    .map((entry) => BLOCK_TYPES.find((type) => type.type === entry.type)?.meta?.label ?? entry.type)
+    .map((entry, index) => getNodeLabel(entry, index === 0 ? null : path[index - 1]))
     .join(' › ');
 
   /** Deseleziona il blocco e riporta la sidebar sulla scheda "Widgets" (switch esplicito
@@ -273,21 +289,14 @@ export default function PropertyInspector(): JSX.Element {
                 </ActionIcon>
               </Tooltip>
             )}
-            {descriptor && (
-              <span className={styles.headerIcon} aria-hidden="true">
-                {createElement(blockIcon(descriptor.meta?.icon), { size: 22 })}
-              </span>
-            )}
             <div className={styles.headerText}>
               <Text fw={700} c="dark.8" lh={1.2}>
                 {/* Intestazione "Modifica {tipo}" (parità Elementor Pro, T-elementor-parity):
-                    ogni tipo legge `meta.label` dal registro, tranne la Sezione — che grazie a
-                    `isSection` (ADR-82) resta "Sezione" sia pre-save (`type:'section'`) sia dopo
-                    la migrazione a `container`+`tag:'section'`, invece di seguire la label
-                    generica "Contenitore" del registro. */}
-                {descriptor
-                  ? `Modifica ${isSection ? 'Sezione' : (descriptor.meta?.label ?? descriptor.type)}`
-                  : 'Proprietà'}
+                    `getNodeLabel` (ADR-82, `resolve-block-kind.ts`) resta "Sezione" sia pre-save
+                    (`type:'section'`) sia dopo la migrazione a `container`+`tag:'section'`, e
+                    "Colonna" per un `container` figlio diretto di una griglia/riga — invece di
+                    seguire la label generica "Contenitore" del registro in entrambi i casi. */}
+                {descriptor ? `Modifica ${nodeLabel}` : 'Proprietà'}
               </Text>
               {breadcrumb && (
                 <Text size="xs" c="dimmed" truncate="end">

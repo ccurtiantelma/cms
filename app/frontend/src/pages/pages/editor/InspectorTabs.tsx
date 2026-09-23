@@ -16,33 +16,51 @@
  */
 import type { ReactNode } from 'react';
 import { Tabs } from '@mantine/core';
-import { IconBrush, IconPencil, IconSettings } from '@tabler/icons-react';
+import { IconBrush, IconLayoutGrid, IconPencil, IconSettings } from '@tabler/icons-react';
 import styles from './InspectorTabs.module.css';
 
 export type InspectorTab = 'content' | 'style' | 'advanced';
 
 export interface InspectorTabsProps {
-  /** Contenuto della scheda "Contenuto" (testi, URL immagini, tag HTML) — `undefined` = scheda assente. */
+  /**
+   * Contenuto della prima scheda: "Contenuto" (testi, URL immagini, tag HTML) per ogni tipo,
+   * "Layout" (`ContainerLayoutTab.tsx`, T-container-layout-tab) per `container`/`section`
+   * (ADR-82: `container` v2 attivo, `section` v1 deprecato ma ancora leggibile) — `undefined`
+   * = scheda assente, stesso invariante di sempre.
+   */
   content?: ReactNode;
   /** Contenuto della scheda "Stile" (colori, dimensioni font, allineamento) — `undefined` = scheda assente. */
   style?: ReactNode;
   /** Contenuto della scheda "Avanzato" (margin, padding, classi/ID custom) — `undefined` = scheda assente. */
   advanced?: ReactNode;
+  /**
+   * Tipo del nodo selezionato: decide solo l'etichetta/icona della prima scheda
+   * ("Layout" + `IconLayoutGrid` per `container`/`section`, "Contenuto" + `IconPencil` per
+   * ogni altro tipo), mai una quarta via di dispaccio per tipo — il contenuto della scheda
+   * resta deciso da `PropertyInspector.tsx` (`content` sopra), questo componente sceglie solo
+   * *come* etichettarla.
+   */
+  nodeType?: string;
 }
 
-const TAB_DEFS: readonly { value: InspectorTab; label: string; icon: ReactNode }[] = [
-  { value: 'content', label: 'Contenuto', icon: <IconPencil size={14} /> },
-  { value: 'style', label: 'Stile', icon: <IconBrush size={14} /> },
-  { value: 'advanced', label: 'Avanzato', icon: <IconSettings size={14} /> },
-];
+const CONTAINER_LIKE_TYPES = new Set(['container', 'section']);
 
 export default function InspectorTabs({
   content,
   style,
   advanced,
+  nodeType,
 }: InspectorTabsProps): JSX.Element | null {
+  const isContainerLike = nodeType !== undefined && CONTAINER_LIKE_TYPES.has(nodeType);
+  const tabDefs: readonly { value: InspectorTab; label: string; icon: ReactNode }[] = [
+    isContainerLike
+      ? { value: 'content', label: 'Layout', icon: <IconLayoutGrid size={14} /> }
+      : { value: 'content', label: 'Contenuto', icon: <IconPencil size={14} /> },
+    { value: 'style', label: 'Stile', icon: <IconBrush size={14} /> },
+    { value: 'advanced', label: 'Avanzato', icon: <IconSettings size={14} /> },
+  ];
   const sections: Record<InspectorTab, ReactNode | undefined> = { content, style, advanced };
-  const availableTabs = TAB_DEFS.filter((tab) => sections[tab.value] !== undefined);
+  const availableTabs = tabDefs.filter((tab) => sections[tab.value] !== undefined);
 
   if (availableTabs.length === 0) return null;
 

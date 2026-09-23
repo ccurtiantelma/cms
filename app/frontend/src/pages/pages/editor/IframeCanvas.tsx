@@ -143,7 +143,17 @@ const aggregatedBlockCss = Object.keys(blockModuleCssMap)
  *   aggiungerci un proprio bordo/padding sopra (`content-box` sommerebbe, sfalsando di nuovo
  *   la larghezza simulata dal Breakpoint Switcher come per il margine sopra).
  */
-const IFRAME_SRC_DOC = `<!doctype html><html><head><style>html,body{margin:0;padding:0;box-sizing:border-box;width:100%;height:100%}</style></head><body><div id="${CANVAS_ROOT_ID}"></div></body></html>`;
+// `#${CANVAS_ROOT_ID} { height: 100% }` (bugfix breadcrumb sticky, ADR-93 § 3-4): senza,
+// questo `<div>` — unico figlio di `body` e antenato diretto del `<div onContextMenu>` di
+// `CanvasContextMenu.tsx`, a sua volta antenato di `.canvasRoot` (`EditorCanvas.module.css`)
+// — resta ad altezza `auto`, interrompendo la stessa catena percentuale un livello più in
+// alto: `.canvasRoot { min-height: 100% }` risolve solo se OGNI antenato fra sé e un
+// contenitore ad altezza definita (qui `html,body{height:100%}` sopra) dichiara a sua volta
+// un'altezza definita, non `auto`. Verificato con una riproduzione Playwright della stessa
+// catena DOM/CSS: senza questo fix il breadcrumb (`margin-top: auto` in un flex column) non
+// ha spazio extra da cui essere spinto in fondo e finisce subito sotto l'ultimo blocco
+// invece che ancorato in fondo al canvas, specialmente con poco contenuto.
+const IFRAME_SRC_DOC = `<!doctype html><html><head><style>html,body{margin:0;padding:0;box-sizing:border-box;width:100%;height:100%}#${CANVAS_ROOT_ID}{height:100%}</style></head><body><div id="${CANVAS_ROOT_ID}"></div></body></html>`;
 
 export interface IframeCanvasProps {
   /** Il `canvasTree` da proiettare nell'iframe — oggi `InvalidBlockProvider > EditorCanvas`,

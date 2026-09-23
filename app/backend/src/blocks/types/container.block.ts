@@ -39,14 +39,21 @@ export const containerBlock: BlockDefinition = {
     boxedWidth: {
       kind: 'unitValue',
       required: false,
-      units: ['px', '%'],
+      // Parità Elementor Pro (richiesta esplicita utente 2026-09-23, screenshot del menu
+      // unità): `vw` è il quinto relativo a una larghezza — `vh` resta specifico di
+      // `minHeight` sotto, non ha senso su una larghezza. `unitValueToCss` (frontend
+      // `Container.tsx`/backend `value-to-declarations.ts`) è generico su `${value}${unit}`,
+      // nessuna whitelist di rendering da aggiornare per aggiungere unità qui.
+      units: ['px', '%', 'em', 'rem', 'vw'],
       min: 0,
       max: 4000,
     },
     minHeight: {
       kind: 'unitValue',
       required: false,
-      units: ['px', 'vh'],
+      // Parità Elementor Pro, stesso principio di `boxedWidth` sopra ma `vh` (relativo
+      // all'altezza) al posto di `vw`.
+      units: ['px', '%', 'em', 'rem', 'vh'],
       min: 0,
       max: 2000,
     },

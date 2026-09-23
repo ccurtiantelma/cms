@@ -71,13 +71,6 @@
   min-height: 0;
 }
 
-/* Intestazione: icona del tipo (accento) + titolo + percorso, stile Elementor. */
-.headerIcon {
-  display: inline-flex;
-  flex-shrink: 0;
-  color: var(--mantine-color-red-9);
-}
-
 .headerText {
   min-width: 0;
   flex: 1;

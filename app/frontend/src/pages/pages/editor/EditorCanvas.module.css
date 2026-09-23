@@ -23,6 +23,12 @@
 .canvasRoot {
   width: 100%;
   min-height: 100%;
+  /* `border-box`: indispensabile per il `padding-top` sotto — con `content-box` (default)
+     i 50px si sommerebbero al `min-height: 100%` già risolto a piena altezza dell'iframe,
+     ricreando esattamente l'overflow che questa regola vuole evitare. Con `border-box` il
+     padding rientra nel box che il `min-height: 100%` misura, quindi non eccede mai
+     l'altezza disponibile. */
+  box-sizing: border-box;
   container-type: inline-size;
   /* Colonna flex: footer e breadcrumb restano in calce anche con pochi blocchi. */
   display: flex;
@@ -32,16 +38,30 @@
      ancorata esattamente a filo del bordo superiore del blocco via
      `transform: translate(-50%, -100%)` (`BlockHoverOverlay.module.css`) — sporgerebbe
      fuori dal canvas e potrebbe sovrapporsi visivamente al bordo dell'iframe/Topbar quando
-     il primo blocco è selezionato in cima all'albero. `margin-top` (non `padding-top`):
-     nessun `calc(100vh - …)`/altezza fissa nel resto della catena assume `margin-top: 0`
-     su questo elemento — l'iframe che lo ospita ha altezza fissa indipendente dal
-     contenuto (`IframeCanvas.module.css`, `.frame { height: 100% }`, non dal contenuto
-     portato) e lo scroll di un albero più alto della viewport è nativo del documento
-     dell'iframe (`overflow` mai impostato su `html`/`body` in `IFRAME_SRC_DOC`, default
-     UA — vedi `IframeCanvas.tsx`), non un `overflow-y: auto` esterno con altezza
-     precalcolata: 50px in più di contenuto scrollano semplicemente in più, nessuna
-     altezza cablata da ricalcolare. */
-  margin-top: 50px;
+     il primo blocco è selezionato in cima all'albero. `padding-top` (non `margin-top`): un
+     `margin-top` su un elemento il cui `min-height: 100%` risolve già alla piena altezza
+     disponibile dell'iframe eccede sempre quell'altezza di 50px, causando una scrollbar
+     costante nel documento dell'iframe anche con un solo blocco (`html,body{height:100%}`
+     in `IFRAME_SRC_DOC`, `IframeCanvas.tsx`) — un `padding-top` invece entra nel box
+     misurato dal `min-height` (vedi `box-sizing` sopra) e non produce overflow strutturale
+     quando il contenuto reale è più basso della viewport. La posizione della maniglia della
+     prima sezione (ancorata al bordo del blocco stesso, non a questo elemento) resta
+     identica: lo spazio sopra il primo blocco è lo stesso, solo spostato da fuori a dentro
+     il box. */
+  padding-top: 50px;
+}
+
+/*
+  Quando il tema non ha Header/Footer visibile (`isHeaderFooterVisible` false,
+  `useBlockEditorStore.ts`), `EditorCanvasThemeFrame` non monta più nulla (`return null`) e non
+  c'è più un badge "THEME - HEADER" da disegnare nel margine superiore: i 50px di `padding-top`
+  sopra restano comunque nel foglio di stile per il caso `true`, ma qui vengono azzerati del
+  tutto (richiesta esplicita del task: nessuna fascia bianca residua sopra la prima Sezione, la
+  maniglia di selezione della prima Sezione può occasionalmente sporgere di qualche px oltre il
+  bordo dell'iframe quando selezionata — accettato, non più prioritario rispetto allo spazio
+  vuoto). */
+.canvasRootNoThemeHeader {
+  padding-top: 0;
 }
 
 /*

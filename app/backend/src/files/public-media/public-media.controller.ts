@@ -1,6 +1,6 @@
 import { Controller, Get, HttpStatus, Param, Res, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { SkipThrottle, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { Response } from 'express';
 import { PublicMediaService } from './public-media.service';
 
@@ -19,6 +19,9 @@ import { PublicMediaService } from './public-media.service';
 @ApiTags('Public Media')
 @Controller('public/media')
 @UseGuards(ThrottlerGuard)
+// Il throttler `auth` (20/min) è per /auth/*: qui vale solo `public`, altrimenti
+// render SSR ed export (tutti da un solo IP) finiscono in 429 -> 500 sul public-site.
+@SkipThrottle({ auth: true })
 export class PublicMediaController {
   /** Inietta il service di lettura pubblica dei media. */
   constructor(private readonly publicMediaService: PublicMediaService) {}

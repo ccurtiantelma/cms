@@ -36,6 +36,10 @@ function resolveContainerBlockProps(node: BlockNode): ResolvedProps {
     htmlId: node.props.htmlId,
     cssClass: node.props.cssClass,
     defaultDirection: resolveDefaultDirection(node),
+    // Solo per l'overlay editor-only "Contorno griglia" (`grid-outline.utils.ts`); il Runtime
+    // Style Bridge resta l'unico canale di stile reale, invariato (vedi il commento di testa
+    // di `resolveContainerBlockProps`).
+    layout: node.props.layout,
   };
 }
 

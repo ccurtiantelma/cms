@@ -54,3 +54,18 @@
   flex: 1 1 0%;
   min-width: 0;
 }
+
+/*
+ * Overlay "Contorno griglia" (T-container-layout-tab, `ContainerLayoutTab.tsx` § Accordion
+ * "Elementi"): bande verticali equidistanti, puramente visive — `pointer-events: none` così
+ * non intercetta mai la selezione/il drag del canvas, `position: absolute; inset: 0` sfrutta
+ * `position: relative` già dichiarato su `.container` sopra. Mai nel sito pubblico: questa
+ * classe compare solo quando `Container.tsx` riceve `gridOutlineColumnCount !== null`, che
+ * accade solo nel canvas editor (`resolveGridOutlineColumnCount`, `grid-outline.utils.ts`).
+ */
+.gridOutline {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}

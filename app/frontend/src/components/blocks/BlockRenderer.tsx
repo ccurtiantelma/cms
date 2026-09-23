@@ -147,6 +147,7 @@ function renderNode(
     case 'section':
       return (
         <Section
+          id={node.id}
           styleSpaceBefore={node.props.styleSpaceBefore}
           styleSpaceAfter={node.props.styleSpaceAfter}
           stylePadding={node.props.stylePadding}

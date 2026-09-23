@@ -8,7 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { SkipThrottle, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { TemplateResolverService } from './template-resolver.service';
 import { ResolveSiteTemplateDto, ResolvedSiteTemplateDto } from './dto/resolve-site-template.dto';
 
@@ -25,6 +25,9 @@ import { ResolveSiteTemplateDto, ResolvedSiteTemplateDto } from './dto/resolve-s
 @ApiTags('Public Site Templates')
 @Controller('public/site-templates')
 @UseGuards(ThrottlerGuard)
+// Il throttler `auth` (20/min) è per /auth/*: qui vale solo `public`, altrimenti
+// render SSR ed export (tutti da un solo IP) finiscono in 429 -> 500 sul public-site.
+@SkipThrottle({ auth: true })
 export class PublicSiteTemplatesController {
   /** Inietta il servizio di risoluzione dei Template di tema. */
   constructor(private readonly templateResolver: TemplateResolverService) {}

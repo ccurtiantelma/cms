@@ -18,8 +18,9 @@ import { memo } from 'react';
 import { IconLock } from '@tabler/icons-react';
 import { useShallow } from 'zustand/react/shallow';
 import { useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
-import { BLOCK_TYPES } from '../../../types/blocks.types';
 import { findPath } from './block-tree.utils';
+import { getNodeLabel } from './blocks/resolve-block-kind';
+import CanvasAddSectionZone from './CanvasAddSectionZone';
 import styles from './EditorCanvasThemeFrame.module.css';
 
 /** Indicatore di contesto `THEME - HEADER` / `THEME - FOOTER`, fuori flusso e non interattivo. */
@@ -27,7 +28,9 @@ const EditorCanvasThemeFrame = memo(function EditorCanvasThemeFrame({
   area,
 }: {
   area: 'header' | 'footer';
-}): JSX.Element {
+}): JSX.Element | null {
+  const isHeaderFooterVisible = useBlockEditorStore((state) => state.isHeaderFooterVisible);
+  if (!isHeaderFooterVisible) return null;
   const title = area === 'header' ? 'THEME - HEADER' : 'THEME - FOOTER';
   return (
     <div className={styles.themeFrameAnchor} aria-hidden="true">
@@ -48,26 +51,20 @@ const EditorCanvasThemeFrame = memo(function EditorCanvasThemeFrame({
 
 export default EditorCanvasThemeFrame;
 
-function labelOf(type: string): string {
-  return BLOCK_TYPES.find((entry) => entry.type === type)?.meta?.label ?? type;
-}
-
 /** Breadcrumb "Pagina > … > blocco selezionato": ogni segmento risale l'albero via store. */
 export function CanvasBreadcrumbBar(): JSX.Element {
   const selectNode = useBlockEditorStore((state) => state.selectNode);
-  // Stringhe primitive (`id\u0000type`): `useShallow` confronta gli elementi per riferimento,
-  // oggetti nuovi a ogni selezione causerebbero un loop di render.
-  const pathKeys = useBlockEditorStore(
-    useShallow((state) =>
-      state.selectedId
-        ? findPath(state.tree, state.selectedId).map((n) => `${n.id}\u0000${n.type}`)
-        : [],
-    ),
+  // Array di nodi reali (non stringhe): i nodi dell'albero sono referenzialmente stabili finché
+  // non modificati, quindi `useShallow` (confronto per riferimento elemento per elemento) non
+  // causa un loop di render — servono i nodi interi (non solo `id`/`type`) per derivare la label
+  // "Sezione"/"Colonna" via `getNodeLabel`, che guarda anche il genitore.
+  const path = useBlockEditorStore(
+    useShallow((state) => (state.selectedId ? findPath(state.tree, state.selectedId) : [])),
   );
-  const path = pathKeys.map((key) => {
-    const [id, type] = key.split('\u0000');
-    return { id, type };
-  });
+  // Posizione di inserimento dei tre trigger "Aggiungi sezione" (T-canvas-declutter-2): sempre
+  // in coda alla radice dell'albero, stesso `index` che il box tratteggiato rimosso passava a
+  // `CanvasAddSectionZone` da `RootAddSectionZone` (`EditorCanvasDropZones.tsx`, ora smontato).
+  const rootBlocksCount = useBlockEditorStore((state) => state.tree.length);
 
   return (
     <nav
@@ -103,12 +100,15 @@ export function CanvasBreadcrumbBar(): JSX.Element {
                 aria-current={isLast ? 'location' : undefined}
                 onClick={() => selectNode(node.id)}
               >
-                {labelOf(node.type)}
+                {getNodeLabel(node, index === 0 ? null : path[index - 1])}
               </button>
             </li>
           );
         })}
       </ol>
+      <div className={styles.breadcrumbActions}>
+        <CanvasAddSectionZone parentId={null} index={rootBlocksCount} />
+      </div>
     </nav>
   );
 }

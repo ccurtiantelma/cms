@@ -220,7 +220,14 @@ function ScaleNumberRow({
           max={limits.max}
           step={resolvedStep}
           decimalScale={unit ? THEME_UNIT_DECIMAL_SCALE[unit] : undefined}
-          suffix={unit ? ` ${unit}` : undefined}
+          rightSection={
+            unit ? (
+              <Text size="xs" c="dimmed">
+                {unit}
+              </Text>
+            ) : undefined
+          }
+          rightSectionWidth={unit ? 32 : undefined}
           onChange={(value) => {
             const bounded = toBoundedNumber(value, limits);
             if (bounded !== null) {
@@ -323,9 +330,14 @@ function PanelGeneral({ config, editScheme, updateConfig }: ThemeEditorPanelProp
                 });
               }
             }}
-            suffix="°"
+            rightSection={
+              <Text size="xs" c="dimmed">
+                °
+              </Text>
+            }
+            rightSectionWidth={22}
             aria-label="Gradiente: angolo in gradi (valore esatto)"
-            style={{ width: 52, flexShrink: 0 }}
+            style={{ width: 66, flexShrink: 0 }}
           />
         </Group>
       </Group>
@@ -644,7 +656,12 @@ function PanelScales({ config, updateConfig }: ThemeEditorPanelProps): JSX.Eleme
               max={THEME_DIMENSION_UNIT_LIMITS.shadowY[config.shadowUnit].max}
               step={THEME_UNIT_STEP[config.shadowUnit]}
               decimalScale={THEME_UNIT_DECIMAL_SCALE[config.shadowUnit]}
-              suffix={` ${config.shadowUnit}`}
+              rightSection={
+                <Text size="xs" c="dimmed">
+                  {config.shadowUnit}
+                </Text>
+              }
+              rightSectionWidth={32}
               onChange={(value) => {
                 const bounded = toBoundedNumber(
                   value,
@@ -667,7 +684,12 @@ function PanelScales({ config, updateConfig }: ThemeEditorPanelProps): JSX.Eleme
               max={THEME_DIMENSION_UNIT_LIMITS.shadowBlur[config.shadowUnit].max}
               step={THEME_UNIT_STEP[config.shadowUnit]}
               decimalScale={THEME_UNIT_DECIMAL_SCALE[config.shadowUnit]}
-              suffix={` ${config.shadowUnit}`}
+              rightSection={
+                <Text size="xs" c="dimmed">
+                  {config.shadowUnit}
+                </Text>
+              }
+              rightSectionWidth={32}
               onChange={(value) => {
                 const bounded = toBoundedNumber(
                   value,
@@ -690,7 +712,12 @@ function PanelScales({ config, updateConfig }: ThemeEditorPanelProps): JSX.Eleme
               max={THEME_DIMENSION_UNIT_LIMITS.shadowSpread[config.shadowUnit].max}
               step={THEME_UNIT_STEP[config.shadowUnit]}
               decimalScale={THEME_UNIT_DECIMAL_SCALE[config.shadowUnit]}
-              suffix={` ${config.shadowUnit}`}
+              rightSection={
+                <Text size="xs" c="dimmed">
+                  {config.shadowUnit}
+                </Text>
+              }
+              rightSectionWidth={32}
               onChange={(value) => {
                 const bounded = toBoundedNumber(
                   value,

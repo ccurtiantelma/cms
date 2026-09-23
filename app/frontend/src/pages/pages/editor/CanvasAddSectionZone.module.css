@@ -1,94 +1,41 @@
 /*
- * CanvasAddSectionZone.tsx — zona di inserimento sezione sempre visibile in-canvas.
- * Restyle Elementor Pro (richiesta esplicita del task, valori letterali della spec): box
- * tratteggiato `#d5d8dc` con sfondo bianco, tre pulsanti circolari da 36px con un colore
- * dedicato ciascuno. Il selettore di struttura vero e proprio (box tratteggiati dei
- * preset) vive in `SectionStructureModal.module.css`, non qui: questo file resta solo il
- * trigger.
+ * CanvasAddSectionZone.tsx — tre trigger compatti di inserimento sezione, montati nella riga
+ * sticky del breadcrumb in fondo al canvas (`CanvasBreadcrumbBar`, `EditorCanvasThemeFrame.tsx`
+ * — T-canvas-declutter-2). Il vecchio box tratteggiato "Trascina il widget qui" (ingombro
+ * verticale fisso nel flusso del canvas) è stato rimosso: solo i tre pulsanti restano, ridotti
+ * a icone da 14px coerenti con le altre icone della topbar/breadcrumb.
  */
 
 .zone {
-  width: 100%;
-}
-
-/* Box del trigger: bordo tratteggiato e sfondo bianco, centrato e limitato in larghezza
-   (valori letterali della spec). */
-.box {
-  max-width: none;
-  min-height: 180px;
-  margin: 20px auto;
-  border: 1px dashed #d5d8dc;
-  border-radius: 4px;
-  padding: 24px;
-  background-color: #ffffff;
-  text-align: center;
-  transition:
-    border-color 120ms ease,
-    background-color 120ms ease;
-}
-
-[data-mantine-color-scheme='dark'] .box {
-  border-color: var(--mantine-color-dark-4);
-  background-color: var(--mantine-color-dark-6);
+  display: inline-flex;
+  align-items: center;
 }
 
 /*
-  I tre pulsanti circolari condividono forma/dimensione (36px di diametro): solo il
-  colore di sfondo/icona cambia. `variant="filled"` di Mantine calcola il proprio sfondo
-  da `color`/`theme.primaryColor` via custom property interna, che una singola classe
-  della stessa specificità non batte in modo affidabile — da qui `!important`, mirato
-  solo a questi tre pulsanti (stesso idioma già in uso in questo file prima del restyle).
-*/
+ * I tre trigger ("+" struttura, cartella libreria, importa preset) uniformati al blu primario
+ * della topbar (`Toolbar.module.css` § icone `ActionIcon variant="subtle"` —
+ * `--mantine-primary-color-filled`): stessa approssimazione statica dichiarata sopra in
+ * `EditorCanvasThemeFrame.module.css` § `.breadcrumbBar` (le custom property Mantine non
+ * attraversano il confine dell'iframe). Sfondo/bordo restano quelli nativi di `ActionIcon
+ * variant="subtle"` (transparent/none): qui si forza solo il colore icona e l'hover, come fa
+ * `.root :global(.mantine-ActionIcon-root[data-variant='subtle'])` nella topbar.
+ */
 .addButton,
-.addButton:hover,
-.addButton:focus,
 .templateButton,
-.templateButton:hover,
-.templateButton:focus,
-.importButton,
-.importButton:hover,
-.importButton:focus {
-  width: 60px !important;
-  height: 60px !important;
-  min-width: 60px !important;
-  min-height: 60px !important;
-  margin: 0 6px !important;
-  border-radius: 50% !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  cursor: pointer;
+.importButton {
+  /* Il CSS di Mantine (`@mantine/core/styles.css`) non è clonato nell'iframe (commento di
+     testa `IframeCanvas.tsx` § "Non clonato"): `ActionIcon` qui rende come un `<button>` senza
+     alcuno stile di libreria, quindi il reset background/border va dichiarato esplicitamente,
+     non solo il colore icona come basterebbe nella topbar (documento padre, Mantine reale). */
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #2271b1;
 }
 
-/* Pulsante 1 — "+": scegli la struttura della sezione (Aggiungi Struttura). Cerchio
-   grigio chiaro, icona grigio scuro — non più il riempimento a colore pieno. */
-.addButton,
 .addButton:hover,
-.addButton:focus {
-  background-color: #e6e8ea !important;
-  color: #6d787a !important;
-}
-
-/* Pulsante 2 — cartella: libreria template. Cerchio nero, icona bianca. */
-.templateButton,
 .templateButton:hover,
-.templateButton:focus {
-  background-color: #23282d !important;
-  color: #ffffff !important;
-}
-
-/* Pulsante 3 — importa un preset JSON. */
-.importButton,
-.importButton:hover,
-.importButton:focus {
-  background-color: #e040fb !important;
-  color: #ffffff !important;
-}
-
-.helperText {
-  margin-top: 10px;
-  font-size: 13px;
-  font-style: italic;
-  color: #8c8f94;
-  text-align: center;
+.importButton:hover {
+  background: rgba(34, 113, 177, 0.12);
+  color: #2271b1;
 }

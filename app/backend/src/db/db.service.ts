@@ -16,7 +16,10 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
 
   /** Inizializza il pool di connessioni e il client Drizzle all'avvio del modulo. */
   async onModuleInit(): Promise<void> {
-    this.client = new Pool({ connectionString: AppConstants.databaseUrl });
+    this.client = new Pool({
+      connectionString: AppConstants.databaseUrl,
+      max: AppConstants.databasePoolMax,
+    });
     this.db = drizzle(this.client, { schema });
   }
 

@@ -28,6 +28,8 @@
  */
 import { createElement, type CSSProperties, type ReactNode } from 'react';
 import styles from './Container.module.css';
+import { useActiveBreakpoint, useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
+import { resolveGridOutlineColumnCount } from './grid-outline.utils';
 
 /** `tag` (ADR-82 § "Decisione" punto 1): elenco chiuso a 8 nomi, default `'div'`. */
 const ALLOWED_TAGS = [
@@ -101,6 +103,15 @@ interface ContainerProps {
   htmlId?: unknown;
   cssClass?: unknown;
   defaultDirection?: 'row' | 'column';
+  /**
+   * Valore grezzo di `layout` (`kind: 'layout'`, `container` v2, ADR-82), passato **solo**
+   * dal canvas editor (`resolve-container-props.ts`) per l'overlay "Contorno griglia"
+   * (T-container-layout-tab) — mai dal sito pubblico (`BlockRenderer.tsx` non lo valorizza,
+   * lo stile reale resta sempre e solo il Runtime Style Bridge via `data-canvas-style-id`,
+   * vedi il commento di testa del file). Facoltativo: la sua assenza equivale a "nessun
+   * overlay", mai a un errore.
+   */
+  layout?: unknown;
 }
 
 export default function Container({
@@ -115,7 +126,20 @@ export default function Container({
   htmlId,
   cssClass,
   defaultDirection,
+  layout,
 }: ContainerProps) {
+  // "Contorno griglia" (`ContainerLayoutTab.tsx`, Accordion "Elementi"): stato UI puramente
+  // effimero, selettore mirato per id — un cambio dell'overlay su un altro nodo non
+  // ri-renderizza questo componente (CLAUDE.md § dominio CMS, "selettori Zustand mirati").
+  // Zero impatto sul markup salvato/pubblico: non scrive alcuna prop, solo un `<div>`
+  // decorativo `aria-hidden` in più nel DOM del canvas admin.
+  const isGridOutlineVisible = useBlockEditorStore(
+    (state) => id !== undefined && state.gridOutlineNodeId === id,
+  );
+  const activeBreakpoint = useActiveBreakpoint();
+  const gridOutlineColumnCount = isGridOutlineVisible
+    ? resolveGridOutlineColumnCount(layout, activeBreakpoint)
+    : null;
   const resolvedTag = resolveTag(tag);
 
   const className = [styles.container, typeof cssClass === 'string' && cssClass ? cssClass : '']
@@ -129,14 +153,46 @@ export default function Container({
   if (isUnitValue(minHeight)) {
     style.minHeight = unitValueToCss(minHeight);
   }
-  if (contentWidth === 'boxed' && isUnitValue(boxedWidth)) {
-    style.maxWidth = unitValueToCss(boxedWidth);
+  if (contentWidth === 'boxed') {
+    // `boxedWidth` è opzionale (nessun default, `container.block.ts`): un container "boxed"
+    // senza un valore esplicito contava finora sull'ancestor `.pageBoxed` (il wrapper di
+    // pagina, `max-width: var(--theme-layout-boxed-width)`) per apparire vincolato — un
+    // no-op mascherato dalla coincidenza che quasi tutto vive dentro `.pageBoxed`. Un
+    // ancestor "full" che ora esce da `.pageBoxed` (sotto) smaschera il caso: qui ricade
+    // sulla stessa variabile tema, mai un valore magico duplicato.
+    style.maxWidth = isUnitValue(boxedWidth)
+      ? unitValueToCss(boxedWidth)
+      : 'var(--theme-layout-boxed-width, none)';
     style.marginLeft = 'auto';
     style.marginRight = 'auto';
+  }
+  // `contentWidth === 'full'`: un container annidato dentro `.pageBoxed`
+  // (`max-width` del tema, `app/public-site/src/PageView.css`) resterebbe comunque
+  // limitato a quella larghezza senza un'uscita esplicita — lo sfondo/contenuto "Full
+  // Width" deve invece coprire l'intera viewport. Tecnica full-bleed standard senza
+  // `width: 100vw` (eviterebbe overflow orizzontale dovuto alla scrollbar).
+  if (contentWidth === 'full') {
+    style.marginLeft = 'calc(50% - 50vw)';
+    style.marginRight = 'calc(50% - 50vw)';
   }
   if (overflow === 'visible' || overflow === 'hidden' || overflow === 'auto') {
     style.overflow = overflow;
   }
+
+  // Overlay "Contorno griglia": bande verticali equidistanti (`repeating-linear-gradient`),
+  // una ogni `100% / gridOutlineColumnCount` — puramente decorativo, `aria-hidden`, mai nel
+  // markup salvato/pubblico (il sito pubblico non monta mai questo ramo, `gridOutlineNodeId`
+  // non esiste fuori dallo store dell'editor).
+  const gridOutlineOverlay =
+    gridOutlineColumnCount !== null
+      ? createElement('div', {
+          className: styles.gridOutline,
+          'aria-hidden': 'true',
+          style: {
+            backgroundImage: `repeating-linear-gradient(to right, var(--grid-outline-color, rgba(217, 26, 122, 0.5)) 0, var(--grid-outline-color, rgba(217, 26, 122, 0.5)) 1px, transparent 1px, transparent calc(100% / ${gridOutlineColumnCount}))`,
+          },
+        })
+      : null;
 
   // `createElement` invece di JSX (`<Tag>`): `resolvedTag` è solo una stringa di nome-tag
   // ('div'/'section'/...), mai un componente — usare JSX con un identificatore capitalizzato
@@ -152,6 +208,7 @@ export default function Container({
       'data-default-direction': defaultDirection,
       style: Object.keys(style).length > 0 ? style : undefined,
     },
+    gridOutlineOverlay,
     children,
   );
 }

@@ -619,7 +619,7 @@ describe('EditorBlockWrapper — identità "Sezione" preservata su container mig
     useBlockEditorStore.getState().initTree([plainContainer]);
 
     const { container } = renderWithProviders(<EditorBlockWrapper id="cont-div-1" />);
-    const wrapperEl = container.querySelector('[data-block-id="cont-div-1"]');
+    const wrapperEl = container.querySelector<HTMLElement>('[data-block-id="cont-div-1"]');
     if (!wrapperEl) throw new Error('wrapper non trovato');
 
     fireEvent.mouseOver(wrapperEl);

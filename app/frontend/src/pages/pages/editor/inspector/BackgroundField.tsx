@@ -214,7 +214,12 @@ export default function BackgroundField({
               aria-label={`${label} — Angolo`}
               min={0}
               max={360}
-              suffix="°"
+              rightSection={
+                <Text size="xs" c="dimmed">
+                  °
+                </Text>
+              }
+              rightSectionWidth={22}
               value={gradient.angle ?? 180}
               onChange={(next) =>
                 writeGradient({ ...gradient, angle: typeof next === 'number' ? next : 180 })
@@ -247,7 +252,12 @@ export default function BackgroundField({
                 aria-label={`${label} — Punto colore ${index + 1} — Posizione`}
                 min={0}
                 max={100}
-                suffix="%"
+                rightSection={
+                  <Text size="xs" c="dimmed">
+                    %
+                  </Text>
+                }
+                rightSectionWidth={22}
                 w={90}
                 value={stop.at}
                 onChange={(next) =>

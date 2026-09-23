@@ -1,6 +1,6 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { SkipThrottle, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { GlobalSectionsService } from './global-sections.service';
 import { PublicActiveGlobalSectionsDto } from './dto/public-active-global-sections.dto';
 
@@ -14,6 +14,9 @@ import { PublicActiveGlobalSectionsDto } from './dto/public-active-global-sectio
 @ApiTags('Public Global Sections')
 @Controller('public/global-sections')
 @UseGuards(ThrottlerGuard)
+// Il throttler `auth` (20/min) è per /auth/*: qui vale solo `public`, altrimenti
+// render SSR ed export (tutti da un solo IP) finiscono in 429 -> 500 sul public-site.
+@SkipThrottle({ auth: true })
 export class PublicGlobalSectionsController {
   /**
    * Inietta il service di dominio delle Sezioni Globali.

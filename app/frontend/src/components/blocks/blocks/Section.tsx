@@ -30,8 +30,17 @@ import {
   resolveScalarClassName,
 } from '../style-tokens';
 import { resolveMediaSrc } from '../media-url';
+import { useActiveBreakpoint, useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
+import { resolveGridOutlineColumnCount } from './grid-outline.utils';
 
 interface SectionProps {
+  /** `node.id` strutturale, mai una prop del blocco — bersaglio di `data-canvas-style-id`
+   * per i valori liberi PropKind v2 (es. `styleBackgroundColor`/`kind: 'background'`,
+   * ADR-96) compilati da `generateCanvasCss.ts` col selettore `[data-canvas-style-id="<id>"]`.
+   * Stesso pattern già in uso da `Container.tsx` — senza questo attributo sull'elemento
+   * radice, quelle regole non trovano mai il proprio bersaglio né in editor né in anteprima
+   * pubblica (entrambi consumano lo stesso `generateCanvasCss.ts`). */
+  id?: string;
   children: ReactNode;
   styleSpaceBefore?: unknown;
   styleSpaceAfter?: unknown;
@@ -75,9 +84,19 @@ interface SectionProps {
   styleGradientStart?: unknown;
   /** ADR-50: colore finale del gradiente, applicato solo quando il tipo è `gradient`. */
   styleGradientEnd?: unknown;
+  /**
+   * `section` v1 non dichiara mai `kind: 'layout'` nel registro (ADR-82 § "Decisione" punto
+   * 2: nessuna prop nuova per questo tipo deprecato) — questa prop resta sempre `undefined`
+   * in pratica. Dichiarata comunque, e wired allo stesso overlay "Contorno griglia" di
+   * `Container.tsx`, solo per uniformità di superficie fra i due contenitori dell'ADR-82: se
+   * mai un contenuto pre-migrazione portasse un `layout` residuo, l'overlay lo onorerebbe
+   * senza codice ulteriore.
+   */
+  layout?: unknown;
 }
 
 export default function Section({
+  id,
   children,
   styleSpaceBefore,
   styleSpaceAfter,
@@ -112,7 +131,17 @@ export default function Section({
   styleBackgroundSize,
   styleGradientStart,
   styleGradientEnd,
+  layout,
 }: SectionProps) {
+  // "Contorno griglia" (`ContainerLayoutTab.tsx`): stesso selettore mirato di `Container.tsx`,
+  // vedi il commento di testa della prop `layout` sopra.
+  const isGridOutlineVisible = useBlockEditorStore(
+    (state) => id !== undefined && state.gridOutlineNodeId === id,
+  );
+  const activeBreakpoint = useActiveBreakpoint();
+  const gridOutlineColumnCount = isGridOutlineVisible
+    ? resolveGridOutlineColumnCount(layout, activeBreakpoint)
+    : null;
   // ADR-33 § 1 — logica di rendering, non di validazione: `maxWidth` resta dichiarato e
   // validato server-side anche quando `contentWidth === 'full-width'`, ma il renderer lo
   // ignora in quel caso (una Section a piena larghezza non ha senso di avere anche un
@@ -225,6 +254,19 @@ export default function Section({
   // Sfondo (colore/immagine/gradiente): resta sul `<section>` esterno, mai sul wrapper del
   // contenuto — stessa ragione dello split di classi sopra.
   const outerInlineStyle: CSSProperties = {
+    // Bug "sfondo Full Width clippato" (diagnosi Puppeteer su /test-21, task dedicato):
+    // il `<section>` esterno porta già lo sfondo a prescindere da `contentWidth` (split
+    // sfondo/contenuto sopra), ma la sua PROPRIA larghezza resta comunque vincolata
+    // dall'antenato `.pageBoxed` (`PageView.css`, sito pubblico — `max-width:
+    // var(--theme-layout-boxed-width, none)`), quando il tema ha un layout "Boxed" con una
+    // larghezza configurata: lo sfondo non raggiunge mai il bordo reale della viewport,
+    // solo quello del box centrale. Tecnica "full-bleed" standard (margini negativi pari a
+    // metà differenza fra viewport e contenitore, senza `width: 100vw` — quest'ultimo
+    // includerebbe la scrollbar verticale e produrrebbe overflow orizzontale spurio): fa
+    // uscire il solo `<section>` dal contenitore boxed, mentre il wrapper interno
+    // `.content` (che porta il vero vincolo di larghezza del contenuto, ADR-33 § 1) resta
+    // invariato e continua a centrarsi. No-op quando `contentWidth !== 'full-width'`.
+    ...(isFullWidth ? { marginLeft: 'calc(50% - 50vw)', marginRight: 'calc(50% - 50vw)' } : {}),
     ...(typeof styleBackgroundColor === 'string' && styleBackgroundColor
       ? { backgroundColor: styleBackgroundColor }
       : {}),
@@ -257,8 +299,22 @@ export default function Section({
     ...(hasOverlayOpacity ? { opacity: styleOverlayOpacity as number } : {}),
   };
 
+  // Overlay "Contorno griglia" (vedi il commento di testa della prop `layout`): stesso
+  // pattern `repeating-linear-gradient` di `Container.tsx`, in pratica mai renderizzato per
+  // `section` (nessuna prop `layout` reale su questo tipo v1).
+  const gridOutlineStyle: CSSProperties | undefined =
+    gridOutlineColumnCount !== null
+      ? {
+          backgroundImage: `repeating-linear-gradient(to right, var(--grid-outline-color, rgba(217, 26, 122, 0.5)) 0, var(--grid-outline-color, rgba(217, 26, 122, 0.5)) 1px, transparent 1px, transparent calc(100% / ${gridOutlineColumnCount}))`,
+        }
+      : undefined;
+
   return (
-    <section className={outerClassName} style={hasOuterInlineStyle ? outerInlineStyle : undefined}>
+    <section
+      data-canvas-style-id={id}
+      className={outerClassName}
+      style={hasOuterInlineStyle ? outerInlineStyle : undefined}
+    >
       {hasOverlay ? (
         <div className={styles.overlay} style={overlayStyle} aria-hidden="true" />
       ) : null}
@@ -266,6 +322,9 @@ export default function Section({
         className={contentClassName}
         style={hasContentInlineStyle ? contentInlineStyle : undefined}
       >
+        {gridOutlineStyle ? (
+          <div className={styles.gridOutline} style={gridOutlineStyle} aria-hidden="true" />
+        ) : null}
         {children}
       </div>
     </section>

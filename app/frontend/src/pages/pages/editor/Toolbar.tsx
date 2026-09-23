@@ -6,6 +6,9 @@ import {
   IconChevronDown,
   IconDeviceFloppy,
   IconEye,
+  IconLayoutNavbar,
+  IconLayoutSidebarLeftCollapse,
+  IconLayoutSidebarLeftExpand,
 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 import type { ResponsiveBreakpointName } from '../../../types/blocks.types';
@@ -29,6 +32,17 @@ export interface ToolbarProps {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
+  /**
+   * Visibilità corrente della sidebar sinistra (`EditorSidebarShell`). Il toggle vive qui
+   * (richiesta esplicita del task, non più dentro la sidebar stessa), subito a sinistra del
+   * toggle Header/Footer sotto.
+   */
+  isSidebarVisible: boolean;
+  onToggleSidebarVisible: () => void;
+  /** Visibilità corrente dei badge `THEME - HEADER`/`THEME - FOOTER` del canvas (ADR-93). */
+  isHeaderFooterVisible: boolean;
+  /** Alterna la visibilità dei badge `THEME - HEADER`/`THEME - FOOTER` del canvas. */
+  onToggleHeaderFooterVisible: () => void;
   hasUnsavedChanges: boolean;
   saving: boolean;
   /** Salva la bozza corrente (`PATCH`, lock ottimistico) — mai una transizione di stato. */
@@ -75,6 +89,10 @@ export default function Toolbar({
   canRedo,
   onUndo,
   onRedo,
+  isSidebarVisible,
+  onToggleSidebarVisible,
+  isHeaderFooterVisible,
+  onToggleHeaderFooterVisible,
   hasUnsavedChanges,
   saving,
   onSaveDraft,
@@ -128,6 +146,39 @@ export default function Toolbar({
             onClick={onRedo}
           >
             <IconArrowForwardUp size={16} />
+          </ActionIcon>
+        </Tooltip>
+        <Tooltip
+          label={isSidebarVisible ? 'Comprimi pannello sinistro' : 'Espandi pannello sinistro'}
+          withArrow
+        >
+          <ActionIcon
+            variant="subtle"
+            size="lg"
+            aria-label="Alterna pannello sinistro"
+            aria-pressed={isSidebarVisible}
+            onClick={onToggleSidebarVisible}
+          >
+            {isSidebarVisible ? (
+              <IconLayoutSidebarLeftCollapse size={18} />
+            ) : (
+              <IconLayoutSidebarLeftExpand size={18} />
+            )}
+          </ActionIcon>
+        </Tooltip>
+        <Tooltip
+          label={isHeaderFooterVisible ? 'Nascondi Header/Footer' : 'Mostra Header/Footer'}
+          withArrow
+        >
+          <ActionIcon
+            variant="subtle"
+            size="lg"
+            aria-label="Alterna Header/Footer"
+            aria-pressed={isHeaderFooterVisible}
+            className={isHeaderFooterVisible ? undefined : styles.headerFooterToggleInactive}
+            onClick={onToggleHeaderFooterVisible}
+          >
+            <IconLayoutNavbar size={18} />
           </ActionIcon>
         </Tooltip>
         {leadingActions}

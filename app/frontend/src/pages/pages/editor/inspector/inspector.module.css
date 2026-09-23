@@ -264,3 +264,84 @@
 [data-mantine-color-scheme='dark'] .accordion :global(.mantine-Accordion-control) {
   color: var(--mantine-color-dark-0);
 }
+
+/*
+  SegmentedControl "Disposizione" (Flex/Griglia) e "Larghezza contenuto" (Boxed/Full width),
+  `ContainerLayoutTab.tsx`: stato selezionato con sfondo blu chiaro e testo/icona blu (parità
+  Elementor Pro, richiesta esplicita utente 2026-09-23) invece del bianco/ombra di default
+  Mantine — `root` con bordo sottile e sfondo bianco invece dello sfondo grigio di default,
+  perché il solo accento voluto è lo sfondo blu del segmento attivo. `input:checked + label`
+  (fratelli nel DOM di Mantine) invece di `[data-active]`: quest'ultimo non è documentato per
+  `label` nella Styles API di `SegmentedControl` (solo `root`/`control`), il selettore
+  `:checked` è l'unico garantito dalla struttura radio nativa (sezione Accessibilità dei doc).
+  L'icona eredita il colore via `currentColor` (default `@tabler/icons-react`), nessuna regola
+  dedicata sull'SVG.
+*/
+.segmentedRoot {
+  border: 1px solid var(--mantine-color-gray-3);
+  background-color: var(--mantine-color-white);
+}
+
+.segmentedIndicator {
+  background-color: var(--mantine-color-blue-0);
+  box-shadow: none;
+}
+
+.segmentedLabel {
+  color: var(--mantine-color-gray-6);
+}
+
+.segmentedInput:checked + .segmentedLabel {
+  color: var(--mantine-color-blue-8);
+}
+
+[data-mantine-color-scheme='dark'] .segmentedRoot {
+  border-color: var(--mantine-color-dark-4);
+  background-color: var(--mantine-color-dark-7);
+}
+
+[data-mantine-color-scheme='dark'] .segmentedIndicator {
+  background-color: rgba(34, 139, 230, 0.15);
+}
+
+[data-mantine-color-scheme='dark'] .segmentedLabel {
+  color: var(--mantine-color-dark-1);
+}
+
+[data-mantine-color-scheme='dark'] .segmentedInput:checked + .segmentedLabel {
+  color: var(--mantine-color-blue-3);
+}
+
+/*
+  Campi `boxedWidth`/`minHeight` (`PropField.tsx`, `case 'unitValue'`): icona desktop decorativa
+  accanto all'etichetta e Select unità senza bordo/sfondo, stile Elementor Pro (screenshot
+  allegato dall'utente 2026-09-23) — nessuno dei due campi è `responsive` nel registro
+  (`container.block.ts`), l'icona è quindi puramente estetica, non un vero switch di
+  breakpoint (quello resta `BreakpointSwitcher.tsx`, unico proprietario di quel comportamento).
+*/
+.unitFieldDeviceIcon {
+  flex-shrink: 0;
+  color: var(--mantine-color-gray-5);
+}
+
+.unitFieldUnitSelect {
+  width: 60px;
+  flex-shrink: 0;
+}
+
+.unitFieldUnitSelect :global(.mantine-Select-input) {
+  min-height: unset;
+  height: auto;
+  padding: 0 18px 0 0;
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-gray-6);
+  text-align: right;
+}
+
+[data-mantine-color-scheme='dark'] .unitFieldDeviceIcon {
+  color: var(--mantine-color-dark-2);
+}
+
+[data-mantine-color-scheme='dark'] .unitFieldUnitSelect :global(.mantine-Select-input) {
+  color: var(--mantine-color-dark-1);
+}
