@@ -124,6 +124,10 @@ const ENUM_VALUE_LABELS: Record<string, Record<string, string>> = {
     none: 'Nessuno',
   },
   styleAlign: { left: 'Sinistra', center: 'Centro', right: 'Destra' },
+  // `container`/`section` v2 (ADR-82), riusato da `ContainerLayoutTab.tsx` (T-container-
+  // layout-tab) per l'etichetta "Larghezza piena"/"Boxed" — stesso `Select`
+  // generico di questo `case 'enum'`, nessun controllo dedicato duplicato.
+  contentWidth: { boxed: 'Boxed', full: 'Larghezza piena' },
 };
 
 /**
