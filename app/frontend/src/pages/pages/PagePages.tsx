@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react';
 import { Badge, Button, Group, ScrollArea, Select, Stack, Text, TextInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-import { IconEye, IconPencil, IconRefresh, IconTrash } from '@tabler/icons-react';
+import { IconEye, IconPencil, IconRefresh, IconTrash, IconFileText, IconEyeCheck, IconClock, IconCheck, IconArchive } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { useAuthStore } from '../../hooks/useAuth';
@@ -327,6 +327,14 @@ export default function PagePages(): JSX.Element {
 
   const { visibleColumns, isVisible, toggle } = useColumnVisibility('app.columns.pages', columns);
 
+  const statusIcons: Record<PageStatus, typeof IconFileText> = {
+    draft: IconFileText,
+    review: IconEyeCheck,
+    scheduled: IconClock,
+    published: IconCheck,
+    archived: IconArchive,
+  };
+
   return (
     <div>
       <PageHeader
@@ -335,6 +343,7 @@ export default function PagePages(): JSX.Element {
         kpis={PAGE_STATUSES.map((status) => ({
           value: statusCounts[status] ?? 0,
           label: PAGE_STATUS_LABELS[status],
+          icon: statusIcons[status],
           color: PAGE_STATUS_COLORS[status] as any,
         }))}
       />

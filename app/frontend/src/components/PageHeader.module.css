@@ -68,9 +68,9 @@
   align-items: center;
   gap: 12px;
   padding: 10px 18px 10px 12px;
+  border-radius: 14px;
   background: var(--mantine-color-starterPrimary-0);
   border: 1px solid var(--mantine-color-starterPrimary-1);
-  border-radius: 14px;
 }
 
 .kpiIcon {
@@ -88,74 +88,106 @@
 
 .kpiGreen {
   background: var(--mantine-color-green-0);
-  border-color: var(--mantine-color-green-1);
+  border: 1px solid var(--mantine-color-green-1);
 }
 
 .kpiGreen .kpiIcon {
   background: var(--mantine-color-green-6);
 }
 
+.kpiGreen .kpiValue {
+  color: var(--mantine-color-green-9);
+}
+
 .kpiGray {
   background: var(--mantine-color-gray-0);
-  border-color: var(--mantine-color-gray-1);
+  border: 1px solid var(--mantine-color-gray-1);
 }
 
 .kpiGray .kpiIcon {
   background: var(--mantine-color-gray-6);
 }
 
+.kpiGray .kpiValue {
+  color: var(--mantine-color-gray-9);
+}
+
 .kpiYellow {
   background: var(--mantine-color-yellow-0);
-  border-color: var(--mantine-color-yellow-1);
+  border: 1px solid var(--mantine-color-yellow-1);
 }
 
 .kpiYellow .kpiIcon {
   background: var(--mantine-color-yellow-6);
 }
 
+.kpiYellow .kpiValue {
+  color: var(--mantine-color-yellow-9);
+}
+
 .kpiCyan {
   background: var(--mantine-color-cyan-0);
-  border-color: var(--mantine-color-cyan-1);
+  border: 1px solid var(--mantine-color-cyan-1);
 }
 
 .kpiCyan .kpiIcon {
   background: var(--mantine-color-cyan-6);
 }
 
+.kpiCyan .kpiValue {
+  color: var(--mantine-color-cyan-9);
+}
+
 .kpiDark {
   background: var(--mantine-color-dark-0);
-  border-color: var(--mantine-color-dark-1);
+  border: 1px solid var(--mantine-color-dark-1);
 }
 
 .kpiDark .kpiIcon {
   background: var(--mantine-color-dark-6);
 }
 
+.kpiDark .kpiValue {
+  color: var(--mantine-color-dark-9);
+}
+
 .kpiBlue {
   background: var(--mantine-color-blue-0);
-  border-color: var(--mantine-color-blue-1);
+  border: 1px solid var(--mantine-color-blue-1);
 }
 
 .kpiBlue .kpiIcon {
   background: var(--mantine-color-blue-6);
 }
 
+.kpiBlue .kpiValue {
+  color: var(--mantine-color-blue-9);
+}
+
 .kpiRed {
   background: var(--mantine-color-red-0);
-  border-color: var(--mantine-color-red-1);
+  border: 1px solid var(--mantine-color-red-1);
 }
 
 .kpiRed .kpiIcon {
   background: var(--mantine-color-red-6);
 }
 
+.kpiRed .kpiValue {
+  color: var(--mantine-color-red-9);
+}
+
 .kpiViolet {
   background: var(--mantine-color-violet-0);
-  border-color: var(--mantine-color-violet-1);
+  border: 1px solid var(--mantine-color-violet-1);
 }
 
 .kpiViolet .kpiIcon {
   background: var(--mantine-color-violet-6);
+}
+
+.kpiViolet .kpiValue {
+  color: var(--mantine-color-violet-9);
 }
 
 .kpiText {
@@ -168,7 +200,6 @@
   font-size: 26px;
   font-weight: 800;
   line-height: 1;
-  color: var(--mantine-color-starterPrimary-9);
 }
 
 .kpiLabel {
