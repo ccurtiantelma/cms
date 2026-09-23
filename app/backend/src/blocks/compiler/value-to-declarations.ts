@@ -173,9 +173,7 @@ export function backgroundToDeclarations(value: unknown): CssDeclaration[] {
       if (background.color === undefined) {
         return [];
       }
-      return [
-        { property: 'background-color', value: colorRefValueToCss(background.color) },
-      ];
+      return [{ property: 'background-color', value: colorRefValueToCss(background.color) }];
     case 'gradient':
       if (background.gradient === undefined) {
         return [];

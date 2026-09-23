@@ -182,12 +182,15 @@ describe('container figlio vuoto: nessun vincolo di altezza minima nel consumer 
     // `<div>` con la classe di base e `data-canvas-style-id` (Container.tsx, ADR-82: bersaglio
     // del Runtime Style Bridge, emesso sia in editor sia sul sito pubblico — non un secondo
     // `id` strutturale), nessun attributo `style`, nessuna classe riconducibile all'affordance
-    // di editing `.emptyContainer` o al segnaposto `.contentPlaceholder`.
+    // di editing `.emptyContainer` o al segnaposto `.contentPlaceholder`. `data-default-direction`
+    // è l'hook dati con cui `Container.tsx` porta la direzione di default al CSS, non uno stile.
     expect(main).not.toMatch(/min-height/i);
     expect(main).not.toMatch(/emptyContainer/);
     expect(main).not.toMatch(/contentPlaceholder/);
     expect(main).not.toContain('style=');
-    expect(main).toMatch(/<div class="[^"]*container[^"]*" data-canvas-style-id="[^"]*"><\/div>/);
+    expect(main).toMatch(
+      /<div class="[^"]*container[^"]*" data-canvas-style-id="[^"]*"(?: data-default-direction="[^"]*")?><\/div>/,
+    );
   });
 
   /**

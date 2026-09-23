@@ -13,7 +13,17 @@ import { useEffect, useState } from 'react';
 import { Badge, Button, Group, ScrollArea, Select, Stack, Text, TextInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-import { IconEye, IconPencil, IconRefresh, IconTrash, IconFileText, IconEyeCheck, IconClock, IconCheck, IconArchive } from '@tabler/icons-react';
+import {
+  IconEye,
+  IconPencil,
+  IconRefresh,
+  IconTrash,
+  IconFileText,
+  IconEyeCheck,
+  IconClock,
+  IconCheck,
+  IconArchive,
+} from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { useAuthStore } from '../../hooks/useAuth';
@@ -38,7 +48,7 @@ import type {
 } from '../../types/pages.types';
 import { PAGE_STATUS_COLORS, PAGE_STATUS_LABELS, PAGE_STATUSES } from '../../types/pages.types';
 import ListToolbar from '../../components/ListToolbar';
-import PageHeader from '../../components/PageHeader';
+import PageHeader, { type PageHeaderKpi } from '../../components/PageHeader';
 import ContentCard from '../../components/ContentCard';
 import ResponsiveTable, { type ResponsiveTableColumn } from '../../components/ResponsiveTable';
 import ColumnSelector from '../../components/ColumnSelector';
@@ -179,8 +189,8 @@ export default function PagePages(): JSX.Element {
             fetchPages({ status, i: 1, p: 1 }).then((result) => ({
               status,
               count: result.totalItems,
-            }))
-          )
+            })),
+          ),
         );
         const countsMap: Partial<Record<PageStatus, number>> = {};
         counts.forEach(({ status, count }) => {
@@ -344,7 +354,7 @@ export default function PagePages(): JSX.Element {
           value: statusCounts[status] ?? 0,
           label: PAGE_STATUS_LABELS[status],
           icon: statusIcons[status],
-          color: PAGE_STATUS_COLORS[status] as any,
+          color: PAGE_STATUS_COLORS[status] as NonNullable<PageHeaderKpi['color']>,
         }))}
       />
 

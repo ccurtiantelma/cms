@@ -14,10 +14,10 @@
  *
  * `ADR-82-container-unificato-grid-flex.md` § "Decisione" punto 1 sostituisce, per
  * `container` `v: 2`, le vecchie `styleWidth`/`styleHeight` con `boxedWidth`/`minHeight`
- * (stesso `kind: 'unitValue'`, intervalli e unità propri — `boxedWidth` resta `px`/`%`,
- * `minHeight` dichiara `px`/`vh`: quest'ultima non pilotabile da questa maniglia, che si ferma
- * a `RESIZE_HANDLE_UNITS`, quindi `resolveResizePropSpec('container', 'minHeight')` risolve a
- * sole unità `px`). `image` continua a dichiarare `styleWidth`/`styleHeight` invariate (prop
+ * (stesso `kind: 'unitValue'`, intervalli e unità propri — `boxedWidth` dichiara
+ * `px`/`%`/`em`/`rem`/`vw`, `minHeight` `px`/`%`/`em`/`rem`/`vh`: le unità oltre `px`/`%` non
+ * sono pilotabili da questa maniglia, che si ferma a `RESIZE_HANDLE_UNITS`, quindi
+ * `resolveResizePropSpec('container', ...)` risolve a `px`/`%` per entrambe). `image` continua a dichiarare `styleWidth`/`styleHeight` invariate (prop
  * proprie, non toccate da `ADR-82`) ma resta comunque esclusa da ogni maniglia trascinabile in
  * quanto widget foglia (`ADR-73`, vedi sotto).
  */

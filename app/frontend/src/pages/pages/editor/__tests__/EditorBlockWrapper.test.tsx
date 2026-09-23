@@ -609,9 +609,7 @@ describe('EditorBlockWrapper — identità "Sezione" preservata su container mig
 
     renderWithProviders(<EditorBlockWrapper id="mig-sec-3" />);
 
-    expect(
-      screen.getByRole('button', { name: /come Preset Globale$/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /come Preset Globale$/i })).toBeInTheDocument();
   });
 
   it('container con tag="div" (o assente): resta cornice/tono Contenitore normale, nessuna identità Sezione', () => {
@@ -642,9 +640,7 @@ describe('EditorBlockWrapper — identità "Sezione" preservata su container mig
 
     const chrome = chromeOf(wrapperEl);
     expect(chrome).toHaveAttribute('data-block-chrome-tone', 'container');
-    expect(
-      screen.queryByRole('button', { name: /come Preset Globale$/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /come Preset Globale$/i })).not.toBeInTheDocument();
   });
 });
 

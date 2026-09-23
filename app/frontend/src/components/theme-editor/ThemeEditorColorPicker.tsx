@@ -179,13 +179,7 @@ export function ThemeEditorColorPicker({
         )}
       </Group>
 
-      <Modal
-        opened={gridOpened}
-        onClose={closeGrid}
-        title="Palette colori"
-        size="lg"
-        centered
-      >
+      <Modal opened={gridOpened} onClose={closeGrid} title="Palette colori" size="lg" centered>
         <Stack gap={4}>
           {COLOR_GRID_ORDER.map((name) => (
             <Group key={name} gap={8} wrap="nowrap" align="center">

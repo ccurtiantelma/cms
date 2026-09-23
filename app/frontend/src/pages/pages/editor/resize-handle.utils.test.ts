@@ -25,11 +25,11 @@ describe('resolveResizePropSpec — risoluzione dal registro reale', () => {
     });
   });
 
-  it('container.minHeight: unitValue px/vh nel registro, ma questa maniglia pilota solo px (RESIZE_HANDLE_UNITS, ADR-71 § "Decisione" punto 2)', () => {
+  it('container.minHeight: unitValue px/%/em/rem/vh nel registro, la maniglia pilota solo px e % (RESIZE_HANDLE_UNITS, ADR-71 § "Decisione" punto 2)', () => {
     expect(resolveResizePropSpec('container', 'minHeight')).toEqual({
       min: 0,
       max: 2000,
-      units: ['px'],
+      units: ['px', '%'],
     });
   });
 
@@ -76,7 +76,7 @@ describe('resolveResizePropSpec — widget foglia esclusi dalla maniglia (ADR-73
     expect(resolveResizePropSpec('container', 'minHeight')).toEqual({
       min: 0,
       max: 2000,
-      units: ['px'],
+      units: ['px', '%'],
     });
   });
 });
