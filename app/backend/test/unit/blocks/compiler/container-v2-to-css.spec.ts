@@ -70,7 +70,7 @@ describe('toCss() — kind "layout"', () => {
     ]);
   });
 
-  it('gridTemplateColumns come array di GridTrackValue emette una stringa spazio-separata (fr/px/%/auto)', () => {
+  it('gridTemplateColumns come array di GridTrackValue emette una stringa spazio-separata (fr/px/em/%/auto)', () => {
     const blocks = toCss(
       'layout',
       spec,
@@ -82,6 +82,7 @@ describe('toCss() — kind "layout"', () => {
             { value: 200, unit: 'px' },
             'auto',
             { value: 30, unit: '%' },
+            { value: 12, unit: 'em' },
           ],
         },
       },
@@ -89,7 +90,7 @@ describe('toCss() — kind "layout"', () => {
     );
     expect(blocks[0].declarations).toContainEqual({
       property: 'grid-template-columns',
-      value: '1fr 200px auto 30%',
+      value: '1fr 200px auto 30% 12em',
     });
   });
 

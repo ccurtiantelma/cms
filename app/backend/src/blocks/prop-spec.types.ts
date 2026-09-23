@@ -525,8 +525,14 @@ export interface FilterPropSpec extends BasePropSpec {
 
 // ─── Container v2 (ADR-81/ADR-82, round R2 "parità Elementor Pro", Sub-Task S1.4) ───
 
-/** Unità ammesse per una traccia di griglia esplicita (`docs/SPEC-propkind-v2.md` § 4.1, ADR-82 § "Decisione" punto 1). */
-export type GridTrackUnit = 'fr' | 'px' | '%';
+/**
+ * Unità ammesse per una traccia di griglia esplicita (`docs/SPEC-propkind-v2.md` § 4.1, ADR-82 §
+ * "Decisione" punto 1). `em` aggiunta su richiesta esplicita dell'utente (2026-09-23, parità con
+ * il selettore unità di Elementor Pro: fr/px/em/%): estensione additiva dell'elenco chiuso, ogni
+ * valore già salvato resta valido. L'unità "personalizzato" di Elementor (stringa CSS libera)
+ * resta esclusa da ADR-82 § "Alternative valutate", ultima riga.
+ */
+export type GridTrackUnit = 'fr' | 'px' | 'em' | '%';
 
 /**
  * Una singola traccia di `gridTemplateColumns`/`gridTemplateRows`: un valore

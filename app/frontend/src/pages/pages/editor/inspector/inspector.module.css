@@ -345,3 +345,41 @@
 [data-mantine-color-scheme='dark'] .unitFieldUnitSelect :global(.mantine-Select-input) {
   color: var(--mantine-color-dark-1);
 }
+
+/*
+  Riga "Spaziature" di `ContainerLayoutTab.tsx` (Grid): due input e il lucchetto uniti in un
+  unico blocco, come nello screenshot Elementor Pro (2026-09-23) — bordi condivisi (`margin-left:
+  -1px`) e angoli arrotondati solo sulle estremità. Il lucchetto è alto quanto un input (36px,
+  `size` di `ActionIcon`) perché le didascalie "Colonna"/"Riga" stanno sotto gli input, non
+  accanto al pulsante.
+*/
+.gapInputStart {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.gapInputMiddle {
+  margin-left: -1px;
+  border-radius: 0;
+}
+
+.gapLinkButton {
+  margin-left: -1px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/*
+  Righe "Giustifica elementi"/"Allinea elementi" (`ContainerGridControls.tsx`, `IconChoiceField`):
+  quattro segmenti solo-icona. Senza queste due regole il `SegmentedControl` `xs` è più largo
+  dello spazio lasciato dall'etichetta e l'ultima icona (estendi) esce dal pannello — trovato
+  nella verifica a schermo. Doppia classe (`.segmentedLabel.iconChoiceLabel`) per battere il
+  padding di default Mantine senza dipendere dall'ordine dei fogli di stile.
+*/
+.iconChoiceRoot {
+  flex-shrink: 0;
+}
+
+.segmentedLabel.iconChoiceLabel {
+  padding: 4px 6px;
+}

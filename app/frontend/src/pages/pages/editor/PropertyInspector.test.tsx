@@ -643,16 +643,17 @@ describe('PropertyInspector — i sette kind del registro', () => {
     const user = userEvent.setup();
     renderInspectorWith(node('k-1', 'kindProbe', { flag: false, quantita: 0, descrizione: '' }));
 
-    const tokenPicker = screen.getByRole('button', { name: 'Colori del tema' });
+    // `ThemeColorPicker` ha un solo pallino trigger con `aria-label` = etichetta del campo; i
+    // preset "Colori del Tema" stanno nel popover come pallini `"<Nome> - <hex>"`.
+    const tokenPicker = screen.getByRole('button', { name: 'colore' });
     expect(tokenPicker).toBeEnabled();
     await user.click(tokenPicker);
 
-    // `findByText`, non `getByText`: il dropdown del Popover entra con la transizione
-    // Mantine (150ms), quindi non è ancora nel DOM nel tick del click. È il motivo per cui
-    // la versione precedente di questo test era rossa.
-    const primaryOption = await screen.findByText(
-      `Primario · ${DEFAULT_THEME_CONFIG.colors.primary}`,
-    );
+    // `findByRole`, non `getByRole`: il dropdown del Popover entra con la transizione Mantine
+    // (150ms), quindi non è ancora nel DOM nel tick del click.
+    const primaryOption = await screen.findByRole('button', {
+      name: `Primario - ${DEFAULT_THEME_CONFIG.colors.primary}`,
+    });
     await user.click(primaryOption);
 
     expect(propsInStore('k-1').colore).toBe(DEFAULT_THEME_CONFIG.colors.primary);
@@ -1328,7 +1329,10 @@ describe('PropertyInspector — integrazione PropKind v2 (Sub-Task S2.3)', () =>
     renderInspectorWith(node('h-color', 'heading', { level: 'h2', text: 'Titolo' }));
 
     await user.click(screen.getByRole('tab', { name: 'Stile' }));
-    await user.click(screen.getByRole('button', { name: 'Colore di sistema: Primario' }));
+    // Pallino trigger (`aria-label` = etichetta del campo) → popover → preset "Primario - <hex>"
+    // (`#000000` finché nessun Global Token è stato impostato, `ColorField.resolveSystemHex`).
+    await user.click(screen.getByRole('button', { name: 'Colore testo' }));
+    await user.click(await screen.findByRole('button', { name: 'Primario - #000000' }));
 
     expect(propsInStore('h-color').color).toEqual({ normal: { default: { ref: 'primary' } } });
   });
@@ -1386,6 +1390,104 @@ describe('PropertyInspector — integrazione PropKind v2 (Sub-Task S2.3)', () =>
     await user.click(screen.getByRole('radio', { name: 'Grid' }));
 
     expect(propsInStore('cont-layout').layout).toEqual({ default: { display: 'grid' } });
+  });
+
+  describe('container — scheda Layout, gruppo "Elementi" (Grid, parità Elementor Pro)', () => {
+    const gridNode = (id: string, layout: Record<string, unknown> = {}) =>
+      node(id, 'container', { layout: { default: { display: 'grid', ...layout } } });
+
+    it('passare a Griglia scrive anche le tracce predefinite: 2 colonne e 1 riga', async () => {
+      const user = userEvent.setup();
+      renderInspectorWith(node('grid-switch', 'container', {}));
+
+      await user.click(screen.getByRole('radio', { name: 'Griglia' }));
+
+      expect(propsInStore('grid-switch').layout).toEqual({
+        default: {
+          display: 'grid',
+          gridTemplateColumns: { preset: 'repeat', count: 2 },
+          gridTemplateRows: { preset: 'repeat', count: 1 },
+        },
+      });
+    });
+
+    it('espone tutti i campi dello screenshot solo in modalità Griglia', async () => {
+      renderInspectorWith(node('flex-only', 'container', {}));
+      expect(screen.queryByText('Righe')).not.toBeInTheDocument();
+      expect(screen.queryByText('Flusso automatico')).not.toBeInTheDocument();
+    });
+
+    it('Righe: il valore scrive gridTemplateRows senza toccare le colonne', async () => {
+      const user = userEvent.setup();
+      renderInspectorWith(
+        gridNode('grid-rows', { gridTemplateColumns: { preset: 'repeat', count: 3 } }),
+      );
+
+      const rows = screen.getByRole('textbox', { name: 'Righe — Valore' });
+      await user.clear(rows);
+      await user.type(rows, '4');
+
+      expect(propsInStore('grid-rows').layout).toEqual({
+        default: {
+          display: 'grid',
+          gridTemplateColumns: { preset: 'repeat', count: 3 },
+          gridTemplateRows: { preset: 'repeat', count: 4 },
+        },
+      });
+    });
+
+    it('Colonne: cambiare unità in px scrive tracce esplicite conservando il numero di colonne', async () => {
+      const user = userEvent.setup();
+      renderInspectorWith(
+        gridNode('grid-cols-px', { gridTemplateColumns: { preset: 'repeat', count: 3 } }),
+      );
+
+      await user.click(screen.getByRole('textbox', { name: 'Colonne — Unità' }));
+      await user.click(screen.getByRole('option', { name: 'px' }));
+
+      expect(propsInStore('grid-cols-px').layout).toEqual({
+        default: {
+          display: 'grid',
+          gridTemplateColumns: [
+            { value: 200, unit: 'px' },
+            { value: 200, unit: 'px' },
+            { value: 200, unit: 'px' },
+          ],
+        },
+      });
+    });
+
+    it('Flusso automatico: Colonna scrive autoFlow "column" e conserva una variante dense già presente', async () => {
+      const user = userEvent.setup();
+      renderInspectorWith(gridNode('grid-flow', { autoFlow: 'row dense' }));
+
+      await user.click(screen.getByRole('textbox', { name: 'Flusso automatico' }));
+      await user.click(screen.getByRole('option', { name: 'Colonna' }));
+
+      expect(propsInStore('grid-flow').layout).toEqual({
+        default: { display: 'grid', autoFlow: 'column dense' },
+      });
+    });
+
+    it('Giustifica elementi e Allinea elementi scrivono justifyItems/alignItems', async () => {
+      const user = userEvent.setup();
+      renderInspectorWith(gridNode('grid-align'));
+
+      await user.click(
+        within(screen.getByRole('radiogroup', { name: 'Giustifica elementi' })).getByRole('radio', {
+          name: 'Fine',
+        }),
+      );
+      await user.click(
+        within(screen.getByRole('radiogroup', { name: 'Allinea elementi' })).getByRole('radio', {
+          name: 'Centro',
+        }),
+      );
+
+      expect(propsInStore('grid-align').layout).toEqual({
+        default: { display: 'grid', justifyItems: 'end', alignItems: 'center' },
+      });
+    });
   });
 
   /**

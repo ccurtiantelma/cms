@@ -68,5 +68,7 @@ export function resolveGridOutlineColumnCount(
   ) {
     return columns.count;
   }
+  // Tracce esplicite (unità px/%, "Colonne" di `ContainerLayoutTab.tsx`): una colonna per traccia.
+  if (Array.isArray(columns) && columns.length > 0) return columns.length;
   return 2;
 }

@@ -73,7 +73,15 @@ const JUSTIFY_OPTIONS = [
   'space-evenly',
 ] as const;
 const ALIGN_OPTIONS = ['stretch', 'flex-start', 'center', 'flex-end', 'baseline'] as const;
-const GRID_AUTO_FLOW_OPTIONS = ['row', 'column', 'dense'] as const;
+// Stesso elenco chiuso di `LAYOUT_AUTO_FLOW_VALUES` (validatore backend): `dense` da solo non è un
+// valore ammesso, esistono solo le varianti `row dense`/`column dense` — un `dense` nudo veniva
+// scritto dal Select ma rifiutato con 400 al salvataggio.
+const GRID_AUTO_FLOW_OPTIONS = [
+  { value: 'row', label: 'row' },
+  { value: 'column', label: 'column' },
+  { value: 'row dense', label: 'row dense' },
+  { value: 'column dense', label: 'column dense' },
+] as const;
 const GRID_JUSTIFY_ITEMS_OPTIONS = ['start', 'end', 'center', 'stretch'] as const;
 const GRID_ALIGN_ITEMS_OPTIONS = ['start', 'end', 'center', 'stretch'] as const;
 
@@ -213,7 +221,7 @@ export default function LayoutField({
             label="Distribuzione automatica"
             aria-label={`${label} — Distribuzione automatica`}
             data={[...GRID_AUTO_FLOW_OPTIONS]}
-            value={current.autoFlow ?? GRID_AUTO_FLOW_OPTIONS[0]}
+            value={current.autoFlow ?? GRID_AUTO_FLOW_OPTIONS[0].value}
             allowDeselect={false}
             comboboxProps={{ zIndex: 1100 }}
             onChange={(next) => next && write({ ...current, autoFlow: next })}

@@ -5,7 +5,8 @@
  * entrambi, letta da `node.type`). Sostituisce `ContentTab.tsx` per questi due tipi
  * (`PropertyInspector.tsx` decide il monte, mai qui): due Accordion, "Contenitore" (layout
  * Flex/Grid, larghezza contenuto/massima, altezza minima) ed "Elementi" (contorno griglia,
- * colonne, spaziature — visibile solo a `layout.display === 'grid'`).
+ * colonne, righe, spaziature, flusso automatico, giustifica/allinea elementi — visibile solo a
+ * `layout.display === 'grid'`, tutti i campi nello stesso ordine dello screenshot Elementor Pro).
  *
  * Ogni scrittura passa da `setAndCommit` (`PropertyForm.commit`, mai uno stato locale di
  * valore): `draft` resta l'unica fonte di verità, stesso principio di `ContentTab`/`StyleTab`.
@@ -20,7 +21,8 @@
  * invece qui: leggono/scrivono `layout` con lo stesso pattern di `LayoutField.tsx`
  * (`readStatefulResponsiveValue`/`buildStatefulResponsivePropPatch`, `state: 'normal'`),
  * senza montare l'intero `LayoutField` (che espone anche i controlli Flex, fuori scope di
- * questo redesign: qui c'è solo il selettore Griglia/Flex più i pochi campi Grid richiesti).
+ * questo redesign: qui c'è solo il selettore Griglia/Flex più i campi Grid). I controlli
+ * dedicati (Colonne/Righe con unità, gruppi di icone) vivono in `ContainerGridControls.tsx`.
  */
 import { useState } from 'react';
 import {
@@ -30,13 +32,19 @@ import {
   NumberInput,
   SegmentedControl,
   Select,
-  Slider,
   Stack,
   Switch,
   Text,
   Tooltip,
 } from '@mantine/core';
 import {
+  IconArrowBarBoth,
+  IconLayoutAlignBottom,
+  IconLayoutAlignCenter,
+  IconLayoutAlignLeft,
+  IconLayoutAlignMiddle,
+  IconLayoutAlignRight,
+  IconLayoutAlignTop,
   IconLayoutDistributeHorizontal,
   IconLayoutGrid,
   IconLink,
@@ -47,6 +55,12 @@ import type { EditorViewport } from '../../../../hooks/useBlockEditorStore';
 import { useActiveBreakpoint, useBlockEditorStore } from '../../../../hooks/useBlockEditorStore';
 import type { BlockNode } from '../block-tree.utils';
 import PropField from './PropField';
+import {
+  FieldLabel,
+  GridTrackField,
+  IconChoiceField,
+  type IconChoiceOption,
+} from './ContainerGridControls';
 import {
   breakpointKey,
   buildStatefulResponsivePropPatch,
@@ -90,16 +104,44 @@ interface UnitValueLike {
   unit: string;
 }
 
-interface GridPresetLike {
-  preset: 'repeat';
-  count: number;
-}
-
 interface LayoutValueLike {
   display?: 'flex' | 'grid';
   gap?: { x: UnitValueLike; y: UnitValueLike };
-  gridTemplateColumns?: GridPresetLike | unknown;
+  gridTemplateColumns?: unknown;
+  gridTemplateRows?: unknown;
+  autoFlow?: string;
+  justifyItems?: string;
+  alignItems?: string;
 }
+
+// Vocabolario Grid (`LAYOUT_GRID_ALIGN_VALUES`/`LAYOUT_AUTO_FLOW_VALUES`, validatore backend).
+// Icone e ordine come lo screenshot Elementor Pro: inizio, centro, fine, stretch.
+const JUSTIFY_ITEMS_OPTIONS: readonly IconChoiceOption[] = [
+  { value: 'start', label: 'Inizio', icon: <IconLayoutAlignLeft size={16} aria-hidden /> },
+  { value: 'center', label: 'Centro', icon: <IconLayoutAlignCenter size={16} aria-hidden /> },
+  { value: 'end', label: 'Fine', icon: <IconLayoutAlignRight size={16} aria-hidden /> },
+  { value: 'stretch', label: 'Estendi', icon: <IconArrowBarBoth size={16} aria-hidden /> },
+];
+
+const ALIGN_ITEMS_OPTIONS: readonly IconChoiceOption[] = [
+  { value: 'start', label: 'Inizio', icon: <IconLayoutAlignTop size={16} aria-hidden /> },
+  { value: 'center', label: 'Centro', icon: <IconLayoutAlignMiddle size={16} aria-hidden /> },
+  { value: 'end', label: 'Fine', icon: <IconLayoutAlignBottom size={16} aria-hidden /> },
+  {
+    value: 'stretch',
+    label: 'Estendi',
+    icon: <IconArrowBarBoth size={16} aria-hidden style={{ transform: 'rotate(90deg)' }} />,
+  },
+];
+
+const AUTO_FLOW_OPTIONS = [
+  { value: 'row', label: 'Riga' },
+  { value: 'column', label: 'Colonna' },
+] as const;
+
+// Default Elementor Pro per una griglia appena creata: 2 colonne, 1 riga.
+const DEFAULT_GRID_COLUMNS = 2;
+const DEFAULT_GRID_ROWS = 1;
 
 export default function ContainerLayoutTab({
   node,
@@ -147,16 +189,35 @@ export default function ContainerLayoutTab({
     );
   }
 
-  const gridColumnsCount =
-    isPlainObject(layoutCurrent.gridTemplateColumns) &&
-    (layoutCurrent.gridTemplateColumns as Record<string, unknown>).preset === 'repeat' &&
-    typeof (layoutCurrent.gridTemplateColumns as Record<string, unknown>).count === 'number'
-      ? ((layoutCurrent.gridTemplateColumns as Record<string, unknown>).count as number)
-      : 2;
-
   const gapUnit = layoutCurrent.gap?.x.unit ?? layoutCurrent.gap?.y.unit ?? GAP_UNITS[0];
   const gapX = layoutCurrent.gap?.x.value ?? 0;
   const gapY = layoutCurrent.gap?.y.value ?? 0;
+
+  // `autoFlow` ammette anche le varianti `dense` (validatore backend): la UI espone solo
+  // Riga/Colonna come Elementor, ma cambiare direzione non deve perdere un `dense` già scritto.
+  const autoFlowRaw = layoutCurrent.autoFlow ?? 'row';
+  const autoFlowDense = autoFlowRaw.endsWith('dense');
+  const autoFlowDirection = autoFlowRaw.startsWith('column') ? 'column' : 'row';
+
+  // Passando a Griglia scrive subito le tracce predefinite (2 colonne, 1 riga) se mancano:
+  // senza, i controlli mostrerebbero 2 colonne ma il CSS emesso avrebbe una sola colonna implicita.
+  function handleDisplayChange(next: 'flex' | 'grid'): void {
+    if (next !== 'grid') {
+      writeLayout({ display: next });
+      return;
+    }
+    writeLayout({
+      display: 'grid',
+      gridTemplateColumns: layoutCurrent.gridTemplateColumns ?? {
+        preset: 'repeat',
+        count: DEFAULT_GRID_COLUMNS,
+      },
+      gridTemplateRows: layoutCurrent.gridTemplateRows ?? {
+        preset: 'repeat',
+        count: DEFAULT_GRID_ROWS,
+      },
+    });
+  }
 
   function writeGap(nextX: number, nextY: number, nextUnit: string): void {
     writeLayout({
@@ -222,7 +283,7 @@ export default function ContainerLayoutTab({
                   },
                 ]}
                 value={display}
-                onChange={(next) => writeLayout({ display: next as 'flex' | 'grid' })}
+                onChange={(next) => handleDisplayChange(next as 'flex' | 'grid')}
                 fullWidth
               />
             </div>
@@ -297,84 +358,72 @@ export default function ContainerLayoutTab({
                 />
               </Group>
 
-              <div>
-                <Text size="sm" fw={500} mb={4}>
-                  Colonne
-                </Text>
-                <Group gap="sm" align="center" wrap="nowrap">
-                  <Slider
-                    style={{ flex: 1 }}
-                    min={1}
-                    max={12}
-                    value={gridColumnsCount}
-                    label={(value) => `${value}`}
-                    thumbLabel="Colonne"
-                    onChange={(next) =>
-                      writeLayout({ gridTemplateColumns: { preset: 'repeat', count: next } })
-                    }
-                  />
-                  <NumberInput
-                    aria-label="Colonne — Valore"
-                    min={1}
-                    max={12}
-                    value={gridColumnsCount}
-                    w={70}
-                    onChange={(next) =>
-                      writeLayout({
-                        gridTemplateColumns: {
-                          preset: 'repeat',
-                          count: typeof next === 'number' ? next : gridColumnsCount,
-                        },
-                      })
-                    }
-                  />
-                </Group>
-              </div>
+              <GridTrackField
+                label="Colonne"
+                viewport={activeViewport}
+                value={layoutCurrent.gridTemplateColumns}
+                defaultCount={DEFAULT_GRID_COLUMNS}
+                onChange={(next) => writeLayout({ gridTemplateColumns: next })}
+              />
+
+              <GridTrackField
+                label="Righe"
+                viewport={activeViewport}
+                value={layoutCurrent.gridTemplateRows}
+                defaultCount={DEFAULT_GRID_ROWS}
+                onChange={(next) => writeLayout({ gridTemplateRows: next })}
+              />
 
               <div>
-                <Text size="sm" fw={500} mb={4}>
-                  Spaziature
-                </Text>
-                <Group gap="xs" align="flex-end" wrap="nowrap">
-                  <div>
+                <Group justify="space-between" align="center" wrap="nowrap" mb={4}>
+                  <FieldLabel label="Spaziature" viewport={activeViewport} />
+                  <Select
+                    aria-label="Spaziatura — Unità"
+                    variant="unstyled"
+                    className={styles.unitFieldUnitSelect}
+                    data={[...GAP_UNITS]}
+                    value={gapUnit}
+                    allowDeselect={false}
+                    comboboxProps={{ zIndex: 1100, width: 'max-content', position: 'bottom-end' }}
+                    rightSectionWidth={18}
+                    onChange={(next) => writeGap(gapX, gapY, next ?? gapUnit)}
+                  />
+                </Group>
+                <Group gap={0} align="flex-start" wrap="nowrap">
+                  <div style={{ flex: 1 }}>
                     <NumberInput
                       aria-label="Spaziatura — Colonna"
                       min={0}
                       max={500}
                       value={gapX}
-                      w={80}
+                      hideControls
+                      classNames={{ input: styles.gapInputStart }}
                       onChange={handleGapXChange}
                     />
-                    <Text size="xs" c="dimmed" ta="center">
+                    <Text size="xs" c="dimmed" ta="center" mt={2}>
                       Colonna
                     </Text>
                   </div>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <NumberInput
                       aria-label="Spaziatura — Riga"
                       min={0}
                       max={500}
                       value={gapY}
-                      w={80}
+                      hideControls
+                      classNames={{ input: styles.gapInputMiddle }}
                       onChange={handleGapYChange}
                     />
-                    <Text size="xs" c="dimmed" ta="center">
+                    <Text size="xs" c="dimmed" ta="center" mt={2}>
                       Riga
                     </Text>
                   </div>
-                  <Select
-                    aria-label="Spaziatura — Unità"
-                    data={[...GAP_UNITS]}
-                    value={gapUnit}
-                    allowDeselect={false}
-                    comboboxProps={{ zIndex: 1100 }}
-                    w={80}
-                    onChange={(next) => writeGap(gapX, gapY, next ?? gapUnit)}
-                  />
                   <Tooltip label={gapLinked ? 'Scollega' : 'Collega'} withArrow>
                     <ActionIcon
-                      variant={gapLinked ? 'light' : 'subtle'}
-                      color={gapLinked ? 'grape' : 'gray'}
+                      className={styles.gapLinkButton}
+                      size={36}
+                      variant={gapLinked ? 'filled' : 'default'}
+                      color={gapLinked ? 'gray' : undefined}
                       aria-label={gapLinked ? 'Scollega spaziature' : 'Collega spaziature'}
                       aria-pressed={gapLinked}
                       onClick={() => setGapLinked((current) => !current)}
@@ -384,6 +433,38 @@ export default function ContainerLayoutTab({
                   </Tooltip>
                 </Group>
               </div>
+
+              <Group justify="space-between" align="center" wrap="nowrap">
+                <FieldLabel label="Flusso automatico" viewport={activeViewport} />
+                <Select
+                  aria-label="Flusso automatico"
+                  data={[...AUTO_FLOW_OPTIONS]}
+                  value={autoFlowDirection}
+                  allowDeselect={false}
+                  comboboxProps={{ zIndex: 1100 }}
+                  w={132}
+                  onChange={(next) => {
+                    if (next !== 'row' && next !== 'column') return;
+                    writeLayout({ autoFlow: autoFlowDense ? `${next} dense` : next });
+                  }}
+                />
+              </Group>
+
+              <IconChoiceField
+                label="Giustifica elementi"
+                viewport={activeViewport}
+                options={JUSTIFY_ITEMS_OPTIONS}
+                value={layoutCurrent.justifyItems ?? 'stretch'}
+                onChange={(next) => writeLayout({ justifyItems: next })}
+              />
+
+              <IconChoiceField
+                label="Allinea elementi"
+                viewport={activeViewport}
+                options={ALIGN_ITEMS_OPTIONS}
+                value={layoutCurrent.alignItems ?? 'stretch'}
+                onChange={(next) => writeLayout({ alignItems: next })}
+              />
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>

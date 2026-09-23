@@ -331,7 +331,7 @@ const LAYOUT_GAP_UNITS: readonly LengthUnit[] = ['px', '%', 'em', 'rem'];
 const LAYOUT_GAP_RANGE: [number, number] = [0, 500];
 
 /** Unità/intervalli fissi per `GridTrackValue` (ADR-82 § "Decisione" punto 1, terzo bullet). */
-const GRID_TRACK_UNITS = ['fr', 'px', '%'] as const;
+const GRID_TRACK_UNITS = ['fr', 'px', 'em', '%'] as const;
 const GRID_TRACK_VALUE_RANGE: [number, number] = [0, 4000];
 const GRID_TRACK_COUNT_RANGE: [number, number] = [1, 12];
 const GRID_TRACK_ARRAY_LENGTH_RANGE: [number, number] = [1, 12];

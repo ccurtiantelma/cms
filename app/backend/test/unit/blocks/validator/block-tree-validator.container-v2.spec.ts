@@ -170,6 +170,42 @@ describe('BlockTreeValidatorService — Container v2, 8 kind nuovi (ADR-81/ADR-8
       });
     });
 
+    it('una traccia in "em" è accettata (unità aggiunta per parità Elementor Pro); "rem" resta respinta con reason "enum"', () => {
+      const accepted = validator.validateTree(
+        [
+          node({
+            type: 't',
+            props: {
+              layout: { default: { gridTemplateRows: [{ value: 10, unit: 'em' }, 'auto'] } },
+            },
+          }),
+        ],
+        registry,
+      );
+      expect(accepted.errors).toEqual([]);
+
+      const rejected = validator.validateTree(
+        [
+          node({
+            type: 't',
+            props: { layout: { default: { gridTemplateRows: [{ value: 10, unit: 'rem' }] } } },
+          }),
+        ],
+        registry,
+      );
+      expect(rejected.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.layout.default.gridTemplateRows[0].unit',
+          type: 't',
+          prop: 'layout',
+          kind: 'layout',
+          reason: 'enum',
+          constraint: ['fr', 'px', 'em', '%'],
+        },
+      });
+    });
+
     it('un array di 1 GridTrackValue con "auto" è accettato', () => {
       const result = validator.validateTree(
         [node({ type: 't', props: { layout: { default: { gridTemplateColumns: ['auto'] } } } })],
