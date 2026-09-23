@@ -97,12 +97,9 @@ test('drag & drop del widget Contenitore nel canvas e impostazione di flexDirect
 
   // ─── 1. La sidebar mostra già la scheda "Widgets" (stato di riposo dello store,
   // `activeSidebarTab: 'widgets'`) ────────────────────────────────────────────────────────
-  // `CanvasAddSectionZone` resta montata in fondo al canvas indipendentemente da quanti
-  // blocchi ci siano già in radice (commento di testa di `EditorCanvas.tsx`), quindi questo
-  // testo resta visibile anche ora che la Pagina appena creata non parte da un canvas vuoto:
-  // il `templateSlug` di default ("empty", RFC-43) porta già una Sezione seed in radice
-  // (`page-blueprints.registry.ts`).
-  await expect(canvasFrame(page).getByText('Trascina il widget qui')).toBeVisible();
+  // Il box tratteggiato "Trascina il widget qui" non esiste più (T-canvas-declutter-2): la
+  // pagina appena creata mostra solo la zona di inserimento radice, che porta `[data-over]`.
+  await expect(canvasFrame(page).locator('[data-over]').last()).toBeAttached();
 
   // Con la Sezione seed già in radice, `[data-over]` risolve a più elementi (le strisce
   // `before`/`after` del suo `EditorBlockWrapper`, la sua `containerDropZone` interna, e i
@@ -131,7 +128,10 @@ test('drag & drop del widget Contenitore nel canvas e impostazione di flexDirect
   if (await styleTab.isVisible().catch(() => false)) {
     await styleTab.click();
   }
-  await selectFlexOption(page, 'Direzione', 'row');
+  // `row-reverse`, non `row`: il campo mostra `row` come fallback anche quando il default
+  // implicito del nodo è `column` (`resolveDefaultDirection`), quindi riselezionare `row`
+  // non produce alcuna scrittura.
+  await selectFlexOption(page, 'Direzione', 'row-reverse');
   await selectFlexOption(page, 'Allineamento orizzontale', 'space-between');
 
   // ─── 4. Verifica sul canvas: nessuno stile inline, solo classi CSS Module
@@ -144,12 +144,10 @@ test('drag & drop del widget Contenitore nel canvas e impostazione di flexDirect
   // sorgente): individuato risalendo dal testo del segnaposto "Contenitore vuoto", unico
   // dentro quel `<div>` finché non ha figli — invariato per l'intera durata di questo test.
   // ────────────────────────────────────────────────────────────────────────────────────────
-  // Il segnaposto testuale "Contenitore vuoto" non esiste più: si individua il `<div>` flex
-  // dalla classe `_container_*` di `Container.tsx` (i token `flexDirection_*` non sono più
-  // classi del nodo: l'effetto si verifica sullo stile calcolato, sotto).
-  const flexDiv = container
-    .locator('div[class*="_container_"]:not([class*="containerSelect"]):not([class*="containerDropZone"])')
-    .first();
+  // Il nodo flex reale è quello con `data-canvas-style-id` (Runtime Style Bridge): NON si
+  // cerca per classe `_container_*`, che collide con la classe di tono `.container` della barra
+  // azioni in hover (`BlockHoverOverlay.module.css`, ADR-95) e risolverebbe la barra stessa.
+  const flexDiv = container.locator('[data-canvas-style-id]').first();
   await expect(flexDiv).not.toHaveAttribute('style', /flex-direction|justify-content/);
 
   // Il canvas applica davvero il flex risultante: computed style, non solo la classe.
@@ -162,7 +160,7 @@ test('drag & drop del widget Contenitore nel canvas e impostazione di flexDirect
     };
   });
   expect(computed.display).toBe('flex');
-  expect(computed.flexDirection).toBe('row');
+  expect(computed.flexDirection).toBe('row-reverse');
   expect(computed.justifyContent).toBe('space-between');
 
   // Nessun salvataggio/reload qui: un `container` appena inserito (dalla palette o dal
