@@ -8,6 +8,7 @@ Istruzione vincolante per ogni agente AI: per il task corrente, apri **solo** gl
 | Schema & Migrazione Blocchi JSON | `docs/ai/specs/SPEC-F02-blocchi.md` · `docs/ai/adr/ADR-21-schema-blocchi-versionamento.md` · `app/frontend/src/types/blocks.types.ts` |
 | Rendering & Caching Pubblico | `docs/ai/specs/SPEC-F03-superficie-pubblica.md` · `docs/ai/adr/ADR-53-air-gapped-ssg-zero-db.md` · `docs/ai/adr/ADR-63-consegna-statica-volume-nginx-isolato.md` · `docs/ai/adr/ADR-65-layout-export-su-url-pubblico.md` · `docs/ai/adr/ADR-67-eventi-di-export-e-render-riservato.md` · `docs/ai/adr/ADR-96-implementazione-background-color-gradient.md` · `docs/ai/adr/ADR-97-css-dinamico-per-nodo-sul-sito-pubblico.md` |
 | Gestione Pagine | `docs/ai/specs/SPEC-F01-gestione-pagine.md` · `docs/ai/adr/ADR-19-revisioni-immutabili.md` · `docs/ai/adr/ADR-53-air-gapped-ssg-zero-db.md` (routing/slug, succede ad ADR-24) · `docs/ai/adr/ADR-61-retention-revisioni.md` |
+| Auth, Ruoli & Permessi | `docs/ai/adr/ADR-99-rbac-dinamico-ruoli-e-permessi-granulari.md` · `docs/ai/specs/SPEC-RBAC-F1-schema-seed-cache-guard.md` · `docs/ai/plans/PLAN-RBAC-F1-schema-seed-cache-guard.md` · `docs/ai/adr/ADR-18-ownership-per-riga.md` · `docs/ai/adr/ADR-13-gestione-sessioni-dispositivi.md` · `docs/ai/adr/ADR-90-custom-fonts-code-e-role-manager.md` (§ 3, in discussione) · `app/backend/src/permissions/permissions.registry.ts` · `docs/business-rules.md` (A4 e § Permessi editoriali) |
 | Parità Elementor Pro — R0 Decisioni fondative | `docs/ELEMENTOR_PRO_GAP_ANALYSIS_v2.md` · `docs/PLAN-parita-elementor-pro.md` · `docs/SPEC-propkind-v2.md` · `docs/ai/adr/ADR-74-isole-js-pubbliche.md` · `docs/ai/adr/ADR-75-involucro-stateful-e-stati-hover.md` · `docs/ai/adr/ADR-76-breakpoints-configurabili.md` · `docs/ai/adr/ADR-77-global-kit-schema.md` · `docs/ai/adr/ADR-78-sanitizzazione-css-e-sandbox-html.md` · `docs/ai/adr/ADR-79-modello-collezioni-content-types.md` · `docs/ai/adr/ADR-80-provider-media-e-mappe.md` · `docs/ai/specs/SPEC-IFRAME-PROTOCOL.md` · `docs/ai/specs/SPEC-BENCHMARK-VALIDATOR.md` — **ADR-74/75/76/77 approvate il 2026-09-17 (marketing@antelmagroup.net), contestualmente a `SPEC-PROPKIND-V2-DETAILS.md`; ADR-78 approvata il 2026-09-18 (marketing@antelmagroup.net) a supporto del Sub-Task S5.1 — vedi "Decisione umana" in coda al documento; ADR-79/80 restano "In discussione", nessuna firmata**: vedi nota di allineamento sotto per la rinumerazione 73→74-80 |
 
 ## Nota di allineamento
@@ -70,3 +71,12 @@ Istruzione vincolante per ogni agente AI: per il task corrente, apri **solo** gl
   `SPEC-PROPKIND-V2-DETAILS.md` (autorevole per il codice, non `docs/SPEC-propkind-v2.md` che è la
   bozza propedeutica) restano da mappare correttamente ai rispettivi domini in una sessione
   dedicata — non fatto qui per restare nello scope del task che l'ha rilevato.
+- **`ADR-99-rbac-dinamico-ruoli-e-permessi-granulari.md` (approvata 2026-09-24) supera
+  parzialmente l'assunzione A4 di `docs/business-rules.md` e `ADR-18` § "Alternative valutate"**
+  (riga "Nuovi ruoli editoriali", scartata *per A4*). A4 è emendata sul file (§ "Emendamento di
+  A4"): le 4 soglie restano e diventano i ruoli di sistema, e sopra si aggiungono ruoli
+  personalizzati additivi. Le decisioni D1–D5 di `ADR-18` (ownership per riga, `hasElevatedRowAccess`)
+  restano vigenti e `ADR-18` resta storica e non riscritta. La F1 (schema, seed, cache, guard,
+  `RolesService` senza controller) è implementata su `feature/rbac-f1-permessi`. Le API, la UI e la
+  migrazione delle rotte arrivano con F2/F3. Restano da riallineare `docs/glossary.md` e
+  `docs/system-architecture.md` (ADR-99 § "Documenti da aggiornare"), non ancora richiesto.

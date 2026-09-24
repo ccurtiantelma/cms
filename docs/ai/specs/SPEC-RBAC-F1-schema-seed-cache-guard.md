@@ -490,3 +490,66 @@ che li eserciti.
     chiamata. `toggleActiveUser` → invalidazione.
 18. Suite unit ed e2e esistenti verdi **senza modifiche ai test esistenti**. Nessun `@Permissions`
     su rotte reali. `PublicMediaController` e le funzioni di sistema invariati.
+
+---
+
+## Addendum di allineamento (2026-09-24, chiusura F1)
+
+> Aggiunto su richiesta esplicita dell'umano (marketing@antelmagroup.net) dopo l'implementazione
+> della F1 sul branch `feature/rbac-f1-permessi`. Non modifica nessuna regola approvata sopra.
+> Registra le garanzie difensive che il codice applica oltre il minimo richiesto dalla SPEC e le
+> deviazioni di consegna rispetto al PLAN.
+
+### Garanzie difensive implementate
+
+1. **`409 ROLE_CODE_DUPLICATE` a due livelli.**
+   - Livello applicativo: `RolesService.create` rifiuta con `ROLE_CODE_DUPLICATE` i codici dei 4
+     ruoli di sistema (`superadmin`, `admin`, `manager`, `user`) **prima dell'insert**. Così un
+     ruolo personalizzato non può occupare un codice di sistema su un DB non ancora seedato, che
+     poi farebbe fallire il seed.
+   - Livello DB: il vincolo `roles_code_uq` è mappato in `db-error.mapper.ts` sullo stesso `409`
+     (voce della tabella "Contratto di errore"), per i duplicati fra ruoli personalizzati e per le
+     creazioni concorrenti.
+   - Test: `roles.service.spec.ts`, "code di un ruolo di sistema → 409 ROLE_CODE_DUPLICATE" e
+     "code duplicato (roles_code_uq) → 409 ROLE_CODE_DUPLICATE, nessun audit".
+2. **`roles:manage` filtrato dai ruoli personalizzati anche nella query dei permessi.**
+   `PermissionsService.loadFromDb` applica `notInArray(permissions.code,
+   SYSTEM_RESERVED_PERMISSIONS)` al solo ramo dei ruoli personalizzati della `UNION`. È il terzo
+   livello di S6, dopo il `400 RESERVED_PERMISSION` in `RolesService` e la pulizia al passo 5 del
+   seed. Un `roles:manage` inserito a mano in un ruolo custom (SQL diretto, restore di un dump) non
+   diventa mai un permesso effettivo, neanche prima del riavvio successivo. Il ramo del ruolo di
+   sistema non è filtrato, perché lì `roles:manage` è legittimo per `superadmin`.
+   - Test: la pulizia del seed è coperta da `permissions-seed.service.spec.ts` ("un codice
+     riservato inserito a mano in un ruolo custom viene rimosso…"). Il filtro nella query non ha un
+     test dedicato: gli unit test usano un mock Drizzle che non valuta il `WHERE`. La copertura
+     arriva in F2 con `roles.e2e-spec.ts` su DB reale.
+3. **Mapper `isPgForeignKeyViolation(err, constraint)` in `db-error.mapper.ts`.** Riconosce la
+   violazione FK Postgres `23503` su un vincolo preciso leggendo `err.constraint`, anche quando
+   Drizzle avvolge l'errore in `DrizzleQueryError` (stesso `unwrapDatabaseError` di `mapPgError`),
+   e mai dal testo del messaggio. `RolesService.delete` lo usa su
+   `user_roles_role_id_roles_id_fk` per tradurre in `409 ROLE_IN_USE` la corsa fra il conteggio e
+   il `DELETE`, cioè il secondo livello descritto sotto "Contratto di errore". Le altre FK e gli
+   altri errori vengono rilanciati invariati (500). Test: `roles.service.spec.ts`, "violazione FK
+   concorrente (23503 su user_roles) → stesso 409 ROLE_IN_USE".
+
+### Deviazioni di consegna rispetto al PLAN
+
+- **Ordine dei commit T3/T4**: `PermissionsSeedService` chiama `PermissionsService.invalidateRole`
+  dopo la pulizia dei codici riservati (passo 5), quindi T4 è stato committato prima di T3.
+  `PermissionsModule` nasce in T3 con servizio e seed e riceve `PermissionsGuard` in T5. Ogni
+  commit compila da solo.
+- **Prerequisito di build**: prima dei commit T1–T7 c'è un commit `chore(gitignore)` che ancora le
+  regole di storage e traccia i driver `app/backend/src/files/storage/*.ts`. Senza quel commit un
+  checkout pulito del branch non compila.
+
+### Esito della verifica
+
+- Unit test (Jest): 68 suite, **1123 test verdi** (verificato alla chiusura della F1).
+- E2E (Supertest): 25 suite, **263 test verdi** su `cms_db_test`, rieseguiti in chiusura sul
+  commit T7.
+- Ogni commit del branch, dal `chore(gitignore)` a T7, compila da solo (`tsc --noEmit`) in un
+  checkout pulito. Nota: in un checkout senza `app/backend/.env` falliscono 8 test preesistenti
+  (`auth.service.spec.ts`, `preview-token.spec.ts`), che leggono il segreto JWT dall'ambiente. Il
+  problema non dipende dalla F1 e c'è già su `main`. Con il `.env` passano.
+- Nessun test esistente modificato (criterio 18). `grep "@Permissions("` fuori da
+  `app/backend/src/permissions/` non trova nulla: nessuna rotta migrata.

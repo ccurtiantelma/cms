@@ -3,7 +3,10 @@
 > Regole di dominio. Priorità: dopo Constitution. Le AI non le modificano di propria
 > iniziativa (vedi `docs/constitution.md` → "Documentation Policy").
 >
-> Ultima revisione: 2026-09-13 — § "Freschezza del contenuto pubblico" riallineato all'export
+> Ultima revisione: 2026-09-24 — assunzione **A4** emendata e § "Permessi editoriali" riallineato
+> ad **ADR-99** (RBAC dinamico additivo: ruoli personalizzati e permessi granulari), su richiesta
+> esplicita dell'umano (marketing@antelmagroup.net) dopo la chiusura della F1.
+> Precedente: 2026-09-13 — § "Freschezza del contenuto pubblico" riallineato all'export
 > statico (ADR-67) e rigenerazione del sito aggiunta alle funzioni di sistema, su richiesta
 > umana esplicita.
 > Precedente: 2026-09-11 — riscrittura del § "Revisioni e cronologia" su richiesta
@@ -27,11 +30,38 @@ una regola approvata**.
 | A1 | **GEO = Generative Engine Optimization** (ottimizzazione per motori di risposta generativi: ChatGPT, Perplexity, AI Overviews) | GEO = geolocalizzazione / geo-targeting dei contenuti per area geografica | ✅ **Confermata** da ccurti il 2026-08-13: "visibilità non sui motori di ricerca ma per l'AI" |
 | A2 | Il **contenuto di pagina è un albero di blocchi JSON** validato server-side | Contenuto come HTML salvato dall'editor | ✅ **Confermata** da ccurti il 2026-08-17: è già l'architettura. Allinea lo status all'obbligo costituzionale (Principle 6, `constitution.md` § Modello di contenuto, regola 2) |
 | A3 | Le **traduzioni sono righe autonome** legate da un gruppo di traduzione | Traduzioni come colonne/campi affiancati sulla stessa riga | ✅ **Confermata** da ccurti il 2026-08-17. Il legame è la colonna opaca `translationGroupId` (`char(16)`), **non** una tabella `translation_groups` (assunzione S4 di SPEC-F01, confermata nella stessa sede) |
-| A4 | Si riusano le **4 soglie di ruolo esistenti** (SuperAdmin/Admin/Manager/User) mappandole sui permessi editoriali | Introdurre nuovi ruoli dedicati (Editor, Autore, Revisore) | ✅ **Confermata con correzione** da ccurti il 2026-08-17: nessun ruolo nuovo, ma le sole soglie non bastano — serve un **controllo di ownership per riga** per la voce "Pagina propria (bozza)". Vedi la nota sotto la tabella dei permessi editoriali e `docs/ai/adr/ADR-18-ownership-per-riga.md` |
+| A4 | Le **4 soglie di ruolo esistenti** (SuperAdmin/Admin/Manager/User) restano il livello base di ogni utente e diventano i **4 ruoli di sistema**, i cui permessi sono la matrice dei permessi editoriali. Sopra si possono aggiungere **ruoli personalizzati** che concedono permessi granulari in più (solo unione) | Sostituire le soglie con un RBAC puramente dinamico; ruoli editoriali fissi nel codice (Editor, Autore, Revisore) | 🔁 **Emendata** il 2026-09-24 da `docs/ai/adr/ADR-99-rbac-dinamico-ruoli-e-permessi-granulari.md` (marketing@antelmagroup.net). Testo originale, ✅ confermato con correzione da ccurti il 2026-08-17: "si riusano le 4 soglie, nessun ruolo nuovo", più il **controllo di ownership per riga** per "Pagina propria (bozza)" (`ADR-18-ownership-per-riga.md`), che resta vigente. Vedi § "Emendamento di A4" sotto |
 | A5 | Il CMS è **mono-sito**: un'unica installazione serve un solo sito, con più lingue | Multi-sito / multi-tenant con più siti nella stessa installazione | ✅ **Confermata** da ccurti il 2026-08-17: mono-sito, più lingue. **Nessuna colonna `siteId`** su alcuna tabella di dominio |
 | A6 | Il **chatbot risponde solo su contenuti pubblicati** del sito, non è un assistente generalista | Chatbot generalista con conoscenza esterna | ⏳ Da confermare — non blocca nulla: F11 è l'ultima della fila (`docs/roadmap.md`) |
 
 Stato di avanzamento e decisioni ancora aperte: `docs/TODO.md`.
+
+### Emendamento di A4 (ADR-99, 2026-09-24)
+
+A4 era stata confermata come "nessun ruolo nuovo". ADR-99 la riapre per un fatto nuovo: ruoli e
+permessi devono essere gestibili da API e UI senza modificare il codice. Il modello resta
+**additivo**:
+
+1. `users.role` non cambia e resta l'unica fonte per i guard a soglia esistenti, l'ownership per
+   riga (ADR-18), `applyScopeFilter`, l'impersonificazione e la visibilità dei SuperAdmin.
+2. **Permessi effettivi** di un utente = permessi del ruolo di sistema che corrisponde a
+   `users.role` **∪** permessi dei ruoli personalizzati assegnati. Non esistono permessi negativi né
+   sottrazioni.
+3. I **permessi** sono un catalogo chiuso, raggruppato per categoria e definito nel codice
+   (`app/backend/src/permissions/permissions.registry.ts`). Da API e UI si creano ruoli, non
+   permessi.
+4. I **ruoli di sistema** (`superadmin`, `admin`, `manager`, `user`) sono di sola lettura e
+   riallineati alla matrice qui sotto a ogni avvio. La matrice resta la fonte di verità: un test
+   tabellare fallisce se seed e matrice divergono.
+5. `roles:manage` (creare, modificare, eliminare ruoli) spetta al **solo SuperAdmin** e non può
+   comparire in un ruolo personalizzato. `users:assign_roles` è Admin+.
+6. **Anti-escalation**: nessuno può inserire in un ruolo, o assegnare a un utente, un permesso che
+   non possiede. Un ruolo assegnato ad almeno un utente non si elimina (`409 ROLE_IN_USE`).
+7. Le funzioni di sistema del SuperAdmin (impersonificazione, seed/reset demo, rigenerazione)
+   restano a soglia esatta e non diventano permessi.
+
+Le rotte passano ai permessi granulari una per una, secondo la SPEC di ciascuna fase. Finché una
+rotta non è migrata, il suo comportamento resta quello della soglia.
 
 ### Conseguenza di A5 — l'unico punto di innesto del multi-sito
 
@@ -110,8 +140,9 @@ Regole:
 
 ## Permessi editoriali (mappatura sui ruoli esistenti)
 
-Non vengono introdotti nuovi ruoli: si riusano le soglie esistenti (numero minore =
-privilegio maggiore).
+La tabella assegna i permessi alle 4 soglie esistenti (numero minore = privilegio maggiore).
+Da ADR-99 (vedi § "Emendamento di A4") è anche il **seed dei 4 ruoli di sistema**. I ruoli
+personalizzati possono concedere permessi in più, mai toglierne.
 
 | Azione | SuperAdmin (5) | Admin (10) | Manager (20) | User (30) |
 |---|---|---|---|---|

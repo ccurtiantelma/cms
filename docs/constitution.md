@@ -3,7 +3,10 @@
 > Priorità assoluta su qualsiasi altro documento. Nessuna AI la modifica di propria iniziativa.
 > In caso di conflitto con qualsiasi altra spec, ADR o piano: questo documento vince sempre.
 >
-> Ultima revisione: 2026-08-13 — ristrutturazione documentale su richiesta esplicita
+> Ultima revisione: 2026-09-24 — § "Base tecnica già presente" e voce Autorizzazione della
+> Security Policy allineate ad **ADR-99** (RBAC a soglie + permessi granulari), su richiesta
+> esplicita dell'umano (marketing@antelmagroup.net).
+> Precedente: 2026-08-13 — ristrutturazione documentale su richiesta esplicita
 > dell'umano (passaggio da starter-kit generico a CMS headless a pagine).
 
 ---
@@ -34,8 +37,8 @@ Roadmap e sequenza di sviluppo: `docs/roadmap.md`.
 
 ### Base tecnica già presente (non va re-implementata)
 
-Autenticazione JWT (access + refresh con rotation), RBAC a soglie di ruolo, MFA
-TOTP, audit log, impersonificazione SuperAdmin, gestione utenti, pagina profilo,
+Autenticazione JWT (access + refresh con rotation), RBAC a soglie di ruolo + permessi
+granulari con ruoli personalizzati (ADR-99), MFA TOTP, audit log, impersonificazione SuperAdmin, gestione utenti, pagina profilo,
 gestione sessioni/dispositivi, notifiche persistenti + realtime, storage documenti,
 export liste/report, health check, scheduling, osservabilità opzionale, tour guidato,
 theme customizer.
@@ -214,8 +217,18 @@ La sicurezza non è una fase finale. Ogni spec e ogni implementazione deve consi
 
 - **Autenticazione**: JWT middleware globale, access token 15min, refresh token 7gg
   httpOnly cookie firmato, rotation ad ogni refresh
-- **Autorizzazione**: RBAC a soglie (`GuardSuperAdmin`, `GuardAdmin`, `GuardManager`)
-  su ogni endpoint sensibile
+- **Autorizzazione**: RBAC a soglie + permessi granulari (ADR-99). Ogni endpoint sensibile
+  è protetto da un guard a soglia (`GuardSuperAdmin`, `GuardAdmin`, `GuardManager`) oppure,
+  dopo la migrazione prevista dalla sua SPEC, da `@Permissions(...codici)` con
+  `PermissionsGuard`. Regole non negoziabili dello strato permessi:
+  - modello **additivo**: permessi effettivi = ruolo di sistema di `users.role` ∪ ruoli
+    personalizzati; nessun permesso negativo; `users.role` e il JWT non cambiano;
+  - semantica AND e **fail-closed**: metadati o `authInfo` assenti, errore di risoluzione o
+    Redis non disponibile non concedono mai l'accesso (si legge dal DB o si risponde `403`/500);
+  - i permessi sono un catalogo nel codice (`permissions.registry.ts`), non si creano da API;
+  - **anti-escalation**: non si concede, né in un ruolo né a un utente, un permesso che non si
+    possiede; `roles:manage` è riservato al SuperAdmin e non entra in ruoli personalizzati;
+  - le funzioni di sistema del SuperAdmin restano su `GuardSuperAdmin` a match esatto.
 - **Validazione input**: class-validator su tutti i DTO, `forbidNonWhitelisted: true`,
   mai oggetti plain
 - **Protezione dati**: `Utils.applyScopeFilter()` obbligatorio su ogni query multi-tenant
