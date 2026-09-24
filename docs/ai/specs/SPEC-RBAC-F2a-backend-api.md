@@ -424,3 +424,35 @@ firmato, chiave `login:` in Redis).
     trova solo `roles.controller.ts` fuori da `src/permissions/`.
 24. `docs/openapi.yaml` contiene le 5 rotte nuove, `roleGuids`, `roles` e `permissions` di
     `auth/me`. `api.types.ts` rigenerato compila (`npm run build --workspace=app/frontend`).
+
+## Addendum di implementazione (2026-09-24)
+
+Implementata su `feature/rbac-f1-permessi`, un commit per task (T1–T7). Deviazioni emerse
+rispetto al testo della SPEC, nessuna delle quali cambia il contratto HTTP:
+
+1. **`MeResponse` non acquisisce `permissions`.** Il tipo è quello restituito da
+   `AuthService.getMe`: aggiungergli un campo obbligatorio avrebbe imposto di toccare
+   `auth.service.ts`, che il PLAN (T5) vuole invariato. La risposta di `GET auth/me` è il nuovo
+   `MeWithPermissionsResponse extends MeResponse` in `common/types.ts`; `MeResponseDto` ne è la
+   controparte Swagger, come previsto.
+2. **`PermissionsService` è `@Optional()` nel costruttore di `AuthController`.** S20 ha
+   considerato `auth.service.spec.ts` ma non `test/e2e/auth.e2e-spec.ts` (su `main`), che monta
+   `AuthController` in un `TestingModule` ridotto senza `PermissionsService`: con una dipendenza
+   obbligatoria la suite non si avvia più. Nell'app il provider arriva sempre dal modulo globale;
+   se mancasse, `getMe` risponde `500` e mai senza permessi (unit test dedicato). Il test di `main`
+   resta intatto.
+3. **`CreateRoleInput.permissionCodes` è `readonly string[]`**, non `PermissionCode[]`: il body
+   HTTP porta stringhe arbitrarie, validate da `RolesService` (`INVALID_PERMISSION_CODE`, S14).
+   Nessun cast nel controller.
+4. **`updateUser` senza `roleGuids` (o con insieme invariato) resta un singolo `UPDATE` senza
+   transazione**, già atomico. La transazione si apre solo quando si scrivono anche i ruoli. Serve
+   anche a rispettare S21: il mock di `admin.service.invalidation.spec.ts` non ha `transaction`.
+5. **`createUser` apre sempre una transazione** (insert di `users`, più `user_roles` se ci sono
+   ruoli), come chiesto dal prompt di implementazione. Con ruoli assegnati invalida anche la
+   cache del nuovo utente dopo il commit: è ridondante in produzione, ma innocua.
+6. **Il dettaglio di `user.update` nell'audit non contiene più `roleGuids`**, che finisce in
+   `user.roles.update` (`added`/`removed`). Senza `roleGuids` il dettaglio è identico a prima.
+7. **API di `RolesService` in aggiunta a S17**: `auditUserRoles` (audit `user.roles.update`
+   condiviso da `setUserRoles` e `AdminService`) e `listUserRoles` (S19). Il DTO di risposta
+   `RoleGuidResponseDto` tipizza il `{ guid }` di `POST`/`PATCH roles`.
+

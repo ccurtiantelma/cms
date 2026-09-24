@@ -14,7 +14,8 @@ http:
         "surname": "Rossi",
         "email": "mario.rossi@example.com",
         "role": 30,
-        "scopeId": null
+        "scopeId": null,
+        "roleGuids": ["0123456789abcdef"]
       }
   auth:
     type: bearer
