@@ -20,6 +20,8 @@ import {
   index,
   jsonb,
   uniqueIndex,
+  primaryKey,
+  check,
   AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
@@ -620,6 +622,98 @@ export const formSubmissionEntity = pgTable(
     index('form_submissions_form_key_idx').on(t.formKey, t.createdAt),
     index('form_submissions_page_idx').on(t.pageId),
     uniqueIndex('form_submissions_guid_idx').on(t.guid),
+  ],
+);
+
+// ─── RBAC (ADR-99) ───────────────────────────────────────────────────────────
+// Strato permessi additivo sopra `users.role`, che resta invariato (ADR-99 § 1).
+// `permissions` è gestita solo da `PermissionsSeedService` a partire da
+// `src/permissions/permissions.registry.ts`, mai da API. I 4 ruoli di sistema
+// (`is_system = true`) hanno `level` = valore `AppUserRoles` corrispondente;
+// i ruoli personalizzati hanno `level` null (vincolo `roles_system_level_ck`).
+
+export const roleEntity = pgTable(
+  'roles',
+  {
+    id: serial().notNull().primaryKey(),
+    guid: char('guid', { length: 16 })
+      .notNull()
+      .$defaultFn(() => Utils.randomString(16)),
+    /** Slug stabile: `superadmin`/`admin`/`manager`/`user` per i ruoli di sistema. */
+    code: varchar('code', { length: 50 }).notNull(),
+    name: varchar('name', { length: 100 }).notNull(),
+    description: text('description'),
+    isSystem: boolean('is_system').notNull().default(false),
+    /** Valore `AppUserRoles` corrispondente; valorizzato solo per i ruoli di sistema. */
+    level: integer('level'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+    createdBy: integer('created_by').references(() => userEntity.id, {
+      onDelete: 'restrict',
+      onUpdate: 'restrict',
+    }),
+    updatedBy: integer('updated_by').references(() => userEntity.id, {
+      onDelete: 'restrict',
+      onUpdate: 'restrict',
+    }),
+  },
+  (t) => [
+    uniqueIndex('roles_code_uq').on(t.code),
+    uniqueIndex('roles_guid_uq').on(t.guid),
+    uniqueIndex('roles_level_uq')
+      .on(t.level)
+      .where(sql`${t.level} is not null`),
+    check('roles_system_level_ck', sql`(${t.isSystem}) = (${t.level} is not null)`),
+  ],
+);
+
+export const permissionEntity = pgTable(
+  'permissions',
+  {
+    id: serial().notNull().primaryKey(),
+    /** `risorsa:azione`, minuscolo snake_case. Gestito solo dal seed (mai da API). */
+    code: varchar('code', { length: 64 }).notNull(),
+    category: varchar('category', { length: 50 }).notNull(),
+    description: text('description'),
+  },
+  (t) => [uniqueIndex('permissions_code_uq').on(t.code)],
+);
+
+export const rolePermissionEntity = pgTable(
+  'role_permissions',
+  {
+    roleId: integer('role_id')
+      .notNull()
+      .references(() => roleEntity.id, { onDelete: 'restrict', onUpdate: 'restrict' }),
+    // `cascade` (SPEC S5): il seed rimuove un codice uscito dal registro
+    // insieme alle sue associazioni.
+    permissionId: integer('permission_id')
+      .notNull()
+      .references(() => permissionEntity.id, { onDelete: 'cascade', onUpdate: 'restrict' }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.roleId, t.permissionId] }),
+    index('role_permissions_permission_idx').on(t.permissionId),
+  ],
+);
+
+// Nessun `created_by`: una FK `restrict` verso `users` bloccherebbe `resetDemo`.
+// Il "chi" dell'assegnazione è in `audit_log` (`user.roles.update`).
+export const userRoleEntity = pgTable(
+  'user_roles',
+  {
+    userId: integer('user_id')
+      .notNull()
+      .references(() => userEntity.id, { onDelete: 'cascade', onUpdate: 'restrict' }),
+    roleId: integer('role_id')
+      .notNull()
+      .references(() => roleEntity.id, { onDelete: 'restrict', onUpdate: 'restrict' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.roleId] }),
+    // `409 ROLE_IN_USE` e invalidazione della cache per ruolo.
+    index('user_roles_role_idx').on(t.roleId),
   ],
 );
 
