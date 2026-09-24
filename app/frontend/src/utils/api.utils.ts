@@ -22,6 +22,19 @@ export function getErrorMessage(err: unknown, fallback: string): string {
 }
 
 /**
+ * Estrae il codice di dominio (`code`) dal corpo di un errore Axios, per esempio
+ * `RESERVED_PERMISSION` o `ROLE_IN_USE`. Per le eccezioni senza codice di dominio il backend
+ * mette il nome della classe (`ForbiddenException`, `NotFoundException`, ...).
+ *
+ * @param err Errore catturato in un blocco `catch` (tipizzato `unknown`).
+ * @returns Il codice, oppure `undefined` se la risposta non ne ha uno (o non c'è risposta).
+ */
+export function getErrorCode(err: unknown): string | undefined {
+  const code = (err as AxiosError<{ code?: unknown }>)?.response?.data?.code;
+  return typeof code === 'string' ? code : undefined;
+}
+
+/**
  * Verifica se un errore catturato è un errore di rete Axios (nessuna risposta
  * ricevuta dal server: timeout, DNS, connessione assente).
  */
