@@ -213,14 +213,14 @@ Nessuno.
 
 Il dettaglio (output, dipendenze, criterio di Done, agente) è nel PLAN.
 
-- [ ] T1 — `FilesService.softDelete`: parametro `canDeleteAny`, messaggio S42, unit test nuovi
-- [ ] T2 — `FilesController`: `@Permissions('media:upload')`, composizione `media:delete_any`,
+- [x] T1 — `FilesService.softDelete`: parametro `canDeleteAny`, messaggio S42, unit test nuovi
+- [x] T2 — `FilesController`: `@Permissions('media:upload')`, composizione `media:delete_any`,
       Swagger
-- [ ] T3 — Conformità del registro e test statico di `PublicMediaController`
-- [ ] T4 — `files.e2e-spec.ts`: mock `PermissionsService` e casi `403`
-- [ ] T5 — `files-permissions.e2e-spec.ts` su DB e Redis reali
-- [ ] T6 — Contratti: OpenAPI, tipi, Bruno
-- [ ] T7 — Verifica globale, addendum, `INDEX.md`
+- [x] T3 — Conformità del registro e test statico di `PublicMediaController`
+- [x] T4 — `files.e2e-spec.ts`: mock `PermissionsService` e casi `403`
+- [x] T5 — `files-permissions.e2e-spec.ts` su DB e Redis reali
+- [x] T6 — Contratti: OpenAPI, tipi, Bruno
+- [x] T7 — Verifica globale, addendum, `INDEX.md`
 
 ## Criteri di verifica
 
@@ -288,3 +288,52 @@ Il dettaglio (output, dipendenze, criterio di Done, agente) è nel PLAN.
     `npm run build --workspace=app/frontend` passa.
 24. Bruno `bruno/files/Upload File.yml` e `Delete File.yml` accettano il `403` documentato;
     `List Files.yml` non cita più `GuardManager` (descrizione obsoleta: la lista non ha guard).
+
+## Addendum di implementazione (2026-09-24)
+
+Implementata su `feature/rbac-f1-permessi`, un commit per task (T1–T6), più il commit di firma e
+questo addendum. Nessuna modifica a `src/files/public-media/`, `files.module.ts`,
+`permissions.registry.ts` (hash invariato rispetto a `811aa7f`, criterio 8) né ad
+`app/frontend/src` salvo `api.types.ts` generato. Deviazioni e aggiunte rispetto al testo della
+SPEC:
+
+1. **Scansione di conformità (S43 a)**: la regex riconosce `@Permissions(` e `.hasAll(` (chiamata
+   di metodo, non un `hasAll(` qualsiasi). Criterio 6 verificato a mano: togliendo
+   `'media:delete_any'` dalla chiamata in `FilesController.delete`, il test "ogni codice del
+   registro è applicato … oppure è in `NOT_YET_MIGRATED`" fallisce. Riga ripristinata.
+2. **Test statico di S46** in un file proprio,
+   `test/unit/files/public-media/public-media.controller.permissions.spec.ts`. Oltre a
+   `PERMISSIONS_KEY` (classe e handler) e ai guard di classe `[ThrottlerGuard]`, verifica che
+   nessun handler abbia `PermissionsGuard` fra i guard di metodo.
+3. **Unit test di `softDelete`**: i 4 casi nuovi stanno in un `describe` separato, così il diff è
+   di sole aggiunte. Il caso 2 verifica anche che l'audit log non venga scritto.
+4. **`files.e2e-spec.ts`**: oltre ai criteri 10–13, un caso in più: un non autore con `role: 10`
+   nel JWT ma senza `media:delete_any` riceve `403` con il messaggio di S42. Il JWT da solo non
+   basta più. Il criterio 13 copre anche il `404` di `GET :guid/metadata`. Diff di sole aggiunte
+   (116+/0−).
+5. **`files-permissions.e2e-spec.ts`**: i criteri 16 e 17 stanno in un solo `it` (assegnazione e
+   poi revoca sullo stesso utente e token). Il `403` di B prima dell'assegnazione verifica anche il
+   messaggio di S42. Il criterio 19 usa una Pagina `published` e una Revisione inserite a DB con un
+   blocco `image` su `mediaRef`. Per il criterio 20 il driver mockato restituisce un PNG minimo. Il
+   test verifica `200` e `image/png` e non ripete le asserzioni sugli header di
+   `public-media.e2e-spec.ts`.
+6. **Bruno**: in `List Files.yml` l'asserzione passa da `oneOf([200, 403])` a `200`, perché il
+   `403` "ruolo User, GuardManager" non è mai esistito nel codice. `Upload Media.yml` e
+   `Upload Media - Non Raster.yml` non sono modificati (fuori dal criterio 24). Con un utente
+   attivo il loro esito non cambia.
+
+### Verifica (criterio 21)
+
+- `npm test` (backend): 72 suite, 1154 test verdi.
+- `npm run test:e2e` (backend, DB `cms_db_test` e Redis DB #1 reali): 27 suite, 295 test verdi,
+  comprese `roles.e2e-spec.ts` e `public-media.e2e-spec.ts` invariate.
+- `npm run build` verde per backend e frontend. Il worktree non ha `app/frontend/node_modules`: la
+  build del frontend è passata con un symlink temporaneo verso quello del checkout principale,
+  rimosso subito dopo. L'avviso di Vite sui chunk oltre 500 kB è preesistente.
+- Lint: `eslint` e `prettier --check` puliti sui file toccati. `npm run lint` del backend segnala
+  **1 errore preesistente** (Prettier) in `src/blocks/compiler/value-to-declarations.ts`, file non
+  toccato dalla F2c (ultimo commit `7d4e7f9`), più 7 warning preesistenti. Non corretto qui.
+- Criterio 22: `@Permissions(` solo in `roles.controller.ts` e `files.controller.ts`, nessuno in
+  `src/files/public-media/`. `softDelete(` ha un solo chiamante, `files.controller.ts`, che passa
+  `canDeleteAny`.
+- **Non eseguito**: verifica manuale della collezione Bruno contro un backend avviato.

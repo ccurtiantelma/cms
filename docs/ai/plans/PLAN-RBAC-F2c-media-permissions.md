@@ -238,37 +238,38 @@ gerarchia di `CLAUDE.md` (ADR → spec) la SPEC segue l'ADR. Vanno confermate al
 
 ### Implementazione
 
-- [ ] T1–T7 implementati, un commit per task
-- [ ] Nessun `any` TypeScript senza commento
-- [ ] Nessun `console.log` rimasto
-- [ ] JSDoc su `softDelete` (nuovo parametro) e sul costruttore di `FilesController`
-- [ ] `@Permissions` solo su `RolesController` e `FilesController.upload`; nessuna modifica in
+- [x] T1–T7 implementati, un commit per task
+- [x] Nessun `any` TypeScript senza commento
+- [x] Nessun `console.log` rimasto
+- [x] JSDoc su `softDelete` (nuovo parametro) e sul costruttore di `FilesController`
+- [x] `@Permissions` solo su `RolesController` e `FilesController.upload`; nessuna modifica in
       `src/files/public-media/`
 
 ### Test
 
-- [ ] Unit test nuovi verdi (`files.service.spec.ts`, conformità del registro, test statico
+- [x] Unit test nuovi verdi (`files.service.spec.ts`, conformità del registro, test statico
       `PublicMediaController`)
-- [ ] `files.e2e-spec.ts`: esistenti invariati e verdi, nuovi verdi
-- [ ] `files-permissions.e2e-spec.ts` verde su DB e Redis reali
-- [ ] Nessun test placeholder
+- [x] `files.e2e-spec.ts`: esistenti invariati e verdi, nuovi verdi
+- [x] `files-permissions.e2e-spec.ts` verde su DB e Redis reali
+- [x] Nessun test placeholder
 
 ### Build e qualità
 
-- [ ] `npm run build --workspace=app/backend` superata
-- [ ] `npm run build --workspace=app/frontend` superata (tipi rigenerati)
-- [ ] Lint superato
+- [x] `npm run build --workspace=app/backend` superata
+- [x] `npm run build --workspace=app/frontend` superata (tipi rigenerati)
+- [ ] Lint superato (file toccati puliti; 1 errore Prettier preesistente in
+      `value-to-declarations.ts`, vedi SPEC § Addendum)
 - [ ] Code review completata
 
 ### Contratti e documentazione
 
-- [ ] `npm run openapi:export` e `npm run openapi:types` eseguiti
-- [ ] Bruno `bruno/files/` riallineato
-- [ ] Addendum di implementazione in coda alla SPEC
-- [ ] `docs/ai/INDEX.md` aggiornato alla firma (testo in T7)
+- [x] `npm run openapi:export` e `npm run openapi:types` eseguiti
+- [x] Bruno `bruno/files/` riallineato
+- [x] Addendum di implementazione in coda alla SPEC
+- [x] `docs/ai/INDEX.md` aggiornato alla firma (testo in T7)
 - [ ] `docs/ai/progress-tracker.md`: solo su richiesta esplicita a fine feature, come in F2a/F2b
 
 ### Commit
 
-- [ ] Conventional Commits, scope `rbac` (es. `feat(rbac): T2 — media:upload e media:delete_any su app/files`)
-- [ ] Branch `feature/rbac-f1-permessi` aggiornato
+- [x] Conventional Commits, scope `rbac` (es. `feat(rbac): T2 — media:upload e media:delete_any su app/files`)
+- [x] Branch `feature/rbac-f1-permessi` aggiornato
