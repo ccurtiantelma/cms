@@ -3,12 +3,17 @@ import { PermissionCategory, PermissionCode } from '../../permissions/permission
 /** Formato del `code` di un ruolo personalizzato: slug minuscolo, 3–50 caratteri. */
 export const ROLE_CODE_PATTERN = /^[a-z][a-z0-9_]{2,49}$/;
 
-/** Input di creazione di un ruolo personalizzato (diventa un DTO `class-validator` in F2). */
+/**
+ * Input di creazione di un ruolo personalizzato (forma validata da
+ * `CreateRoleDto`). `permissionCodes` arriva come stringhe arbitrarie:
+ * appartenenza al registro e codici riservati li verifica `RolesService`
+ * (`INVALID_PERMISSION_CODE`, `RESERVED_PERMISSION`, SPEC-RBAC-F2a S14).
+ */
 export interface CreateRoleInput {
   code: string;
   name: string;
   description?: string | null;
-  permissionCodes: PermissionCode[];
+  permissionCodes: readonly string[];
 }
 
 /** Input di modifica: `code` è immutabile. */

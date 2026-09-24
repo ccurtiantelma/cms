@@ -76,8 +76,6 @@ const NOT_YET_MIGRATED: readonly PermissionCode[] = [
   'users:read',
   'users:write',
   'users:assign_roles',
-  'roles:read',
-  'roles:manage',
   'audit:read',
 ];
 
