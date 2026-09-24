@@ -326,14 +326,14 @@ richiesta dalla Documentation Policy. Nessun'altra riga dei due file viene tocca
 
 Dettaglio operativo, dipendenze e agenti in `PLAN-RBAC-F2a-backend-api.md`.
 
-- [ ] T1: DTO di input e di risposta ruoli/permessi, `roleGuids` sui DTO utente, `MeResponseDto`
-- [ ] T2: `RolesService`: separazione `planUserRoles`/`applyUserRoles`
-- [ ] T3: `RolesController` e registrazione in `RolesModule`; `NOT_YET_MIGRATED` aggiornato
-- [ ] T4: `AdminService`/`AdminController`: `roleGuids` atomico, `roles` nel dettaglio
-- [ ] T5: `GET auth/me` con `permissions`
-- [ ] T6: e2e `roles.e2e-spec.ts`
-- [ ] T7: `openapi:export`/`openapi:types`, collezione Bruno, `INDEX.md`, glossario, architettura
-- [ ] T8: Verifica globale e non regressione
+- [x] T1: DTO di input e di risposta ruoli/permessi, `roleGuids` sui DTO utente, `MeResponseDto`
+- [x] T2: `RolesService`: separazione `planUserRoles`/`applyUserRoles`
+- [x] T3: `RolesController` e registrazione in `RolesModule`; `NOT_YET_MIGRATED` aggiornato
+- [x] T4: `AdminService`/`AdminController`: `roleGuids` atomico, `roles` nel dettaglio
+- [x] T5: `GET auth/me` con `permissions`
+- [x] T6: e2e `roles.e2e-spec.ts`
+- [x] T7: `openapi:export`/`openapi:types`, collezione Bruno, `INDEX.md`, glossario, architettura
+- [x] T8: Verifica globale e non regressione
 
 ## Criteri di verifica
 
@@ -455,4 +455,22 @@ rispetto al testo della SPEC, nessuna delle quali cambia il contratto HTTP:
 7. **API di `RolesService` in aggiunta a S17**: `auditUserRoles` (audit `user.roles.update`
    condiviso da `setUserRoles` e `AdminService`) e `listUserRoles` (S19). Il DTO di risposta
    `RoleGuidResponseDto` tipizza il `{ guid }` di `POST`/`PATCH roles`.
+
+**Verifica T8 (2026-09-24)**, con baseline prima di F2a su `33cbbd1`:
+
+- Unit backend: 71 suite, 1146 test verdi (baseline 1123, più 23 nuovi).
+- E2E backend: 26 suite, 284 test verdi (baseline 263, più i 21 di `roles.e2e-spec.ts`).
+- `nest build` verde. `eslint` pulito sui 20 file `.ts` del backend toccati da F2a. `eslint .`
+  riporta 1 errore Prettier **preesistente** in `src/blocks/compiler/value-to-declarations.ts`,
+  file non toccato da F2a.
+- Build del frontend verde con `api.types.ts` rigenerato. Unit del frontend: 853/857. I 4
+  falliti (`PropertyInspector.test.tsx`, `resize-handle.utils.test.ts`) falliscono identici con
+  l'`api.types.ts` precedente a F2a: sono preesistenti, e li corregge `edab79f` sul branch editor,
+  che non è su `main`.
+- Criteri 22–23: nessun test presente su `main` modificato. Test F1 toccati solo come da S21.
+  `@Permissions(` fuori da `src/permissions/` solo in `roles.controller.ts`. `app/files` e
+  `public-media` invariati.
+- Nota d'ambiente: il worktree non ha `app/frontend/node_modules`, che nel checkout principale
+  contiene `@mantine/charts` e `@mantine/tiptap`. Build e test del frontend sono stati eseguiti
+  con un symlink temporaneo, rimosso subito dopo.
 

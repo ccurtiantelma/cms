@@ -241,36 +241,37 @@ editor `feat/editor-controlli-griglia-elementor`, che ha modifiche non committat
 ## Definition of Done — Checklist globale
 
 ### Implementazione
-- [ ] Tutti i task implementati (T1–T8)
-- [ ] Nessun `any` TypeScript senza commento
-- [ ] Nessun `console.log` rimasto
-- [ ] Ogni funzione pubblica con JSDoc
-- [ ] Nessuna dipendenza npm nuova, nessuna migrazione DB
-- [ ] `@Permissions` solo su `RolesController`; `app/files`, `system/*`, `PublicMediaController`
+- [x] Tutti i task implementati (T1–T8)
+- [x] Nessun `any` TypeScript senza commento
+- [x] Nessun `console.log` rimasto
+- [x] Ogni funzione pubblica con JSDoc
+- [x] Nessuna dipendenza npm nuova, nessuna migrazione DB
+- [x] `@Permissions` solo su `RolesController`; `app/files`, `system/*`, `PublicMediaController`
       invariati
 
 ### Test
-- [ ] Unit test scritti e superati (Jest), criteri 1–5 della SPEC
-- [ ] Integration test scritti e superati (Supertest), `roles.e2e-spec.ts`, criteri 6–21
-- [ ] Collezioni Bruno create per ogni endpoint nuovo o modificato
-- [ ] Mock per servizi esterni (email in coda, `RedisService`/`DbService` negli unit test)
-- [ ] Nessun test placeholder (`expect(true).toBe(true)`)
-- [ ] Nessun test di `main` modificato; test F1 toccati solo come S21
+- [x] Unit test scritti e superati (Jest), criteri 1–5 della SPEC
+- [x] Integration test scritti e superati (Supertest), `roles.e2e-spec.ts`, criteri 6–21
+- [x] Collezioni Bruno create per ogni endpoint nuovo o modificato
+- [x] Mock per servizi esterni (email in coda, `RedisService`/`DbService` negli unit test)
+- [x] Nessun test placeholder (`expect(true).toBe(true)`)
+- [x] Nessun test di `main` modificato; test F1 toccati solo come S21
 
 ### Build e qualità
-- [ ] `npm run build --workspace=app/backend` superata
-- [ ] `npm run build --workspace=app/frontend` superata (con `api.types.ts` rigenerato)
-- [ ] Lint superato
+- [x] `npm run build --workspace=app/backend` superata
+- [x] `npm run build --workspace=app/frontend` superata (con `api.types.ts` rigenerato)
+- [x] Lint superato sui file di F2a (`eslint .` ha 1 errore Prettier preesistente in
+      `value-to-declarations.ts`, fuori perimetro: vedi addendum SPEC)
 - [ ] Code review completata, con attenzione ad atomicità S17, ordine guard/pipe e anti-escalation
 
 ### Contratti e documentazione
-- [ ] `npm run openapi:export` eseguito
-- [ ] `npm run openapi:types` eseguito
-- [ ] `docs/glossary.md` e `docs/system-architecture.md` emendati come da SPEC
-- [ ] `docs/ai/INDEX.md` aggiornato
-- [ ] SPEC aggiornata con un addendum se sono emerse deviazioni durante l'implementazione
+- [x] `npm run openapi:export` eseguito
+- [x] `npm run openapi:types` eseguito
+- [x] `docs/glossary.md` e `docs/system-architecture.md` emendati come da SPEC
+- [x] `docs/ai/INDEX.md` aggiornato
+- [x] SPEC aggiornata con un addendum se sono emerse deviazioni durante l'implementazione
 - [ ] `docs/ai/progress-tracker.md` aggiornato (su richiesta esplicita, Documentation Policy)
 
 ### Commit
-- [ ] Commit atomico per task con messaggio Conventional Commits (es. `feat(rbac): T3 — …`)
-- [ ] Branch aggiornato (`feature/rbac-f1-permessi` o `feature/rbac-f2a-api`, vedi § Task)
+- [x] Commit atomico per task con messaggio Conventional Commits (es. `feat(rbac): T3 — …`)
+- [x] Branch aggiornato (`feature/rbac-f1-permessi` o `feature/rbac-f2a-api`, vedi § Task)
