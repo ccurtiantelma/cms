@@ -13,6 +13,7 @@ import { DbService } from '../db/db.service';
 import { fileEntity, pageEntity, pageRevisionEntity } from '../db/schema';
 import { AppConstants } from '../common/app-constants';
 import { AppUserRoles } from '../common/enums';
+import { hasElevatedRowAccess } from '../common/ownership';
 import { AuditLogService } from '../common/audit-log.service';
 import { AuthInfo, FilesQueryParams } from '../common/types';
 import { Pagination } from '../common/pagination';
@@ -235,8 +236,8 @@ export class FilesService {
    * Soft-delete del file (`isActive = false`): il blob fisico non viene
    * rimosso subito (ADR-8, Conseguenze — pulizia rimandata a un job futuro,
    * per non rendere irreversibile un'operazione pensata come reversibile).
-   * Consentito solo all'autore del file o a un ruolo Admin/superiore.
-   * Protezione referenziale (RFC-F09 N7): rifiutata con `409` se il file è
+   * Consentito all'autore del file (ADR-18) o a chi ha l'accesso elevato
+   * `canDeleteAny`. Protezione referenziale (RFC-F09 N7): rifiutata con `409` se il file è
    * referenziato da un nodo `mediaRef` nell'albero della Revisione
    * attualmente pubblicata di una Pagina `published` — verificato **prima**
    * di qualunque side-effect (nessuna scrittura DB, nessuna chiamata al
@@ -244,12 +245,22 @@ export class FilesService {
    * @param guid Identificatore pubblico del file.
    * @param authInfo Identità del chiamante.
    * @param ip Indirizzo IP del chiamante, per l'audit log.
+   * @param canDeleteAny Accesso elevato di ADR-18: il controller lo ricava da
+   *   `media:delete_any` (ADR-99, SPEC F2c S41). Il default (soglia Admin sul
+   *   JWT) serve solo ai chiamanti che non lo passano.
    */
-  async softDelete(guid: string, authInfo: AuthInfo, ip?: string): Promise<void> {
+  async softDelete(
+    guid: string,
+    authInfo: AuthInfo,
+    ip?: string,
+    canDeleteAny: boolean = hasElevatedRowAccess(authInfo, AppUserRoles.Admin),
+  ): Promise<void> {
     const row = await this.findActiveByGuid(guid);
 
-    if (authInfo.role > AppUserRoles.Admin && row.createdBy !== authInfo.userId) {
-      throw new ForbiddenException("Solo l'autore del file o un Admin possono eliminarlo.");
+    if (!canDeleteAny && row.createdBy !== authInfo.userId) {
+      throw new ForbiddenException(
+        "Solo l'autore del file, un Admin o chi ha il permesso media:delete_any possono eliminarlo.",
+      );
     }
 
     await this.assertNotReferencedByPublishedPage(guid);

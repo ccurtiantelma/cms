@@ -473,6 +473,55 @@ describe('FilesService (unit)', () => {
     });
   });
 
+  describe('softDelete — accesso elevato da media:delete_any (SPEC F2c S41)', () => {
+    it('consente a un non autore con canDeleteAny = true di eliminare il file, anche se User', async () => {
+      findFirstMock.mockResolvedValue(insertedRow);
+      const authInfo = buildAuthInfo(99, AppUserRoles.User);
+
+      await expect(
+        filesService.softDelete(insertedRow.guid, authInfo, undefined, true),
+      ).resolves.toBeUndefined();
+      expect(updateSetMock).toHaveBeenCalledWith(
+        expect.objectContaining({ isActive: false, updatedBy: 99 }),
+      );
+    });
+
+    it('rifiuta un non autore con canDeleteAny = false anche se il JWT dice Admin', async () => {
+      findFirstMock.mockResolvedValue(insertedRow);
+      const authInfo = buildAuthInfo(99, AppUserRoles.Admin);
+
+      await expect(
+        filesService.softDelete(insertedRow.guid, authInfo, undefined, false),
+      ).rejects.toThrow(
+        new ForbiddenException(
+          "Solo l'autore del file, un Admin o chi ha il permesso media:delete_any possono eliminarlo.",
+        ),
+      );
+      expect(updateSetMock).not.toHaveBeenCalled();
+      expect(auditLogMock).not.toHaveBeenCalled();
+    });
+
+    it("consente all'autore di eliminare il proprio file con canDeleteAny = false", async () => {
+      findFirstMock.mockResolvedValue(insertedRow);
+      const authInfo = buildAuthInfo(7, AppUserRoles.User);
+
+      await expect(
+        filesService.softDelete(insertedRow.guid, authInfo, undefined, false),
+      ).resolves.toBeUndefined();
+      expect(updateSetMock).toHaveBeenCalled();
+    });
+
+    it('lancia NotFoundException per un file inesistente anche con canDeleteAny = true', async () => {
+      findFirstMock.mockResolvedValue(undefined);
+      const authInfo = buildAuthInfo(99, AppUserRoles.User);
+
+      await expect(
+        filesService.softDelete('guid-inesistente', authInfo, undefined, true),
+      ).rejects.toThrow(NotFoundException);
+      expect(updateSetMock).not.toHaveBeenCalled();
+    });
+  });
+
   describe('softDelete — protezione referenziale (N7)', () => {
     const referencingContent: TestPageContent = {
       version: 1,
