@@ -277,34 +277,34 @@ Parallelismo possibile: T5 e T6 dopo T4. Tutto il resto è sequenziale.
 ## Definition of Done — Checklist globale
 
 ### Implementazione
-- [ ] Tutti i task implementati
-- [ ] Nessun `any` TypeScript senza commento
-- [ ] Nessun `console.log` rimasto
-- [ ] Ogni funzione pubblica con JSDoc
-- [ ] Solo Mantine v7 e `@tabler/icons-react`; chiamate HTTP solo da `src/services/`
+- [x] Tutti i task implementati
+- [x] Nessun `any` TypeScript senza commento
+- [x] Nessun `console.log` rimasto
+- [x] Ogni funzione pubblica con JSDoc
+- [x] Solo Mantine v7 e `@tabler/icons-react`; chiamate HTTP solo da `src/services/`
 
 ### Test
-- [ ] Unit test scritti e superati (Vitest: store, hook, `<Can>`, utility, mappatura errori)
-- [ ] Integration test dei componenti scritti e superati (Vitest + Testing Library: matrice,
+- [x] Unit test scritti e superati (Vitest: store, hook, `<Can>`, utility, mappatura errori)
+- [x] Integration test dei componenti scritti e superati (Vitest + Testing Library: matrice,
       drawer, `PageRoles`, `PageUsers`)
 - [ ] Collezioni Bruno: **non applicabile** (nessun endpoint nuovo o modificato)
-- [ ] Mock per servizi esterni: service Axios mockati, nessuna chiamata HTTP reale
-- [ ] Nessun test placeholder (`expect(true).toBe(true)`)
+- [x] Mock per servizi esterni: service Axios mockati, nessuna chiamata HTTP reale
+- [x] Nessun test placeholder (`expect(true).toBe(true)`)
 - [ ] E2E Playwright: **fuori perimetro**, raccomandato come follow-up (`e2e/tests/roles.spec.ts`:
       SuperAdmin crea un ruolo e lo assegna, l'utente vede `/roles` dopo il reload)
 
 ### Build e qualità
 - [ ] `npm run build --workspace=app/backend`: **non applicabile** (backend non toccato; criterio 28)
-- [ ] `npm run build --workspace=app/frontend` superata
-- [ ] Lint superato sui file toccati
+- [x] `npm run build --workspace=app/frontend` superata
+- [x] Lint superato sui file toccati
 - [ ] Code review completata
 
 ### Contratti e documentazione
 - [ ] `npm run openapi:export` / `openapi:types`: **non applicabile** (nessun endpoint cambiato)
-- [ ] Spec aggiornata con l'addendum di implementazione (T7)
-- [ ] `docs/ai/INDEX.md`: riga proposta come testo, scritta solo su richiesta esplicita
+- [x] Spec aggiornata con l'addendum di implementazione (T7)
+- [x] `docs/ai/INDEX.md`: scritta su richiesta esplicita del prompt di implementazione
 - [ ] `docs/ai/progress-tracker.md` aggiornato solo su richiesta esplicita a fine feature
 
 ### Commit
-- [ ] Commit atomico per task con messaggio Conventional Commits
-- [ ] Branch `feature/rbac-f1-permessi` aggiornato (nessun branch nuovo, come F1/F2a)
+- [x] Commit atomico per task con messaggio Conventional Commits
+- [x] Branch `feature/rbac-f1-permessi` aggiornato (nessun branch nuovo, come F1/F2a)

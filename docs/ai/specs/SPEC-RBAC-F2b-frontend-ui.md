@@ -288,13 +288,13 @@ Non applicabile (ADR-99 § Conseguenze (e)).
 
 Dettaglio operativo, dipendenze e agenti in `PLAN-RBAC-F2b-frontend-ui.md`.
 
-- [ ] T1 — `useAuthStore`: `permissions`, `refreshPermissions`, caricamento post-login
-- [ ] T2 — `useHasPermission`, `<Can>`, `RequirePermission`, `permission` nella navigazione
-- [ ] T3 — Tipi, service ruoli, `getErrorCode`, mappatura errori
-- [ ] T4 — Utility e componente della matrice dei permessi
-- [ ] T5 — `PageRoles`, drawer ruolo, rotta `/roles` e voce di navigazione
-- [ ] T6 — `PageUsers`: multi-select dei ruoli aggiuntivi
-- [ ] T7 — Verifica globale, non regressione, addendum SPEC
+- [x] T1 — `useAuthStore`: `permissions`, `refreshPermissions`, caricamento post-login
+- [x] T2 — `useHasPermission`, `<Can>`, `RequirePermission`, `permission` nella navigazione
+- [x] T3 — Tipi, service ruoli, `getErrorCode`, mappatura errori
+- [x] T4 — Utility e componente della matrice dei permessi
+- [x] T5 — `PageRoles`, drawer ruolo, rotta `/roles` e voce di navigazione
+- [x] T6 — `PageUsers`: multi-select dei ruoli aggiuntivi
+- [x] T7 — Verifica globale, non regressione, addendum SPEC
 
 ## Criteri di verifica
 
@@ -371,3 +371,70 @@ Nessuna chiamata HTTP reale.
 27. `npm run build --workspace=app/frontend` verde. `eslint` pulito sui file toccati.
 28. `git diff f1099b7 -- app/backend docs/openapi.yaml app/frontend/src/types/api.types.ts bruno`
     vuoto.
+
+## Addendum di implementazione (2026-09-24)
+
+Implementata su `feature/rbac-f1-permessi`, un commit per task (T1–T6, più il commit di firma e
+questo addendum). Nessuna modifica a `app/backend/`, `docs/openapi.yaml`, `api.types.ts` e
+`bruno/` (criterio 28: `git diff f1099b7` vuoto su quei percorsi). Deviazioni e aggiunte rispetto
+al testo della SPEC:
+
+1. **`RequirePermission` vive in `src/components/RequirePermission.tsx`**, non in `App.tsx`
+   (scelta lasciata all'implementatore dal PLAN, T2): così si testa senza importare l'albero delle
+   rotte. `useHasPermission.ts` esporta anche la funzione pura `hasPermission(permissions, code)`,
+   usata dal guard e dall'hook.
+2. **`init()` fallito porta `permissions` a `[]`** (oltre a `user: null`), coerente con il
+   fail-closed di S26. I criteri 1–4 non coprivano il caso.
+3. **`roleErrorMessage` restituisce `null` anche per `404`, `5xx` ed errori di rete**, non solo per
+   il `403` senza codice di dominio: l'interceptor li notifica già tutti (stessa motivazione di S37),
+   e un secondo toast sarebbe un duplicato. Un `404` in modifica chiude il drawer e ricarica la
+   lista; in eliminazione ricarica la lista.
+4. **`isRoleDomainError(err)`** in `roles-errors.utils.ts`: `PageUsers` usa i messaggi dedicati
+   solo per gli 8 codici di dominio e mantiene la gestione preesistente (`getErrorMessage`) per
+   tutti gli altri errori, così il suo comportamento non cambia fuori dai ruoli. Il lookup dei
+   messaggi considera solo le chiavi proprie della mappa (un `code` come `toString` non è un codice
+   di dominio: difetto trovato dal test).
+5. **`FormDrawer` acquisisce `readOnly?: boolean`** (default `false`): nasconde "Salva" e rinomina
+   "Annulla" in "Chiudi". Serve alla modalità `view`, che la SPEC vuole senza pulsante di
+   salvataggio. Prop additiva: i 4 consumer esistenti non cambiano.
+6. **`409 ROLE_IN_USE`**: il toast riporta il messaggio del backend e aggiunge dove togliere il
+   ruolo (campo "Ruoli aggiuntivi" della pagina Utenti).
+7. **Drawer ruolo**: "Salva" resta disabilitato finché il catalogo non è caricato; se il
+   caricamento fallisce, il drawer mostra un avviso con "Riprova". `PageRoles` aggiunge due KPI
+   nell'intestazione (ruoli totali, personalizzati) e, senza `roles:manage`, un sottotitolo che
+   dichiara la sola lettura.
+8. **`PageUsers`, caricamento dei ruoli in modifica**: `fetchUser(guid)` gira in un `useEffect`
+   con flag `active`, che scarta le risposte arrivate dopo un cambio di utente o una chiusura.
+   `form.setFieldValue` è escluso dalle dipendenze perché Mantine lo ricrea a ogni render (dipende
+   dalle regole di validazione inline): incluso, rifaceva la richiesta e azzerava il campo a ogni
+   modifica. Il test verifica una sola `fetchUser` per apertura. Se il caricamento di ruoli o
+   dettaglio fallisce, il campo resta disabilitato con un messaggio, e `roleGuids` non viene mai
+   inviato.
+9. **Multi-select**: il codice del ruolo compare come seconda riga dell'opzione (`renderOption`).
+   Il pulsante "svuota" di Mantine è `aria-hidden` per scelta della libreria: da tastiera si toglie
+   un ruolo con Backspace.
+10. **Fixture di test** in `src/test/fixtures/` (`permission-catalog.ts`, `roles.ts`): il catalogo
+    è ricostruito dal registro backend (20 codici, 6 categorie, ordine di `PERMISSION_CATEGORIES`),
+    non copiato da una risposta HTTP reale, perché la verifica non ha avviato il backend (vedi
+    sotto).
+
+**Verifica T7 (2026-09-24)**, con baseline su `f1099b7` presa prima di T1 nello stesso ambiente:
+
+- Unit e integration del frontend: 92 file, **978/982** (baseline: 80 file, 853/857). Più 12 file
+  e 125 test nuovi. I 4 falliti sono gli stessi della baseline e di SPEC F2a § Addendum
+  (`PropertyInspector.test.tsx` ×2, `resize-handle.utils.test.ts` ×2), in file non toccati.
+  `PagePages.test.tsx`, `PagePageDetail.test.tsx` e `ResponsiveTable.test.tsx` verdi senza
+  modifiche.
+- `npm run build --workspace=app/frontend` verde (`tsc` pulito; `PageRoles` in un chunk lazy
+  proprio). L'avviso di Vite sui chunk oltre 500 kB è preesistente.
+- `eslint` e `prettier --check` puliti sui 33 file `.ts`/`.tsx` toccati.
+- **Verifiche manuali di T5 e T6 non eseguite**: richiedono backend e database avviati dal
+  worktree (che non ha `app/backend/.env`). Restano da fare prima del merge: SuperAdmin che crea,
+  modifica ed elimina un ruolo, `409` con un ruolo assegnato, Admin in sola lettura, Admin che
+  assegna a uno User un ruolo con `roles:read` e User che dopo il reload vede "Ruoli" in sola
+  lettura. L'E2E Playwright raccomandato dal PLAN (`e2e/tests/roles.spec.ts`) le coprirebbe.
+- Nota d'ambiente: come in F2a, build e test del frontend usano un symlink temporaneo
+  `app/frontend/node_modules`, rimosso a fine verifica e mai committato.
+- `docs/ai/INDEX.md` aggiornato su richiesta esplicita del prompt di implementazione (commit di
+  firma): SPEC/PLAN F2b mappati nel dominio "Auth, Ruoli & Permessi" e nota sulla ridenominazione
+  dell'enforcement `media:*` in F2c.
