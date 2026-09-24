@@ -16,6 +16,7 @@ import { AppConstants } from '../common/app-constants';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { assertTargetRoleManageable } from './user-management.rules';
+import { PermissionsService } from '../permissions/permissions.service';
 
 /** Colonne escluse dalle risposte utente: mai esporre hash password, secret MFA o token azione. */
 const SENSITIVE_USER_COLUMNS = {
@@ -48,13 +49,17 @@ const ACTIVATION_TOKEN_HOURS = 48;
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
 
-  /** Inietta i servizi per accesso al DB, seed dati demo, invio email, audit log ed export statico. */
+  /**
+   * Inietta i servizi per accesso al DB, seed dati demo, invio email, audit log,
+   * export statico e invalidazione della cache permessi (ADR-99 § 6).
+   */
   constructor(
     private readonly db: DbService,
     private readonly seedService: SeedService,
     private readonly emailQueue: EmailQueueService,
     private readonly auditLogService: AuditLogService,
     private readonly exportService: ExportService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   // ─── Sistema (SuperAdmin only) ───────────────────────────────────────────
@@ -295,6 +300,11 @@ export class AdminService {
       })
       .where(eq(userEntity.id, target.id));
 
+    // Il ruolo di sistema dei permessi granulari segue `users.role` (ADR-99 § 1, SPEC S1).
+    if (dto.role !== undefined && dto.role !== target.role) {
+      await this.permissionsService.invalidateUsers([target.id]);
+    }
+
     this.logger.log(`Utente ${target.id} aggiornato da ${authInfo.userId}.`);
     await this.auditLogService.log(
       authInfo.userId,
@@ -326,6 +336,8 @@ export class AdminService {
       .update(userEntity)
       .set({ isActive, updatedAt: new Date(), updatedBy: authInfo.userId })
       .where(eq(userEntity.id, target.id));
+    // Utente disattivato → insieme vuoto di permessi (SPEC S2): la cache va riallineata.
+    await this.permissionsService.invalidateUsers([target.id]);
 
     this.logger.log(
       `Utente ${target.id} ${isActive ? 'riattivato' : 'disabilitato'} da ${authInfo.userId}.`,
