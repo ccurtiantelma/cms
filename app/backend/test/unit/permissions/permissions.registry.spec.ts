@@ -68,8 +68,6 @@ const NOT_YET_MIGRATED: readonly PermissionCode[] = [
   'pages:delete',
   'templates:manage',
   'global_sections:manage',
-  'media:upload',
-  'media:delete_any',
   'forms:read_submissions',
   'settings:manage_theme',
   'settings:manage_locales',
@@ -109,7 +107,11 @@ function readMatrix(): MatrixRow[] {
     });
 }
 
-/** Codici passati a `@Permissions(...)` in tutti i controller di `src/`. */
+/**
+ * Codici passati a `@Permissions(...)` o a `hasAll(...)` in tutti i controller
+ * di `src/`. `hasAll` copre l'enforcement per composizione nel controller,
+ * come `media:delete_any` in `FilesController.delete` (SPEC-RBAC-F2c S43).
+ */
 function codesUsedByControllers(): Set<string> {
   const used = new Set<string>();
   const walk = (dir: string): void => {
@@ -118,7 +120,7 @@ function codesUsedByControllers(): Set<string> {
       if (entry.isDirectory()) walk(full);
       else if (entry.name.endsWith('.controller.ts')) {
         const source = readFileSync(full, 'utf8');
-        for (const call of source.matchAll(/@Permissions\(([^)]*)\)/g)) {
+        for (const call of source.matchAll(/(?:@Permissions|\.hasAll)\(([^)]*)\)/g)) {
           for (const literal of call[1].matchAll(/['"`]([^'"`]+)['"`]/g)) used.add(literal[1]);
         }
       }
