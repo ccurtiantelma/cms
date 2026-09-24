@@ -29,9 +29,21 @@ interface AuthStoreState {
   isMfaEnabled: boolean | null;
   /** Id del SuperAdmin reale se la sessione corrente è un'impersonificazione. */
   impersonatedBy: number | null;
+  /**
+   * Codici permesso effettivi dell'utente (`GET /auth/me`, ADR-99 § 10). `null` = non ancora
+   * caricati, `[]` = nessun permesso: i guard mostrano un loader sul primo e negano sul secondo
+   * (SPEC F2b S25/S28). Mai persistiti in `localStorage`. Solo UX: l'autorità resta il backend.
+   */
+  permissions: string[] | null;
   /** Avvia il fetch iniziale (GET /auth/me), no-op se già avviato in questa sessione dell'app. */
   init: () => void;
+  /** Salva token e utente, poi carica i permessi senza attenderli (SPEC F2b S26 (b)). */
   login: (token: string, user: AuthUser) => void;
+  /**
+   * Ricarica i permessi da `GET /auth/me`. Le chiamate concorrenti condividono la stessa
+   * richiesta; in caso di errore `permissions` diventa `[]` e la sessione resta aperta.
+   */
+  refreshPermissions: () => Promise<void>;
   logout: () => Promise<void>;
   /** Aggiorna nome/cognome in stato e localStorage dopo un self-update da Pagina Profilo. */
   updateUserProfile: (name: string, surname?: string) => void;
@@ -42,11 +54,15 @@ interface AuthStoreState {
 /** Guard a livello di modulo: `init()` è invocato da `useAuthInit`, ma la GET /auth/me deve partire una sola volta. */
 let initStarted = false;
 
+/** Richiesta `refreshPermissions` in volo, condivisa dalle chiamate concorrenti. */
+let permissionsInFlight: Promise<void> | null = null;
+
 export const useAuthStore = create<AuthStoreState>((set, get) => ({
   user: getStoredUser(),
   isLoading: true,
   isMfaEnabled: null,
   impersonatedBy: null,
+  permissions: null,
 
   init: () => {
     if (initStarted) return;
@@ -75,12 +91,13 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
           user: nextUser,
           isMfaEnabled: data.isMfaEnabled ?? null,
           impersonatedBy: getImpersonatedBy(),
+          permissions: data.permissions ?? [],
         });
       })
       .catch(() => {
         // Token non valido o scaduto.
         clearAuthStorage();
-        set({ user: null });
+        set({ user: null, permissions: [] });
       })
       .finally(() => {
         set({ isLoading: false });
@@ -91,6 +108,25 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     setToken(token);
     setStoredUser(userData);
     set({ user: userData, impersonatedBy: getImpersonatedBy() });
+    // `init()` è già consumato e il login naviga in SPA senza ricaricare: senza questa chiamata
+    // i permessi resterebbero `null` fino al primo reload (PLAN F2b, falla 6).
+    void get().refreshPermissions();
+  },
+
+  refreshPermissions: () => {
+    if (permissionsInFlight) return permissionsInFlight;
+    permissionsInFlight = getMeApi()
+      .then((data) => {
+        // Un logout arrivato mentre la richiesta era in volo vince.
+        if (getToken()) set({ permissions: data.permissions ?? [] });
+      })
+      .catch(() => {
+        if (getToken()) set({ permissions: [] });
+      })
+      .finally(() => {
+        permissionsInFlight = null;
+      });
+    return permissionsInFlight;
   },
 
   updateUserProfile: (name, surname) => {
@@ -110,7 +146,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       // Ignora errori di logout lato server: lo stato locale va comunque ripulito.
     } finally {
       clearAuthStorage();
-      set({ user: null, impersonatedBy: null });
+      set({ user: null, impersonatedBy: null, permissions: null });
       window.location.href = '/login';
     }
   },
