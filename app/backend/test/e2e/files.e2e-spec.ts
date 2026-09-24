@@ -18,6 +18,8 @@ import { AllExceptionsFilter } from '../../src/common/filters/all-exceptions.fil
 import { AppConstants } from '../../src/common/app-constants';
 import { AppUserRoles } from '../../src/common/enums';
 import { MediaQueueService } from '../../src/queues/media-queue/media-queue.service';
+import { PermissionsService } from '../../src/permissions/permissions.service';
+import { PermissionCode, SYSTEM_ROLES } from '../../src/permissions/permissions.registry';
 
 /**
  * Test di integrazione per `FilesController` (upload/download/delete, ADR-8).
@@ -37,6 +39,13 @@ describe('FilesController (integration)', () => {
   let updateSetMock: jest.Mock;
   let storageUploadMock: jest.Mock;
   let storageDownloadMock: jest.Mock;
+  /**
+   * Codici concessi dal mock di `PermissionsService.hasAll` a ogni `userId`
+   * (SPEC-RBAC-F2c S44). Default: il seed `user`, quindi i test preesistenti
+   * danno lo stesso esito di prima della F2c. Ogni test può riassegnarlo.
+   */
+  let grantedCodes: readonly PermissionCode[];
+  let hasAllMock: jest.Mock;
 
   const activeSessions = new Set<string>();
 
@@ -86,6 +95,11 @@ describe('FilesController (integration)', () => {
 
   beforeEach(async () => {
     activeSessions.clear();
+    grantedCodes = SYSTEM_ROLES.user.permissions;
+    hasAllMock = jest.fn((_userId: number, codes: readonly PermissionCode[]) => {
+      const missing = codes.filter((code) => !grantedCodes.includes(code));
+      return Promise.resolve({ ok: missing.length === 0, missing });
+    });
     insertValuesMock = jest
       .fn()
       .mockReturnValue({ returning: jest.fn().mockResolvedValue([storedRow]) });
@@ -144,6 +158,10 @@ describe('FilesController (integration)', () => {
           provide: MediaQueueService,
           useValue: { enqueueTransform: jest.fn().mockResolvedValue('job-1') },
         },
+        // `@Permissions` su upload monta `PermissionsGuard` e `delete` legge
+        // `media:delete_any` (SPEC-RBAC-F2c S41, S44): i permessi si pilotano
+        // con `grantedCodes`, non con il JWT (ADR-99 § 6).
+        { provide: PermissionsService, useValue: { hasAll: hasAllMock } },
       ],
     }).compile();
 
@@ -405,6 +423,104 @@ describe('FilesController (integration)', () => {
 
     it('errore: senza JWT → 401 dal middleware globale', async () => {
       await request(app.getHttpServer()).delete(`/api/v1/app/files/${storedRow.guid}`).expect(401);
+    });
+  });
+
+  describe('permessi media:* (SPEC-RBAC-F2c)', () => {
+    it('POST senza media:upload → 403 dal guard, nessuna scrittura (criterio 10)', async () => {
+      grantedCodes = [];
+      const auth = makeAuthFor(7);
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/app/files')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .attach('file', Buffer.from('%PDF-1.7'), 'contratto.pdf')
+        .expect(403);
+
+      expect(res.body.code).toBe('ForbiddenException');
+      expect(res.body.message).toBe('Permessi insufficienti (richiesto permesso: media:upload).');
+      expect(hasAllMock).toHaveBeenCalledWith(7, ['media:upload']);
+      expect(storageUploadMock).not.toHaveBeenCalled();
+      expect(insertValuesMock).not.toHaveBeenCalled();
+    });
+
+    it('DELETE di un non autore con media:delete_any → 204 (criterio 11)', async () => {
+      grantedCodes = [...SYSTEM_ROLES.user.permissions, 'media:delete_any'];
+      const auth = makeAuthFor(99, AppUserRoles.User);
+
+      await request(app.getHttpServer())
+        .delete(`/api/v1/app/files/${storedRow.guid}`)
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .expect(204);
+
+      expect(hasAllMock).toHaveBeenCalledWith(99, ['media:delete_any']);
+      expect(updateSetMock).toHaveBeenCalledWith(
+        expect.objectContaining({ isActive: false, updatedBy: 99 }),
+      );
+    });
+
+    it('DELETE di un non autore Admin nel JWT ma senza media:delete_any → 403', async () => {
+      grantedCodes = SYSTEM_ROLES.user.permissions;
+      const auth = makeAuthFor(99, AppUserRoles.Admin);
+
+      const res = await request(app.getHttpServer())
+        .delete(`/api/v1/app/files/${storedRow.guid}`)
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .expect(403);
+
+      expect(res.body.message).toBe(
+        "Solo l'autore del file, un Admin o chi ha il permesso media:delete_any possono eliminarlo.",
+      );
+      expect(updateSetMock).not.toHaveBeenCalled();
+    });
+
+    it("DELETE dell'autore senza media:delete_any → 204 (criterio 12, ADR-18)", async () => {
+      grantedCodes = [];
+      const auth = makeAuthFor(7);
+
+      await request(app.getHttpServer())
+        .delete(`/api/v1/app/files/${storedRow.guid}`)
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .expect(204);
+
+      expect(updateSetMock).toHaveBeenCalledWith(
+        expect.objectContaining({ isActive: false, updatedBy: 7 }),
+      );
+    });
+
+    it('le rotte di lettura non consultano i permessi (criterio 13, S39)', async () => {
+      grantedCodes = [];
+      const auth = makeAuthFor(7);
+      const server = app.getHttpServer();
+
+      await request(server)
+        .get('/api/v1/app/files')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .expect(200);
+      await request(server)
+        .get(`/api/v1/app/files/${storedRow.guid}`)
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .expect(200);
+      await request(server)
+        .get(`/api/v1/app/files/${storedRow.guid}/metadata`)
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .expect(200);
+
+      findFirstMock.mockResolvedValue(undefined);
+      await request(server)
+        .get('/api/v1/app/files/guid-inesistente/metadata')
+        .set('Authorization', auth.bearer)
+        .set('Cookie', auth.cookie)
+        .expect(404);
+
+      expect(hasAllMock).not.toHaveBeenCalled();
     });
   });
 });
