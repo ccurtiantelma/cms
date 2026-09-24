@@ -33,6 +33,9 @@ import {
   ROLE_CODE_PATTERN,
   RoleView,
   UpdateRoleInput,
+  UserRoleSummary,
+  UserRolesPlan,
+  UserRolesTarget,
 } from './roles.types';
 
 /** Vincolo FK `user_roles.role_id → roles.id` (`restrict`): backstop del `409 ROLE_IN_USE`. */
@@ -285,7 +288,8 @@ export class RolesService {
   /**
    * Sostituisce l'insieme dei ruoli aggiuntivi di un utente. L'anti-escalation
    * si applica solo ai ruoli **aggiunti** (SPEC S7): rimuovere un ruolo riduce i
-   * privilegi. Il livello base resta `users.role` (S9).
+   * privilegi. Il livello base resta `users.role` (S9). È la composizione di
+   * `planUserRoles` e `applyUserRoles`, con invalidazione e audit dopo il commit.
    */
   async setUserRoles(
     userGuid: string,
@@ -293,14 +297,114 @@ export class RolesService {
     authInfo: AuthInfo,
     ip?: string,
   ): Promise<{ guid: string; roleGuids: string[] }> {
-    const callerPermissions = await this.permissionsService.getUserPermissions(authInfo.userId);
-    this.assertHasPermission(callerPermissions, 'users:assign_roles');
+    const callerPermissions = await this.requireAssignRoles(authInfo);
 
     const [target] = await this.db.db
       .select({ id: userEntity.id, guid: userEntity.guid, role: userEntity.role })
       .from(userEntity)
       .where(eq(userEntity.guid, userGuid));
     if (!target) throw new NotFoundException('Utente non trovato.');
+
+    const plan = await this.buildUserRolesPlan(callerPermissions, target, roleGuids, authInfo);
+    if (!plan.changed) {
+      return { guid: target.guid, roleGuids: plan.roleGuids };
+    }
+
+    await this.db.db.transaction(async (tx) => {
+      await this.applyUserRoles(tx, target.id, plan);
+    });
+
+    await this.permissionsService.invalidateUsers([target.id]);
+    await this.auditUserRoles(target, plan, authInfo, ip);
+    return { guid: target.guid, roleGuids: plan.roleGuids };
+  }
+
+  /**
+   * Valida un'assegnazione di ruoli **senza scrivere nulla** (SPEC-RBAC-F2a
+   * S17), con le stesse regole e nello stesso ordine di `setUserRoles`:
+   * `users:assign_roles` (`403`), target gestibile (`403`), ruoli esistenti
+   * (`404`), nessun ruolo di sistema (`400`, S9), anti-escalation sui soli
+   * ruoli aggiunti (`403`, S7). Va chiamato prima di ogni scrittura, così un
+   * rifiuto non lascia utenti creati o modificati a metà.
+   */
+  async planUserRoles(
+    target: UserRolesTarget,
+    roleGuids: readonly string[],
+    authInfo: AuthInfo,
+  ): Promise<UserRolesPlan> {
+    const callerPermissions = await this.requireAssignRoles(authInfo);
+    return this.buildUserRolesPlan(callerPermissions, target, roleGuids, authInfo);
+  }
+
+  /**
+   * Applica un piano di `planUserRoles` dentro la transazione `tx` del
+   * chiamante: solo scritture su `user_roles`. Invalidazione della cache e
+   * audit restano al chiamante, dopo il commit (S10).
+   */
+  async applyUserRoles(
+    tx: Pick<DbService['db'], 'insert' | 'delete'>,
+    userId: number,
+    plan: UserRolesPlan,
+  ): Promise<void> {
+    const removedIds = plan.removed.map((r) => r.id);
+    if (removedIds.length > 0) {
+      await tx
+        .delete(userRoleEntity)
+        .where(and(eq(userRoleEntity.userId, userId), inArray(userRoleEntity.roleId, removedIds)));
+    }
+    if (plan.added.length > 0) {
+      await tx
+        .insert(userRoleEntity)
+        .values(plan.added.map((r) => ({ userId, roleId: r.id })))
+        .onConflictDoNothing();
+    }
+  }
+
+  /** Registra su log e audit (`user.roles.update`) un piano applicato. */
+  async auditUserRoles(
+    target: { id: number; guid: string },
+    plan: UserRolesPlan,
+    authInfo: AuthInfo,
+    ip?: string,
+  ): Promise<void> {
+    this.logger.log(`Ruoli aggiuntivi dell'utente ${target.id} aggiornati da ${authInfo.userId}.`);
+    await this.auditLogService.log(
+      authInfo.userId,
+      'user.roles.update',
+      'user',
+      target.guid,
+      { added: plan.added.map((r) => r.code), removed: plan.removed.map((r) => r.code) },
+      authInfo.impersonatedBy,
+      ip,
+    );
+  }
+
+  /** Ruoli personalizzati assegnati a un utente, in ordine di nome (SPEC-RBAC-F2a S19). */
+  async listUserRoles(userId: number): Promise<UserRoleSummary[]> {
+    return this.db.db
+      .select({ guid: roleEntity.guid, code: roleEntity.code, name: roleEntity.name })
+      .from(userRoleEntity)
+      .innerJoin(roleEntity, eq(roleEntity.id, userRoleEntity.roleId))
+      .where(eq(userRoleEntity.userId, userId))
+      .orderBy(asc(roleEntity.name));
+  }
+
+  // ─── Helper ──────────────────────────────────────────────────────────────
+
+  /** Permessi del chiamante, dopo aver verificato `users:assign_roles` (`403`). */
+  private async requireAssignRoles(authInfo: AuthInfo): Promise<ReadonlySet<PermissionCode>> {
+    const callerPermissions = await this.permissionsService.getUserPermissions(authInfo.userId);
+    this.assertHasPermission(callerPermissions, 'users:assign_roles');
+    return callerPermissions;
+  }
+
+  /** Letture e validazioni di un'assegnazione, dato il chiamante già autorizzato. */
+  private async buildUserRolesPlan(
+    callerPermissions: ReadonlySet<PermissionCode>,
+    target: UserRolesTarget,
+    roleGuids: readonly string[],
+    authInfo: AuthInfo,
+  ): Promise<UserRolesPlan> {
     assertTargetRoleManageable(target.role, authInfo);
 
     const desiredGuids = [...new Set(roleGuids)];
@@ -319,16 +423,20 @@ export class RolesService {
       });
     }
 
-    const currentRoles = await this.db.db
-      .select({ id: roleEntity.id, code: roleEntity.code })
-      .from(userRoleEntity)
-      .innerJoin(roleEntity, eq(roleEntity.id, userRoleEntity.roleId))
-      .where(eq(userRoleEntity.userId, target.id));
+    const currentRoles =
+      target.id === null
+        ? []
+        : await this.db.db
+            .select({ id: roleEntity.id, code: roleEntity.code })
+            .from(userRoleEntity)
+            .innerJoin(roleEntity, eq(roleEntity.id, userRoleEntity.roleId))
+            .where(eq(userRoleEntity.userId, target.id));
     const currentRoleIds = new Set(currentRoles.map((r) => r.id));
     const desiredRoleIds = new Set(desiredRoles.map((r) => r.id));
-    const added = desiredRoles.filter((r) => !currentRoleIds.has(r.id));
+    const added = desiredRoles
+      .filter((r) => !currentRoleIds.has(r.id))
+      .map((r) => ({ id: r.id, code: r.code }));
     const removed = currentRoles.filter((r) => !desiredRoleIds.has(r.id));
-    const removedIds = removed.map((r) => r.id);
 
     if (added.length > 0) {
       const codesByRole = await this.loadRoleCodes(added.map((r) => r.id));
@@ -338,42 +446,13 @@ export class RolesService {
       );
     }
 
-    if (added.length === 0 && removedIds.length === 0) {
-      return { guid: target.guid, roleGuids: desiredGuids };
-    }
-
-    await this.db.db.transaction(async (tx) => {
-      if (removedIds.length > 0) {
-        await tx
-          .delete(userRoleEntity)
-          .where(
-            and(eq(userRoleEntity.userId, target.id), inArray(userRoleEntity.roleId, removedIds)),
-          );
-      }
-      if (added.length > 0) {
-        await tx
-          .insert(userRoleEntity)
-          .values(added.map((r) => ({ userId: target.id, roleId: r.id })))
-          .onConflictDoNothing();
-      }
-    });
-
-    await this.permissionsService.invalidateUsers([target.id]);
-
-    this.logger.log(`Ruoli aggiuntivi dell'utente ${target.id} aggiornati da ${authInfo.userId}.`);
-    await this.auditLogService.log(
-      authInfo.userId,
-      'user.roles.update',
-      'user',
-      target.guid,
-      { added: added.map((r) => r.code), removed: removed.map((r) => r.code) },
-      authInfo.impersonatedBy,
-      ip,
-    );
-    return { guid: target.guid, roleGuids: desiredGuids };
+    return {
+      roleGuids: desiredGuids,
+      added,
+      removed,
+      changed: added.length > 0 || removed.length > 0,
+    };
   }
-
-  // ─── Helper ──────────────────────────────────────────────────────────────
 
   private async findRoleOrFail(guid: string): Promise<RoleRow> {
     const [role] = await this.db.db.select().from(roleEntity).where(eq(roleEntity.guid, guid));
