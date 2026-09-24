@@ -8,6 +8,7 @@ import { AuthInfo } from '../../../src/common/types';
 import type { DbService } from '../../../src/db/db.service';
 import type { ExportService } from '../../../src/export/export.service';
 import type { PermissionsService } from '../../../src/permissions/permissions.service';
+import type { RolesService } from '../../../src/admin/roles/roles.service';
 import type { EmailQueueService } from '../../../src/queues/email-queue/email.queue.service';
 
 /**
@@ -54,6 +55,7 @@ describe('AdminService — invalidazione cache permessi (ADR-99 § 6)', () => {
       { log: jest.fn().mockResolvedValue(undefined) } as unknown as AuditLogService,
       {} as ExportService,
       { invalidateUsers } as unknown as PermissionsService,
+      {} as RolesService,
     );
   });
 
