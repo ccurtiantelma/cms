@@ -6,6 +6,7 @@ import { Suspense, lazy, type ReactNode } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Center, Loader } from '@mantine/core';
 import ErrorBoundary from './components/ErrorBoundary';
+import RequirePermission from './components/RequirePermission';
 import PageNotFound from './components/PageNotFound';
 import PageServerError from './components/PageServerError';
 import { getToken, homePathForRole } from './utils/auth.utils';
@@ -39,6 +40,7 @@ const PagePages = lazy(() => import('./pages/pages/PagePages'));
 const PagePageDetail = lazy(() => import('./pages/pages/PagePageDetail'));
 const PageStudio = lazy(() => import('./pages/pages/PageStudio'));
 const PageUsers = lazy(() => import('./pages/admin/PageUsers'));
+const PageRoles = lazy(() => import('./pages/admin/PageRoles'));
 const PageThemeEditor = lazy(() => import('./pages/theme-editor/PageThemeEditor'));
 const PageGlobalSections = lazy(() => import('./pages/global-sections/PageGlobalSections'));
 const PageGlobalSectionBuilder = lazy(
@@ -193,6 +195,16 @@ export default function App(): JSX.Element {
                 <RequireRole allowed={ADMIN_ROLES}>
                   <PageUsers />
                 </RequireRole>
+              }
+            />
+            {/* Per permesso, non per soglia (ADR-99 § 10): uno User con un ruolo personalizzato
+                che contiene `roles:read` vede la pagina, come consente il backend. */}
+            <Route
+              path="roles"
+              element={
+                <RequirePermission permission="roles:read">
+                  <PageRoles />
+                </RequirePermission>
               }
             />
             <Route path="theme-editor" element={<PageThemeEditor />} />

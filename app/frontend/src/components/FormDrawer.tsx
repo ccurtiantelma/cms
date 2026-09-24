@@ -34,6 +34,8 @@ interface FormDrawerProps {
    * il drawer senza salvare).
    */
   tourId?: string;
+  /** Sola lettura: nessun pulsante di salvataggio, e "Annulla" diventa "Chiudi". */
+  readOnly?: boolean;
 }
 
 /**
@@ -50,6 +52,7 @@ export default function FormDrawer({
   size,
   children,
   tourId,
+  readOnly = false,
 }: FormDrawerProps): JSX.Element {
   return (
     <Drawer
@@ -81,11 +84,13 @@ export default function FormDrawer({
               disabled={submitting}
               data-tour={tourId ? `${tourId}-cancel` : undefined}
             >
-              Annulla
+              {readOnly ? 'Chiudi' : 'Annulla'}
             </Button>
-            <Button type="submit" loading={submitting} disabled={!canSubmit}>
-              {submitLabel}
-            </Button>
+            {!readOnly && (
+              <Button type="submit" loading={submitting} disabled={!canSubmit}>
+                {submitLabel}
+              </Button>
+            )}
           </Group>
         </div>
         <div className={classes.body} data-tour={tourId}>

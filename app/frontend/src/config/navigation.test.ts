@@ -47,6 +47,14 @@ describe('isNavigationItemVisible (SPEC F2b S31)', () => {
     expect(visible.map((item) => item.path)).toEqual(['/dashboard', '/pages']);
   });
 
+  it('la voce "Ruoli" è per permesso roles:read, senza soglia di ruolo', () => {
+    const roles = navigationItems.find((item) => item.path === '/roles');
+    expect(roles).toMatchObject({ label: 'Ruoli', permission: 'roles:read' });
+    expect(roles?.roles).toBeUndefined();
+    expect(isNavigationItemVisible(roles as NavigationItem, User, ['roles:read'])).toBe(true);
+    expect(isNavigationItemVisible(roles as NavigationItem, Admin, [])).toBe(false);
+  });
+
   describe('voce con `permission`', () => {
     const byPermission: NavigationItem = {
       label: 'Ruoli',
