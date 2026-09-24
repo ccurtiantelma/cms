@@ -40,6 +40,24 @@ const MESSAGES: Record<string, (backendMessage: string) => RoleErrorFeedback> = 
   }),
 };
 
+/** Messaggio mappato per `code`, solo fra le chiavi proprie di `MESSAGES` (mai `toString` & co.). */
+function messageFor(
+  code: string | undefined,
+): ((backendMessage: string) => RoleErrorFeedback) | undefined {
+  return code !== undefined && Object.prototype.hasOwnProperty.call(MESSAGES, code)
+    ? MESSAGES[code]
+    : undefined;
+}
+
+/**
+ * `true` se l'errore porta uno dei codici di dominio di ruoli e permessi. Serve alle pagine che
+ * mantengono la propria gestione per tutti gli altri errori (`PageUsers`).
+ * @param err Errore catturato in un blocco `catch`.
+ */
+export function isRoleDomainError(err: unknown): boolean {
+  return messageFor(getErrorCode(err)) !== undefined;
+}
+
 /**
  * Traduce un errore di scrittura in un messaggio per la pagina. Restituisce `null` quando la
  * pagina non deve mostrare nulla perché l'interceptor Axios ha già notificato: errore di rete,
@@ -51,8 +69,7 @@ const MESSAGES: Record<string, (backendMessage: string) => RoleErrorFeedback> = 
 export function roleErrorMessage(err: unknown, fallback: string): RoleErrorFeedback | null {
   if (isNetworkError(err)) return null;
   const status = (err as AxiosError)?.response?.status;
-  const code = getErrorCode(err);
-  const mapped = code ? MESSAGES[code] : undefined;
+  const mapped = messageFor(getErrorCode(err));
   if (mapped) return mapped(getErrorMessage(err, fallback));
   if (status === 403 || status === 404 || (status !== undefined && status >= 500)) return null;
   return { message: getErrorMessage(err, fallback) };

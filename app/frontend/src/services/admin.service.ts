@@ -5,6 +5,7 @@
 
 import api from './api';
 import type { Pagination, PaginationParams } from '../types/common.types';
+import type { UserRoleSummary } from '../types/roles.types';
 
 const ADMIN_PREFIX = 'app/admin';
 
@@ -23,6 +24,8 @@ export interface UserListItem {
 
 export interface UserDetail extends UserListItem {
   updatedAt: string;
+  /** Ruoli personalizzati aggiuntivi assegnati (SPEC-RBAC-F2a S19); mai i ruoli di sistema. */
+  roles: UserRoleSummary[];
 }
 
 export interface AdminUsersQueryParams extends PaginationParams {
@@ -36,6 +39,8 @@ export interface CreateUserRequest {
   email: string;
   role: number;
   scopeId?: string | null;
+  /** Ruoli personalizzati da assegnare; richiede `users:assign_roles` (SPEC-RBAC-F2a S18). */
+  roleGuids?: string[];
 }
 
 export interface UpdateUserRequest {
@@ -44,6 +49,11 @@ export interface UpdateUserRequest {
   email?: string;
   role?: number;
   scopeId?: string | null;
+  /**
+   * Insieme completo dei ruoli personalizzati: sostituisce quello attuale, `[]` li toglie tutti.
+   * Assente = invariati (SPEC-RBAC-F2a S18).
+   */
+  roleGuids?: string[];
 }
 
 export interface AuditLogItem {
@@ -77,7 +87,7 @@ export async function createUser(payload: CreateUserRequest): Promise<{ guid: st
   return data;
 }
 
-/** `GET /app/admin/users/:guid` — dettaglio utente. */
+/** `GET /app/admin/users/:guid` — dettaglio utente, con i ruoli personalizzati assegnati. */
 export async function fetchUser(guid: string): Promise<UserDetail> {
   const { data } = await api.get<UserDetail>(`${ADMIN_PREFIX}/users/${guid}`);
   return data;

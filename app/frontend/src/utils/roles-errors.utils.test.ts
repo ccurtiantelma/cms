@@ -3,7 +3,7 @@
  * più i casi in cui la pagina tace perché l'interceptor Axios ha già notificato.
  */
 import { describe, it, expect } from 'vitest';
-import { roleErrorMessage } from './roles-errors.utils';
+import { isRoleDomainError, roleErrorMessage } from './roles-errors.utils';
 
 function httpError(status: number, data: Record<string, unknown> = {}): unknown {
   return { isAxiosError: true, response: { status, data } };
@@ -85,5 +85,15 @@ describe('roleErrorMessage (SPEC F2b S37)', () => {
     expect(roleErrorMessage(httpError(400, { code: 'X' }), FALLBACK)).toEqual({
       message: FALLBACK,
     });
+  });
+});
+
+describe('isRoleDomainError', () => {
+  it('true per i codici di dominio, false per gli altri', () => {
+    expect(isRoleDomainError(httpError(400, { code: 'SYSTEM_ROLE_NOT_ASSIGNABLE' }))).toBe(true);
+    expect(isRoleDomainError(httpError(403, { code: 'PERMISSION_ESCALATION' }))).toBe(true);
+    expect(isRoleDomainError(httpError(403, { code: 'ForbiddenException' }))).toBe(false);
+    expect(isRoleDomainError(httpError(409, { code: 'toString' }))).toBe(false);
+    expect(isRoleDomainError({ isAxiosError: true })).toBe(false);
   });
 });
