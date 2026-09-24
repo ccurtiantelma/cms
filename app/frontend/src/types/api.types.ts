@@ -4497,6 +4497,13 @@ export interface operations {
           'application/json': components['schemas']['FileMetadataDto'];
         };
       };
+      /** @description Permesso media:upload mancante */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
       /** @description File più grande del limite configurato */
       413: {
         headers: {
@@ -4551,7 +4558,7 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description Non sei l'autore del file e non hai un ruolo Admin/superiore */
+      /** @description Non sei l'autore del file e non hai il permesso media:delete_any */
       403: {
         headers: {
           [name: string]: unknown;

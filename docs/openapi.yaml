@@ -580,6 +580,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FileMetadataDto'
+        '403':
+          description: Permesso media:upload mancante
         '413':
           description: File più grande del limite configurato
       security:
@@ -653,7 +655,7 @@ paths:
         '204':
           description: File eliminato
         '403':
-          description: Non sei l'autore del file e non hai un ruolo Admin/superiore
+          description: Non sei l'autore del file e non hai il permesso media:delete_any
         '404':
           description: File non trovato o già eliminato
       security:
