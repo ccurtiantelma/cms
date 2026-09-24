@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { and, asc, count, desc, eq, gte, ilike, lte, ne, or, SQL, sql } from 'drizzle-orm';
 import { DbService } from '../db/db.service';
 import { SeedService } from './seed.service';
@@ -21,6 +15,7 @@ import { buildActivationEmailHtml } from '../mailer/templates';
 import { AppConstants } from '../common/app-constants';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { assertTargetRoleManageable } from './user-management.rules';
 
 /** Colonne escluse dalle risposte utente: mai esporre hash password, secret MFA o token azione. */
 const SENSITIVE_USER_COLUMNS = {
@@ -139,11 +134,10 @@ export class AdminService {
   /**
    * Verifica che il chiamante possa vedere/gestire un utente con il ruolo indicato.
    * Regola critica: un Admin (non SuperAdmin) non può vedere né gestire utenti SuperAdmin.
+   * Delega alla funzione pura condivisa con `RolesService`.
    */
   private assertTargetRoleManageable(targetRole: number, authInfo: AuthInfo): void {
-    if (targetRole <= AppUserRoles.SuperAdmin && authInfo.role > AppUserRoles.SuperAdmin) {
-      throw new ForbiddenException('Non puoi gestire utenti con ruolo SuperAdmin.');
-    }
+    assertTargetRoleManageable(targetRole, authInfo);
   }
 
   /**

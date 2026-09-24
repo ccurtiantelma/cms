@@ -33,7 +33,24 @@ const PG_CONSTRAINT_CONFLICTS: Readonly<Record<string, { code: string; message: 
     code: 'GLOBAL_SECTION_LAYOUT_SLOT_TAKEN',
     message: 'Esiste già una Sezione Globale assegnata a questo slot di layout.',
   },
+  roles_code_uq: {
+    code: 'ROLE_CODE_DUPLICATE',
+    message: 'Esiste già un ruolo con questo codice.',
+  },
 };
+
+const PG_FOREIGN_KEY_VIOLATION = '23503';
+
+/**
+ * `true` se `err` è una violazione del vincolo FK `constraint` (Postgres
+ * `23503`), anche se avvolta da Drizzle. Serve ai service che traducono una
+ * FK `restrict` in un conflitto locale (es. `ROLE_IN_USE` in `RolesService`),
+ * dove il significato dipende dall'operazione e non solo dal vincolo.
+ */
+export function isPgForeignKeyViolation(err: unknown, constraint: string): boolean {
+  const pgError = unwrapDatabaseError(err);
+  return pgError?.code === PG_FOREIGN_KEY_VIOLATION && pgError.constraint === constraint;
+}
 
 /**
  * Converte una violazione di vincolo univoco Postgres in un
