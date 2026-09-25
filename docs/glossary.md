@@ -95,11 +95,14 @@
 
 | Termine | Significato |
 |---|---|
-| **Ruolo** | Livello di privilegio assegnato a un utente, espresso come intero (`AppUserRoles`). Numero minore = privilegio maggiore. |
+| **Ruolo** | Livello di privilegio base di un utente, espresso come intero (`AppUserRoles`, colonna `users.role`). Numero minore = privilegio maggiore. Resta la soglia letta dai guard legacy, dall'ownership (ADR-18) e dalle funzioni di sistema. Ogni livello corrisponde a un Ruolo di sistema (ADR-99). |
 | **SuperAdmin** | Ruolo massimo (`5`). Unico abilitato a impersonare altri utenti, eseguire seed/reset demo, usare il blocco HTML/embed. |
 | **Admin** | Ruolo (`10`). Gestisce utenti, audit log, impostazioni del sito, lingue, tema e redirect. Non può creare/gestire SuperAdmin. |
 | **Manager** | Ruolo (`20`). Profilo editoriale con potere di pubblicazione: crea, modifica e pubblica Pagine, gestisce Menu, Template e Moduli. |
 | **User** | Ruolo base (`30`). Autore: scrive e modifica le proprie bozze, non pubblica. |
+| **Ruolo di sistema** | Uno dei 4 ruoli seedati (`superadmin`, `admin`, `manager`, `user`, `is_system = true`), corrispondente a un livello `AppUserRoles`. I suoi permessi derivano dalla matrice di `business-rules.md` § Permessi editoriali e sono in sola lettura (ADR-99 P3). |
+| **Ruolo personalizzato** | Ruolo creato da API/UI da chi ha `roles:manage` (solo SuperAdmin), assegnato in aggiunta al livello base tramite `user_roles`. Può solo aggiungere permessi, mai toglierli (ADR-99 § 1). |
+| **Permesso** | Codice `risorsa:azione` (es. `pages:publish`) definito solo nel registro versionato `permissions.registry.ts` e applicato da `@Permissions` sulle rotte. Non si crea da UI. Permessi effettivi = permessi del ruolo di sistema ∪ permessi dei ruoli personalizzati (ADR-99). |
 | **Scope / tenant** | Perimetro dati di un utente. Campo `scopeId` nullable su `users`, applicato con `Utils.applyScopeFilter(authInfo)`. Non usato dal dominio CMS finché resta mono-sito. |
 | **Guid** | Identificativo pubblico a 16 caratteri esadecimali usato nelle URL amministrative al posto dell'`id` numerico sequenziale. |
 | **Soft delete** | Disattivazione logica di un record (`isActive = false`) invece di cancellazione fisica. Obbligatorio su entità anagrafiche e di contenuto. |

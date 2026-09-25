@@ -36,10 +36,10 @@ import ImpersonationBanner from '../components/ImpersonationBanner';
 import MfaPromptModal from '../components/MfaPromptModal';
 import NotificationBell from '../components/NotificationBell';
 import AppTour, { type AppTourRef } from '../components/AppTour';
-import { navigationItems } from '../config/navigation';
+import { isNavigationItemVisible, navigationItems } from '../config/navigation';
 import { THEME_EDITOR_SECTIONS } from '../config/themeEditorSections';
 import { getPageTourSteps } from '../libs/pageTours';
-import { AppUserRoles } from '../types/common.types';
+import { AppUserRoles, ROLE_LABELS } from '../types/common.types';
 import classes from './LayoutProtected.module.css';
 
 /** Larghezza sidebar nello stato compatto (solo icone), in px — non personalizzabile. */
@@ -65,6 +65,7 @@ export default function LayoutProtected(): JSX.Element {
   // Stato MFA dell'utente (da GET /auth/me, recuperato una sola volta dall'auth store)
   // — determina se mostrare il modal "Proteggi il tuo account".
   const user = useAuthStore((state) => state.user);
+  const permissions = useAuthStore((state) => state.permissions);
   const logout = useAuthStore((state) => state.logout);
   const isMfaEnabled = useAuthStore((state) => state.isMfaEnabled);
   const location = useLocation();
@@ -195,12 +196,7 @@ export default function LayoutProtected(): JSX.Element {
                     );
                   })
                 : navigationItems
-                    .filter(
-                      (item) =>
-                        !item.roles ||
-                        (user?.role !== undefined &&
-                          item.roles.includes(Number(user.role) as AppUserRoles)),
-                    )
+                    .filter((item) => isNavigationItemVisible(item, user?.role, permissions))
                     .map((item) => {
                       const Icon = item.icon;
                       const isActive =

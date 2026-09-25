@@ -92,6 +92,8 @@ export interface MeResponse {
   isMfaEnabled: boolean;
   /** Presente solo durante una sessione di impersonificazione: id del SuperAdmin reale. */
   impersonatedBy?: number;
+  /** Codici permesso effettivi, ordinati (SPEC F2a S20). Nella sessione impersonata, quelli del bersaglio. */
+  permissions: string[];
 }
 
 /** Richiesta di `PATCH /auth/me` — aggiornamento self-service anagrafica. */

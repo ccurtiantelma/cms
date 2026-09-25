@@ -16,9 +16,12 @@ logs/
 *.log
 npm-debug.log*
 
-# Storage documenti locale (ADR-8, STORAGE_DRIVER=local)
-storage/
-app/backend/storage/
+# Storage documenti locale (ADR-8, STORAGE_DRIVER=local): solo gli upload runtime.
+# STORAGE_LOCAL_PATH vale 'storage', relativo alla cwd (radice o app/backend).
+# Pattern ancorati: `storage/` senza slash iniziale ignorava anche i sorgenti dei
+# driver in app/backend/src/files/storage/.
+/storage/
+/app/backend/storage/
 
 # OS
 .DS_Store

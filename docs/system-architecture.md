@@ -37,7 +37,7 @@ mai servite dallo stesso controller.
 |---|---|---|
 | Prefisso | `api/v1/app/<modulo>` | `api/v1/public/<risorsa>` |
 | Autenticazione | JWT obbligatorio | Anonima |
-| Autorizzazione | RBAC a soglie di ruolo | Nessuna |
+| Autorizzazione | RBAC a soglie di ruolo + permessi granulari (`@Permissions`, ADR-99) | Nessuna |
 | Operazioni | Lettura e scrittura | **Sola lettura** |
 | Contenuto visibile | Tutti gli stati | Solo `published` |
 | Cache | Mai | — (vedi nota) |
@@ -183,6 +183,12 @@ oggi lo storage edge, fuori dal perimetro `api/v1`.
   originale; se il refresh fallisce, redirect a `/login`.
 - **AuthMiddleware**: globale su tutte le rotte eccetto `api/v1/auth/*` pubblici,
   `api/v1/health`, `/metrics` e — quando esisteranno — `api/v1/public/*`.
+- **Permessi granulari (ADR-99)**: `PermissionsGuard` risolve i permessi effettivi dell'utente
+  (`authInfo.userId`, anche in impersonificazione) da `PermissionsService`, con cache Redis per
+  utente `perm:v<hashRegistro>:user:<userId>` (TTL 3600 s), invalidata in modo esplicito al cambio
+  di ruoli, permessi di un ruolo, `users.role` o `users.is_active`. Su miss o Redis non pronto legge
+  il DB, mai fail-open. I permessi non sono nel JWT. `GET auth/me` li espone come `permissions`
+  per la UI, che li usa solo per l'esperienza utente: l'autorità è il backend.
 - **MFA**: sfida post-login con chiave Redis `mfa_tmp:${tmpToken}` → `{ userId }`, TTL 300s.
 - **Sessioni/dispositivi (`GET/DELETE auth/sessions`)**: oltre alle chiavi effimere
   `login:`/`rtk:` (che ruotano ad ogni refresh), ogni login genera un `sessionId` opaco
@@ -248,7 +254,8 @@ in `text` con JSON serializzato a mano.
 - Client: **ioredis**
 - Usato per: allowlist di sessione (`login:${accessToken}`), refresh token opachi
   (`rtk:${refreshToken}`), sfida MFA (`mfa_tmp:${tmpToken}`), sessioni/dispositivi
-  (`session:${sessionId}`), code BullMQ
+  (`session:${sessionId}`), code BullMQ, cache dei permessi effettivi per utente
+  (`perm:v<hash>:user:<userId>`, ADR-99)
 - Uso previsto dal dominio CMS: cache delle risposte pubbliche di contenuto, con
   **invalidazione per evento** (pubblicazione, archiviazione, cambio slug, modifica di una
   Sezione globale o di un Menu). Mai scadenza per solo TTL.

@@ -30,11 +30,17 @@ settings:
   maxRedirects: 5
 
 tests: |-
-  test("status is 201", function() {
-    expect(res.getStatus()).to.equal(201);
+  test("status is 201 o 403 (media:upload mancante: utente disattivato)", function() {
+    expect(res.getStatus()).to.be.oneOf([201, 403]);
+  });
+
+  test("se 403, messaggio del permesso media:upload (SPEC-RBAC-F2c)", function() {
+    if (res.getStatus() !== 403) return;
+    expect(res.getBody().message).to.equal("Permessi insufficienti (richiesto permesso: media:upload).");
   });
 
   test("risposta contiene i metadata pubblici, mai storageKey/checksum", function() {
+    if (res.getStatus() !== 201) return;
     const body = res.getBody();
     expect(body).to.have.all.keys(
       "guid", "originalName", "mimeType", "sizeBytes", "entity", "entityId",
@@ -45,6 +51,7 @@ tests: |-
   });
 
   test("un allegato non editoriale non è raster: width/height restano null (RFC-F09 N2)", function() {
+    if (res.getStatus() !== 201) return;
     const body = res.getBody();
     expect(body.width).to.equal(null);
     expect(body.height).to.equal(null);

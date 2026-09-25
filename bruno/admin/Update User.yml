@@ -17,7 +17,8 @@ http:
         "name": "Mario",
         "surname": "Rossi",
         "role": 20,
-        "scopeId": null
+        "scopeId": null,
+        "roleGuids": ["0123456789abcdef"]
       }
   auth:
     type: bearer

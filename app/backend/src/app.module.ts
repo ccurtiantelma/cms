@@ -11,6 +11,7 @@ import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
 import { AuthMiddleware } from './auth/auth.middleware';
 import { RedisModule } from './redis/redis.module';
+import { PermissionsModule } from './permissions/permissions.module';
 import { AdminModule } from './admin/admin.module';
 import { SettingsModule } from './settings/settings.module';
 import { HealthModule } from './health/health.module';
@@ -127,6 +128,8 @@ import { FormsCorsMiddleware } from './forms/forms-cors.middleware';
     DbModule,
     CommonModule,
     RedisModule,
+    // Strato permessi granulari (ADR-99, F1): globale, seed del registro all'avvio.
+    PermissionsModule,
     AuthModule,
     AdminModule,
     SettingsModule,

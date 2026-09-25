@@ -5,10 +5,11 @@ import { SeedService } from './seed.service';
 import { DbModule } from '../db/db.module';
 import { EmailQueueModule } from '../queues/email-queue/email-queue.module';
 import { ExportModule } from '../export/export.module';
+import { RolesModule } from './roles/roles.module';
 
 /** Modulo amministrativo: gestione utenti, audit log (Admin+) e dati demo (SuperAdmin only). */
 @Module({
-  imports: [DbModule, EmailQueueModule, ExportModule],
+  imports: [DbModule, EmailQueueModule, ExportModule, RolesModule],
   controllers: [AdminController],
   providers: [AdminService, SeedService],
 })

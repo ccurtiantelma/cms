@@ -4,7 +4,9 @@
 > Le AI non lo modificano autonomamente: lo stato viene aggiornato a fine feature, su
 > richiesta esplicita.
 >
-> Ultima revisione: 2026-09-13 (terzo giro) — **contatore visite dai log di Nginx (ADR-68), F08
+> Ultima revisione: 2026-09-25 — **RBAC dinamico (ADR-99) completo nelle fasi F1, F2a, F2b e
+> F2c**. Vedi § "RBAC dinamico (ADR-99) — chiusura del modulo (2026-09-25)" in fondo.
+> Precedente: 2026-09-13 (terzo giro) — **contatore visite dai log di Nginx (ADR-68), F08
 > chiusa (ADR-69), meta SEO nel documento, pulsante "Rigenera sito pubblico"**. Vedi § "Passi
 > veloci chiusi (2026-09-13, terzo giro)" in fondo.
 > Precedente: 2026-09-13 (secondo giro) — **F03 e F09 chiuse, conformità di ADR-53 sanata,
@@ -47,6 +49,7 @@
 | Filtro errori globale backend (`AllExceptionsFilter`) | constitution: Error Handling Policy | ✅ Done | — |
 | Autenticazione JWT (access + refresh con rotation) | ADR-2-security-baseline.md | ✅ Done | — |
 | RBAC a soglie di ruolo (SuperAdmin/Admin/Manager/User) | business-rules: Attori e ruoli | ✅ Done | — |
+| RBAC dinamico: ruoli personalizzati e permessi granulari (F1, F2a, F2b, F2c) | ADR-99-rbac-dinamico-ruoli-e-permessi-granulari.md | ✅ Done (Playwright `roles.spec.ts` da confermare) | 2026-09-25 |
 | MFA TOTP (setup/enable/disable) | business-rules: MFA | ✅ Done | — |
 | Attivazione account + recupero password (anti-enumeration) | business-rules: Autenticazione estesa | ✅ Done | — |
 | Gestione utenti (Admin) | business-rules: Attori e ruoli | ✅ Done | — |
@@ -1149,3 +1152,40 @@ chatbot e simili rinviati a dopo il completamento del clone di Elementor Pro.
 Audit dell'editor rispetto a Elementor Pro, poi completamento a round firmati. Restano in
 attesa: redirect (F07, prima di un go-live che cambia URL), `hreflang` in sitemap e resto del
 multilingua, widget editoriali di F12, F11 chatbot.
+
+---
+
+## RBAC dinamico (ADR-99) — chiusura del modulo (2026-09-25)
+
+Su richiesta umana esplicita. Le quattro fasi sono implementate sul branch
+`feature/rbac-f1-permessi`, ciascuna con SPEC e PLAN firmati il 2026-09-24:
+
+| Fase | Contenuto | SPEC / PLAN |
+|---|---|---|
+| **F1** | Tabelle `permissions`, `roles`, `role_permissions`, `user_roles` (migrazione 0015), registro dei codici, seed al bootstrap, cache Redis, guard `@Permissions` | `SPEC-RBAC-F1-schema-seed-cache-guard.md` |
+| **F2a** | API `app/admin/roles` e `app/admin/permissions`, `roleGuids` su creazione e modifica utente, `roles` nel dettaglio utente | `SPEC-RBAC-F2a-backend-api.md` |
+| **F2b** | Permessi in `useAuthStore`, `<Can>`/`RequirePermission`, pagina `/roles` con drawer e matrice a sei categorie, "Ruoli aggiuntivi" in `/users` | `SPEC-RBAC-F2b-frontend-ui.md` |
+| **F2c** | Enforcement `media:upload` e `media:delete_any` su `app/files` | `SPEC-RBAC-F2c-media-permissions.md` |
+
+### Chiusura QA
+
+- **Debito sui tipi sanato**: `description` di `CreateRoleDto`/`UpdateRoleDto` usciva come
+  `Record<string, never>` (`nullable: true` senza `type: String`); il `200` di
+  `GET app/admin/users/:guid` non aveva schema. Ora c'è `UserDetailResponseDto` con
+  `roles: UserRoleSummaryDto[]` (S19). `docs/openapi.yaml` e `api.types.ts` rigenerati.
+- **E2E browser**: nuova `e2e/tests/roles.spec.ts` (navigazione su `/roles`, ruoli di sistema in
+  sola lettura, drawer di creazione e modifica, matrice a sei categorie, assegnazione e revoca in
+  `/users`, `409 ROLE_IN_USE`, eliminazione).
+- **Verifiche** sul worktree del branch: unit backend 72 suite / 1154 test verdi; E2E backend
+  27 suite / 295 test verdi; `npm run build` verde. Unit frontend 978 verdi e 4 rossi, tutti
+  preesistenti su `main` e fuori dal perimetro RBAC (`PropertyInspector.test.tsx`,
+  `resize-handle.utils.test.ts`; il secondo è riallineato da `edab79f` sul branch dell'editor).
+
+### Aperto
+
+- `roles.spec.ts` non è ancora stata vista verde: al primo giro il browser parlava con un
+  backend di un altro branch (`VITE_API_BASE_URL` ha come default assoluto `:53000`, quindi il
+  proxy di Vite non basta per uno stack su porte alternative).
+- Il database di sviluppo `cms_db` ha ora la migrazione 0015 applicata.
+- Restano `Record<string, never>` in DTO preesistenti non RBAC (notifiche: `entity`,
+  `entityId`, `url`; tipografia del tema): stessa causa, fuori da questo modulo.

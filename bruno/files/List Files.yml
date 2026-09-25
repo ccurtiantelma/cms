@@ -32,12 +32,11 @@ settings:
   maxRedirects: 5
 
 tests: |-
-  test("status is 200 (ruolo Manager+) o 403 (ruolo User, GuardManager)", function() {
-    expect(res.getStatus()).to.be.oneOf([200, 403]);
+  test("status is 200 per ogni ruolo autenticato (solo JWT, ADR-35; nessun media:read, SPEC-RBAC-F2c S39)", function() {
+    expect(res.getStatus()).to.equal(200);
   });
 
-  test("se 200, risposta è paginata di FileMetadataDto (mai storageKey/checksumSha256)", function() {
-    if (res.getStatus() !== 200) return;
+  test("risposta paginata di FileMetadataDto (mai storageKey/checksumSha256)", function() {
     const body = res.getBody();
     expect(body).to.have.all.keys("items", "totalItems", "totalPages", "currentPage", "itemsPerPage");
     body.items.forEach((item) => {

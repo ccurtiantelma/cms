@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  InternalServerErrorException,
+  Optional,
   Param,
   Patch,
   Post,
@@ -15,7 +17,8 @@ import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { AppConstants } from '../common/app-constants';
-import { AuthInfo, MeResponse } from '../common/types';
+import { AuthInfo, MeWithPermissionsResponse } from '../common/types';
+import { PermissionsService } from '../permissions/permissions.service';
 import {
   AuthService,
   AuthTokensResponse,
@@ -31,14 +34,24 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { MfaEnableDto } from './dto/mfa-enable.dto';
 import { MfaDisableDto } from './dto/mfa-disable.dto';
+import { MeResponseDto } from './dto/me-response.dto';
 import { GuardAdmin, GuardSuperAdmin } from './guard';
 
 @ApiTags('Auth')
 @Controller('auth')
 @UseGuards(ThrottlerGuard) // rate limiting di default (throttler 'auth', 20/60s) su tutte le rotte /auth/*
 export class AuthController {
-  /** Inietta il servizio applicativo di autenticazione. */
-  constructor(private readonly authService: AuthService) {}
+  /**
+   * Inietta il servizio applicativo di autenticazione e la risoluzione dei
+   * permessi effettivi per `GET auth/me` (SPEC-RBAC-F2a S20). `PermissionsService`
+   * arriva dal modulo globale ed è sempre presente nell'app: `@Optional()` serve
+   * solo ai `TestingModule` ridotti che montano questo controller senza di esso
+   * (`auth.e2e-spec.ts`). Se manca, `getMe` risponde `500`, mai senza permessi.
+   */
+  constructor(
+    private readonly authService: AuthService,
+    @Optional() private readonly permissionsService?: PermissionsService,
+  ) {}
 
   /** Imposta il cookie httpOnly firmato `rtk` e rimuove il refresh token dal body della risposta. */
   private attachRefreshCookie(res: Response, authResponse: AuthTokensResponse): AuthTokensResponse {
@@ -189,13 +202,25 @@ export class AuthController {
     return this.authService.requestActivation(dto, authInfo);
   }
 
-  /** Recupera i dati dell'utente autenticato. */
+  /**
+   * Recupera i dati dell'utente autenticato con i suoi permessi effettivi, in
+   * ordine alfabetico (ADR-99 § 10). In impersonificazione sono quelli
+   * dell'utente impersonato (`authInfo.userId`).
+   */
   @Get('me')
-  @ApiOperation({ summary: "Recupera i dati dell'utente autenticato" })
-  @ApiResponse({ status: 200, description: 'Dati utente recuperati' })
-  async getMe(@Req() req: Request): Promise<MeResponse> {
+  @ApiOperation({ summary: "Recupera i dati e i permessi effettivi dell'utente autenticato" })
+  @ApiResponse({ status: 200, description: 'Dati utente recuperati', type: MeResponseDto })
+  @ApiResponse({ status: 401, description: 'Non autenticato o utente non trovato' })
+  async getMe(@Req() req: Request): Promise<MeWithPermissionsResponse> {
+    if (!this.permissionsService) {
+      throw new InternalServerErrorException('Risoluzione dei permessi non disponibile.');
+    }
     const authInfo = req['authInfo'] as AuthInfo;
-    return this.authService.getMe(authInfo);
+    const [me, permissions] = await Promise.all([
+      this.authService.getMe(authInfo),
+      this.permissionsService.getUserPermissions(authInfo.userId),
+    ]);
+    return { ...me, permissions: [...permissions].sort() };
   }
 
   /** Aggiorna nome e cognome dell'utente autenticato (pagina profilo). */

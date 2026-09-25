@@ -1,0 +1,22 @@
+info:
+  name: List Permissions
+  type: http
+  seq: 15
+
+http:
+  method: GET
+  url: "{{baseUrl}}/app/admin/permissions"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 200 (roles:read) o 403", function() {
+    expect(res.getStatus()).to.be.oneOf([200, 403]);
+  });

@@ -9,6 +9,8 @@ import {
   Avatar,
   Badge,
   Group,
+  Loader,
+  MultiSelect,
   ScrollArea,
   Select,
   Stack,
@@ -22,15 +24,19 @@ import { notifications } from '@mantine/notifications';
 import { useSearchParams } from 'react-router-dom';
 import { IconLogin, IconShieldOff, IconPencil, IconUser } from '@tabler/icons-react';
 import { useAuthStore } from '../../hooks/useAuth';
+import { useHasPermission } from '../../hooks/useHasPermission';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { useColumnVisibility } from '../../hooks/useColumnVisibility';
 import { getErrorMessage } from '../../utils/api.utils';
+import { isRoleDomainError, roleErrorMessage } from '../../utils/roles-errors.utils';
+import { isRoleAssignable } from '../../utils/permission-matrix.utils';
 import { setToken, setStoredUser } from '../../utils/auth.utils';
 import {
   fetchUsers,
   toggleActiveUser,
   resetMfaUser,
   createUser,
+  fetchUser,
   updateUser,
   fetchAuditLog,
   type UserListItem,
@@ -38,6 +44,7 @@ import {
   type UpdateUserRequest,
 } from '../../services/admin.service';
 import { impersonateApi } from '../../services/auth.service';
+import { fetchRoles } from '../../services/roles.service';
 import ListToolbar from '../../components/ListToolbar';
 import PageHeader from '../../components/PageHeader';
 import ContentCard from '../../components/ContentCard';
@@ -45,7 +52,9 @@ import ResponsiveTable, { type ResponsiveTableColumn } from '../../components/Re
 import ColumnSelector from '../../components/ColumnSelector';
 import ConfirmModal from '../../components/ConfirmModal';
 import FormDrawer from '../../components/FormDrawer';
+import Can from '../../components/Can';
 import { AppUserRoles, ROLE_LABELS } from '../../types/common.types';
+import type { PermissionCode, RoleRecord } from '../../types/roles.types';
 import AuditLogPanel from './AuditLogPanel';
 
 /** Ruoli assegnabili da questa UI (SuperAdmin escluso: creato solo via seed). */
@@ -90,6 +99,8 @@ interface UserFormValues {
   email: string;
   role: string;
   scopeId: string;
+  /** Ruoli personalizzati aggiuntivi (`roleGuids`, SPEC-RBAC-F2b S38). */
+  roleGuids: string[];
 }
 
 function userToFormValues(user?: UserListItem): UserFormValues {
@@ -99,7 +110,15 @@ function userToFormValues(user?: UserListItem): UserFormValues {
     email: user?.email ?? '',
     role: user ? String(user.role) : String(AppUserRoles.User),
     scopeId: user?.scopeId ?? '',
+    roleGuids: [],
   };
+}
+
+/** Permessi richiesti per assegnare ruoli aggiuntivi e leggerne l'elenco (S38). */
+const ASSIGN_ROLES_PERMISSIONS: readonly PermissionCode[] = ['users:assign_roles', 'roles:read'];
+
+function sameGuids(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((guid) => b.includes(guid));
 }
 
 /** Pagina di amministrazione utenti (Admin+). */
@@ -108,6 +127,9 @@ export default function PageUsers(): JSX.Element {
   const [accessCount, setAccessCount] = useState<number | null>(null);
   const currentUser = useAuthStore((state) => state.user);
   const isSuperAdmin = currentUser?.role === AppUserRoles.SuperAdmin;
+  const canAssignRoles = useHasPermission(ASSIGN_ROLES_PERMISSIONS);
+  const callerPermissions = useAuthStore((state) => state.permissions) ?? [];
+  const refreshPermissions = useAuthStore((state) => state.refreshPermissions);
   const activeTab = searchParams.get('tab') === 'audit-log' ? 'audit-log' : 'users';
 
   useEffect(() => {
@@ -154,6 +176,12 @@ export default function PageUsers(): JSX.Element {
   const [mfaTarget, setMfaTarget] = useState<UserListItem | null>(null);
   const [impersonateTarget, setImpersonateTarget] = useState<UserListItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  /** Ruoli personalizzati assegnabili, caricati alla prima apertura del drawer. */
+  const [customRoles, setCustomRoles] = useState<RoleRecord[] | null>(null);
+  /** Ruoli aggiuntivi dell'utente in modifica all'apertura: `null` finché non sono noti. */
+  const [initialRoleGuids, setInitialRoleGuids] = useState<string[] | null>(null);
+  /** Caricamento dei ruoli fallito: il campo resta disabilitato e `roleGuids` non si invia. */
+  const [rolesError, setRolesError] = useState(false);
 
   const form = useForm<UserFormValues>({
     mode: 'controlled',
@@ -168,15 +196,62 @@ export default function PageUsers(): JSX.Element {
   const isEdit = !!editTarget;
   const formOpened = createOpened || isEdit;
 
+  /** Carica una volta i ruoli personalizzati per il multi-select, se l'utente può assegnarli. */
+  function ensureCustomRoles(): void {
+    if (!canAssignRoles || customRoles !== null) return;
+    fetchRoles()
+      .then((roles) => setCustomRoles(roles.filter((role) => !role.isSystem)))
+      .catch((err: unknown) => {
+        setRolesError(true);
+        const feedback = roleErrorMessage(err, 'Errore nel caricamento dei ruoli');
+        if (feedback) notifications.show({ color: 'red', message: feedback.message });
+      });
+  }
+
   function openCreate(): void {
     form.setValues(userToFormValues());
+    setInitialRoleGuids([]);
+    setRolesError(false);
     setCreateOpened(true);
+    ensureCustomRoles();
   }
 
   function openEdit(record: UserListItem): void {
     form.setValues(userToFormValues(record));
     setEditTarget(record);
+    setInitialRoleGuids(null);
+    setRolesError(false);
+    ensureCustomRoles();
   }
+
+  // La riga della lista non contiene i ruoli aggiuntivi: in modifica servono dal dettaglio (S38).
+  // `active` scarta la risposta se nel frattempo il drawer è passato a un altro utente o si è chiuso.
+  const editGuid = editTarget?.guid;
+  useEffect(() => {
+    if (!editGuid || !canAssignRoles) return;
+    let active = true;
+    fetchUser(editGuid)
+      .then((detail) => {
+        if (!active) return;
+        const guids = (detail.roles ?? []).map((role) => role.guid);
+        form.setFieldValue('roleGuids', guids);
+        setInitialRoleGuids(guids);
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        setRolesError(true);
+        notifications.show({
+          color: 'red',
+          message: getErrorMessage(err, "Errore nel caricamento dei ruoli dell'utente"),
+        });
+      });
+    return () => {
+      active = false;
+    };
+    // `form.setFieldValue` cambia identità a ogni render (dipende dalle regole di validazione
+    // inline): tra le dipendenze rifarebbe la richiesta, e azzererebbe il campo, a ogni modifica.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editGuid, canAssignRoles]);
 
   function closeForm(): void {
     setCreateOpened(false);
@@ -185,6 +260,14 @@ export default function PageUsers(): JSX.Element {
 
   async function handleFormSubmit(values: UserFormValues): Promise<void> {
     setSubmitting(true);
+    // `roleGuids` solo se l'insieme è cambiato (in creazione: non vuoto), per non produrre audit
+    // `user.roles.update` superflui né `403` a chi non ha il permesso (S38, SPEC F2a S18).
+    const roleGuidsChanged =
+      canAssignRoles &&
+      !rolesError &&
+      initialRoleGuids !== null &&
+      !sameGuids(values.roleGuids, initialRoleGuids);
+    const roleGuids = roleGuidsChanged ? { roleGuids: values.roleGuids } : {};
     try {
       if (editTarget) {
         const payload: UpdateUserRequest = {
@@ -193,9 +276,12 @@ export default function PageUsers(): JSX.Element {
           email: values.email.trim(),
           role: Number(values.role),
           scopeId: values.scopeId.trim() || null,
+          ...roleGuids,
         };
         await updateUser(editTarget.guid, payload);
         notifications.show({ color: 'green', message: 'Utente aggiornato con successo' });
+        // I permessi effettivi dell'utente corrente possono essere cambiati.
+        if (editTarget.guid === currentUser?.guid) void refreshPermissions();
       } else {
         const payload: CreateUserRequest = {
           name: values.name.trim(),
@@ -203,6 +289,7 @@ export default function PageUsers(): JSX.Element {
           email: values.email.trim(),
           role: Number(values.role),
           scopeId: values.scopeId.trim() || undefined,
+          ...roleGuids,
         };
         await createUser(payload);
         notifications.show({ color: 'green', message: 'Utente creato con successo' });
@@ -213,7 +300,11 @@ export default function PageUsers(): JSX.Element {
       const fallback = editTarget
         ? "Errore nell'aggiornamento dell'utente"
         : "Errore nella creazione dell'utente";
-      notifications.show({ color: 'red', message: getErrorMessage(err, fallback) });
+      // Messaggi dedicati per i codici di dominio dei ruoli; per il resto, comportamento invariato.
+      const message = isRoleDomainError(err)
+        ? (roleErrorMessage(err, fallback)?.message ?? getErrorMessage(err, fallback))
+        : getErrorMessage(err, fallback);
+      notifications.show({ color: 'red', message });
     } finally {
       setSubmitting(false);
     }
@@ -417,6 +508,48 @@ export default function PageUsers(): JSX.Element {
           <TextInput label="Cognome" {...form.getInputProps('surname')} />
           <TextInput label="Email" withAsterisk {...form.getInputProps('email')} />
           <Select label="Ruolo" withAsterisk data={ROLE_OPTIONS} {...form.getInputProps('role')} />
+          <Can permission={ASSIGN_ROLES_PERMISSIONS}>
+            <MultiSelect
+              label="Ruoli aggiuntivi"
+              description={
+                rolesError
+                  ? 'Ruoli non disponibili: chiudi e riapri il modulo per riprovare.'
+                  : 'Permessi aggiuntivi rispetto al ruolo base. Non riducono i permessi del ruolo base.'
+              }
+              placeholder={
+                customRoles !== null && customRoles.length === 0
+                  ? 'Nessun ruolo personalizzato'
+                  : undefined
+              }
+              searchable
+              clearable
+              nothingFoundMessage="Nessun ruolo trovato"
+              disabled={customRoles === null || initialRoleGuids === null || rolesError}
+              rightSection={
+                !rolesError && (customRoles === null || initialRoleGuids === null) ? (
+                  <Loader size="xs" aria-label="Caricamento dei ruoli" />
+                ) : undefined
+              }
+              data={(customRoles ?? []).map((role) => ({
+                value: role.guid,
+                label: role.name,
+                // Anti-escalation, solo UX: il backend risponde comunque `403` (S38).
+                disabled: !isRoleAssignable(role, callerPermissions),
+              }))}
+              renderOption={({ option }) => {
+                const role = customRoles?.find((r) => r.guid === option.value);
+                return (
+                  <div>
+                    <Text size="sm">{option.label}</Text>
+                    <Text size="xs" c="dimmed" ff="monospace">
+                      {role?.code}
+                    </Text>
+                  </div>
+                );
+              }}
+              {...form.getInputProps('roleGuids')}
+            />
+          </Can>
           <TextInput
             label="Ambito"
             placeholder="es. filiale, ufficio, tenant (opzionale)"

@@ -1,0 +1,31 @@
+info:
+  name: Create Role
+  type: http
+  seq: 12
+
+http:
+  method: POST
+  url: "{{baseUrl}}/app/admin/roles"
+  body:
+    type: json
+    data: |-
+      {
+        "code": "seo_specialist",
+        "name": "SEO Specialist",
+        "description": "Modifica e pubblica le Pagine per le campagne SEO.",
+        "permissionCodes": ["pages:create", "pages:edit_any", "pages:publish"]
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  test("status is 201 (SuperAdmin), 403 (roles:manage mancante) o 409 (codice già usato)", function() {
+    expect(res.getStatus()).to.be.oneOf([201, 403, 409]);
+  });

@@ -151,7 +151,13 @@ paths:
       responses:
         '200':
           description: Dati utente recuperati
-      summary: Recupera i dati dell'utente autenticato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponseDto'
+        '401':
+          description: Non autenticato o utente non trovato
+      summary: Recupera i dati e i permessi effettivi dell'utente autenticato
       tags:
         - Auth
     patch:
@@ -395,8 +401,17 @@ paths:
       responses:
         '201':
           description: Utente creato
+        '400':
+          description: >-
+            Email già in uso · SYSTEM_ROLE_NOT_ASSIGNABLE (ruolo di sistema in
+            roleGuids)
         '403':
-          description: Tentativo di creare un utente SuperAdmin da parte dell'Admin
+          description: >-
+            Tentativo di creare un utente SuperAdmin da parte dell'Admin ·
+            permesso users:assign_roles mancante · PERMISSION_ESCALATION. Nessun
+            utente creato né email inviata
+        '404':
+          description: Ruolo di roleGuids non trovato
       security:
         - access-token: []
       summary: Crea un nuovo utente (un Admin non può creare utenti SuperAdmin)
@@ -413,7 +428,11 @@ paths:
             type: string
       responses:
         '200':
-          description: Utente trovato
+          description: 'Utente trovato, con `roles`: ruoli personalizzati aggiuntivi'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetailResponseDto'
         '403':
           description: Target SuperAdmin non gestibile dall'Admin
         '404':
@@ -440,13 +459,20 @@ paths:
       responses:
         '200':
           description: Utente aggiornato
+        '400':
+          description: >-
+            Email già in uso · SYSTEM_ROLE_NOT_ASSIGNABLE (ruolo di sistema in
+            roleGuids)
         '403':
-          description: Target SuperAdmin non gestibile dall'Admin
+          description: >-
+            Target SuperAdmin non gestibile dall'Admin · permesso
+            users:assign_roles mancante · PERMISSION_ESCALATION. Nessun campo
+            modificato
         '404':
-          description: Utente non trovato
+          description: Utente o ruolo di roleGuids non trovato
       security:
         - access-token: []
-      summary: Aggiorna i dati di un utente
+      summary: Aggiorna i dati e i ruoli aggiuntivi di un utente
       tags:
         - Admin
   /api/v1/app/admin/users/{guid}/toggle-active:
@@ -556,6 +582,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FileMetadataDto'
+        '403':
+          description: Permesso media:upload mancante
         '413':
           description: File più grande del limite configurato
       security:
@@ -629,7 +657,7 @@ paths:
         '204':
           description: File eliminato
         '403':
-          description: Non sei l'autore del file e non hai un ruolo Admin/superiore
+          description: Non sei l'autore del file e non hai il permesso media:delete_any
         '404':
           description: File non trovato o già eliminato
       security:
@@ -743,6 +771,148 @@ paths:
       summary: Serve il blob di un media editoriale pubblicato (immagine)
       tags:
         - Public Media
+  /api/v1/app/admin/roles:
+    get:
+      operationId: RolesController_list
+      parameters: []
+      responses:
+        '200':
+          description: Ruoli di sistema, poi personalizzati
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RoleResponseDto'
+        '401':
+          description: Non autenticato
+        '403':
+          description: Permesso roles:read mancante
+      security:
+        - access-token: []
+      summary: Lista dei ruoli con i rispettivi permessi
+      tags:
+        - Roles
+    post:
+      operationId: RolesController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleDto'
+      responses:
+        '201':
+          description: Ruolo creato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleGuidResponseDto'
+        '400':
+          description: >-
+            Body non valido · INVALID_ROLE_CODE · INVALID_PERMISSION_CODE ·
+            RESERVED_PERMISSION (roles:manage)
+        '401':
+          description: Non autenticato
+        '403':
+          description: Permesso roles:manage mancante · PERMISSION_ESCALATION
+        '409':
+          description: ROLE_CODE_DUPLICATE
+      security:
+        - access-token: []
+      summary: Crea un ruolo personalizzato (SuperAdmin)
+      tags:
+        - Roles
+  /api/v1/app/admin/roles/{guid}:
+    patch:
+      operationId: RolesController_update
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          description: Guid (16 caratteri) del ruolo
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRoleDto'
+      responses:
+        '200':
+          description: Ruolo aggiornato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleGuidResponseDto'
+        '400':
+          description: >-
+            Body non valido o vuoto (code non ammesso) · INVALID_PERMISSION_CODE
+            · RESERVED_PERMISSION
+        '401':
+          description: Non autenticato
+        '403':
+          description: >-
+            Permesso roles:manage mancante · SYSTEM_ROLE_READONLY ·
+            PERMISSION_ESCALATION
+        '404':
+          description: Ruolo non trovato
+      security:
+        - access-token: []
+      summary: Modifica un ruolo personalizzato (SuperAdmin)
+      tags:
+        - Roles
+    delete:
+      operationId: RolesController_delete
+      parameters:
+        - name: guid
+          required: true
+          in: path
+          description: Guid (16 caratteri) del ruolo
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Ruolo eliminato
+        '401':
+          description: Non autenticato
+        '403':
+          description: >-
+            Permesso roles:manage mancante · SYSTEM_ROLE_READONLY ·
+            PERMISSION_ESCALATION
+        '404':
+          description: Ruolo non trovato
+        '409':
+          description: 'ROLE_IN_USE: il ruolo è assegnato ad almeno un utente, attivo o no'
+      security:
+        - access-token: []
+      summary: Elimina un ruolo personalizzato non assegnato (SuperAdmin)
+      tags:
+        - Roles
+  /api/v1/app/admin/permissions:
+    get:
+      operationId: RolesController_listPermissions
+      parameters: []
+      responses:
+        '200':
+          description: Gruppi nell'ordine di PERMISSION_CATEGORIES, senza categorie vuote
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PermissionGroupResponseDto'
+        '401':
+          description: Non autenticato
+        '403':
+          description: Permesso roles:read mancante
+      security:
+        - access-token: []
+      summary: Catalogo dei permessi raggruppati per categoria
+      tags:
+        - Roles
   /api/v1/app/settings/theme:
     get:
       operationId: SettingsController_getTheme
@@ -2469,6 +2639,71 @@ components:
       required:
         - token
         - password
+    MeResponseDto:
+      type: object
+      properties:
+        userId:
+          type: number
+          description: Id numerico dell'utente autenticato
+          example: 12
+        role:
+          type: number
+          description: Livello di ruolo base
+          enum:
+            - 5
+            - 10
+            - 20
+            - 30
+          example: 30
+        name:
+          type: string
+          description: Nome
+          example: Mario
+        scopeId:
+          type: string
+          description: Scope multi-tenant/multi-sede
+          nullable: true
+        impersonatedBy:
+          type: number
+          description: 'Presente solo in impersonificazione: id del SuperAdmin reale'
+          example: 1
+        guid:
+          type: string
+          description: Guid dell'utente
+          example: a1b2c3d4e5f6a7b8
+        surname:
+          type: string
+          description: Cognome
+          nullable: true
+          example: Rossi
+        email:
+          type: string
+          description: Email
+          example: mario.rossi@example.com
+        isMfaEnabled:
+          type: boolean
+          description: MFA abilitata
+        permissions:
+          description: >-
+            Permessi effettivi (ruolo di sistema ∪ ruoli personalizzati), in
+            ordine alfabetico
+          example:
+            - pages:create
+            - pages:edit_own
+            - pages:submit_review
+          type: array
+          items:
+            type: string
+      required:
+        - userId
+        - role
+        - name
+        - scopeId
+        - guid
+        - surname
+        - email
+        - isMfaEnabled
+        - permissions
     UpdateProfileDto:
       type: object
       properties:
@@ -2518,6 +2753,95 @@ components:
           example: '123456'
       required:
         - code
+    UserRoleSummaryDto:
+      type: object
+      properties:
+        guid:
+          type: string
+          description: Guid del ruolo
+          example: a1b2c3d4e5f6a7b8
+        code:
+          type: string
+          description: Codice del ruolo
+          example: seo_specialist
+        name:
+          type: string
+          description: Nome leggibile
+          example: SEO Specialist
+      required:
+        - guid
+        - code
+        - name
+    UserDetailResponseDto:
+      type: object
+      properties:
+        guid:
+          type: string
+          description: Guid dell'utente
+          example: a1b2c3d4e5f6a7b8
+        name:
+          type: string
+          description: Nome
+          example: Mario
+        surname:
+          type: string
+          description: Cognome
+          nullable: true
+          example: Rossi
+        email:
+          type: string
+          description: Email
+          example: mario.rossi@example.com
+        role:
+          type: number
+          description: Livello di ruolo base
+          enum:
+            - 5
+            - 10
+            - 20
+            - 30
+          example: 30
+        scopeId:
+          type: string
+          description: Scope multi-tenant/multi-sede
+          nullable: true
+        isActive:
+          type: boolean
+          description: Utente attivo
+        pwdSet:
+          type: boolean
+          description: Password già impostata (attivazione completata)
+        isMfaEnabled:
+          type: boolean
+          description: MFA abilitata
+        createdAt:
+          type: string
+          description: Data creazione
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          description: Data ultimo aggiornamento
+          format: date-time
+          nullable: true
+        roles:
+          description: Ruoli personalizzati aggiuntivi; mai i ruoli di sistema (S19)
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRoleSummaryDto'
+      required:
+        - guid
+        - name
+        - surname
+        - email
+        - role
+        - scopeId
+        - isActive
+        - pwdSet
+        - isMfaEnabled
+        - createdAt
+        - updatedAt
+        - roles
     CreateUserDto:
       type: object
       properties:
@@ -2547,6 +2871,18 @@ components:
           description: >-
             Identificatore di scope multi-tenant/multi-sede, a disposizione dei
             moduli del CMS
+        roleGuids:
+          description: >-
+            Guid dei ruoli personalizzati aggiuntivi: sostituisce l'insieme
+            attuale. Richiede users:assign_roles; si possono aggiungere solo
+            ruoli con permessi posseduti dal chiamante. Assente o vuoto: nessun
+            ruolo aggiuntivo.
+          example:
+            - a1b2c3d4e5f6a7b8
+          maxItems: 50
+          type: array
+          items:
+            type: string
       required:
         - name
         - email
@@ -2574,6 +2910,18 @@ components:
         scopeId:
           type: string
           description: Identificatore di scope multi-tenant/multi-sede
+        roleGuids:
+          description: >-
+            Guid dei ruoli personalizzati aggiuntivi: sostituisce l'insieme
+            attuale. Richiede users:assign_roles; si possono aggiungere solo
+            ruoli con permessi posseduti dal chiamante. Assente: ruoli
+            invariati; [] li rimuove tutti.
+          example:
+            - a1b2c3d4e5f6a7b8
+          maxItems: 50
+          type: array
+          items:
+            type: string
     UploadFileDto:
       type: object
       properties:
@@ -2750,6 +3098,169 @@ components:
           example: '42'
       required:
         - jobId
+    RoleResponseDto:
+      type: object
+      properties:
+        guid:
+          type: string
+          description: Guid del ruolo
+          example: a1b2c3d4e5f6a7b8
+        code:
+          type: string
+          description: Codice univoco e immutabile
+          example: seo_specialist
+        name:
+          type: string
+          description: Nome leggibile
+          example: SEO Specialist
+        description:
+          type: string
+          description: Descrizione
+          nullable: true
+        isSystem:
+          type: boolean
+          description: Ruolo di sistema (sola lettura, ADR-99 P3)
+        level:
+          type: number
+          description: >-
+            Livello `AppUserRoles` del ruolo di sistema; null per i ruoli
+            personalizzati
+          nullable: true
+          example: null
+        permissions:
+          description: Codici permesso del ruolo
+          example:
+            - pages:create
+            - pages:edit_any
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          description: Data creazione
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          description: Data ultimo aggiornamento
+          format: date-time
+          nullable: true
+      required:
+        - guid
+        - code
+        - name
+        - description
+        - isSystem
+        - level
+        - permissions
+        - createdAt
+        - updatedAt
+    CreateRoleDto:
+      type: object
+      properties:
+        code:
+          type: string
+          description: >-
+            Slug univoco e immutabile del ruolo (minuscole, cifre e underscore,
+            da 3 a 50 caratteri, inizia con una lettera)
+          example: seo_specialist
+          maxLength: 50
+        name:
+          type: string
+          description: Nome leggibile del ruolo
+          example: SEO Specialist
+          maxLength: 100
+        description:
+          type: string
+          description: Descrizione del ruolo
+          nullable: true
+          maxLength: 500
+          example: Modifica e pubblica le Pagine per le campagne SEO.
+        permissionCodes:
+          description: >-
+            Codici permesso del registro (`GET app/admin/permissions`). Non
+            ammesso: roles:manage, riservato ai ruoli di sistema.
+          example:
+            - pages:create
+            - pages:edit_any
+          maxItems: 100
+          type: array
+          items:
+            type: string
+      required:
+        - code
+        - name
+        - permissionCodes
+    RoleGuidResponseDto:
+      type: object
+      properties:
+        guid:
+          type: string
+          description: Guid del ruolo
+          example: a1b2c3d4e5f6a7b8
+      required:
+        - guid
+    UpdateRoleDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nome leggibile del ruolo
+          maxLength: 100
+        description:
+          type: string
+          description: Descrizione del ruolo
+          nullable: true
+          maxLength: 500
+        permissionCodes:
+          description: >-
+            Nuovo insieme completo dei codici permesso (sostituisce l'attuale).
+            Non ammesso: roles:manage.
+          example:
+            - pages:create
+            - pages:edit_any
+            - pages:publish
+          maxItems: 100
+          type: array
+          items:
+            type: string
+    PermissionItemResponseDto:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Codice `risorsa:azione`
+          example: pages:publish
+        description:
+          type: string
+          description: Descrizione leggibile
+          nullable: true
+          example: Pubblicare, programmare e archiviare una Pagina
+      required:
+        - code
+        - description
+    PermissionGroupResponseDto:
+      type: object
+      properties:
+        category:
+          type: string
+          description: Categoria
+          enum:
+            - pages
+            - structure
+            - media
+            - forms
+            - settings
+            - users
+          example: pages
+        permissions:
+          description: Permessi della categoria
+          type: array
+          items:
+            $ref: '#/components/schemas/PermissionItemResponseDto'
+      required:
+        - category
+        - permissions
     ThemeColorsDto:
       type: object
       properties:

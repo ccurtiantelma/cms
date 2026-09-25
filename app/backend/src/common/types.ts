@@ -1,4 +1,5 @@
 import { AppUserRoles } from './enums';
+import type { PermissionCode } from '../permissions/permissions.registry';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace -- unico modo per estendere Express.Request globalmente
@@ -24,14 +25,23 @@ export interface AuthInfo {
 }
 
 /**
- * Risposta di `GET /auth/me`: estende `AuthInfo` (payload JWT) con i campi
- * letti a runtime dal DB, necessari alla pagina profilo utente.
+ * Profilo restituito da `AuthService.getMe`: estende `AuthInfo` (payload JWT)
+ * con i campi letti a runtime dal DB, necessari alla pagina profilo utente.
  */
 export interface MeResponse extends AuthInfo {
   guid: string;
   surname: string | null;
   email: string;
   isMfaEnabled: boolean;
+}
+
+/**
+ * Risposta di `GET /auth/me`: `MeResponse` più i permessi effettivi in ordine
+ * alfabetico (ADR-99 § 10, SPEC-RBAC-F2a S20). Composta in `AuthController`,
+ * così `AuthService` e i suoi test restano invariati.
+ */
+export interface MeWithPermissionsResponse extends MeResponse {
+  permissions: PermissionCode[];
 }
 
 export interface PaginationParams {

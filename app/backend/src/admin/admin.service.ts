@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { and, asc, count, desc, eq, gte, ilike, lte, ne, or, SQL, sql } from 'drizzle-orm';
 import { DbService } from '../db/db.service';
 import { SeedService } from './seed.service';
@@ -21,6 +15,10 @@ import { buildActivationEmailHtml } from '../mailer/templates';
 import { AppConstants } from '../common/app-constants';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { assertTargetRoleManageable } from './user-management.rules';
+import { PermissionsService } from '../permissions/permissions.service';
+import { RolesService } from './roles/roles.service';
+import { UserRoleSummary, UserRolesPlan } from './roles/roles.types';
 
 /** Colonne escluse dalle risposte utente: mai esporre hash password, secret MFA o token azione. */
 const SENSITIVE_USER_COLUMNS = {
@@ -53,13 +51,19 @@ const ACTIVATION_TOKEN_HOURS = 48;
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
 
-  /** Inietta i servizi per accesso al DB, seed dati demo, invio email, audit log ed export statico. */
+  /**
+   * Inietta i servizi per accesso al DB, seed dati demo, invio email, audit log,
+   * export statico, invalidazione della cache permessi (ADR-99 § 6) e
+   * assegnazione dei ruoli personalizzati (SPEC-RBAC-F2a S17).
+   */
   constructor(
     private readonly db: DbService,
     private readonly seedService: SeedService,
     private readonly emailQueue: EmailQueueService,
     private readonly auditLogService: AuditLogService,
     private readonly exportService: ExportService,
+    private readonly permissionsService: PermissionsService,
+    private readonly rolesService: RolesService,
   ) {}
 
   // ─── Sistema (SuperAdmin only) ───────────────────────────────────────────
@@ -139,11 +143,10 @@ export class AdminService {
   /**
    * Verifica che il chiamante possa vedere/gestire un utente con il ruolo indicato.
    * Regola critica: un Admin (non SuperAdmin) non può vedere né gestire utenti SuperAdmin.
+   * Delega alla funzione pura condivisa con `RolesService`.
    */
   private assertTargetRoleManageable(targetRole: number, authInfo: AuthInfo): void {
-    if (targetRole <= AppUserRoles.SuperAdmin && authInfo.role > AppUserRoles.SuperAdmin) {
-      throw new ForbiddenException('Non puoi gestire utenti con ruolo SuperAdmin.');
-    }
+    assertTargetRoleManageable(targetRole, authInfo);
   }
 
   /**
@@ -188,8 +191,15 @@ export class AdminService {
     return new Pagination(items as SafeUser[], total, page, perPage);
   }
 
-  /** Dettaglio di un utente. Lancia `ForbiddenException` se il target è SuperAdmin e il chiamante non lo è. */
-  async findOneUser(guid: string, authInfo: AuthInfo): Promise<SafeUser> {
+  /**
+   * Dettaglio di un utente, con i ruoli personalizzati aggiuntivi in `roles`
+   * (SPEC-RBAC-F2a S19; il livello base resta `role`). Lancia
+   * `ForbiddenException` se il target è SuperAdmin e il chiamante non lo è.
+   */
+  async findOneUser(
+    guid: string,
+    authInfo: AuthInfo,
+  ): Promise<SafeUser & { roles: UserRoleSummary[] }> {
     const user = await this.db.db.query.userEntity.findFirst({
       where: eq(userEntity.guid, guid),
       columns: SENSITIVE_USER_COLUMNS,
@@ -197,13 +207,19 @@ export class AdminService {
     if (!user) throw new NotFoundException('Utente non trovato.');
 
     this.assertTargetRoleManageable((user as SafeUser).role, authInfo);
-    return user as SafeUser;
+    const roles = await this.rolesService.listUserRoles(user.id);
+    return { ...(user as SafeUser), roles };
   }
 
   /**
    * Crea un nuovo utente: invia sempre l'email di attivazione (pwdSet=false),
    * l'utente imposta la password al primo accesso tramite il link ricevuto.
    * Regola critica: un Admin (non SuperAdmin) non può creare utenti SuperAdmin.
+   *
+   * Con `roleGuids` non vuoto (SPEC-RBAC-F2a S17) i ruoli si validano prima di
+   * ogni scrittura, utente e `user_roles` si scrivono nella stessa transazione,
+   * ed email di attivazione, invalidazione e audit partono solo dopo il commit:
+   * un rifiuto dei ruoli non lascia utenti creati né email accodate.
    */
   async createUser(dto: CreateUserDto, authInfo: AuthInfo, ip?: string): Promise<{ guid: string }> {
     this.assertTargetRoleManageable(dto.role, authInfo);
@@ -215,29 +231,41 @@ export class AdminService {
       throw new BadRequestException('Esiste già un utente con questa email.');
     }
 
+    // In creazione `[]` equivale ad assente (S18): nessun permesso richiesto.
+    const rolesPlan: UserRolesPlan | null = dto.roleGuids?.length
+      ? await this.rolesService.planUserRoles({ id: null, role: dto.role }, dto.roleGuids, authInfo)
+      : null;
+
     // Password segnaposto non utilizzabile: l'utente la imposta tramite il link di attivazione.
     const pwd = await Utils.hashPassword(Utils.randomString(32));
     const actionToken = Utils.randomString(64);
     const actionTokenExpiresAt = new Date();
     actionTokenExpiresAt.setHours(actionTokenExpiresAt.getHours() + ACTIVATION_TOKEN_HOURS);
 
-    const [user] = await this.db.db
-      .insert(userEntity)
-      .values({
-        name: dto.name,
-        surname: dto.surname ?? null,
-        email: dto.email,
-        pwd,
-        role: dto.role,
-        scopeId: dto.scopeId ?? null,
-        pwdSet: false,
-        actionToken,
-        actionTokenExpiresAt,
-        createdBy: authInfo.userId,
-        updatedBy: authInfo.userId,
-      })
-      .returning({ id: userEntity.id, guid: userEntity.guid });
+    const user = await this.db.db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(userEntity)
+        .values({
+          name: dto.name,
+          surname: dto.surname ?? null,
+          email: dto.email,
+          pwd,
+          role: dto.role,
+          scopeId: dto.scopeId ?? null,
+          pwdSet: false,
+          actionToken,
+          actionTokenExpiresAt,
+          createdBy: authInfo.userId,
+          updatedBy: authInfo.userId,
+        })
+        .returning({ id: userEntity.id, guid: userEntity.guid });
+      if (rolesPlan?.changed) {
+        await this.rolesService.applyUserRoles(tx, created.id, rolesPlan);
+      }
+      return created;
+    });
 
+    // Solo dopo il commit: l'email non parte per un utente che non esiste.
     await this.emailQueue.enqueueEmail({
       to: dto.email,
       subject: 'Attiva il tuo account',
@@ -246,6 +274,10 @@ export class AdminService {
         activationUrl: `${AppConstants.frontendUrl}/activate?token=${actionToken}`,
       }),
     });
+
+    if (rolesPlan?.changed) {
+      await this.permissionsService.invalidateUsers([user.id]);
+    }
 
     this.logger.log(`Utente ${user.id} creato da ${authInfo.userId}.`);
     await this.auditLogService.log(
@@ -257,6 +289,9 @@ export class AdminService {
       authInfo.impersonatedBy,
       ip,
     );
+    if (rolesPlan?.changed) {
+      await this.rolesService.auditUserRoles(user, rolesPlan, authInfo, ip);
+    }
     return { guid: user.guid };
   }
 
@@ -264,6 +299,10 @@ export class AdminService {
    * Aggiorna i dati di un utente (nome, cognome, email, ruolo, scopeId).
    * Regola critica: un Admin (non SuperAdmin) non può vedere/aggiornare utenti SuperAdmin
    * né promuovere un utente a SuperAdmin.
+   *
+   * `roleGuids` sostituisce l'insieme dei ruoli aggiuntivi (S18; assente = invariato).
+   * I ruoli si validano prima di ogni scrittura e si scrivono nella stessa
+   * transazione dei campi utente: un rifiuto lascia invariato anche il resto (S17).
    */
   async updateUser(
     guid: string,
@@ -271,6 +310,7 @@ export class AdminService {
     authInfo: AuthInfo,
     ip?: string,
   ): Promise<{ guid: string }> {
+    const { roleGuids, ...fields } = dto;
     const target = await this.db.db.query.userEntity.findFirst({
       where: eq(userEntity.guid, guid),
     });
@@ -281,25 +321,50 @@ export class AdminService {
       this.assertTargetRoleManageable(dto.role, authInfo);
     }
 
-    if (dto.email && dto.email !== target.email) {
+    if (fields.email && fields.email !== target.email) {
       const existing = await this.db.db.query.userEntity.findFirst({
-        where: eq(userEntity.email, dto.email),
+        where: eq(userEntity.email, fields.email),
       });
       if (existing) throw new BadRequestException('Esiste già un utente con questa email.');
     }
 
-    await this.db.db
-      .update(userEntity)
-      .set({
-        ...(dto.name !== undefined && { name: dto.name }),
-        ...(dto.surname !== undefined && { surname: dto.surname }),
-        ...(dto.email !== undefined && { email: dto.email }),
-        ...(dto.role !== undefined && { role: dto.role }),
-        ...(dto.scopeId !== undefined && { scopeId: dto.scopeId }),
-        updatedAt: new Date(),
-        updatedBy: authInfo.userId,
-      })
-      .where(eq(userEntity.id, target.id));
+    const rolesPlan: UserRolesPlan | null =
+      roleGuids === undefined
+        ? null
+        : await this.rolesService.planUserRoles(target, roleGuids, authInfo);
+
+    const writeUser = async (
+      tx: Pick<DbService['db'], 'update' | 'insert' | 'delete'>,
+    ): Promise<void> => {
+      await tx
+        .update(userEntity)
+        .set({
+          ...(fields.name !== undefined && { name: fields.name }),
+          ...(fields.surname !== undefined && { surname: fields.surname }),
+          ...(fields.email !== undefined && { email: fields.email }),
+          ...(fields.role !== undefined && { role: fields.role }),
+          ...(fields.scopeId !== undefined && { scopeId: fields.scopeId }),
+          updatedAt: new Date(),
+          updatedBy: authInfo.userId,
+        })
+        .where(eq(userEntity.id, target.id));
+      if (rolesPlan?.changed) {
+        await this.rolesService.applyUserRoles(tx, target.id, rolesPlan);
+      }
+    };
+    // Un solo UPDATE è già atomico: la transazione serve quando si scrivono anche i ruoli.
+    if (rolesPlan?.changed) {
+      await this.db.db.transaction(writeUser);
+    } else {
+      await writeUser(this.db.db);
+    }
+
+    // Il ruolo di sistema dei permessi granulari segue `users.role` (ADR-99 § 1, SPEC S1);
+    // un cambio di ruolo base e di ruoli aggiuntivi produce una sola invalidazione.
+    const baseRoleChanged = fields.role !== undefined && fields.role !== target.role;
+    if (baseRoleChanged || rolesPlan?.changed) {
+      await this.permissionsService.invalidateUsers([target.id]);
+    }
 
     this.logger.log(`Utente ${target.id} aggiornato da ${authInfo.userId}.`);
     await this.auditLogService.log(
@@ -307,10 +372,13 @@ export class AdminService {
       'user.update',
       'user',
       target.guid,
-      { ...dto },
+      { ...fields },
       authInfo.impersonatedBy,
       ip,
     );
+    if (rolesPlan?.changed) {
+      await this.rolesService.auditUserRoles(target, rolesPlan, authInfo, ip);
+    }
     return { guid: target.guid };
   }
 
@@ -332,6 +400,8 @@ export class AdminService {
       .update(userEntity)
       .set({ isActive, updatedAt: new Date(), updatedBy: authInfo.userId })
       .where(eq(userEntity.id, target.id));
+    // Utente disattivato → insieme vuoto di permessi (SPEC S2): la cache va riallineata.
+    await this.permissionsService.invalidateUsers([target.id]);
 
     this.logger.log(
       `Utente ${target.id} ${isActive ? 'riattivato' : 'disabilitato'} da ${authInfo.userId}.`,

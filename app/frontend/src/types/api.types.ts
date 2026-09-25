@@ -147,7 +147,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Recupera i dati dell'utente autenticato */
+    /** Recupera i dati e i permessi effettivi dell'utente autenticato */
     get: operations['AuthController_getMe'];
     put?: never;
     post?: never;
@@ -377,7 +377,7 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    /** Aggiorna i dati di un utente */
+    /** Aggiorna i dati e i ruoli aggiuntivi di un utente */
     patch: operations['AdminController_updateUser'];
     trace?: never;
   };
@@ -528,6 +528,59 @@ export interface paths {
     };
     /** Serve il blob di un media editoriale pubblicato (immagine) */
     get: operations['PublicMediaController_getMedia'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/admin/roles': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista dei ruoli con i rispettivi permessi */
+    get: operations['RolesController_list'];
+    put?: never;
+    /** Crea un ruolo personalizzato (SuperAdmin) */
+    post: operations['RolesController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/app/admin/roles/{guid}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Elimina un ruolo personalizzato non assegnato (SuperAdmin) */
+    delete: operations['RolesController_delete'];
+    options?: never;
+    head?: never;
+    /** Modifica un ruolo personalizzato (SuperAdmin) */
+    patch: operations['RolesController_update'];
+    trace?: never;
+  };
+  '/api/v1/app/admin/permissions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Catalogo dei permessi raggruppati per categoria */
+    get: operations['RolesController_listPermissions'];
     put?: never;
     post?: never;
     delete?: never;
@@ -1291,6 +1344,57 @@ export interface components {
        */
       password: string;
     };
+    MeResponseDto: {
+      /**
+       * @description Id numerico dell'utente autenticato
+       * @example 12
+       */
+      userId: number;
+      /**
+       * @description Livello di ruolo base
+       * @example 30
+       * @enum {number}
+       */
+      role: 5 | 10 | 20 | 30;
+      /**
+       * @description Nome
+       * @example Mario
+       */
+      name: string;
+      /** @description Scope multi-tenant/multi-sede */
+      scopeId: string | null;
+      /**
+       * @description Presente solo in impersonificazione: id del SuperAdmin reale
+       * @example 1
+       */
+      impersonatedBy?: number;
+      /**
+       * @description Guid dell'utente
+       * @example a1b2c3d4e5f6a7b8
+       */
+      guid: string;
+      /**
+       * @description Cognome
+       * @example Rossi
+       */
+      surname: string | null;
+      /**
+       * @description Email
+       * @example mario.rossi@example.com
+       */
+      email: string;
+      /** @description MFA abilitata */
+      isMfaEnabled: boolean;
+      /**
+       * @description Permessi effettivi (ruolo di sistema ∪ ruoli personalizzati), in ordine alfabetico
+       * @example [
+       *       "pages:create",
+       *       "pages:edit_own",
+       *       "pages:submit_review"
+       *     ]
+       */
+      permissions: string[];
+    };
     UpdateProfileDto: {
       /**
        * @description Nome dell'utente
@@ -1329,6 +1433,71 @@ export interface components {
        */
       code: string;
     };
+    UserRoleSummaryDto: {
+      /**
+       * @description Guid del ruolo
+       * @example a1b2c3d4e5f6a7b8
+       */
+      guid: string;
+      /**
+       * @description Codice del ruolo
+       * @example seo_specialist
+       */
+      code: string;
+      /**
+       * @description Nome leggibile
+       * @example SEO Specialist
+       */
+      name: string;
+    };
+    UserDetailResponseDto: {
+      /**
+       * @description Guid dell'utente
+       * @example a1b2c3d4e5f6a7b8
+       */
+      guid: string;
+      /**
+       * @description Nome
+       * @example Mario
+       */
+      name: string;
+      /**
+       * @description Cognome
+       * @example Rossi
+       */
+      surname: string | null;
+      /**
+       * @description Email
+       * @example mario.rossi@example.com
+       */
+      email: string;
+      /**
+       * @description Livello di ruolo base
+       * @example 30
+       * @enum {number}
+       */
+      role: 5 | 10 | 20 | 30;
+      /** @description Scope multi-tenant/multi-sede */
+      scopeId: string | null;
+      /** @description Utente attivo */
+      isActive: boolean;
+      /** @description Password già impostata (attivazione completata) */
+      pwdSet: boolean;
+      /** @description MFA abilitata */
+      isMfaEnabled: boolean;
+      /**
+       * Format: date-time
+       * @description Data creazione
+       */
+      createdAt: string | null;
+      /**
+       * Format: date-time
+       * @description Data ultimo aggiornamento
+       */
+      updatedAt: string | null;
+      /** @description Ruoli personalizzati aggiuntivi; mai i ruoli di sistema (S19) */
+      roles: components['schemas']['UserRoleSummaryDto'][];
+    };
     CreateUserDto: {
       /**
        * @description Nome dell'utente
@@ -1353,6 +1522,13 @@ export interface components {
       role: 5 | 10 | 20 | 30;
       /** @description Identificatore di scope multi-tenant/multi-sede, a disposizione dei moduli del CMS */
       scopeId?: string;
+      /**
+       * @description Guid dei ruoli personalizzati aggiuntivi: sostituisce l'insieme attuale. Richiede users:assign_roles; si possono aggiungere solo ruoli con permessi posseduti dal chiamante. Assente o vuoto: nessun ruolo aggiuntivo.
+       * @example [
+       *       "a1b2c3d4e5f6a7b8"
+       *     ]
+       */
+      roleGuids?: string[];
     };
     UpdateUserDto: {
       /** @description Nome dell'utente */
@@ -1368,6 +1544,13 @@ export interface components {
       role?: 5 | 10 | 20 | 30;
       /** @description Identificatore di scope multi-tenant/multi-sede */
       scopeId?: string;
+      /**
+       * @description Guid dei ruoli personalizzati aggiuntivi: sostituisce l'insieme attuale. Richiede users:assign_roles; si possono aggiungere solo ruoli con permessi posseduti dal chiamante. Assente: ruoli invariati; [] li rimuove tutti.
+       * @example [
+       *       "a1b2c3d4e5f6a7b8"
+       *     ]
+       */
+      roleGuids?: string[];
     };
     UploadFileDto: {
       /**
@@ -1487,6 +1670,119 @@ export interface components {
        * @example 42
        */
       jobId: string;
+    };
+    RoleResponseDto: {
+      /**
+       * @description Guid del ruolo
+       * @example a1b2c3d4e5f6a7b8
+       */
+      guid: string;
+      /**
+       * @description Codice univoco e immutabile
+       * @example seo_specialist
+       */
+      code: string;
+      /**
+       * @description Nome leggibile
+       * @example SEO Specialist
+       */
+      name: string;
+      /** @description Descrizione */
+      description: string | null;
+      /** @description Ruolo di sistema (sola lettura, ADR-99 P3) */
+      isSystem: boolean;
+      /**
+       * @description Livello `AppUserRoles` del ruolo di sistema; null per i ruoli personalizzati
+       * @example null
+       */
+      level: number | null;
+      /**
+       * @description Codici permesso del ruolo
+       * @example [
+       *       "pages:create",
+       *       "pages:edit_any"
+       *     ]
+       */
+      permissions: string[];
+      /**
+       * Format: date-time
+       * @description Data creazione
+       */
+      createdAt: string | null;
+      /**
+       * Format: date-time
+       * @description Data ultimo aggiornamento
+       */
+      updatedAt: string | null;
+    };
+    CreateRoleDto: {
+      /**
+       * @description Slug univoco e immutabile del ruolo (minuscole, cifre e underscore, da 3 a 50 caratteri, inizia con una lettera)
+       * @example seo_specialist
+       */
+      code: string;
+      /**
+       * @description Nome leggibile del ruolo
+       * @example SEO Specialist
+       */
+      name: string;
+      /**
+       * @description Descrizione del ruolo
+       * @example Modifica e pubblica le Pagine per le campagne SEO.
+       */
+      description?: string | null;
+      /**
+       * @description Codici permesso del registro (`GET app/admin/permissions`). Non ammesso: roles:manage, riservato ai ruoli di sistema.
+       * @example [
+       *       "pages:create",
+       *       "pages:edit_any"
+       *     ]
+       */
+      permissionCodes: string[];
+    };
+    RoleGuidResponseDto: {
+      /**
+       * @description Guid del ruolo
+       * @example a1b2c3d4e5f6a7b8
+       */
+      guid: string;
+    };
+    UpdateRoleDto: {
+      /** @description Nome leggibile del ruolo */
+      name?: string;
+      /** @description Descrizione del ruolo */
+      description?: string | null;
+      /**
+       * @description Nuovo insieme completo dei codici permesso (sostituisce l'attuale). Non ammesso: roles:manage.
+       * @example [
+       *       "pages:create",
+       *       "pages:edit_any",
+       *       "pages:publish"
+       *     ]
+       */
+      permissionCodes?: string[];
+    };
+    PermissionItemResponseDto: {
+      /**
+       * @description Codice `risorsa:azione`
+       * @example pages:publish
+       */
+      code: string;
+      /**
+       * @description Descrizione leggibile
+       * @example Pubblicare, programmare e archiviare una Pagina
+       */
+      description: string | null;
+    };
+    PermissionGroupResponseDto: {
+      /**
+       * @description Categoria
+       * @example pages
+       * @enum {string}
+       */
+      category: 'pages' | 'structure' | 'media' | 'forms' | 'settings' | 'users';
+      /** @description Permessi della categoria */
+      permissions: components['schemas']['PermissionItemResponseDto'][];
     };
     ThemeColorsDto: {
       /**
@@ -3639,6 +3935,15 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
+        content: {
+          'application/json': components['schemas']['MeResponseDto'];
+        };
+      };
+      /** @description Non autenticato o utente non trovato */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
         content?: never;
       };
     };
@@ -4007,8 +4312,22 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description Tentativo di creare un utente SuperAdmin da parte dell'Admin */
+      /** @description Email già in uso · SYSTEM_ROLE_NOT_ASSIGNABLE (ruolo di sistema in roleGuids) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Tentativo di creare un utente SuperAdmin da parte dell'Admin · permesso users:assign_roles mancante · PERMISSION_ESCALATION. Nessun utente creato né email inviata */
       403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Ruolo di roleGuids non trovato */
+      404: {
         headers: {
           [name: string]: unknown;
         };
@@ -4027,12 +4346,14 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Utente trovato */
+      /** @description Utente trovato, con `roles`: ruoli personalizzati aggiuntivi */
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['UserDetailResponseDto'];
+        };
       };
       /** @description Target SuperAdmin non gestibile dall'Admin */
       403: {
@@ -4072,14 +4393,21 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description Target SuperAdmin non gestibile dall'Admin */
+      /** @description Email già in uso · SYSTEM_ROLE_NOT_ASSIGNABLE (ruolo di sistema in roleGuids) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Target SuperAdmin non gestibile dall'Admin · permesso users:assign_roles mancante · PERMISSION_ESCALATION. Nessun campo modificato */
       403: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
       };
-      /** @description Utente non trovato */
+      /** @description Utente o ruolo di roleGuids non trovato */
       404: {
         headers: {
           [name: string]: unknown;
@@ -4236,6 +4564,13 @@ export interface operations {
           'application/json': components['schemas']['FileMetadataDto'];
         };
       };
+      /** @description Permesso media:upload mancante */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
       /** @description File più grande del limite configurato */
       413: {
         headers: {
@@ -4290,7 +4625,7 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description Non sei l'autore del file e non hai un ruolo Admin/superiore */
+      /** @description Non sei l'autore del file e non hai il permesso media:delete_any */
       403: {
         headers: {
           [name: string]: unknown;
@@ -4429,6 +4764,230 @@ export interface operations {
       };
       /** @description Media inesistente, non editoriale (entity <> "page-media"), soft-eliminato, o formato non riconosciuto come raster (SVG compreso) */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  RolesController_list: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ruoli di sistema, poi personalizzati */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RoleResponseDto'][];
+        };
+      };
+      /** @description Non autenticato */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Permesso roles:read mancante */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  RolesController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateRoleDto'];
+      };
+    };
+    responses: {
+      /** @description Ruolo creato */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RoleGuidResponseDto'];
+        };
+      };
+      /** @description Body non valido · INVALID_ROLE_CODE · INVALID_PERMISSION_CODE · RESERVED_PERMISSION (roles:manage) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Non autenticato */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Permesso roles:manage mancante · PERMISSION_ESCALATION */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description ROLE_CODE_DUPLICATE */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  RolesController_delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Guid (16 caratteri) del ruolo */
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ruolo eliminato */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Non autenticato */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Permesso roles:manage mancante · SYSTEM_ROLE_READONLY · PERMISSION_ESCALATION */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Ruolo non trovato */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description ROLE_IN_USE: il ruolo è assegnato ad almeno un utente, attivo o no */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  RolesController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Guid (16 caratteri) del ruolo */
+        guid: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateRoleDto'];
+      };
+    };
+    responses: {
+      /** @description Ruolo aggiornato */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RoleGuidResponseDto'];
+        };
+      };
+      /** @description Body non valido o vuoto (code non ammesso) · INVALID_PERMISSION_CODE · RESERVED_PERMISSION */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Non autenticato */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Permesso roles:manage mancante · SYSTEM_ROLE_READONLY · PERMISSION_ESCALATION */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Ruolo non trovato */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  RolesController_listPermissions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Gruppi nell'ordine di PERMISSION_CATEGORIES, senza categorie vuote */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PermissionGroupResponseDto'][];
+        };
+      };
+      /** @description Non autenticato */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Permesso roles:read mancante */
+      403: {
         headers: {
           [name: string]: unknown;
         };

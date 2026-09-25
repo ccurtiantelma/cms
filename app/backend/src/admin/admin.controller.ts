@@ -10,12 +10,20 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Request } from 'express';
 import { GuardAdmin, GuardSuperAdmin } from '../auth/guard';
 import { AdminService } from './admin.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UserDetailResponseDto } from './dto/user-detail-response.dto';
 import { AuditLogQueryParams, AuthInfo, PaginationParams } from '../common/types';
 import { Pagination } from '../common/pagination';
 
@@ -108,7 +116,11 @@ export class AdminController {
   @Get('users/:guid')
   @UseGuards(GuardAdmin)
   @ApiOperation({ summary: 'Dettaglio utente (un Admin non vede gli utenti SuperAdmin)' })
-  @ApiResponse({ status: 200, description: 'Utente trovato' })
+  @ApiResponse({
+    status: 200,
+    description: 'Utente trovato, con `roles`: ruoli personalizzati aggiuntivi',
+    type: UserDetailResponseDto,
+  })
   @ApiResponse({ status: 403, description: "Target SuperAdmin non gestibile dall'Admin" })
   @ApiResponse({ status: 404, description: 'Utente non trovato' })
   async findOneUser(@Param('guid') guid: string, @Req() req: Request): Promise<unknown> {
@@ -120,11 +132,18 @@ export class AdminController {
   @Post('users')
   @UseGuards(GuardAdmin)
   @ApiOperation({ summary: 'Crea un nuovo utente (un Admin non può creare utenti SuperAdmin)' })
+  @ApiBody({ type: CreateUserDto })
   @ApiResponse({ status: 201, description: 'Utente creato' })
   @ApiResponse({
-    status: 403,
-    description: "Tentativo di creare un utente SuperAdmin da parte dell'Admin",
+    status: 400,
+    description: 'Email già in uso · SYSTEM_ROLE_NOT_ASSIGNABLE (ruolo di sistema in roleGuids)',
   })
+  @ApiResponse({
+    status: 403,
+    description:
+      "Tentativo di creare un utente SuperAdmin da parte dell'Admin · permesso users:assign_roles mancante · PERMISSION_ESCALATION. Nessun utente creato né email inviata",
+  })
+  @ApiResponse({ status: 404, description: 'Ruolo di roleGuids non trovato' })
   async createUser(@Body() dto: CreateUserDto, @Req() req: Request): Promise<{ guid: string }> {
     const authInfo = req['authInfo'] as AuthInfo;
     return this.adminService.createUser(dto, authInfo, req.ip);
@@ -133,10 +152,19 @@ export class AdminController {
   /** Aggiorna i dati di un utente. */
   @Patch('users/:guid')
   @UseGuards(GuardAdmin)
-  @ApiOperation({ summary: 'Aggiorna i dati di un utente' })
+  @ApiOperation({ summary: 'Aggiorna i dati e i ruoli aggiuntivi di un utente' })
+  @ApiBody({ type: UpdateUserDto })
   @ApiResponse({ status: 200, description: 'Utente aggiornato' })
-  @ApiResponse({ status: 403, description: "Target SuperAdmin non gestibile dall'Admin" })
-  @ApiResponse({ status: 404, description: 'Utente non trovato' })
+  @ApiResponse({
+    status: 400,
+    description: 'Email già in uso · SYSTEM_ROLE_NOT_ASSIGNABLE (ruolo di sistema in roleGuids)',
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      "Target SuperAdmin non gestibile dall'Admin · permesso users:assign_roles mancante · PERMISSION_ESCALATION. Nessun campo modificato",
+  })
+  @ApiResponse({ status: 404, description: 'Utente o ruolo di roleGuids non trovato' })
   async updateUser(
     @Param('guid') guid: string,
     @Body() dto: UpdateUserDto,

@@ -27,6 +27,8 @@ import { Request, Response } from 'express';
 import { AppConstants } from '../common/app-constants';
 import { AuthInfo, FilesQueryParams } from '../common/types';
 import { Pagination } from '../common/pagination';
+import { Permissions } from '../permissions/permissions.decorator';
+import { PermissionsService } from '../permissions/permissions.service';
 import { FilesService } from './files.service';
 import { FileMetadataDto } from './dto/file-metadata.dto';
 import { UploadFileDto } from './dto/upload-file.dto';
@@ -40,16 +42,29 @@ import { MediaTransformResultDto } from './dto/media-transform-result.dto';
  * resta compito del progetto verticale, che conosce l'associazione
  * `entity`/`entityId` — qui solo autenticazione (JWT middleware globale) e
  * ownership di base sulla cancellazione.
+ *
+ * Permessi RBAC (ADR-99, SPEC-RBAC-F2c): `media:upload` protegge l'upload con
+ * `@Permissions`; `media:delete_any` è l'accesso elevato della cancellazione,
+ * ricavato qui e passato a `FilesService.softDelete` (S41), perché l'autore
+ * deve poter eliminare i propri file senza permessi (ADR-18). Le altre rotte
+ * restano protette dal solo JWT (S39, S40).
  */
 @ApiTags('Files')
 @ApiBearerAuth('access-token')
 @Controller('app/files')
 export class FilesController {
-  /** Inietta il service di storage documenti. */
-  constructor(private readonly filesService: FilesService) {}
+  /**
+   * Inietta il service di storage documenti e `PermissionsService` (modulo
+   * `@Global`), da cui `delete` legge `media:delete_any` (SPEC-RBAC-F2c S41).
+   */
+  constructor(
+    private readonly filesService: FilesService,
+    private readonly permissionsService: PermissionsService,
+  ) {}
 
   /** Carica un file (multipart/form-data, campo `file`) ed eventuali metadata di associazione. */
   @Post()
+  @Permissions('media:upload')
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: AppConstants.storageMaxFileSizeMb * 1024 * 1024 },
@@ -58,6 +73,7 @@ export class FilesController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Carica un documento (multipart/form-data, campo "file")' })
   @ApiResponse({ status: 201, description: 'File caricato', type: FileMetadataDto })
+  @ApiResponse({ status: 403, description: 'Permesso media:upload mancante' })
   @ApiResponse({ status: 413, description: 'File più grande del limite configurato' })
   async upload(
     @UploadedFile() file: Express.Multer.File,
@@ -175,7 +191,10 @@ export class FilesController {
     return this.filesService.requestImageTransform(guid, dto);
   }
 
-  /** Elimina (soft-delete) il file — solo l'autore o un ruolo Admin/superiore. */
+  /**
+   * Elimina (soft-delete) il file — l'autore, oppure chi ha `media:delete_any`
+   * (SPEC-RBAC-F2c S41). Nessun `@Permissions` di rotta: bloccherebbe l'autore.
+   */
   @Delete(':guid')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
@@ -184,11 +203,14 @@ export class FilesController {
   @ApiResponse({ status: 204, description: 'File eliminato' })
   @ApiResponse({
     status: 403,
-    description: "Non sei l'autore del file e non hai un ruolo Admin/superiore",
+    description: "Non sei l'autore del file e non hai il permesso media:delete_any",
   })
   @ApiResponse({ status: 404, description: 'File non trovato o già eliminato' })
   async delete(@Param('guid') guid: string, @Req() req: Request): Promise<void> {
     const authInfo = req['authInfo'] as AuthInfo;
-    await this.filesService.softDelete(guid, authInfo, req.ip);
+    const { ok: canDeleteAny } = await this.permissionsService.hasAll(authInfo.userId, [
+      'media:delete_any',
+    ]);
+    await this.filesService.softDelete(guid, authInfo, req.ip, canDeleteAny);
   }
 }

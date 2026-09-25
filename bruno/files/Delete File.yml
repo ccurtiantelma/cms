@@ -17,6 +17,6 @@ settings:
   maxRedirects: 5
 
 tests: |-
-  test("status is 204, 403 (non autore/non Admin) o 404 (già eliminato)", function() {
+  test("status is 204, 403 (non autore senza media:delete_any) o 404 (già eliminato)", function() {
     expect(res.getStatus()).to.be.oneOf([204, 403, 404]);
   });
