@@ -18,7 +18,7 @@ export class RoleResponseDto {
   @ApiProperty({ description: 'Descrizione', type: String, nullable: true })
   description!: string | null;
 
-  @ApiProperty({ description: 'Ruolo di sistema (sola lettura, ADR-99 P3)' })
+  @ApiProperty({ description: 'Ruolo di sistema: modificabile, ma non eliminabile' })
   isSystem!: boolean;
 
   @ApiProperty({

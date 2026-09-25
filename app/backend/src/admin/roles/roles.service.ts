@@ -53,7 +53,7 @@ type RoleRow = typeof roleEntity.$inferSelect;
  *   chiamante; modificare/eliminare un ruolo richiede di possederne tutti i permessi.
  * - **Codici riservati** (SPEC S6): `roles:manage` non entra mai in un ruolo
  *   personalizzato, altrimenti la firma P2 ("solo SuperAdmin") sarebbe aggirabile.
- * - **Ruoli di sistema in sola lettura** (P3) e non assegnabili via `user_roles` (S9).
+ * - **Ruoli di sistema modificabili ma non eliminabili** e non assegnabili via `user_roles` (S9).
  * - **`409 ROLE_IN_USE`** (P6): un ruolo assegnato ad almeno un utente non si elimina.
  *
  * I permessi del chiamante vengono sempre da `PermissionsService`, mai dal JWT.
@@ -181,7 +181,6 @@ export class RolesService {
     ip?: string,
   ): Promise<{ guid: string }> {
     const role = await this.findRoleOrFail(guid);
-    this.assertNotSystem(role);
 
     const callerPermissions = await this.permissionsService.getUserPermissions(authInfo.userId);
     this.assertHasPermission(callerPermissions, 'roles:manage');

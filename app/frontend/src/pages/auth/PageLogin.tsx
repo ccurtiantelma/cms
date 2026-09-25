@@ -195,10 +195,12 @@ export default function PageLogin(): JSX.Element {
   return (
     <div className={loginStyles.wrapper}>
       <Container size="xs" className={loginStyles.container}>
-        {/* Placeholder testuale al posto del logo immagine (nessun logo aziendale definito). */}
-        <Text ta="center" fw={800} size="xl" mb="md">
-          CMS
-        </Text>
+        <div className={loginStyles.brand}>
+          <img className={loginStyles.logoImage} src="/logo.png" alt="" />
+          <Text fw={800} size="xl">
+            CMS
+          </Text>
+        </div>
 
         <Paper withBorder shadow="md" p="xl" radius="md" w="100%">
           <Stack gap="md">
@@ -294,6 +296,9 @@ export default function PageLogin(): JSX.Element {
           </Stack>
         </Paper>
       </Container>
+      <Text className={loginStyles.credit} size="xs">
+        Sviluppato da Antelma
+      </Text>
     </div>
   );
 }

@@ -84,10 +84,10 @@ export class RolesController {
     return this.rolesService.create(dto, authInfo, req.ip);
   }
 
-  /** Modifica nome, descrizione e/o permessi di un ruolo personalizzato. */
+  /** Modifica nome, descrizione e/o permessi di un ruolo. */
   @Patch('roles/:guid')
   @Permissions('roles:manage')
-  @ApiOperation({ summary: 'Modifica un ruolo personalizzato (SuperAdmin)' })
+  @ApiOperation({ summary: 'Modifica un ruolo (SuperAdmin)' })
   @ApiParam(GUID_PARAM)
   @ApiBody({ type: UpdateRoleDto })
   @ApiResponse({ status: 200, description: 'Ruolo aggiornato', type: RoleGuidResponseDto })
@@ -99,7 +99,7 @@ export class RolesController {
   @ApiResponse({ status: 401, description: 'Non autenticato' })
   @ApiResponse({
     status: 403,
-    description: 'Permesso roles:manage mancante · SYSTEM_ROLE_READONLY · PERMISSION_ESCALATION',
+    description: 'Permesso roles:manage mancante · PERMISSION_ESCALATION',
   })
   @ApiResponse({ status: 404, description: 'Ruolo non trovato' })
   async update(

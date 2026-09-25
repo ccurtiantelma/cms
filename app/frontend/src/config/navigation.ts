@@ -8,7 +8,6 @@ import {
   IconLayoutDashboard,
   IconLayoutNavbar,
   IconPalette,
-  IconShieldLock,
   IconTemplate,
   IconUsers,
 } from '@tabler/icons-react';
@@ -96,13 +95,5 @@ export const navigationItems: NavigationItem[] = [
     path: '/users',
     icon: IconUsers,
     roles: [AppUserRoles.SuperAdmin, AppUserRoles.Admin],
-  },
-  {
-    label: 'Ruoli',
-    path: '/roles',
-    icon: IconShieldLock,
-    // Per permesso e senza `roles` (ADR-99 § 10, SPEC-RBAC-F2b S31): il backend ammette chiunque
-    // abbia `roles:read`, anche uno User con un ruolo personalizzato.
-    permission: 'roles:read',
   },
 ];

@@ -25,6 +25,8 @@ interface FormDrawerProps {
   submitting: boolean;
   /** Etichetta del pulsante di conferma (default: "Salva"). */
   submitLabel?: string;
+  /** Mostra il pulsante di conferma nella testata, accanto alla X. */
+  submitInHeader?: boolean;
   size?: DrawerProps['size'];
   children: ReactNode;
   /**
@@ -49,6 +51,7 @@ export default function FormDrawer({
   canSubmit,
   submitting,
   submitLabel = 'Salva',
+  submitInHeader = false,
   size,
   children,
   tourId,
@@ -69,29 +72,44 @@ export default function FormDrawer({
             <Text fw={600} fz="lg">
               {title}
             </Text>
-            <CloseButton onClick={onClose} aria-label="Chiudi" size="lg" />
+            <Group gap="xs">
+              {!readOnly && submitInHeader && (
+                <Button
+                  type="submit"
+                  color="starterPrimary"
+                  variant="filled"
+                  loading={submitting}
+                  disabled={!canSubmit}
+                >
+                  {submitLabel}
+                </Button>
+              )}
+              <CloseButton onClick={onClose} aria-label="Chiudi" size="lg" />
+            </Group>
           </Group>
-          <Group
-            justify="flex-end"
-            gap="sm"
-            px="md"
-            py="sm"
-            data-tour={tourId ? `${tourId}-actions` : undefined}
-          >
-            <Button
-              variant="default"
-              onClick={onClose}
-              disabled={submitting}
-              data-tour={tourId ? `${tourId}-cancel` : undefined}
+          {!submitInHeader && (
+            <Group
+              justify="flex-end"
+              gap="sm"
+              px="md"
+              py="sm"
+              data-tour={tourId ? `${tourId}-actions` : undefined}
             >
-              {readOnly ? 'Chiudi' : 'Annulla'}
-            </Button>
-            {!readOnly && (
-              <Button type="submit" loading={submitting} disabled={!canSubmit}>
-                {submitLabel}
+              <Button
+                variant="default"
+                onClick={onClose}
+                disabled={submitting}
+                data-tour={tourId ? `${tourId}-cancel` : undefined}
+              >
+                {readOnly ? 'Chiudi' : 'Annulla'}
               </Button>
-            )}
-          </Group>
+              {!readOnly && (
+                <Button type="submit" loading={submitting} disabled={!canSubmit}>
+                  {submitLabel}
+                </Button>
+              )}
+            </Group>
+          )}
         </div>
         <div className={classes.body} data-tour={tourId}>
           {children}

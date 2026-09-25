@@ -184,6 +184,8 @@ export default function RoleFormDrawer({
       opened={opened}
       onClose={onClose}
       title={title}
+      size="min(72rem, 100vw)"
+      submitInHeader
       onSubmit={form.onSubmit((values) => void handleSubmit(values))}
       canSubmit={form.isValid() && catalog !== null}
       submitting={submitting}

@@ -145,8 +145,8 @@ describe('RoleFormDrawer', () => {
     it('ruolo di sistema: campi e matrice disabilitati, nessun "Salva"', () => {
       renderDrawer('view', SYSTEM_ROLES[1]);
       expect(screen.queryByRole('button', { name: 'Salva' })).not.toBeInTheDocument();
-      // La "X" dell'intestazione e il pulsante della barra azioni: entrambi chiudono.
-      expect(screen.getAllByRole('button', { name: 'Chiudi' })).toHaveLength(2);
+      // La sola "X" dell'intestazione chiude il drawer.
+      expect(screen.getAllByRole('button', { name: 'Chiudi' })).toHaveLength(1);
       expect(screen.getByRole('textbox', { name: /Nome/ })).toBeDisabled();
       screen.getAllByRole('checkbox').forEach((box) => expect(box).toBeDisabled());
       expect(screen.getByRole('checkbox', { name: "Consultare l'audit log" })).toBeChecked();

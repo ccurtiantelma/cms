@@ -106,10 +106,10 @@ describe('PageRoles', () => {
   });
 
   describe('azioni per permesso (criterio 14)', () => {
-    it('SuperAdmin: "Nuovo ruolo", Modifica/Elimina sui personalizzati, Visualizza sui sistema', async () => {
+    it('SuperAdmin: "Nuovo ruolo" e Modifica su tutti i ruoli, Elimina solo sui personalizzati', async () => {
       renderPage(ALL_PERMISSION_CODES);
       expect(await screen.findByRole('button', { name: 'Nuovo ruolo' })).toBeInTheDocument();
-      expect(actionLabels(await rowOf('admin'))).toEqual(['Visualizza']);
+      expect(actionLabels(await rowOf('admin'))).toEqual(['Modifica']);
       expect(actionLabels(await rowOf('redattore'))).toEqual(['Modifica', 'Elimina']);
     });
 
@@ -122,7 +122,7 @@ describe('PageRoles', () => {
       }
     });
 
-    it('Visualizza apre il drawer in sola lettura con il catalogo caricato una volta', async () => {
+    it('Visualizza apre il drawer in sola lettura senza roles:manage', async () => {
       const user = userEvent.setup();
       renderPage(ADMIN_PERMISSION_CODES);
 

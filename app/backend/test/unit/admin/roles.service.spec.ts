@@ -19,8 +19,8 @@ import { createDrizzleMock } from '../permissions/drizzle-mock';
 
 /**
  * Unit test di `RolesService` (SPEC-RBAC-F1 criteri 12–16): anti-escalation,
- * `roles:manage` riservato ai ruoli di sistema (S6), ruoli di sistema in sola
- * lettura, `409 ROLE_IN_USE`, invalidazione post-commit e audit log.
+ * `roles:manage` riservato ai ruoli di sistema (S6), ruoli di sistema modificabili
+ * ma non eliminabili, `409 ROLE_IN_USE`, invalidazione post-commit e audit log.
  *
  * I permessi del chiamante vengono da `PermissionsService` (mock): SuperAdmin
  * = tutti i codici, Admin = seed del ruolo `admin` (senza `roles:manage`, P2).
@@ -219,14 +219,25 @@ describe('RolesService (unit) — ADR-99 § 7–8', () => {
 
   // ─── update / delete su ruoli di sistema ───────────────────────────────────
 
-  describe('ruoli di sistema in sola lettura — criterio 13', () => {
-    it('update su ruolo di sistema → 403 SYSTEM_ROLE_READONLY anche per il SuperAdmin', async () => {
-      mock.results.push([SYSTEM_ADMIN_ROLE]);
+  describe('ruoli di sistema modificabili — criterio 13', () => {
+    it('update su ruolo di sistema → ok per il SuperAdmin', async () => {
+      mock.results.push([SYSTEM_ADMIN_ROLE], roleCodes(SYSTEM_ADMIN_ROLE.id, []), []);
 
       await expect(
         service.update(SYSTEM_ADMIN_ROLE.guid, { name: 'Altro' }, SUPERADMIN),
-      ).rejects.toMatchObject({ status: 403, response: { code: 'SYSTEM_ROLE_READONLY' } });
-      expect(mock.db.transaction).not.toHaveBeenCalled();
+      ).resolves.toEqual({
+        guid: SYSTEM_ADMIN_ROLE.guid,
+      });
+      expect(mock.db.transaction).toHaveBeenCalled();
+      expect(auditLog.log).toHaveBeenCalledWith(
+        SUPERADMIN.userId,
+        'role.update',
+        'role',
+        SYSTEM_ADMIN_ROLE.guid,
+        { name: 'Altro' },
+        undefined,
+        undefined,
+      );
     });
 
     it('delete su ruolo di sistema → 403 SYSTEM_ROLE_READONLY anche per il SuperAdmin', async () => {

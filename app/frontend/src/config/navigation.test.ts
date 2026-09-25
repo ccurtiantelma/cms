@@ -4,7 +4,7 @@
  * (`isNavigationItemVisible`) non deve cambiare.
  */
 import { describe, it, expect } from 'vitest';
-import { IconShieldLock } from '@tabler/icons-react';
+import { IconShieldCheck } from '@tabler/icons-react';
 import { isNavigationItemVisible, navigationItems, type NavigationItem } from './navigation';
 import { AppUserRoles } from '../types/common.types';
 
@@ -47,19 +47,15 @@ describe('isNavigationItemVisible (SPEC F2b S31)', () => {
     expect(visible.map((item) => item.path)).toEqual(['/dashboard', '/pages']);
   });
 
-  it('la voce "Ruoli" è per permesso roles:read, senza soglia di ruolo', () => {
-    const roles = navigationItems.find((item) => item.path === '/roles');
-    expect(roles).toMatchObject({ label: 'Ruoli', permission: 'roles:read' });
-    expect(roles?.roles).toBeUndefined();
-    expect(isNavigationItemVisible(roles as NavigationItem, User, ['roles:read'])).toBe(true);
-    expect(isNavigationItemVisible(roles as NavigationItem, Admin, [])).toBe(false);
+  it('non espone più una voce separata per ruoli e permessi', () => {
+    expect(navigationItems.some((item) => item.path === '/roles')).toBe(false);
   });
 
   describe('voce con `permission`', () => {
     const byPermission: NavigationItem = {
-      label: 'Ruoli',
+      label: 'Ruoli e permessi',
       path: '/roles',
-      icon: IconShieldLock,
+      icon: IconShieldCheck,
       permission: 'roles:read',
     };
 

@@ -11,3 +11,25 @@
   width: 100%;
   max-width: 400px;
 }
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: var(--mantine-spacing-md);
+}
+
+.logoImage {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.credit {
+  position: fixed;
+  right: 20px;
+  bottom: 16px;
+  color: var(--mantine-color-gray-6);
+  font-weight: 700;
+}

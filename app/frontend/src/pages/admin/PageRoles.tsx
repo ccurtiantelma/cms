@@ -1,7 +1,7 @@
 /**
  * Pagina Ruoli e permessi (`/roles`, ADR-99 § 10, SPEC-RBAC-F2b § Pagina Ruoli). Lettura con
  * `roles:read`, scrittura con `roles:manage` (di fatto il solo SuperAdmin, ADR-99 P2). I ruoli di
- * sistema restano in sola lettura (P3).
+ * sistema sono modificabili ma non eliminabili.
  */
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Badge, Button, Group, ScrollArea, Stack, Text, Tooltip } from '@mantine/core';
@@ -200,7 +200,7 @@ export default function PageRoles(): JSX.Element {
   }
 
   const customCount = roles.filter((role) => !role.isSystem).length;
-  const isEditable = (row: RoleRecord): boolean => canManage && !row.isSystem;
+  const isEditable = (_row: RoleRecord): boolean => canManage;
 
   return (
     <div>
@@ -252,23 +252,16 @@ export default function PageRoles(): JSX.Element {
               cardHeader={(row) => <Text fw={600}>{row.name}</Text>}
               actions={[
                 {
-                  label: 'Visualizza',
-                  icon: <IconEye size={16} />,
-                  onClick: (row) => openDrawer('view', row),
-                  hidden: isEditable,
-                },
-                {
-                  label: 'Modifica',
-                  icon: <IconPencil size={16} />,
-                  onClick: (row) => openDrawer('edit', row),
-                  hidden: (row) => !isEditable(row),
+                  label: canManage ? 'Modifica' : 'Visualizza',
+                  icon: canManage ? <IconPencil size={16} /> : <IconEye size={16} />,
+                  onClick: (row) => openDrawer(canManage ? 'edit' : 'view', row),
                 },
                 {
                   label: 'Elimina',
                   color: 'red',
                   icon: <IconTrash size={16} />,
                   onClick: (row) => setDeleteTarget(row),
-                  hidden: (row) => !isEditable(row),
+                  hidden: (row) => !isEditable(row) || row.isSystem,
                 },
               ]}
             />

@@ -22,7 +22,14 @@ import {
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { useSearchParams } from 'react-router-dom';
-import { IconLogin, IconShieldOff, IconPencil, IconUser } from '@tabler/icons-react';
+import {
+  IconClipboardList,
+  IconLogin,
+  IconPencil,
+  IconShieldCheck,
+  IconShieldOff,
+  IconUser,
+} from '@tabler/icons-react';
 import { useAuthStore } from '../../hooks/useAuth';
 import { useHasPermission } from '../../hooks/useHasPermission';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
@@ -56,6 +63,7 @@ import Can from '../../components/Can';
 import { AppUserRoles, ROLE_LABELS } from '../../types/common.types';
 import type { PermissionCode, RoleRecord } from '../../types/roles.types';
 import AuditLogPanel from './AuditLogPanel';
+import PageRoles from './PageRoles';
 
 /** Ruoli assegnabili da questa UI (SuperAdmin escluso: creato solo via seed). */
 const ROLE_OPTIONS = [
@@ -130,7 +138,9 @@ export default function PageUsers(): JSX.Element {
   const canAssignRoles = useHasPermission(ASSIGN_ROLES_PERMISSIONS);
   const callerPermissions = useAuthStore((state) => state.permissions) ?? [];
   const refreshPermissions = useAuthStore((state) => state.refreshPermissions);
-  const activeTab = searchParams.get('tab') === 'audit-log' ? 'audit-log' : 'users';
+  const requestedTab = searchParams.get('tab');
+  const activeTab =
+    requestedTab === 'audit-log' || requestedTab === 'roles' ? requestedTab : 'users';
 
   useEffect(() => {
     let active = true;
@@ -413,7 +423,7 @@ export default function PageUsers(): JSX.Element {
       <Tabs
         value={activeTab}
         onChange={(value) => {
-          if (value === 'audit-log') {
+          if (value === 'audit-log' || value === 'roles') {
             setSearchParams({ tab: value });
           } else {
             setSearchParams({});
@@ -421,8 +431,15 @@ export default function PageUsers(): JSX.Element {
         }}
       >
         <Tabs.List mb="md">
-          <Tabs.Tab value="users">Gestione utenti</Tabs.Tab>
-          <Tabs.Tab value="audit-log">Audit Log</Tabs.Tab>
+          <Tabs.Tab value="users" leftSection={<IconUser size={16} />}>
+            Gestione utenti
+          </Tabs.Tab>
+          <Tabs.Tab value="audit-log" leftSection={<IconClipboardList size={16} />}>
+            Audit Log
+          </Tabs.Tab>
+          <Tabs.Tab value="roles" leftSection={<IconShieldCheck size={16} />}>
+            Ruoli e permessi
+          </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="users">
@@ -490,6 +507,8 @@ export default function PageUsers(): JSX.Element {
         <Tabs.Panel value="audit-log">
           <AuditLogPanel />
         </Tabs.Panel>
+
+        <Tabs.Panel value="roles">{activeTab === 'roles' && <PageRoles />}</Tabs.Panel>
       </Tabs>
 
       {/* Form Nuovo/Modifica Utente (drawer laterale condiviso). */}

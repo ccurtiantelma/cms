@@ -71,7 +71,7 @@ export default function PermissionMatrix({
               onChange={() => onChange(toggleCategory(group, value, callerPermissions))}
               mb="xs"
             />
-            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs" pl="lg">
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="xs" pl="lg">
               {group.permissions.map((permission) => {
                 const selectable = isSelectable(permission.code, callerPermissions);
                 const checkbox = (

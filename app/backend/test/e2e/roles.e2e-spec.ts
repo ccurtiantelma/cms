@@ -341,7 +341,7 @@ describe('RBAC F2a — ruoli, permessi, assegnazione e auth/me (e2e)', () => {
       await post({ ...base, code: 'con_extra', extra: 'no' }).expect(400);
     });
 
-    it('SuperAdmin PATCH/DELETE: ruolo di sistema 403 SYSTEM_ROLE_READONLY, code 400, body vuoto 400, guid inesistente 404 (criterio 12)', async () => {
+    it('SuperAdmin PATCH/DELETE: ruolo di sistema modificabile ma non eliminabile, code 400, body vuoto 400, guid inesistente 404 (criterio 12)', async () => {
       const superAdmin = await createUser(AppUserRoles.SuperAdmin);
       const adminRole = await roleGuidByCode('admin');
       const custom = await createRole(superAdmin, 'revisore', ['pages:publish']);
@@ -349,8 +349,8 @@ describe('RBAC F2a — ruoli, permessi, assegnazione e auth/me (e2e)', () => {
 
       const patchSystem = await client
         .patch(`/app/admin/roles/${adminRole}`, { name: 'Hack' })
-        .expect(403);
-      expect(patchSystem.body.code).toBe('SYSTEM_ROLE_READONLY');
+        .expect(200);
+      expect(patchSystem.body).toEqual({ guid: adminRole });
       const deleteSystem = await client.delete(`/app/admin/roles/${adminRole}`).expect(403);
       expect(deleteSystem.body.code).toBe('SYSTEM_ROLE_READONLY');
 

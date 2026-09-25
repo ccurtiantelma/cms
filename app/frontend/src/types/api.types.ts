@@ -568,7 +568,7 @@ export interface paths {
     delete: operations['RolesController_delete'];
     options?: never;
     head?: never;
-    /** Modifica un ruolo personalizzato (SuperAdmin) */
+    /** Modifica un ruolo (SuperAdmin) */
     patch: operations['RolesController_update'];
     trace?: never;
   };
@@ -1689,7 +1689,7 @@ export interface components {
       name: string;
       /** @description Descrizione */
       description: string | null;
-      /** @description Ruolo di sistema (sola lettura, ADR-99 P3) */
+      /** @description Ruolo di sistema: modificabile, ma non eliminabile */
       isSystem: boolean;
       /**
        * @description Livello `AppUserRoles` del ruolo di sistema; null per i ruoli personalizzati
@@ -4945,7 +4945,7 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description Permesso roles:manage mancante · SYSTEM_ROLE_READONLY · PERMISSION_ESCALATION */
+      /** @description Permesso roles:manage mancante · PERMISSION_ESCALATION */
       403: {
         headers: {
           [name: string]: unknown;
