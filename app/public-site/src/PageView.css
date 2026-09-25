@@ -57,11 +57,29 @@ body {
 
 .pageBoxed {
   width: 100%;
-  max-width: var(--theme-layout-boxed-width, none);
-  margin-inline: auto;
   box-sizing: border-box;
   padding-top: var(--theme-layout-padding-top, 0px);
-  padding-right: var(--theme-layout-padding-right, 0px);
   padding-bottom: var(--theme-layout-padding-bottom, 0px);
-  padding-left: var(--theme-layout-padding-left, 0px);
+}
+
+/*
+ * Griglia di pagina a 3 tracce (ADR-98): gutter sinistro ("Rientro" sinistro) | contenuto
+ * boxed (`--theme-layout-boxed-width`) | gutter destro. I blocchi radice stanno nella traccia
+ * centrale; un root container/section `full` occupa tutte e tre (`grid-column: 1 / -1`) e il
+ * suo sfondo raggiunge il bordo del documento senza margini negativi né `width: 100vw`.
+ */
+.pageBoxed > main {
+  display: grid;
+  grid-template-columns:
+    minmax(var(--theme-layout-padding-left, 0px), 1fr)
+    minmax(0, var(--theme-layout-boxed-width, 100%))
+    minmax(var(--theme-layout-padding-right, 0px), 1fr);
+}
+
+.pageBoxed > main > * {
+  grid-column: 2;
+}
+
+.pageBoxed > main > [data-content-width="full"] {
+  grid-column: 1 / -1;
 }

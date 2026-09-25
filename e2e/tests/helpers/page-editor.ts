@@ -227,6 +227,9 @@ export async function addRootBlock(page: Page, label: string): Promise<void> {
     await completeSectionStructureModal(page);
     return;
   }
+  // Dopo ogni inserimento il nuovo nodo è selezionato e la sidebar passa alla scheda "Modifica"
+  // (ADR-94): si riapre "Widgets" prima di cercare la tessera (idempotente se già attiva).
+  await page.getByRole('tab', { name: 'Widgets' }).click();
   const tile = page.getByRole('button', { name: new RegExp(`^Inserisci il blocco ${label} `) });
   await tile.scrollIntoViewIfNeeded();
   await tile.click();

@@ -12,6 +12,7 @@
  * componente la legge e la scrive, non la duplica.
  */
 import {
+  ActionIcon,
   Button,
   Group,
   NumberInput,
@@ -39,6 +40,7 @@ import {
   IconTrash,
   IconViewportNarrow,
   IconViewportWide,
+  IconX,
   type Icon,
 } from '@tabler/icons-react';
 import type { BlockPropDescriptor } from '../../../../types/blocks.types';
@@ -494,7 +496,7 @@ export default function PropField({
               </Text>
             )}
           </Text>
-          <Group gap="sm" align="flex-start" wrap="nowrap">
+          <Group gap="sm" align="stretch" wrap="nowrap">
             <span className={styles.mediaThumbFrame}>
               {guid ? (
                 <img className={styles.mediaThumb} src={resolveMediaSrc(guid)} alt="" />
@@ -502,14 +504,14 @@ export default function PropField({
                 <IconPhoto size={22} className={styles.mediaThumbPlaceholder} />
               )}
             </span>
-            <Stack gap={6} flex={1}>
+            <Stack gap={6} style={{ flex: 'none' }}>
               <Button
                 variant="light"
                 size="xs"
                 leftSection={<IconPhoto size={14} />}
                 onClick={onOpenMediaPicker}
               >
-                {guid ? 'Sostituisci Immagine' : 'Scegli Immagine'}
+                {guid ? 'Sostituisci' : 'Scegli Immagine'}
               </Button>
               {guid && (
                 <Button
@@ -518,7 +520,7 @@ export default function PropField({
                   leftSection={<IconCrop size={14} />}
                   onClick={onOpenCropper}
                 >
-                  Gestisci Ritaglio & Punto Focale
+                  Ritaglio
                 </Button>
               )}
               {guid && (
@@ -598,7 +600,8 @@ export default function PropField({
         (units as readonly string[]).includes(objectValue.unit)
           ? objectValue.unit
           : (units[0] ?? 'px');
-      const currentValue = typeof objectValue.value === 'number' ? objectValue.value : min;
+      const hasValue = typeof objectValue.value === 'number';
+      const currentValue = hasValue ? (objectValue.value as number) : min;
       const writeValue = (nextValue: number) =>
         onSetAndCommit({ value: nextValue, unit: currentUnit });
       const writeUnit = (nextUnit: string) =>
@@ -610,6 +613,9 @@ export default function PropField({
       // unica sotto (Slider/NumberInput/Select) che resta lo stile di ogni altro `unitValue`
       // del registro (padding/margin/font-size...), non toccato da questa richiesta puntuale.
       if (prop.name === 'boxedWidth' || prop.name === 'minHeight') {
+        // Prop opzionale non impostata ⇒ "Auto": campo vuoto, nessun valore fittizio. Scrivere
+        // `undefined` la rimuove dal nodo (JSON.stringify la scarta), tornando al default del tema.
+        const clearValue = () => onSetAndCommit(undefined);
         return (
           <div>
             <Group justify="space-between" align="center" wrap="nowrap" mb={4}>
@@ -651,10 +657,24 @@ export default function PropField({
                 aria-label={`${label} — Valore`}
                 min={min}
                 max={max}
-                value={currentValue}
+                value={hasValue ? currentValue : ''}
+                placeholder="Auto"
                 w={90}
-                onChange={(next) => writeValue(typeof next === 'number' ? next : currentValue)}
+                onChange={(next) => {
+                  if (typeof next === 'number') writeValue(next);
+                  else if (next === '' && hasValue) clearValue();
+                }}
               />
+              {hasValue && (
+                <ActionIcon
+                  variant="subtle"
+                  size="sm"
+                  aria-label={`${label} — Ripristina automatico`}
+                  onClick={clearValue}
+                >
+                  <IconX size={14} aria-hidden />
+                </ActionIcon>
+              )}
             </Group>
             {error && (
               <Text size="xs" c="red" mt={4}>

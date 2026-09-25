@@ -12,7 +12,13 @@
  */
 import { useCallback, useMemo, useRef, type MutableRefObject, type RefObject } from 'react';
 import type { ClientRect, MeasuringConfiguration } from '@dnd-kit/core';
-import { shiftRect, toPlainRect, type DragOrigin } from './iframe-canvas-measuring.utils';
+import {
+  frameScaleOf,
+  rectIntoIframeSpace,
+  rectIntoParentSpace,
+  toPlainRect,
+  type DragOrigin,
+} from './iframe-canvas-measuring.utils';
 
 export interface CrossFrameMeasuring {
   measuring: MeasuringConfiguration;
@@ -34,12 +40,15 @@ export function useCrossFrameMeasuring(
 
       const elementIsInIframe = element.ownerDocument === iframe.contentDocument;
       const frameRect = iframe.getBoundingClientRect();
+      // Il frame può essere ridotto visivamente (`transform: scale`): senza la scala, la
+      // traslazione da sola sfasa ogni zona di rilascio proporzionalmente alla distanza dall'origine.
+      const scale = frameScaleOf(frameRect.width, iframe.offsetWidth);
 
       if (origin === 'parent' && elementIsInIframe) {
-        return shiftRect(rect, frameRect.left, frameRect.top);
+        return rectIntoParentSpace(rect, frameRect, scale);
       }
       if (origin === 'iframe' && !elementIsInIframe) {
-        return shiftRect(rect, -frameRect.left, -frameRect.top);
+        return rectIntoIframeSpace(rect, frameRect, scale);
       }
       return toPlainRect(rect);
     },

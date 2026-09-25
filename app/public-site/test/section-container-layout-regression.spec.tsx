@@ -189,7 +189,7 @@ describe('container figlio vuoto: nessun vincolo di altezza minima nel consumer 
     expect(main).not.toMatch(/contentPlaceholder/);
     expect(main).not.toContain('style=');
     expect(main).toMatch(
-      /<div class="[^"]*container[^"]*" data-canvas-style-id="[^"]*"(?: data-default-direction="[^"]*")?><\/div>/,
+      /<div class="[^"]*container[^"]*" data-canvas-style-id="[^"]*"(?: data-default-direction="[^"]*")?(?: data-content-width="[^"]*")?><\/div>/,
     );
   });
 

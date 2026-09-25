@@ -591,7 +591,7 @@ describe('PropertyInspector — i sette kind del registro', () => {
     const thumb = container.querySelector('img') as HTMLImageElement;
     expect(thumb).not.toBeNull();
     expect(thumb.src).toContain('a1b2c3d4e5f6a7b8');
-    expect(screen.getByRole('button', { name: 'Sostituisci Immagine' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sostituisci' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Rimuovi' })).toBeInTheDocument();
   });
 
@@ -681,6 +681,29 @@ describe('PropertyInspector — i cinque kind di ADR-38 (unitValue/border/shadow
     await user.type(numberInput, '24');
 
     expect(propsInStore('cont-1').boxedWidth).toEqual({ value: 24, unit: 'px' });
+  });
+
+  it('unitValue opzionale non impostato → campo vuoto "Auto", mai un 100 fittizio', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('cont-1', 'container', {}));
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+
+    const numberInput = screen.getByRole('textbox', { name: 'Larghezza massima — Valore' });
+    expect(numberInput).toHaveValue('');
+    expect(numberInput).toHaveAttribute('placeholder', 'Auto');
+    expect(propsInStore('cont-1').boxedWidth).toBeUndefined();
+  });
+
+  it('unitValue impostato → "Ripristina automatico" rimuove il valore dal nodo', async () => {
+    const user = userEvent.setup();
+    renderInspectorWith(node('cont-1', 'container', { boxedWidth: { value: 800, unit: 'px' } }));
+    await user.click(screen.getByRole('tab', { name: 'Stile' }));
+
+    await user.click(
+      screen.getByRole('button', { name: 'Larghezza massima — Ripristina automatico' }),
+    );
+
+    expect(propsInStore('cont-1').boxedWidth).toBeUndefined();
   });
 
   it('unitValue → il Select unità scrive solo `unit`, preservando `value`', async () => {
@@ -1130,7 +1153,7 @@ describe('PropertyInspector — Media Library', () => {
    */
   async function openLibrary(
     user: ReturnType<typeof userEvent.setup>,
-    buttonName: RegExp = /Scegli Immagine|Sostituisci Immagine/,
+    buttonName: RegExp = /Scegli Immagine|Sostituisci/,
   ) {
     await user.click(screen.getByRole('button', { name: buttonName }));
     return screen.findByRole('button', { name: 'logo.png' });
@@ -1197,7 +1220,7 @@ describe('PropertyInspector — Media Library', () => {
     await user.click(tile);
     await user.click(screen.getByRole('button', { name: /Seleziona Immagine/ }));
 
-    expect(screen.getByRole('button', { name: 'Sostituisci Immagine' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sostituisci' })).toBeInTheDocument();
     const thumb = container.querySelector('img') as HTMLImageElement;
     expect(thumb.src).toContain('a1b2c3d4e5f6a7b8');
     await waitFor(() =>
@@ -1240,7 +1263,7 @@ describe('PropertyInspector — Media Library', () => {
     renderInspectorWith(node('h-1', 'heading', { text: 'Titolo', level: 'h2' }));
 
     expect(
-      screen.queryByRole('button', { name: /Scegli Immagine|Sostituisci Immagine/ }),
+      screen.queryByRole('button', { name: /Scegli Immagine|Sostituisci/ }),
     ).not.toBeInTheDocument();
   });
 });
@@ -1263,7 +1286,7 @@ describe('PropertyInspector — section.styleBackgroundType (ADR-50)', () => {
 
     expect(screen.getByRole('textbox', { name: 'Tipo sfondo' })).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: /Scegli Immagine|Sostituisci Immagine/ }),
+      screen.queryByRole('button', { name: /Scegli Immagine|Sostituisci/ }),
     ).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Posizione sfondo' })).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Dimensione sfondo' })).not.toBeInTheDocument();
@@ -1277,7 +1300,7 @@ describe('PropertyInspector — section.styleBackgroundType (ADR-50)', () => {
     await user.click(screen.getByRole('tab', { name: 'Stile' }));
 
     expect(
-      screen.getByRole('button', { name: /Scegli Immagine|Sostituisci Immagine/ }),
+      screen.getByRole('button', { name: /Scegli Immagine|Sostituisci/ }),
     ).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Posizione sfondo' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Dimensione sfondo' })).toBeInTheDocument();
@@ -1293,7 +1316,7 @@ describe('PropertyInspector — section.styleBackgroundType (ADR-50)', () => {
     expect(screen.getByText('Colore iniziale gradiente')).toBeInTheDocument();
     expect(screen.getByText('Colore finale gradiente')).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: /Scegli Immagine|Sostituisci Immagine/ }),
+      screen.queryByRole('button', { name: /Scegli Immagine|Sostituisci/ }),
     ).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Posizione sfondo' })).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Dimensione sfondo' })).not.toBeInTheDocument();

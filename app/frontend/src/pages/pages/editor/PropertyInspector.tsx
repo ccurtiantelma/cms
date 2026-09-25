@@ -75,6 +75,9 @@ interface PropertyFormProps {
  * — editor). I controlli senza semantica di "fine modifica" (`Select`, `Switch`) scrivono
  * invece `onChange`, dove il cambiamento è già l'atto conclusivo.
  */
+/** Valori di ripiego del blocco `button` quando etichetta/link restano vuoti al blur. */
+const BUTTON_FALLBACKS: Record<string, string> = { label: 'Pulsante', link: '#' };
+
 function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
   const updateBlockPropsAction = useBlockEditorStore((state) => state.updateBlockPropsAction);
   const savePreset = usePresetStore((state) => state.savePreset);
@@ -112,6 +115,12 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
 
   /** Scrive nello store, se il valore è davvero cambiato rispetto al nodo. */
   function commit(name: string, value: unknown): void {
+    // Pulsante: al blur un'etichetta/link vuoti ricevono un valore di ripiego, mostrato anche in bozza.
+    const fallback = descriptor.type === 'button' ? BUTTON_FALLBACKS[name] : undefined;
+    if (fallback !== undefined && (typeof value !== 'string' || value.trim() === '')) {
+      value = fallback;
+      setLocal(name, value);
+    }
     if (Object.is(value, node.props[name])) return;
     updateBlockPropsAction(node.id, { [name]: value });
   }

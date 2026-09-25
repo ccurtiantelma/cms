@@ -1,6 +1,7 @@
 /**
- * Pagina Profilo Utente — dati anagrafici, cambio password, gestione MFA e
- * preferenza tema. Nessuna tab "Notifiche desktop" (non prevista).
+ * Pagina Profilo Utente — dati anagrafici, cambio password, gestione MFA,
+ * sessioni, elenco notifiche ricevute (ADR-12) e preferenza tema.
+ * Nessuna tab "Notifiche desktop" (non prevista).
  */
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -13,6 +14,7 @@ import {
   Image,
   Loader,
   Modal,
+  Pagination,
   PasswordInput,
   PinInput,
   SegmentedControl,
@@ -24,6 +26,7 @@ import {
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import {
+  IconBell,
   IconDevices,
   IconLock,
   IconPalette,
@@ -50,7 +53,13 @@ import {
   revokeSessionApi,
   updateProfileApi,
 } from '../../services/auth.service';
+import {
+  getNotificationsApi,
+  markAllNotificationsReadApi,
+  markNotificationReadApi,
+} from '../../services/notifications.service';
 import type { MeResponse, SessionSummary } from '../../types/auth.types';
+import type { NotificationItem } from '../../types/notifications.types';
 import { AppUserRoles, ROLE_LABELS } from '../../types/common.types';
 
 /** Colore badge per ruolo — le etichette vengono da `ROLE_LABELS` (types/common.types.ts). */
@@ -284,6 +293,63 @@ export default function PageProfile(): JSX.Element {
     }
   };
 
+  // --- Notifiche ricevute (lista paginata, ADR-12) ---
+  const [notifItems, setNotifItems] = useState<NotificationItem[]>([]);
+  const [notifPage, setNotifPage] = useState(1);
+  const [notifTotalPages, setNotifTotalPages] = useState(1);
+  const [loadingNotifs, setLoadingNotifs] = useState(true);
+  const [markingAll, setMarkingAll] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setLoadingNotifs(true);
+    (async () => {
+      try {
+        const data = await getNotificationsApi({ p: notifPage, i: 20 });
+        if (!active) return;
+        setNotifItems(data.items);
+        setNotifTotalPages(Math.max(data.totalPages, 1));
+      } catch (err) {
+        notifications.show({
+          color: 'red',
+          message: getErrorMessage(err, 'Errore nel recupero delle notifiche'),
+        });
+      } finally {
+        if (active) setLoadingNotifs(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [notifPage]);
+
+  const handleMarkRead = async (guid: string): Promise<void> => {
+    try {
+      await markNotificationReadApi(guid);
+      setNotifItems((prev) => prev.map((n) => (n.guid === guid ? { ...n, isRead: true } : n)));
+    } catch (err) {
+      notifications.show({
+        color: 'red',
+        message: getErrorMessage(err, 'Errore nel segnare la notifica come letta'),
+      });
+    }
+  };
+
+  const handleMarkAllRead = async (): Promise<void> => {
+    setMarkingAll(true);
+    try {
+      await markAllNotificationsReadApi();
+      setNotifItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch (err) {
+      notifications.show({
+        color: 'red',
+        message: getErrorMessage(err, 'Errore nel segnare le notifiche come lette'),
+      });
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
   if (loadingProfile) {
     return (
       <Center p="xl">
@@ -313,6 +379,9 @@ export default function PageProfile(): JSX.Element {
               </Tabs.Tab>
               <Tabs.Tab value="sessioni" leftSection={<IconDevices size={16} />}>
                 Sessioni attive
+              </Tabs.Tab>
+              <Tabs.Tab value="notifiche" leftSection={<IconBell size={16} />}>
+                Notifiche
               </Tabs.Tab>
               <Tabs.Tab value="tema" leftSection={<IconPalette size={16} />}>
                 Tema
@@ -598,6 +667,79 @@ export default function PageProfile(): JSX.Element {
                   </Group>
                 </Stack>
               </Modal>
+            </Tabs.Panel>
+
+            <Tabs.Panel value="notifiche" pt="md">
+              <Card withBorder maw={900}>
+                <Stack>
+                  <Group justify="space-between">
+                    <Text size="sm" c="dimmed">
+                      Tutte le notifiche ricevute, dalla più recente.
+                    </Text>
+                    <Button
+                      size="xs"
+                      variant="light"
+                      loading={markingAll}
+                      disabled={notifItems.every((n) => n.isRead)}
+                      onClick={handleMarkAllRead}
+                    >
+                      Segna tutte come lette
+                    </Button>
+                  </Group>
+                  {loadingNotifs ? (
+                    <Center p="md">
+                      <Loader size="sm" />
+                    </Center>
+                  ) : notifItems.length === 0 ? (
+                    <Text size="sm" c="dimmed">
+                      Nessuna notifica ricevuta.
+                    </Text>
+                  ) : (
+                    <Stack gap="xs">
+                      {notifItems.map((n) => (
+                        <Card key={n.guid} withBorder padding="sm">
+                          <Group justify="space-between" wrap="nowrap" align="flex-start">
+                            <Stack gap={2}>
+                              <Group gap="xs">
+                                <Text size="sm" fw={n.isRead ? 400 : 700}>
+                                  {n.title}
+                                </Text>
+                                {!n.isRead && (
+                                  <Badge size="xs" color="starterPrimary" variant="light">
+                                    Nuova
+                                  </Badge>
+                                )}
+                              </Group>
+                              <Text size="sm">{n.message}</Text>
+                              <Text size="xs" c="dimmed">
+                                {formatDate(n.createdAt)}
+                              </Text>
+                            </Stack>
+                            {!n.isRead && (
+                              <Button
+                                size="xs"
+                                variant="subtle"
+                                onClick={() => handleMarkRead(n.guid)}
+                              >
+                                Segna come letta
+                              </Button>
+                            )}
+                          </Group>
+                        </Card>
+                      ))}
+                    </Stack>
+                  )}
+                  {notifTotalPages > 1 && (
+                    <Group justify="center">
+                      <Pagination
+                        value={notifPage}
+                        onChange={setNotifPage}
+                        total={notifTotalPages}
+                      />
+                    </Group>
+                  )}
+                </Stack>
+              </Card>
             </Tabs.Panel>
 
             <Tabs.Panel value="tema" pt="md">

@@ -63,18 +63,10 @@ nav.navbarSurface {
   flex-shrink: 0;
 }
 
-.brandNotifications {
-  margin-left: auto;
-}
-
 .brandCollapsed {
   justify-content: center;
   gap: 4px;
   padding: 0;
-}
-
-.brandCollapsed .brandNotifications {
-  margin-left: 0;
 }
 
 /* Logo dell'installazione, mantenuto in una dimensione stabile nella sidebar. */

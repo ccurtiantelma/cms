@@ -254,19 +254,6 @@ export default function Section({
   // Sfondo (colore/immagine/gradiente): resta sul `<section>` esterno, mai sul wrapper del
   // contenuto — stessa ragione dello split di classi sopra.
   const outerInlineStyle: CSSProperties = {
-    // Bug "sfondo Full Width clippato" (diagnosi Puppeteer su /test-21, task dedicato):
-    // il `<section>` esterno porta già lo sfondo a prescindere da `contentWidth` (split
-    // sfondo/contenuto sopra), ma la sua PROPRIA larghezza resta comunque vincolata
-    // dall'antenato `.pageBoxed` (`PageView.css`, sito pubblico — `max-width:
-    // var(--theme-layout-boxed-width, none)`), quando il tema ha un layout "Boxed" con una
-    // larghezza configurata: lo sfondo non raggiunge mai il bordo reale della viewport,
-    // solo quello del box centrale. Tecnica "full-bleed" standard (margini negativi pari a
-    // metà differenza fra viewport e contenitore, senza `width: 100vw` — quest'ultimo
-    // includerebbe la scrollbar verticale e produrrebbe overflow orizzontale spurio): fa
-    // uscire il solo `<section>` dal contenitore boxed, mentre il wrapper interno
-    // `.content` (che porta il vero vincolo di larghezza del contenuto, ADR-33 § 1) resta
-    // invariato e continua a centrarsi. No-op quando `contentWidth !== 'full-width'`.
-    ...(isFullWidth ? { marginLeft: 'calc(50% - 50vw)', marginRight: 'calc(50% - 50vw)' } : {}),
     ...(typeof styleBackgroundColor === 'string' && styleBackgroundColor
       ? { backgroundColor: styleBackgroundColor }
       : {}),
@@ -313,6 +300,9 @@ export default function Section({
     <section
       data-canvas-style-id={id}
       className={outerClassName}
+      // Posizionamento a livello radice (ADR-98): un `<section>` full-width occupa tutte le
+      // tracce della griglia di pagina, uno boxed resta nella traccia centrale.
+      data-content-width={isFullWidth ? 'full' : 'boxed'}
       style={hasOuterInlineStyle ? outerInlineStyle : undefined}
     >
       {hasOverlay ? (

@@ -62,16 +62,38 @@ export function toPlainRect(rect: DOMRect): ClientRect {
   };
 }
 
-/** Trasla un `DOMRect` di `(dx, dy)`, preservando le sue dimensioni. */
-export function shiftRect(rect: DOMRect, dx: number, dy: number): ClientRect {
-  const top = rect.top + dy;
-  const left = rect.left + dx;
-  return {
-    top,
-    left,
-    width: rect.width,
-    height: rect.height,
-    bottom: top + rect.height,
-    right: left + rect.width,
-  };
+/**
+ * Scala visiva del frame (`transform: scale` di `EditorViewportFrame`): rapporto fra la
+ * larghezza sullo schermo del riquadro dell'`<iframe>` e la sua larghezza di layout
+ * (`offsetWidth`, non toccata dal transform). `1` se il frame non è scalato o non misurabile.
+ */
+export function frameScaleOf(frameRectWidth: number, iframeOffsetWidth: number): number {
+  if (!iframeOffsetWidth || !frameRectWidth) return 1;
+  return frameRectWidth / iframeOffsetWidth;
+}
+
+/** Rettangolo di un nodo dell'iframe (px di layout dell'iframe) nel viewport del padre. */
+export function rectIntoParentSpace(
+  rect: DOMRect,
+  frameRect: { left: number; top: number },
+  scale: number,
+): ClientRect {
+  const left = frameRect.left + rect.left * scale;
+  const top = frameRect.top + rect.top * scale;
+  const width = rect.width * scale;
+  const height = rect.height * scale;
+  return { top, left, width, height, bottom: top + height, right: left + width };
+}
+
+/** Rettangolo di un nodo del padre (viewport del padre) nel sistema di riferimento dell'iframe. */
+export function rectIntoIframeSpace(
+  rect: DOMRect,
+  frameRect: { left: number; top: number },
+  scale: number,
+): ClientRect {
+  const left = (rect.left - frameRect.left) / scale;
+  const top = (rect.top - frameRect.top) / scale;
+  const width = rect.width / scale;
+  const height = rect.height / scale;
+  return { top, left, width, height, bottom: top + height, right: left + width };
 }

@@ -7,7 +7,7 @@
  */
 import { createElement } from 'react';
 import { Paper, Text } from '@mantine/core';
-import { DragOverlay, type DragStartEvent } from '@dnd-kit/core';
+import { DragOverlay, type DragStartEvent, type Modifier } from '@dnd-kit/core';
 import { BLOCK_TYPES } from '../../../types/blocks.types';
 import { blockIcon } from './block-icon';
 import styles from './FullScreenEditorLayout.module.css';
@@ -34,13 +34,25 @@ export function draggedBlockInfo(event: DragStartEvent): DraggedBlockInfo {
 
 export interface EditorDragOverlayProps {
   draggedBlock: DraggedBlockInfo | null;
+  /** Modificatori di posizione (ghost ancorato al cursore, `EditorDnDProvider`). */
+  modifiers?: Modifier[];
 }
 
-export default function EditorDragOverlay({ draggedBlock }: EditorDragOverlayProps): JSX.Element {
+export default function EditorDragOverlay({
+  draggedBlock,
+  modifiers,
+}: EditorDragOverlayProps): JSX.Element {
   // `createElement` invece del tag JSX (stesso motivo di `WidgetPalette.tsx`, `react-hooks/static-components`).
   const icon = draggedBlock ? createElement(blockIcon(draggedBlock.iconName), { size: 16 }) : null;
   return (
-    <DragOverlay>
+    // Ghost compatto (mai largo quanto il blocco sorgente) e senza animazione di ritorno: il
+    // rilascio è immediato come in Elementor, il ghost non "scivola" verso un punto che non è
+    // più quello di destinazione.
+    <DragOverlay
+      modifiers={modifiers}
+      dropAnimation={null}
+      style={{ width: 'max-content', height: 'auto' }}
+    >
       {draggedBlock ? (
         <Paper withBorder p="xs" radius="sm" shadow="md">
           <div className={styles.dragGhostContent}>

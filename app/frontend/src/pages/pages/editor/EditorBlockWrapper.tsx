@@ -147,6 +147,14 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
         } as CSSProperties
       }
       data-block-type={node.type}
+      // Posizionamento nella griglia di pagina (ADR-98, `.blockStack` in `EditorCanvas.module.css`):
+      // solo i contenitori radice `full`/`full-width` occupano tutte le tracce.
+      data-content-width={
+        (node.type === 'container' || node.type === 'section') &&
+        (node.props.contentWidth === 'full' || node.props.contentWidth === 'full-width')
+          ? 'full'
+          : undefined
+      }
       // Bersaglio dello scroll-sync del Navigator (`querySelector('[data-block-id="…"]')`).
       data-block-id={node.id}
       data-modal-open={modalTrigger.isOpen ? 'true' : undefined}

@@ -127,25 +127,15 @@ export default function PageView({
     <>
       {/*
         Wrapper di pagina (Editor tema § "Layout", v8): `.pageOuter` applica il "Margine"
-        come `padding-inline`/`padding-block` reale sull'intero documento (header+main+
-        footer inclusi, stesso principio "boxed" dei temi WordPress) — non un
-        `margin-inline` fisso, incompatibile con l'auto-centraggio di `.pageBoxed`
-        sottostante. `.pageBoxed` applica larghezza massima ("Pagina boxed") +
-        centraggio (`margin-inline: auto`, stesso principio di `.maxWidth_*` in
-        `style-tokens.module.css`) e il "Rientro" come `padding` — **solo al `<main>`**:
-        header/footer sono Sezioni Globali (ADR-40) che decidono la propria larghezza da
-        sole, blocco per blocco, tramite `contentWidth`/`maxWidth` (ADR-33), esattamente
-        come ogni Sezione di Pagina dentro `<main>`. Annidarli anche loro dentro
-        `.pageBoxed` neutralizzerebbe silenziosamente quella scelta — una Sezione
-        `full-width` nell'header/footer non potrebbe mai superare la larghezza boxed
-        dell'antenato, qualunque `contentWidth` scelga l'autore (bug osservato: nel
-        Canvas dell'editor lo stesso `.pageBoxed` non si nota perché il pannello è già
-        più stretto di 1200px, sul sito pubblico invece sì). Le variabili
-        `--theme-layout-*` sono compilate da `generateThemeCss` (`ThemeStyleTag.tsx`); coi
-        default di fabbrica (0 margine/rientro, 1200px di boxed width) il `<main>` resta
-        visivamente invariato solo se il contenuto stesso non richiede più di 1200px — la
-        larghezza boxed di pagina è comunque sempre applicata (a differenza dei token
-        colore/tipografia, qui non esiste un "default = nessuna variabile emessa").
+        come `padding` reale sull'intero documento (header+main+footer inclusi). `.pageBoxed`
+        applica il solo "Rientro" verticale al `<main>`, che è una griglia a 3 tracce
+        (gutter | larghezza boxed | gutter, `PageView.css`, ADR-98): i blocchi radice stanno
+        nella traccia centrale, un root container/section `full` (`data-content-width`)
+        occupa tutte le tracce — nessun margine negativo né `100vw`. Header/footer sono
+        Sezioni Globali (ADR-40) fuori da `.pageBoxed`: decidono la propria larghezza da sole
+        tramite `contentWidth` (ADR-33). Le variabili `--theme-layout-*` sono compilate da
+        `generateThemeCss` (`ThemeStyleTag.tsx`); senza variabili la traccia centrale
+        ricade su 100% e il documento resta invariato.
       */}
       <div className="pageOuter">
         <GlobalSectionSlot

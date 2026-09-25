@@ -131,6 +131,31 @@ describe('Container (v2)', () => {
       expect(html).not.toContain('max-width');
     });
 
+    it('contentWidth "full" → nessun margine negativo né 100vw (ADR-98), solo `data-content-width`', () => {
+      const html = renderToStaticMarkup(
+        <Container id="b1" contentWidth="full">
+          x
+        </Container>,
+      );
+      expect(html).toContain('data-content-width="full"');
+      expect(html).not.toContain('calc(');
+      expect(html).not.toContain('vw');
+      expect(html).not.toContain('margin-left');
+    });
+
+    it('contentWidth assente o "boxed" → `data-content-width="boxed"`', () => {
+      expect(renderToStaticMarkup(<Container id="b1">x</Container>)).toContain(
+        'data-content-width="boxed"',
+      );
+      expect(
+        renderToStaticMarkup(
+          <Container id="b1" contentWidth="boxed">
+            x
+          </Container>,
+        ),
+      ).toContain('data-content-width="boxed"');
+    });
+
     it('overflow tra i tre valori ammessi → overflow inline', () => {
       const html = renderToStaticMarkup(
         <Container id="b1" overflow="hidden">

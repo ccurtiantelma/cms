@@ -237,10 +237,10 @@ export default function ContainerLayoutTab({
 
   // `boxedWidth` non è `responsive` nello schema attuale (`container.block.ts`): nessun
   // pallino di override qui, coerente col registro — un indicatore breakpoint non avrebbe
-  // senso su un valore che non ne porta. Default visivo 100 se non ancora impostato.
-  const boxedWidthValue = isPlainObject(draft.boxedWidth)
-    ? draft.boxedWidth
-    : { value: 100, unit: boxedWidthProp?.units?.[0] ?? 'px' };
+  // senso su un valore che non ne porta. Non impostato ⇒ `undefined` (il campo mostra
+  // "Auto" e il canvas usa la larghezza boxed del tema): mai un `100 px` fittizio, che
+  // sembrava un `max-width: 100px` reale.
+  const boxedWidthValue = isPlainObject(draft.boxedWidth) ? draft.boxedWidth : undefined;
 
   const activeBreakpoint3Way = breakpointKey(activeViewport);
 

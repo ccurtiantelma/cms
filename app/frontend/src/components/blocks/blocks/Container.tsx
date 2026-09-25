@@ -166,15 +166,6 @@ export default function Container({
     style.marginLeft = 'auto';
     style.marginRight = 'auto';
   }
-  // `contentWidth === 'full'`: un container annidato dentro `.pageBoxed`
-  // (`max-width` del tema, `app/public-site/src/PageView.css`) resterebbe comunque
-  // limitato a quella larghezza senza un'uscita esplicita — lo sfondo/contenuto "Full
-  // Width" deve invece coprire l'intera viewport. Tecnica full-bleed standard senza
-  // `width: 100vw` (eviterebbe overflow orizzontale dovuto alla scrollbar).
-  if (contentWidth === 'full') {
-    style.marginLeft = 'calc(50% - 50vw)';
-    style.marginRight = 'calc(50% - 50vw)';
-  }
   if (overflow === 'visible' || overflow === 'hidden' || overflow === 'auto') {
     style.overflow = overflow;
   }
@@ -206,6 +197,10 @@ export default function Container({
       id: typeof htmlId === 'string' && htmlId ? htmlId : undefined,
       'data-canvas-style-id': id,
       'data-default-direction': defaultDirection,
+      // Aggancio per il posizionamento a livello radice (`PageView.css`/`EditorCanvas.module.css`,
+      // ADR-98): un root container `full` occupa tutte le tracce della griglia di pagina, senza
+      // margini negativi. Nessun effetto su un container annidato (nessuna regola lo consuma).
+      'data-content-width': contentWidth === 'full' ? 'full' : 'boxed',
       style: Object.keys(style).length > 0 ? style : undefined,
     },
     gridOutlineOverlay,

@@ -39,7 +39,7 @@ import AppTour, { type AppTourRef } from '../components/AppTour';
 import { navigationItems } from '../config/navigation';
 import { THEME_EDITOR_SECTIONS } from '../config/themeEditorSections';
 import { getPageTourSteps } from '../libs/pageTours';
-import { AppUserRoles, ROLE_LABELS } from '../types/common.types';
+import { AppUserRoles } from '../types/common.types';
 import classes from './LayoutProtected.module.css';
 
 /** Larghezza sidebar nello stato compatto (solo icone), in px — non personalizzabile. */
@@ -99,11 +99,6 @@ export default function LayoutProtected(): JSX.Element {
   };
 
   const initials = `${user?.name?.[0] ?? ''}${user?.surname?.[0] ?? ''}`.toUpperCase() || 'U';
-  const fullName = user ? `${user.name ?? ''} ${user.surname ?? ''}`.trim() || 'Utente' : 'Utente';
-  const roleLabel =
-    user?.role !== undefined
-      ? (ROLE_LABELS[user.role as keyof typeof ROLE_LABELS] ?? 'Utente')
-      : '';
 
   // Tour contestuale della pagina corrente — la voce "Tour guidato" è visibile
   // solo se la pagina ha un tour registrato in `libs/pageTours.ts`.
@@ -167,9 +162,6 @@ export default function LayoutProtected(): JSX.Element {
                   <span className={classes.brandName}>CMS</span>
                 </div>
               )}
-              <div className={classes.brandNotifications}>
-                <NotificationBell />
-              </div>
             </div>
 
             {/* Voci di navigazione — sull'Editor tema diventano ancore alle sezioni
@@ -260,18 +252,12 @@ export default function LayoutProtected(): JSX.Element {
                 <Avatar size={38} radius="md" color="starterPrimary" variant="filled">
                   {initials}
                 </Avatar>
-                {!isCollapsed && (
-                  <div className={classes.userInfo}>
-                    <span className={classes.userName}>{fullName}</span>
-                    <span className={classes.userRole}>{roleLabel}</span>
-                    <span className={classes.userEmail}>{user?.email ?? ''}</span>
-                  </div>
-                )}
               </UnstyledButton>
 
               <div
                 className={`${classes.userActions} ${isCollapsed ? classes.userActionsCollapsed : ''}`}
               >
+                <NotificationBell />
                 <Tooltip label={collapsed ? 'Espandi menu' : 'Comprimi menu'} position="top">
                   <ActionIcon
                     className={classes.bottomBtn}

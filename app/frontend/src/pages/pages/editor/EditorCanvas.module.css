@@ -85,12 +85,8 @@
 }
 
 .pageBoxed {
-  max-width: var(--theme-layout-boxed-width, none);
-  margin-inline: auto;
   padding-top: var(--theme-layout-padding-top, 0px);
-  padding-right: var(--theme-layout-padding-right, 0px);
   padding-bottom: var(--theme-layout-padding-bottom, 0px);
-  padding-left: var(--theme-layout-padding-left, 0px);
 }
 
 /*
@@ -103,7 +99,20 @@
   (`style-tokens.module.css`), nessun valore hardcoded duplicato.
 */
 .blockStack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cms-space-sm, 12px);
+  /* Griglia di pagina a 3 tracce (ADR-98), stessa di `.pageBoxed > main` in `PageView.css`. */
+  display: grid;
+  grid-template-columns:
+    minmax(var(--theme-layout-padding-left, 0px), 1fr)
+    minmax(0, var(--theme-layout-boxed-width, 100%))
+    minmax(var(--theme-layout-padding-right, 0px), 1fr);
+  row-gap: var(--cms-space-sm, 12px);
+}
+
+.blockStack > * {
+  grid-column: 2;
+}
+
+/* `data-content-width` è scritto da `EditorBlockWrapper.tsx` sul wrapper del nodo radice. */
+.blockStack > [data-content-width='full'] {
+  grid-column: 1 / -1;
 }

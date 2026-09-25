@@ -444,7 +444,7 @@
   left: 0;
   right: 0;
   top: 50%;
-  height: 6px;
+  height: 8px;
   transform: translateY(-50%);
   background-image: none;
   background-repeat: no-repeat;
@@ -453,9 +453,9 @@
     100% center,
     center;
   background-size:
-    6px 6px,
-    6px 6px,
-    100% 2px;
+    8px 8px,
+    8px 8px,
+    100% 3px;
   box-shadow: none;
   transition:
     background-image 100ms ease,
@@ -471,15 +471,20 @@
  */
 .dropZone[data-over='true']::before {
   background-image:
-    radial-gradient(circle, #a333c8 0 3px, transparent 3px 100%),
-    radial-gradient(circle, #a333c8 0 3px, transparent 3px 100%), linear-gradient(#a333c8, #a333c8);
-  box-shadow: 0 0 6px 1px rgba(163, 51, 200, 0.6);
+    radial-gradient(circle, #a333c8 0 4px, transparent 4px 100%),
+    radial-gradient(circle, #a333c8 0 4px, transparent 4px 100%), linear-gradient(#a333c8, #a333c8);
+  box-shadow: 0 0 8px 2px rgba(163, 51, 200, 0.6);
+}
+
+/* La zona attiva sta sopra toolbar/badge del blocco: la linea di inserimento non va coperta. */
+.dropZone[data-over='true'] {
+  z-index: 1000;
 }
 
 .dropZone[data-over='true'][data-rejected='true']::before {
   background-image:
-    radial-gradient(circle, var(--mantine-color-red-6) 0 3px, transparent 3px 100%),
-    radial-gradient(circle, var(--mantine-color-red-6) 0 3px, transparent 3px 100%),
+    radial-gradient(circle, var(--mantine-color-red-6) 0 4px, transparent 4px 100%),
+    radial-gradient(circle, var(--mantine-color-red-6) 0 4px, transparent 4px 100%),
     linear-gradient(var(--mantine-color-red-6), var(--mantine-color-red-6));
   box-shadow: none;
 }
