@@ -1433,6 +1433,71 @@ export interface components {
        */
       code: string;
     };
+    UserRoleSummaryDto: {
+      /**
+       * @description Guid del ruolo
+       * @example a1b2c3d4e5f6a7b8
+       */
+      guid: string;
+      /**
+       * @description Codice del ruolo
+       * @example seo_specialist
+       */
+      code: string;
+      /**
+       * @description Nome leggibile
+       * @example SEO Specialist
+       */
+      name: string;
+    };
+    UserDetailResponseDto: {
+      /**
+       * @description Guid dell'utente
+       * @example a1b2c3d4e5f6a7b8
+       */
+      guid: string;
+      /**
+       * @description Nome
+       * @example Mario
+       */
+      name: string;
+      /**
+       * @description Cognome
+       * @example Rossi
+       */
+      surname: string | null;
+      /**
+       * @description Email
+       * @example mario.rossi@example.com
+       */
+      email: string;
+      /**
+       * @description Livello di ruolo base
+       * @example 30
+       * @enum {number}
+       */
+      role: 5 | 10 | 20 | 30;
+      /** @description Scope multi-tenant/multi-sede */
+      scopeId: string | null;
+      /** @description Utente attivo */
+      isActive: boolean;
+      /** @description Password già impostata (attivazione completata) */
+      pwdSet: boolean;
+      /** @description MFA abilitata */
+      isMfaEnabled: boolean;
+      /**
+       * Format: date-time
+       * @description Data creazione
+       */
+      createdAt: string | null;
+      /**
+       * Format: date-time
+       * @description Data ultimo aggiornamento
+       */
+      updatedAt: string | null;
+      /** @description Ruoli personalizzati aggiuntivi; mai i ruoli di sistema (S19) */
+      roles: components['schemas']['UserRoleSummaryDto'][];
+    };
     CreateUserDto: {
       /**
        * @description Nome dell'utente
@@ -1665,7 +1730,7 @@ export interface components {
        * @description Descrizione del ruolo
        * @example Modifica e pubblica le Pagine per le campagne SEO.
        */
-      description?: Record<string, never> | null;
+      description?: string | null;
       /**
        * @description Codici permesso del registro (`GET app/admin/permissions`). Non ammesso: roles:manage, riservato ai ruoli di sistema.
        * @example [
@@ -1686,7 +1751,7 @@ export interface components {
       /** @description Nome leggibile del ruolo */
       name?: string;
       /** @description Descrizione del ruolo */
-      description?: Record<string, never> | null;
+      description?: string | null;
       /**
        * @description Nuovo insieme completo dei codici permesso (sostituisce l'attuale). Non ammesso: roles:manage.
        * @example [
@@ -4281,12 +4346,14 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Utente trovato, con `roles`: ruoli personalizzati aggiuntivi ({ guid, code, name }[]) */
+      /** @description Utente trovato, con `roles`: ruoli personalizzati aggiuntivi */
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['UserDetailResponseDto'];
+        };
       };
       /** @description Target SuperAdmin non gestibile dall'Admin */
       403: {

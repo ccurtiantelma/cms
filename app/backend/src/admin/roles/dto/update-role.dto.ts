@@ -23,7 +23,12 @@ export class UpdateRoleDto {
   @MaxLength(100, { message: 'Il nome non può superare i 100 caratteri.' })
   name?: string;
 
-  @ApiPropertyOptional({ description: 'Descrizione del ruolo', nullable: true, maxLength: 500 })
+  @ApiPropertyOptional({
+    description: 'Descrizione del ruolo',
+    type: String,
+    nullable: true,
+    maxLength: 500,
+  })
   @IsOptional()
   @IsString({ message: 'La descrizione deve essere una stringa.' })
   @MaxLength(500, { message: 'La descrizione non può superare i 500 caratteri.' })

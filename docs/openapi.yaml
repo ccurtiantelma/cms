@@ -428,9 +428,11 @@ paths:
             type: string
       responses:
         '200':
-          description: >-
-            Utente trovato, con `roles`: ruoli personalizzati aggiuntivi ({
-            guid, code, name }[])
+          description: 'Utente trovato, con `roles`: ruoli personalizzati aggiuntivi'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetailResponseDto'
         '403':
           description: Target SuperAdmin non gestibile dall'Admin
         '404':
@@ -2751,6 +2753,95 @@ components:
           example: '123456'
       required:
         - code
+    UserRoleSummaryDto:
+      type: object
+      properties:
+        guid:
+          type: string
+          description: Guid del ruolo
+          example: a1b2c3d4e5f6a7b8
+        code:
+          type: string
+          description: Codice del ruolo
+          example: seo_specialist
+        name:
+          type: string
+          description: Nome leggibile
+          example: SEO Specialist
+      required:
+        - guid
+        - code
+        - name
+    UserDetailResponseDto:
+      type: object
+      properties:
+        guid:
+          type: string
+          description: Guid dell'utente
+          example: a1b2c3d4e5f6a7b8
+        name:
+          type: string
+          description: Nome
+          example: Mario
+        surname:
+          type: string
+          description: Cognome
+          nullable: true
+          example: Rossi
+        email:
+          type: string
+          description: Email
+          example: mario.rossi@example.com
+        role:
+          type: number
+          description: Livello di ruolo base
+          enum:
+            - 5
+            - 10
+            - 20
+            - 30
+          example: 30
+        scopeId:
+          type: string
+          description: Scope multi-tenant/multi-sede
+          nullable: true
+        isActive:
+          type: boolean
+          description: Utente attivo
+        pwdSet:
+          type: boolean
+          description: Password già impostata (attivazione completata)
+        isMfaEnabled:
+          type: boolean
+          description: MFA abilitata
+        createdAt:
+          type: string
+          description: Data creazione
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          description: Data ultimo aggiornamento
+          format: date-time
+          nullable: true
+        roles:
+          description: Ruoli personalizzati aggiuntivi; mai i ruoli di sistema (S19)
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRoleSummaryDto'
+      required:
+        - guid
+        - name
+        - surname
+        - email
+        - role
+        - scopeId
+        - isActive
+        - pwdSet
+        - isMfaEnabled
+        - createdAt
+        - updatedAt
+        - roles
     CreateUserDto:
       type: object
       properties:
@@ -3080,7 +3171,7 @@ components:
           example: SEO Specialist
           maxLength: 100
         description:
-          type: object
+          type: string
           description: Descrizione del ruolo
           nullable: true
           maxLength: 500
@@ -3117,7 +3208,7 @@ components:
           description: Nome leggibile del ruolo
           maxLength: 100
         description:
-          type: object
+          type: string
           description: Descrizione del ruolo
           nullable: true
           maxLength: 500

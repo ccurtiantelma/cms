@@ -40,6 +40,7 @@ export class CreateRoleDto {
 
   @ApiPropertyOptional({
     description: 'Descrizione del ruolo',
+    type: String,
     nullable: true,
     maxLength: 500,
     example: 'Modifica e pubblica le Pagine per le campagne SEO.',

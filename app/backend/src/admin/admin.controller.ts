@@ -23,6 +23,7 @@ import { GuardAdmin, GuardSuperAdmin } from '../auth/guard';
 import { AdminService } from './admin.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UserDetailResponseDto } from './dto/user-detail-response.dto';
 import { AuditLogQueryParams, AuthInfo, PaginationParams } from '../common/types';
 import { Pagination } from '../common/pagination';
 
@@ -117,8 +118,8 @@ export class AdminController {
   @ApiOperation({ summary: 'Dettaglio utente (un Admin non vede gli utenti SuperAdmin)' })
   @ApiResponse({
     status: 200,
-    description:
-      'Utente trovato, con `roles`: ruoli personalizzati aggiuntivi ({ guid, code, name }[])',
+    description: 'Utente trovato, con `roles`: ruoli personalizzati aggiuntivi',
+    type: UserDetailResponseDto,
   })
   @ApiResponse({ status: 403, description: "Target SuperAdmin non gestibile dall'Admin" })
   @ApiResponse({ status: 404, description: 'Utente non trovato' })
