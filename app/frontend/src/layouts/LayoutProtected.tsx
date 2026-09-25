@@ -39,7 +39,6 @@ import AppTour, { type AppTourRef } from '../components/AppTour';
 import { isNavigationItemVisible, navigationItems } from '../config/navigation';
 import { THEME_EDITOR_SECTIONS } from '../config/themeEditorSections';
 import { getPageTourSteps } from '../libs/pageTours';
-import { AppUserRoles, ROLE_LABELS } from '../types/common.types';
 import classes from './LayoutProtected.module.css';
 
 /** Larghezza sidebar nello stato compatto (solo icone), in px — non personalizzabile. */
