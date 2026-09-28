@@ -24,14 +24,38 @@
   word-break: break-word;
 }
 
+/*
+ * Wrapper interno di un container boxed (ADR-100 punto 3, `.e-con-inner` di Elementor): porta
+ * il `layout` (Runtime Style Bridge, `> [data-container-inner]`) ed è limitato alla larghezza
+ * boxed; l'elemento esterno resta a tutta larghezza con sfondo/bordo/padding. `--root-gutter`
+ * è scritto solo sul root boxed (`PageView.css`/`EditorCanvas.module.css`) per rispettare il
+ * "Rientro" di pagina, e azzerato per i discendenti così un boxed annidato non lo eredita.
+ */
+.inner {
+  display: flex;
+  flex-grow: 1;
+  width: 100%;
+  min-width: 0;
+  max-width: min(
+    var(--container-boxed-width, var(--theme-layout-boxed-width, 100%)),
+    100% - var(--root-gutter, 0px)
+  );
+  margin-inline: auto;
+}
+
+.inner > * {
+  --root-gutter: 0px;
+}
+
 /* Default verticale (figli impilati): `:where` a specificità 0, così `layout.direction` del
    Runtime Style Bridge (`[data-canvas-style-id]`) vince sempre. */
-:where(.container) {
+:where(.container, .inner) {
   flex-direction: column;
 }
 
-/* Contenitore di contenitori (righe/colonne dei preset di struttura): affiancati. */
-:where(.container[data-default-direction='row']) {
+/* Contenitore di contenitori (righe/colonne dei preset di struttura): affiancati. Con un
+   container boxed l'attributo sta sul wrapper interno, che è il vero genitore flex. */
+:where(.container[data-default-direction='row'], .inner[data-default-direction='row']) {
   flex-direction: row;
 }
 
@@ -50,7 +74,8 @@
  * percentuale è persistita) vince comunque, perché lo `style` inline ha sempre priorità
  * sulla classe, indipendentemente dalla specificità di quest'ultima.
  */
-.container[data-default-direction='row'] > .container {
+/* `:where` (ADR-100 punto 2): specificità 0, la `width` per nodo del Runtime Style Bridge vince. */
+:where([data-default-direction='row'] > .container) {
   flex: 1 1 0%;
   min-width: 0;
 }

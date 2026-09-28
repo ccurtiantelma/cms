@@ -85,8 +85,11 @@ function defaultPropValue(prop: BlockPropDescriptor): unknown {
 const FRONTEND_ONLY_PROP_DEFAULTS: Readonly<Record<string, Readonly<Record<string, unknown>>>> = {
   heading: { text: 'Questo è un titolo' },
   richText: { html: '<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit</p>' },
-  // L'immagine non ha una prop "titolo": `alt` è il testo obbligatorio che la descrive.
-  image: { alt: 'image', mediaRef: PLACEHOLDER_MEDIA_REF },
+  // `alt` è facoltativo e parte vuoto (chiave omessa): solo `mediaRef` riceve il segnaposto.
+  image: { mediaRef: PLACEHOLDER_MEDIA_REF },
+  // Stessi valori di ripiego del blur in `PropertyInspector.tsx` (`BUTTON_FALLBACKS`): senza
+  // seed nello store un pulsante appena trascinato è vuoto appena perde il focus.
+  button: { label: 'Pulsante', link: '#' },
 };
 
 /**

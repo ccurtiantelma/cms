@@ -1,67 +1,20 @@
 /**
- * Modal "Seleziona la tua struttura" (ADR-33 § 7): selettore a due passi per un nuovo
- * blocco `section` — prima il tipo di layout, poi il preset — fedele a Elementor Pro.
- * Unico proprietario di questa UI: era divisa fra questo modal (cinque preset piatti) e il
- * box inline a due passi di `CanvasAddSectionZone.tsx`; ora è tutta qui, montata da due
- * punti (`BlockPalette.tsx` per la voce "Sezione" del suo menu — quindi raggiungibile anche
- * dalla toolbar integrata di `EditorBlockWrapper.tsx` via "Inserisci sopra/sotto" — e
- * `CanvasAddSectionZone.tsx` per il "+" della zona sempre visibile in fondo al canvas) che
- * condividono lo stesso componente controllato — nessuna copia. Un terzo punto di
- * montaggio, il "+" della `sectionActionTab` di `EditorBlockWrapper.tsx`, è stato rimosso
- * insieme a quella barra (T-canvas-declutter, consolidata nella Handle Bar unica): la
- * stessa azione resta raggiungibile dal primo punto sopra.
+ * Modal "Seleziona la tua struttura" per una nuova riga, fedele al Flexbox/Grid Container di
+ * Elementor Pro (ADR-100 punto 1): primo passo "Flexbox" o "Griglia", poi il preset. Ogni
+ * preset inserisce **solo** nodi `container` (`section` è deprecata, ADR-82): un container
+ * genitore boxed con i container figli (colonne) direttamente dentro — nessuna riga
+ * intermedia. Le colonne portano la propria `width` in `%` (ADR-100 punto 2), quindi un
+ * preset 33/67 produce davvero 33/67; su mobile le colonne vanno al 100% e il genitore
+ * passa a `direction: column` (stesso default di Elementor).
  *
- * Componente frontend puro nella palette, stesso principio di `WidgetPalette`/
- * `BlockPalette` (ADR-32 § 4): la selezione chiama `addBlockAction` già esistente con un
- * nodo `section` pre-popolato (`columns` + `columnRatio` del preset sovrascritti sopra i
- * default del descrittore), nessuna azione nuova nello store.
+ * Montato da `BlockPalette.tsx` (voce "Sezione", quindi anche "Inserisci sopra/sotto" della
+ * toolbar di `EditorBlockWrapper.tsx`) e da `CanvasAddSectionZone.tsx`; il componente è
+ * controllato e condiviso, nessuna copia. Le strutture annidate (`NESTED_PRESETS`) restano
+ * dietro il link secondario "Strutture annidate avanzate" del passo Flexbox.
  *
- * Supera esplicitamente ADR-31 Decisione 6 ("nessun selettore visivo a icone in questo
- * round"): quel rinvio era condizionato all'assenza di dati per pilotare un box
- * asimmetrico — `columnRatio` (ADR-33 § 2) fornisce ora quel dato.
- *
- * Icone dei preset verificate pixel-per-pixel contro lo "Select Your Structure" reale di
- * Elementor (screenshot del produttore, non una ricostruzione a memoria): una riga di nove
- * tessere di struttura piatta (colonna/riga direzionali + 7 varianti a colonne, incluse la
- * coppia simmetrica 33/67 e 67/33 — gap-analysis T-editor-refinement: il "66-33" di
- * `SectionColumnRatioValue` era un valore di tipo già valido ma orfano di preset — e la
- * coppia 30/70 e 70/30 aggiunta da RFC-58), più sei tessere a celle annidate/asimmetriche
- * (`GRID_PRESETS`). Le tessere annidate (ADR-39, `container` con
- * `flexDirection`/`styleFlexBasis`) non hanno un equivalente nella prop
- * `columns`/`columnRatio` di `section` — nessuna scorciatoia, nessuna nuova prop: si
- * compone `section` + `container` già approvati, esattamente come la sua ADR li ha
- * pensati. `columnRatio` di `section` produce solo lo split flessibile "33/67"/"67/33", mai
- * le celle annidate — quelle attraversano `buildGridSectionSubtree` sotto.
- *
- * **Tre categorie del primo passo (T-editor-refinement, supera il precedente "fix
- * emergenza" a due tab — quel testo è superato, non più valido, non riportarlo)**: il
- * primo passo espone ora due scelte primarie fedeli a Elementor Pro — "Flexbox" (motore
- * CSS Grid su `section`, `FLEXBOX_PRESETS`/`handleSelectFlexbox`: riga di icone
- * direzionali + riga di preset proporzionali a riempimento grigio, nessun bordo a riposo)
- * e "Riga / Sezione Classica" (stesso motore Grid, stesso `handleSelectFlexbox`, preset
- * diversi — `CLASSIC_PRESETS`: sole miniature a bordo tratteggiato per le suddivisioni
- * fisse, fedeli allo "Select Your Structure" di una Sezione classica, non di un
- * Container). Le sei tessere annidate/asimmetriche (`GRID_PRESETS`, motore Flexbox via
- * `container`) restano disponibili ma non più come scelta primaria: un link testuale in
- * fondo al tab "Flexbox" ("Strutture annidate avanzate") apre `step: 'grid'` invariato —
- * nessuna funzionalità rimossa, solo declassata a scelta secondaria per rispettare
- * l'"esclusivamente" richiesto sul tab classico. `handleSelectFlexbox` è condiviso da
- * `FLEXBOX_PRESETS` e `CLASSIC_PRESETS` (stessa forma `FlexboxPreset`, stesso
- * inserimento piatto `columns`/`columnRatio`): l'unica differenza fra le due categorie è
- * quali preset vengono passati e come si renderizza la tessera (`renderStructureNode`
- * accetta una `variant`: `'filled'` per Flexbox/Griglia annidata — riempimento grigio
- * `#e6e9ec`, nessun bordo a riposo, fedele a Elementor — `'dashed'` per Riga/Sezione
- * Classica — bordo `1px dashed #a4afb7`, nessun riempimento, fedele allo "Select Your
- * Structure" di una Sezione classica).
- *
- * `aria-label`/testo del pulsante "Flexbox" del primo passo restano letteralmente
- * `"Flexbox"` (non "Flexbox Container"): `e2e/tests/helpers/page-editor.ts`
- * (`completeSectionStructureModal`, verificato) e
- * `e2e/tests/page-editor-navigator-layouts.spec.ts` già cercano
- * `getByRole('button', { name: 'Flexbox', exact: true })` seguito dal preset "Colonna" —
- * precedono il "fix emergenza" ora superato sopra e non sono mai stati aggiornati per
- * seguirlo, quindi si aspettavano già la mappatura corretta: cambiare quel testo
- * romperebbe silenziosamente ogni test che inserisce una `section` in tutta la suite E2E.
+ * `aria-label` "Flexbox", "Colonna" e "2 colonne" sono letti dagli E2E
+ * (`e2e/tests/helpers/page-editor.ts`, `page-editor-navigator-layouts.spec.ts`): non
+ * rinominarli.
  */
 import { useEffect, useState, type ComponentType } from 'react';
 import { ActionIcon, Anchor, Group, Modal, SimpleGrid, Text } from '@mantine/core';
@@ -69,44 +22,30 @@ import {
   IconArrowDown,
   IconArrowLeft,
   IconArrowRight,
-  IconGridDots,
   IconLayoutColumns,
+  IconLayoutGrid,
 } from '@tabler/icons-react';
 import { BLOCK_TYPES } from '../../../types/blocks.types';
 import { useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
 // Da `block-registry.utils.ts`, non da `./BlockPalette`: `BlockPalette` monta questo
-// stesso modal per la voce "Sezione" del suo menu (ADR-33 § 7), un import nell'altro
-// verso creerebbe un ciclo fra i due moduli.
+// stesso modal, un import nell'altro verso creerebbe un ciclo fra i due moduli.
 import { defaultPropsFor } from './block-registry.utils';
-import { findNode, type BlockNode } from './block-tree.utils';
+import type { BlockNode } from './block-tree.utils';
 import styles from './SectionStructureModal.module.css';
 
-/** Descrittori del registro (BLOCK_TYPES è statico: calcolati una volta a modulo). */
-const SECTION_DESCRIPTOR = BLOCK_TYPES.find((entry) => entry.type === 'section');
+/** Descrittore del registro (BLOCK_TYPES è statico: calcolato una volta a modulo). */
 const CONTAINER_DESCRIPTOR = BLOCK_TYPES.find((entry) => entry.type === 'container');
 
-/** Passo corrente del selettore: scelta del tipo, poi uno dei tre tab di preset — 'grid' (strutture annidate avanzate) resta raggiungibile da un link secondario dentro 'flexbox', non più dal primo passo. */
-type Step = 'chooseType' | 'flexbox' | 'classic' | 'grid';
-
-/** Valori ammessi per `columns`/`columnRatio` (`section.block.ts`): niente oltre questi. */
-type SectionColumnsToken = '1' | '2' | '3' | '4';
-type SectionColumnRatioValue = 'equal' | '33-66' | '66-33' | '30-70' | '70-30';
-
-/** Forma persistita della prop responsive `columns` (ADR-29). */
-interface SectionColumnsValue {
-  default: SectionColumnsToken;
-}
+/** Passo corrente: scelta del tipo, poi i preset Flexbox o Griglia; 'nested' dal link secondario. */
+type Step = 'chooseType' | 'flexbox' | 'grid' | 'nested';
 
 /**
- * Nodo dell'anteprima proporzionale condivisa fra le tessere "Flexbox" (una sola riga) e
- * "Griglia" (fino a due righe, con celle annidate) — stesso spec renderizza l'icona nella
- * tessera (`renderStructureNode`) e, per la Griglia, il sottoalbero `container` davvero
- * inserito (`buildCellNode`): un solo posto dove le proporzioni sono dichiarate, mai due
- * fonti che potrebbero divergere. Foglia = nessun `children` (una cella piena); ramo =
- * `direction` + `children` (righe/colonne annidate, ADR-39). `weight` è insieme il peso
- * `flex-grow` dell'anteprima e la percentuale `styleFlexBasis` del nodo reale — l'insieme
- * dei valori usati (25/30/33/34/35/40/50/60/65/67/70) è chiuso ed esaurito dalle classi
- * `.w25`…`.w70` di `SectionStructureModal.module.css`, mai un valore libero.
+ * Nodo dell'anteprima proporzionale: lo stesso spec disegna la tessera
+ * (`renderStructureNode`) e costruisce il sottoalbero inserito (`buildChild`), una sola fonte
+ * delle proporzioni. Foglia = nessun `children`; ramo = `direction` + `children`. `weight` è
+ * il `flex-grow` dell'anteprima e la `width` in `%` della colonna reale; i valori usati
+ * (25/30/33/34/35/40/50/60/65/67/70) sono chiusi dalle classi `.w25`…`.w70` di
+ * `SectionStructureModal.module.css`.
  */
 interface StructureNode {
   weight: number;
@@ -114,15 +53,14 @@ interface StructureNode {
   children?: readonly StructureNode[];
 }
 
-/** Preset del layout "Flexbox": split piatto scritto su `columns`/`columnRatio` di `section`. */
+/** Preset Flexbox: un container genitore, in colonna/riga, o con N colonne affiancate. */
 interface FlexboxPreset {
   id: string;
   label: string;
-  columns: SectionColumnsValue;
-  columnRatio: SectionColumnRatioValue;
-  /** Solo 'colonna'/'riga': icona direzionale al posto dell'anteprima a celle. */
+  /** Solo 'colonna'/'riga': icona direzionale, container singolo senza figli. */
   directionIcon?: ComponentType<{ size?: number }>;
-  /** Assente quando c'è `directionIcon` — le due tessere direzionali non hanno un'anteprima a celle. */
+  direction?: 'row' | 'column';
+  /** Una sola riga `direction: 'row'` con le colonne. Assente con `directionIcon`. */
   rows?: readonly StructureNode[];
 }
 
@@ -130,57 +68,43 @@ const FLEXBOX_PRESETS: readonly FlexboxPreset[] = [
   {
     id: 'column',
     label: 'Colonna',
-    columns: { default: '1' },
-    columnRatio: 'equal',
     directionIcon: IconArrowDown,
+    direction: 'column',
   },
   {
     id: 'row',
     label: 'Riga',
-    columns: { default: '2' },
-    columnRatio: 'equal',
     directionIcon: IconArrowRight,
+    direction: 'row',
   },
   {
     id: '2-equal',
     label: '2 colonne',
-    columns: { default: '2' },
-    columnRatio: 'equal',
     rows: [{ weight: 1, direction: 'row', children: [{ weight: 50 }, { weight: 50 }] }],
   },
   {
     id: '2-33-67',
     label: '2 colonne (33/67)',
-    columns: { default: '2' },
-    columnRatio: '33-66',
     rows: [{ weight: 1, direction: 'row', children: [{ weight: 33 }, { weight: 67 }] }],
   },
   {
     id: '2-67-33',
     label: '2 colonne (67/33)',
-    columns: { default: '2' },
-    columnRatio: '66-33',
     rows: [{ weight: 1, direction: 'row', children: [{ weight: 67 }, { weight: 33 }] }],
   },
   {
     id: '2-30-70',
     label: '2 colonne (30/70)',
-    columns: { default: '2' },
-    columnRatio: '30-70',
     rows: [{ weight: 1, direction: 'row', children: [{ weight: 30 }, { weight: 70 }] }],
   },
   {
     id: '2-70-30',
     label: '2 colonne (70/30)',
-    columns: { default: '2' },
-    columnRatio: '70-30',
     rows: [{ weight: 1, direction: 'row', children: [{ weight: 70 }, { weight: 30 }] }],
   },
   {
     id: '4-equal',
     label: '4 colonne',
-    columns: { default: '4' },
-    columnRatio: 'equal',
     rows: [
       {
         weight: 1,
@@ -192,91 +116,51 @@ const FLEXBOX_PRESETS: readonly FlexboxPreset[] = [
   {
     id: '3-equal',
     label: '3 colonne',
-    columns: { default: '3' },
-    columnRatio: 'equal',
     rows: [
       { weight: 1, direction: 'row', children: [{ weight: 33 }, { weight: 34 }, { weight: 33 }] },
     ],
   },
 ];
 
-/**
- * Preset del layout "Riga / Sezione Classica": stessa forma `FlexboxPreset` di
- * {@link FLEXBOX_PRESETS} (stesso inserimento piatto `columns`/`columnRatio` via
- * `handleSelectFlexbox`, stesso motore Grid reale — ADR-31), sei suddivisioni fisse
- * (1/2/3/4 colonne uguali + 33/67 + 67/33) rese come tessere a bordo tratteggiato
- * (`variant: 'dashed'` in {@link renderStructureNode}), mai a riempimento grigio: fedeli
- * allo "Select Your Structure" di una Sezione classica di Elementor, distinto per
- * costruzione dal preset proporzionale della Sezione/Container Flexbox sopra — stessi
- * valori `columns`/`columnRatio` già approvati (ADR-31/ADR-33/RFC-58), nessun token nuovo.
- */
-const CLASSIC_PRESETS: readonly FlexboxPreset[] = [
-  {
-    id: 'classic-1',
-    label: '1 colonna',
-    columns: { default: '1' },
-    columnRatio: 'equal',
-    rows: [{ weight: 1 }],
-  },
-  {
-    id: 'classic-2-equal',
-    label: '2 colonne (50/50)',
-    columns: { default: '2' },
-    columnRatio: 'equal',
-    rows: [{ weight: 1, direction: 'row', children: [{ weight: 50 }, { weight: 50 }] }],
-  },
-  {
-    id: 'classic-3-equal',
-    label: '3 colonne (33/33/33)',
-    columns: { default: '3' },
-    columnRatio: 'equal',
-    rows: [
-      { weight: 1, direction: 'row', children: [{ weight: 33 }, { weight: 34 }, { weight: 33 }] },
-    ],
-  },
-  {
-    id: 'classic-4-equal',
-    label: '4 colonne (25/25/25/25)',
-    columns: { default: '4' },
-    columnRatio: 'equal',
-    rows: [
-      {
-        weight: 1,
-        direction: 'row',
-        children: [{ weight: 25 }, { weight: 25 }, { weight: 25 }, { weight: 25 }],
-      },
-    ],
-  },
-  {
-    id: 'classic-33-67',
-    label: 'Sezione 33/67',
-    columns: { default: '2' },
-    columnRatio: '33-66',
-    rows: [{ weight: 1, direction: 'row', children: [{ weight: 33 }, { weight: 67 }] }],
-  },
-  {
-    id: 'classic-67-33',
-    label: 'Sezione 67/33',
-    columns: { default: '2' },
-    columnRatio: '66-33',
-    rows: [{ weight: 1, direction: 'row', children: [{ weight: 67 }, { weight: 33 }] }],
-  },
-];
-
-/**
- * Preset del layout "Griglia": ognuno è una lista di righe (`StructureNode`), risolta sia
- * nell'anteprima della tessera sia nel sottoalbero `section` → `container`* davvero
- * inserito da `buildGridSectionSubtree` — mai una prop piatta come i preset Flexbox, le
- * celle annidate/asimmetriche di queste sei tessere non hanno un equivalente in
- * `columns`/`columnRatio` (vedi commento di testa del file).
- */
+/** Preset Griglia (Elementor Grid Container): un solo container `display: grid`, una cella per traccia. */
 interface GridPreset {
+  id: string;
+  label: string;
+  columns: number;
+  rows: number;
+}
+
+const GRID_PRESETS: readonly GridPreset[] = [
+  { id: 'grid-2x1', label: 'Griglia 2×1', columns: 2, rows: 1 },
+  { id: 'grid-3x1', label: 'Griglia 3×1', columns: 3, rows: 1 },
+  { id: 'grid-4x1', label: 'Griglia 4×1', columns: 4, rows: 1 },
+  { id: 'grid-2x2', label: 'Griglia 2×2', columns: 2, rows: 2 },
+  { id: 'grid-3x2', label: 'Griglia 3×2', columns: 3, rows: 2 },
+  { id: 'grid-4x2', label: 'Griglia 4×2', columns: 4, rows: 2 },
+];
+
+/** Pesi uguali per l'anteprima di `count` colonne, dentro le classi `.w25`/`.w33`/`.w34`/`.w50`. */
+function equalWeights(count: number): StructureNode[] {
+  if (count === 3) return [{ weight: 33 }, { weight: 34 }, { weight: 33 }];
+  return Array.from({ length: count }, () => ({ weight: Math.floor(100 / count) }));
+}
+
+function gridPreviewRows(preset: GridPreset): StructureNode[] {
+  return Array.from({ length: preset.rows }, () => ({
+    weight: 1,
+    direction: 'row' as const,
+    children: equalWeights(preset.columns),
+  }));
+}
+
+/** Strutture annidate avanzate: righe impilate, celle annidate/asimmetriche. */
+interface NestedPreset {
   id: string;
   label: string;
   rows: readonly StructureNode[];
 }
 
-const GRID_PRESETS: readonly GridPreset[] = [
+const NESTED_PRESETS: readonly NestedPreset[] = [
   {
     id: '2x2',
     label: '2×2',
@@ -332,12 +216,11 @@ const GRID_PRESETS: readonly GridPreset[] = [
     ],
   },
 ];
-
 interface SectionStructureModalProps {
   /** Stato di apertura, controllato dal chiamante. */
   opened: boolean;
   onClose: () => void;
-  /** Contenitore di destinazione della nuova Section: `null` = radice dell'albero. */
+  /** Contenitore di destinazione della nuova riga: `null` = radice dell'albero. */
   parentId: string | null;
   /** Posizione di inserimento fra i figli del contenitore di destinazione. */
   index: number;
@@ -350,7 +233,7 @@ interface SectionStructureModalProps {
  * un errore da segnalare, semplicemente non c'è nulla da far scorrere. Duplicato (non
  * importato) da `EditorStructureNavigator.tsx`: questo codebase duplica deliberatamente
  * piccoli helper cross-modulo per non accoppiare i componenti dell'editor fra loro — stesso
- * principio già in uso per `SECTION_DESCRIPTOR`/`defaultPropsFor` sopra.
+ * principio già in uso per `CONTAINER_DESCRIPTOR`/`defaultPropsFor` sopra.
  */
 function scrollBlockIntoView(id: string): void {
   const selector =
@@ -415,150 +298,117 @@ function nextPlaceholderId(): string {
   return `structure-preset-${nodeIdSeed}`;
 }
 
-/**
- * Costruisce ricorsivamente il sottoalbero `container` di una riga/cella della Griglia
- * (ADR-39): foglia → `container` vuoto (segnaposto interattivo esistente,
- * `EditorBlockWrapper.module.css` `.emptyContainer`, l'utente vi trascina widget dopo);
- * ramo → `container` con `flexDirection` sull'asse dichiarato, contenente i figli.
- * `applyFlexBasis`/`node.weight` non producono più alcuna prop scritta sul nodo: `container`
- * v2 (ADR-82) non dichiara `styleFlexBasis`, e `boxedWidth` (unica prop di larghezza rimasta
- * sul registro) è un `max-width` centrato attivo solo quando `contentWidth === 'boxed'`
- * (`Container.tsx`) — scriverci un peso percentuale non produceva alcuna larghezza reale in
- * riga flex, il bug corretto qui (colonne collassate al proprio contenuto minimo invece di
- * dividersi la riga). Il registro non espone oggi alcuna prop di peso per-colonna (ADR-82 §
- * "Conseguenze": l'estensione dell'handle di resize a un peso dedicato è task R2 T4/T5, non
- * ancora fatto) — le colonne di una riga si dividono quindi lo spazio in parti uguali per
- * default CSS (`Container.module.css`/`EditorBlockWrapper.module.css`,
- * `[data-default-direction='row'] > …`), non più per un peso autorevole scritto qui. I preset
- * asimmetrici (33/67 ecc.) restano nell'anteprima della tessera (`renderStructureNode`, sempre
- * proporzionale) ma producono oggi lo stesso 50/50 di un preset "equal" una volta inseriti —
- * limite noto, non introdotto da questa funzione.
- */
-function buildCellNode(node: StructureNode): BlockNode {
+/** Gap di default fra colonne/celle, come il default di Elementor (20px). */
+const GAP = { value: 20, unit: 'px' };
+const FULL_WIDTH = { value: 100, unit: '%' };
+
+function containerNode(props: Record<string, unknown>, children: BlockNode[] = []): BlockNode {
   if (!CONTAINER_DESCRIPTOR)
     throw new Error('Descrittore "container" assente dal registro blocchi.');
-  const props: Record<string, unknown> = { ...defaultPropsFor(CONTAINER_DESCRIPTOR) };
-
-  if (!node.children) {
-    return { id: nextPlaceholderId(), type: 'container', props, children: [] };
-  }
-
-  // `container` v2 (ADR-82): flexDirection/gap sono consolidati in `layout` (gap `sm` = 8px).
-  const gap = { value: 8, unit: 'px' };
-  props.layout = {
-    default: { display: 'flex', direction: node.direction ?? 'row', gap: { x: gap, y: gap } },
-  };
   return {
     id: nextPlaceholderId(),
     type: 'container',
-    props,
-    children: node.children.map((child) => buildCellNode(child)),
+    props: { ...defaultPropsFor(CONTAINER_DESCRIPTOR), ...props },
+    children,
   };
 }
 
-/** Sottoalbero `section` (colonna singola, righe impilate) da inserire per un preset Griglia — vedi {@link buildCellNode}. */
-function buildGridSectionSubtree(preset: GridPreset): BlockNode {
-  if (!SECTION_DESCRIPTOR) throw new Error('Descrittore "section" assente dal registro blocchi.');
-  return {
-    id: nextPlaceholderId(),
-    type: 'section',
-    props: {
-      ...defaultPropsFor(SECTION_DESCRIPTOR),
-      columns: { default: '1' },
-      columnRatio: 'equal',
-      gap: { default: 'sm' },
-    },
-    children: preset.rows.map((row) => buildCellNode(row)),
-  };
+/** `layout` flex responsive: una riga su desktop torna una colonna su mobile. */
+function flexLayout(direction: 'row' | 'column'): Record<string, unknown> {
+  const base = { display: 'flex', direction, gap: { x: GAP, y: GAP } };
+  return direction === 'row'
+    ? { default: base, mobile: { ...base, direction: 'column' } }
+    : { default: base };
 }
 
 /**
- * Righe-colonna reali di un preset piatto con più colonne: la riga `direction: 'row'` di
- * `preset.rows`, oppure (tessera "Riga", senza anteprima a celle) N colonne uguali.
- * `undefined` per una colonna singola, che resta la `section` piatta.
+ * Container figlio (colonna o riga annidata), sempre `contentWidth: 'full'` come i container
+ * annidati di Elementor (ADR-100 punto 5). Dentro un genitore in riga riceve la `width` del
+ * proprio peso, 100% su mobile.
  */
-function resolveColumnRows(preset: FlexboxPreset): readonly StructureNode[] | undefined {
-  const count = Number(preset.columns.default);
-  if (count < 2) return undefined;
-  const authored = preset.rows?.filter((row) => row.direction === 'row' && row.children);
-  if (authored?.length) return authored;
-  const weight = Math.floor(100 / count);
-  return [
-    { weight: 1, direction: 'row', children: Array.from({ length: count }, () => ({ weight })) },
-  ];
+function buildChild(node: StructureNode, parentDirection: 'row' | 'column'): BlockNode {
+  const props: Record<string, unknown> = { contentWidth: 'full' };
+  if (parentDirection === 'row') {
+    props.width = { default: { value: node.weight, unit: '%' }, mobile: FULL_WIDTH };
+  }
+  if (!node.children) return containerNode(props);
+  const direction = node.direction ?? 'row';
+  props.layout = flexLayout(direction);
+  return containerNode(
+    props,
+    node.children.map((child) => buildChild(child, direction)),
+  );
 }
 
-/** Modal di selezione del preset di struttura per una nuova `section` (ADR-33 § 7). */
+/** Radice di un preset Flexbox: container boxed, con le colonne come figli diretti. */
+function buildFlexboxSubtree(preset: FlexboxPreset): BlockNode {
+  const columns = preset.rows?.find((row) => row.direction === 'row' && row.children)?.children;
+  if (!columns) {
+    return containerNode({
+      contentWidth: 'boxed',
+      layout: flexLayout(preset.direction ?? 'column'),
+    });
+  }
+  return containerNode(
+    { contentWidth: 'boxed', layout: flexLayout('row') },
+    columns.map((column) => buildChild(column, 'row')),
+  );
+}
+
+/** Radice di un preset Griglia: un container `display: grid`, una cella vuota per traccia, 1 colonna su mobile. */
+function buildGridSubtree(preset: GridPreset): BlockNode {
+  const grid = {
+    display: 'grid',
+    gridTemplateColumns: { preset: 'repeat', count: preset.columns },
+    gridTemplateRows: { preset: 'repeat', count: preset.rows },
+    gap: { x: GAP, y: GAP },
+  };
+  const layout = {
+    default: grid,
+    mobile: { ...grid, gridTemplateColumns: { preset: 'repeat', count: 1 } },
+  };
+  const cells = Array.from({ length: preset.columns * preset.rows }, () =>
+    containerNode({ contentWidth: 'full' }),
+  );
+  return containerNode({ contentWidth: 'boxed', layout }, cells);
+}
+
+/** Radice di una struttura annidata: container boxed in colonna, una riga per voce di `rows`. */
+function buildNestedSubtree(preset: NestedPreset): BlockNode {
+  return containerNode(
+    { contentWidth: 'boxed', layout: flexLayout('column') },
+    preset.rows.map((row) => buildChild(row, 'column')),
+  );
+}
+
+/** Modal di selezione della struttura di una nuova riga (ADR-100 punto 1). */
 export default function SectionStructureModal({
   opened,
   onClose,
   parentId,
   index,
 }: SectionStructureModalProps): JSX.Element {
-  const addBlockAction = useBlockEditorStore((state) => state.addBlockAction);
   const insertSubtreeAction = useBlockEditorStore((state) => state.insertSubtreeAction);
   const [step, setStep] = useState<Step>('chooseType');
 
-  // Le tre chiamate di questo modal (`BlockPalette`, `CanvasAddSectionZone`,
-  // `EditorBlockWrapper`) riusano tutte la stessa istanza di stato locale fra un'apertura e
-  // l'altra: senza questo reset, una sessione lasciata al passo "flexbox"/"grid" riaprirebbe
-  // lì invece che dalla scelta del tipo.
+  // I punti di montaggio riusano la stessa istanza di stato locale fra un'apertura e l'altra:
+  // senza questo reset, una sessione lasciata a metà riaprirebbe lì invece che dal primo passo.
   useEffect(() => {
     if (opened) setStep('chooseType');
   }, [opened]);
 
-  /** Scrolla e chiude dopo un inserimento — comune alle due vie di selezione sotto. */
-  function afterInsert(insertedId: string | undefined): void {
+  /**
+   * Inserisce il sottoalbero e chiude. `insertSubtreeAction` seleziona già la radice
+   * inserita; lo scroll aspetta un frame perché il wrapper del nuovo nodo sia nel DOM.
+   */
+  function insert(subtree: BlockNode): void {
+    insertSubtreeAction(parentId, index, subtree);
+    const insertedId = useBlockEditorStore.getState().selectedId ?? undefined;
     setStep('chooseType');
     onClose();
-    // Il modal si chiude e il wrapper del nuovo blocco ha bisogno di un giro di render per
-    // montarsi/aggiornarsi: senza rimandare lo scroll al frame successivo, il `querySelector`
-    // di `scrollBlockIntoView` cercherebbe un nodo non ancora nel DOM.
     if (insertedId) {
       requestAnimationFrame(() => scrollBlockIntoView(insertedId));
     }
-  }
-
-  /**
-   * Crea la Section col preset scelto (condiviso da `FLEXBOX_PRESETS` e `CLASSIC_PRESETS`,
-   * stessa forma `FlexboxPreset`, stesso inserimento piatto): default del registro,
-   * `columns`/`columnRatio` sovrascritti. `addBlockAction` non ritorna l'id del nodo
-   * inserito (`void`): si replica qui il clamping dell'indice che lo store applica
-   * internamente (`useBlockEditorStore.ts`, `addBlockAction`) per ritrovare il nodo appena
-   * creato e scrollarlo in vista.
-   */
-  function handleSelectFlexbox(preset: FlexboxPreset): void {
-    // Più colonne = gerarchia reale Section → Row(container flex) → Column(container): ogni
-    // colonna è un nodo selezionabile e una dropzone a sé, i widget ne diventano figli
-    // (RFC-F04e Decisione 3(a): nessun tipo nuovo, si compone `container` già approvato).
-    const rows = resolveColumnRows(preset);
-    if (rows) {
-      handleSelectGrid({ id: preset.id, label: preset.label, rows });
-      return;
-    }
-
-    const baseProps = SECTION_DESCRIPTOR ? defaultPropsFor(SECTION_DESCRIPTOR) : {};
-    addBlockAction(parentId, 'section', index, {
-      ...baseProps,
-      columns: preset.columns,
-      columnRatio: preset.columnRatio,
-    });
-
-    const tree = useBlockEditorStore.getState().tree;
-    const siblings = parentId === null ? tree : (findNode(tree, parentId)?.children ?? []);
-    const clampedIndex = Math.max(0, Math.min(index, siblings.length - 1));
-    afterInsert(siblings[clampedIndex]?.id);
-  }
-
-  /**
-   * Inserisce il sottoalbero `section` → `container`* del preset Griglia scelto
-   * ({@link buildGridSectionSubtree}) — `insertSubtreeAction` seleziona già il nodo di
-   * radice inserito (`useBlockEditorStore.ts`), niente clamping manuale come in
-   * `handleSelectFlexbox`.
-   */
-  function handleSelectGrid(preset: GridPreset): void {
-    insertSubtreeAction(parentId, index, buildGridSectionSubtree(preset));
-    afterInsert(useBlockEditorStore.getState().selectedId ?? undefined);
   }
 
   return (
@@ -595,11 +445,6 @@ export default function SectionStructureModal({
       overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}
     >
       {step === 'chooseType' && (
-        // "Flexbox" a sinistra, "Riga / Sezione Classica" a destra (T-editor-refinement,
-        // commento di testa del file, paragrafo "Tre categorie del primo passo"): il testo
-        // del pulsante corrisponde ora letteralmente al tab che apre, nessuna inversione —
-        // `aria-label`/testo "Flexbox" invariati (contratto E2E pre-esistente, vedi commento
-        // di testa).
         <SimpleGrid cols={2} spacing="md">
           <button
             type="button"
@@ -613,11 +458,11 @@ export default function SectionStructureModal({
           <button
             type="button"
             className={styles.typeCard}
-            aria-label="Riga / Sezione Classica"
-            onClick={() => setStep('classic')}
+            aria-label="Griglia"
+            onClick={() => setStep('grid')}
           >
-            <IconGridDots size={28} />
-            <Text size="sm">Riga / Sezione Classica</Text>
+            <IconLayoutGrid size={28} />
+            <Text size="sm">Griglia</Text>
           </button>
         </SimpleGrid>
       )}
@@ -632,7 +477,7 @@ export default function SectionStructureModal({
                 className={styles.presetButton}
                 aria-label={preset.label}
                 title={preset.label}
-                onClick={() => handleSelectFlexbox(preset)}
+                onClick={() => insert(buildFlexboxSubtree(preset))}
               >
                 {preset.directionIcon ? (
                   <div className={styles.directionIconBox}>
@@ -644,35 +489,12 @@ export default function SectionStructureModal({
               </button>
             ))}
           </SimpleGrid>
-          {/*
-            Le sei tessere annidate/asimmetriche (`GRID_PRESETS`) restano raggiungibili da
-            qui invece che come terza scelta primaria (T-editor-refinement): nessuna
-            funzionalità approvata (RFC-58) rimossa, solo spostata dietro un link secondario
-            per rispettare l'"esclusivamente" richiesto sul tab Riga/Sezione Classica sotto.
-          */}
           <Group justify="center" mt="sm">
-            <Anchor component="button" type="button" size="sm" onClick={() => setStep('grid')}>
+            <Anchor component="button" type="button" size="sm" onClick={() => setStep('nested')}>
               Strutture annidate avanzate
             </Anchor>
           </Group>
         </>
-      )}
-
-      {step === 'classic' && (
-        <SimpleGrid cols={{ base: 2, xs: 3, sm: 6 }} spacing="xs">
-          {CLASSIC_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              className={styles.presetButton}
-              aria-label={preset.label}
-              title={preset.label}
-              onClick={() => handleSelectFlexbox(preset)}
-            >
-              <StructurePreview rows={preset.rows ?? []} variant="dashed" />
-            </button>
-          ))}
-        </SimpleGrid>
       )}
 
       {step === 'grid' && (
@@ -684,7 +506,24 @@ export default function SectionStructureModal({
               className={styles.presetButton}
               aria-label={preset.label}
               title={preset.label}
-              onClick={() => handleSelectGrid(preset)}
+              onClick={() => insert(buildGridSubtree(preset))}
+            >
+              <StructurePreview rows={gridPreviewRows(preset)} variant="dashed" />
+            </button>
+          ))}
+        </SimpleGrid>
+      )}
+
+      {step === 'nested' && (
+        <SimpleGrid cols={{ base: 2, xs: 3, sm: 6 }} spacing="xs">
+          {NESTED_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              className={styles.presetButton}
+              aria-label={preset.label}
+              title={preset.label}
+              onClick={() => insert(buildNestedSubtree(preset))}
             >
               <StructurePreview rows={preset.rows} />
             </button>

@@ -49,6 +49,11 @@ export interface ToCssContext {
   blockId: string;
   /** Breakpoint attivi per il sito, già risolti (vedi nota di modulo sopra). */
   activeBreakpoints: ResolvedBreakpoint[];
+  /**
+   * Suffisso del selettore, es. ` > [data-container-inner]` per il `layout` di un `container`
+   * boxed (ADR-100 punto 3): il layout va sul wrapper interno, non sull'elemento esterno.
+   */
+  selectorSuffix?: string;
 }
 
 /** Una singola dichiarazione CSS `property: value`. */

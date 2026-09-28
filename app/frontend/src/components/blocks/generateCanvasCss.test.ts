@@ -388,4 +388,40 @@ describe('generateCanvasCss', () => {
   it('albero vuoto → stringa vuota', () => {
     expect(generateCanvasCss([], DEFAULT_ACTIVE)).toBe('');
   });
+
+  describe('container boxed e width (ADR-100)', () => {
+    it("layout di un boxed va sul wrapper interno, di un full sull'elemento stesso", () => {
+      const layout = { default: { display: 'flex', direction: 'row' } };
+      const css = generateCanvasCss(
+        [
+          leaf('boxed1', 'container', { contentWidth: 'boxed', layout }),
+          leaf('full1', 'container', { contentWidth: 'full', layout }),
+        ],
+        DEFAULT_ACTIVE,
+      );
+      expect(css).toContain(
+        '[data-canvas-style-id="boxed1"] > [data-container-inner] { display: flex;',
+      );
+      expect(css).toContain('[data-canvas-style-id="full1"] { display: flex;');
+    });
+
+    it('width responsive: width/flex/max-width per breakpoint, selettore sovrascrivibile', () => {
+      const node = leaf('col1', 'container', {
+        width: { default: { value: 33, unit: '%' }, mobile: { value: 100, unit: '%' } },
+      });
+      const publicCss = generateCanvasCss([node], DEFAULT_ACTIVE);
+      expect(publicCss).toContain(
+        '[data-canvas-style-id="col1"] { width: 33%; flex: 0 1 auto; max-width: 100%; }',
+      );
+      expect(publicCss).toContain(
+        '@media (max-width: 767px) { [data-canvas-style-id="col1"] { width: 100%; flex: 0 1 auto; max-width: 100%; } }',
+      );
+
+      const canvasCss = generateCanvasCss([node], DEFAULT_ACTIVE, {
+        widthSelector: (id) => `[data-block-id="${id}"]`,
+      });
+      expect(canvasCss).toContain('[data-block-id="col1"] { width: 33%;');
+      expect(canvasCss).not.toContain('[data-canvas-style-id="col1"]');
+    });
+  });
 });

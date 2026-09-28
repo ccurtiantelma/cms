@@ -4,6 +4,7 @@
  */
 import { useRef, useState, type CSSProperties, type RefObject } from 'react';
 import {
+  useActiveBreakpoint,
   useBlockEditorStore,
   useContainerResizePercent,
 } from '../../../../hooks/useBlockEditorStore';
@@ -11,7 +12,7 @@ import type { BlockNode } from '../block-tree.utils';
 import {
   CONTAINER_WIDTH_PROP,
   containerWidthPercentFromPointer,
-  readContainerWidthPercent,
+  readContainerWidthPercentAt,
   resolveContainerWidthSpec,
   resolveLayoutParentWidth,
 } from '../container-resize.utils';
@@ -49,13 +50,20 @@ export function useContainerWidthResize({
   /** Solo un `container` **selezionato** (mai su hover) e solo se il registro dichiara la prop. */
   const showContainerResizeHandle =
     node?.type === 'container' && isSelected && CONTAINER_WIDTH_SPEC !== null;
-  const persistedPercent = readContainerWidthPercent(node?.props[CONTAINER_WIDTH_PROP]);
+  const activeBreakpoint = useActiveBreakpoint();
+  const persistedPercent = readContainerWidthPercentAt(
+    node?.props[CONTAINER_WIDTH_PROP],
+    activeBreakpoint,
+  );
   const effectiveWidthPercent = previewPercent ?? persistedPercent;
-  /** Inline: percentuale continua. `flexGrow/flexShrink: 0` servono quanto la larghezza. */
+  /**
+   * Inline solo durante il trascinamento: il valore salvato arriva dal CSS generato
+   * (`generateCanvasCss`, selettore `[data-block-id]`), che conosce ogni breakpoint.
+   */
   const widthStyle: CSSProperties | undefined =
-    effectiveWidthPercent === null
+    previewPercent === null
       ? undefined
-      : { width: `${effectiveWidthPercent}%`, flexGrow: 0, flexShrink: 0 };
+      : { width: `${previewPercent}%`, flexGrow: 0, flexShrink: 0 };
 
   const widthHandlers: ResizePointerHandlers = {
     onPointerDown(event) {

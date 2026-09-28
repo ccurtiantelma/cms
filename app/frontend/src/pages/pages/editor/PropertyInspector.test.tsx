@@ -881,7 +881,7 @@ describe('PropertyInspector — obbligatorietà e cambio di selezione', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('nonEmpty è trattato come obbligatorio quanto required (alt di image)', async () => {
+  it('alt di image è facoltativo: vuoto non segnala obbligatorietà', async () => {
     const user = userEvent.setup();
     // `mediaRef` valorizzato di proposito: da quando la Media Library esiste anche quel
     // campo segnala l'obbligatorietà, e qui l'unica prop sotto esame deve restare `alt`.
@@ -891,7 +891,7 @@ describe('PropertyInspector — obbligatorietà e cambio di selezione', () => {
     await user.type(alt, '   ');
     await user.tab();
 
-    expect(screen.getByText(/Obbligatoria: il salvataggio verrà rifiutato/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Obbligatoria: il salvataggio verrà rifiutato/i)).toBeNull();
   });
 
   it('cambiando selezione il form mostra i valori del nuovo nodo, non quelli del precedente', () => {

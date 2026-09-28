@@ -6,20 +6,11 @@
  * punto in cui il nome e la forma della prop sono scritti (`EditorBlockWrapper.tsx` per il
  * gesto, `useBlockEditorStore.ts` per il commit).
  *
- * La prop di larghezza era dichiarata dal registro (`container.block.ts` `v: 1`):
- * `styleFlexBasis`, `kind: 'unitValue'`, unità `%` — l'unica eccezione a "container è
- * layout puro" di ADR-39 § 2 ("Alternative scartate"). `container` `v: 2`
- * (`ADR-82-container-unificato-grid-flex.md` § "Decisione" punto 1) non la dichiara più: il
- * registro non elenca `styleFlexBasis` fra le prop del `container` corrente, quindi
- * {@link resolveContainerWidthSpec} risolve sempre a `null` sul registro reale oggi — la
- * maniglia resta montata nel codice ma non compare mai, finché un round successivo (ADR-82
- * § "Conseguenze": "estensione dell'handle di resize esistente a minHeight/gap", task R2
- * T4/T5, non vincolato da questa ADR) non ripristina un equivalente. {@link
- * resolveContainerWidthSpec} continua a interrogare il registro generato invece di dare
- * `min`/`max` per scontati: il validatore server-side respinge ogni prop non dichiarata con
- * `BLOCK_PROP_NOT_DECLARED` (`block-tree-validator.service.ts` § `validateProps`), quindi un
- * intervallo scritto qui a mano potrebbe divergere da quello che il backend applica davvero e
- * produrre un `400` al salvataggio pur avendo una maniglia visivamente funzionante.
+ * La prop di larghezza è `width` di `container` v2 (ADR-100 punto 2): `kind: 'unitValue'`,
+ * `responsive`, unità `px|%|vw`. Il gesto scrive una percentuale sul breakpoint attivo
+ * dell'editor. {@link resolveContainerWidthSpec} interroga il registro generato invece di
+ * dare `min`/`max` per scontati: un intervallo scritto qui a mano potrebbe divergere da
+ * quello che il backend applica davvero e produrre un `400` al salvataggio.
  */
 import { BLOCK_TYPES } from '../../../types/blocks.types';
 
@@ -30,7 +21,7 @@ import { BLOCK_TYPES } from '../../../types/blocks.types';
  * dichiarato. Una prop con questo nome ma di `kind` diverso non viene usata: sarebbe un
  * omonimo, non questa prop.
  */
-export const CONTAINER_WIDTH_PROP = 'styleFlexBasis';
+export const CONTAINER_WIDTH_PROP = 'width';
 
 /** Valore composto di `kind: 'unitValue'` ristretto alla percentuale — l'unica unità che il gesto sa produrre. */
 export interface ContainerWidthValue {
@@ -55,7 +46,8 @@ export function resolveContainerWidthSpec(): ContainerWidthSpec | null {
   if (!prop || prop.kind !== 'unitValue') return null;
   if (!prop.units?.includes('%')) return null;
   if (typeof prop.min !== 'number' || typeof prop.max !== 'number') return null;
-  return { min: prop.min, max: prop.max };
+  // Il gesto produce solo `%`: oltre il 100% la colonna uscirebbe dal genitore.
+  return { min: prop.min, max: Math.min(prop.max, 100) };
 }
 
 /**
@@ -103,6 +95,40 @@ export function readContainerWidthPercent(value: unknown): number | null {
 /** Valore da persistere sulla prop, nella forma composta di `kind: 'unitValue'`. */
 export function toContainerWidthValue(percent: number): ContainerWidthValue {
   return { value: percent, unit: '%' };
+}
+
+/** `true` se `value` è un envelope breakpoint `{ default, tablet?, ... }`. */
+function isWidthEnvelope(value: unknown): value is Record<string, unknown> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Object.prototype.hasOwnProperty.call(value, 'default')
+  );
+}
+
+/**
+ * Percentuale in vigore su `breakpoint`: il valore del breakpoint se c'è, altrimenti quello
+ * di `default` (lo stesso ripiego che il CSS generato produce senza una regola dedicata).
+ */
+export function readContainerWidthPercentAt(value: unknown, breakpoint: string): number | null {
+  if (!isWidthEnvelope(value)) return null;
+  return readContainerWidthPercent(value[breakpoint]) ?? readContainerWidthPercent(value.default);
+}
+
+/**
+ * Envelope aggiornato con `percent` su `breakpoint`. Un envelope senza `default` non è valido
+ * per il backend: se manca, anche `default` riceve lo stesso valore.
+ */
+export function withContainerWidthAt(
+  previous: unknown,
+  breakpoint: string,
+  percent: number,
+): Record<string, unknown> {
+  const envelope = isWidthEnvelope(previous) ? { ...previous } : {};
+  const next = toContainerWidthValue(percent);
+  envelope[breakpoint] = next;
+  if (!Object.prototype.hasOwnProperty.call(envelope, 'default')) envelope.default = next;
+  return envelope;
 }
 
 /** Etichetta del badge di trascinamento: un decimale, mai `50.0%` dove basta `50%`. */

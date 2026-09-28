@@ -217,7 +217,7 @@ export function toCss(
   for (const state of STATE_ORDER) {
     if (!Object.prototype.hasOwnProperty.call(stateEnvelope, state)) continue;
     const stateValue = stateEnvelope[state];
-    const selector = `[data-block="${ctx.blockId}"]${state === 'normal' ? '' : `:${state}`}`;
+    const selector = `[data-block="${ctx.blockId}"]${state === 'normal' ? '' : `:${state}`}${ctx.selectorSuffix ?? ''}`;
 
     const perBreakpoint = resolveBreakpointDeclarations(spec, stateValue, ctx.activeBreakpoints);
     for (const { breakpoint, declarations } of perBreakpoint) {

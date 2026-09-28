@@ -329,6 +329,8 @@ export interface UnitValuePropSpec extends BasePropSpec {
   min: number;
   max: number;
   default?: { value: number; unit: LengthUnit };
+  /** Envelope per breakpoint `{ default, tablet?, mobile?, ... }` (ADR-29 § 2), usato da `container.width` (ADR-100). */
+  responsive?: boolean;
 }
 
 /** Stile del tratto per `kind: 'border'` — elenco chiuso, come ogni altro enum del registro. */

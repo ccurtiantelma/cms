@@ -2279,6 +2279,66 @@ describe('BlockTreeValidatorService — PropKind v2 (SPEC-PROPKIND-V2-DETAILS.md
       });
     });
 
+    it('container.width (ADR-100) è un unitValue responsive: envelope per breakpoint valido', () => {
+      const result = validator.validateTree([
+        node({
+          type: 'container',
+          props: {
+            width: { default: { value: 33, unit: '%' }, mobile: { value: 100, unit: '%' } },
+          },
+        }),
+      ]);
+      expect(result).toEqual({ valid: true, errors: [] });
+    });
+
+    it('container.width (ADR-100) rifiuta valore nudo, unità fuori elenco e valore oltre 4000', () => {
+      const naked = validator.validateTree([
+        node({ type: 'container', props: { width: { value: 50, unit: '%' } } }),
+      ]);
+      expect(naked.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.width',
+          type: 'container',
+          prop: 'width',
+          kind: 'unitValue',
+          reason: 'type',
+        },
+      });
+
+      const invalid = validator.validateTree([
+        node({
+          type: 'container',
+          props: {
+            width: { default: { value: 5000, unit: 'px' }, tablet: { value: 10, unit: 'em' } },
+          },
+        }),
+      ]);
+      expect(invalid.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.width.default.value',
+          type: 'container',
+          prop: 'width',
+          kind: 'unitValue',
+          reason: 'range',
+          constraint: [0, 4000],
+          actual: 5000,
+        },
+      });
+      expect(invalid.errors).toContainEqual({
+        code: 'BLOCK_PROP_INVALID',
+        details: {
+          path: 'blocks[0].props.width.tablet.unit',
+          type: 'container',
+          prop: 'width',
+          kind: 'unitValue',
+          reason: 'enum',
+          constraint: ['px', '%', 'vw'],
+        },
+      });
+    });
+
     it('kind "unitValue"/"border" (ADR-38) continuano a validare identico (verificato su container.boxedWidth e heading.styleBorder, entrambe non stateful)', () => {
       const unitValueResult = validator.validateTree([
         node({

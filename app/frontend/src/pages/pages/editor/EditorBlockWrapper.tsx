@@ -155,6 +155,11 @@ const EditorBlockWrapper = memo(function EditorBlockWrapper({
           ? 'full'
           : undefined
       }
+      // Root `container` boxed: anche lui su tutte le tracce, il wrapper interno limita il
+      // contenuto (ADR-100 punto 4, `.blockStack` in `EditorCanvas.module.css`).
+      data-container-boxed={
+        node.type === 'container' && node.props.contentWidth === 'boxed' ? '' : undefined
+      }
       // Bersaglio dello scroll-sync del Navigator (`querySelector('[data-block-id="…"]')`).
       data-block-id={node.id}
       data-modal-open={modalTrigger.isOpen ? 'true' : undefined}

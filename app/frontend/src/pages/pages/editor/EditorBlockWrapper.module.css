@@ -300,7 +300,9 @@
  * inline di `resize.widthStyle` (`useContainerWidthResize.ts`) vince comunque su questa
  * classe quando presente, stessa garanzia della regola gemella pubblica.
  */
-[data-default-direction='row'] > .childrenArea > .wrapper[data-block-type='container'] {
+/* `:where` (ADR-100 punto 2): specificità 0, la `width` per nodo (`generateCanvasCss`, selettore
+   `[data-block-id]` del wrapper) vince sempre su questa crescita equa di default. */
+:where([data-default-direction='row'] > .childrenArea > .wrapper[data-block-type='container']) {
   flex: 1 1 0%;
   min-width: 0;
 }

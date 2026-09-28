@@ -154,7 +154,15 @@ function PropertyForm({ node, descriptor }: PropertyFormProps): JSX.Element {
     setMediaPickerProp(null);
   }
 
-  const { content, style, advanced } = groupPropsByTab(descriptor.props, propsMeta);
+  const grouped = groupPropsByTab(descriptor.props, propsMeta);
+  const { content, advanced } = grouped;
+  // `width` di `container` (ADR-100) è responsive e ha il suo campo dedicato nella scheda
+  // "Layout" (`ContainerLayoutTab.tsx`): il `PropField` generico di "Stile" lo scriverebbe
+  // come valore nudo, rifiutato dal backend.
+  const style =
+    node.type === 'container'
+      ? grouped.style.filter((prop) => prop.name !== 'width')
+      : grouped.style;
 
   // `container`/`section` (ADR-82: `container` v2 attivo, `section` v1 deprecato ma ancora
   // leggibile — stessa UI per entrambi, letta da `node.type`): la prima scheda diventa

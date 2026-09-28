@@ -83,3 +83,13 @@ body {
 .pageBoxed > main > [data-content-width="full"] {
   grid-column: 1 / -1;
 }
+
+/* Root `container` boxed (ADR-100 punto 4): sfondo a tutta larghezza, il wrapper interno
+   (`Container.module.css` `.inner`) resta entro la larghezza boxed meno il "Rientro". */
+.pageBoxed > main > [data-container-boxed] {
+  grid-column: 1 / -1;
+  --root-gutter: calc(
+    var(--theme-layout-padding-left, 0px) +
+      var(--theme-layout-padding-right, 0px)
+  );
+}

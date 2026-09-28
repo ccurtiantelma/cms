@@ -165,6 +165,7 @@ export default function ContainerLayoutTab({
   const contentWidthProp = findProp(descriptor, 'contentWidth');
   const boxedWidthProp = findProp(descriptor, 'boxedWidth');
   const minHeightProp = findProp(descriptor, 'minHeight');
+  const widthProp = findProp(descriptor, 'width');
 
   const layoutRaw = draft.layout;
   const layoutCurrent: LayoutValueLike = layoutProp
@@ -244,6 +245,39 @@ export default function ContainerLayoutTab({
 
   const activeBreakpoint3Way = breakpointKey(activeViewport);
 
+  // `width` (ADR-100 punto 2) è responsive: il campo mostra e scrive il valore del breakpoint
+  // attivo. `PropField` riceve la prop come scalare (`responsive: false`), l'envelope lo
+  // gestisce `writeWidth`. Il backend esige sempre `default`: se manca, riceve lo stesso valore.
+  const widthRaw = draft.width;
+  const widthCurrent = widthProp
+    ? readStatefulResponsiveValue(widthProp, widthRaw, 'normal', activeBreakpoint)
+    : undefined;
+  const widthScalarProp = widthProp ? { ...widthProp, responsive: false } : undefined;
+
+  function writeWidth(next: unknown): void {
+    if (!widthProp) return;
+    const envelope = isPlainObject(widthRaw) ? { ...widthRaw } : {};
+    if (next === undefined) {
+      // "Ripristina automatico": sul default toglie l'intera prop, altrove solo l'override.
+      if (activeBreakpoint === 'default') {
+        setAndCommit('width', undefined);
+        return;
+      }
+      delete envelope[activeBreakpoint];
+      setAndCommit('width', Object.keys(envelope).length > 0 ? envelope : undefined);
+      return;
+    }
+    const patched = buildStatefulResponsivePropPatch(
+      widthProp,
+      envelope,
+      'normal',
+      activeBreakpoint,
+      next,
+    ) as Record<string, unknown>;
+    if (!('default' in patched)) patched.default = next;
+    setAndCommit('width', patched);
+  }
+
   return (
     <Accordion multiple defaultValue={['Contenitore', 'Elementi']} variant="separated">
       <Accordion.Item value="Contenitore">
@@ -316,6 +350,26 @@ export default function ContainerLayoutTab({
                 onOpenMediaPicker={() => {}}
                 onOpenCropper={() => {}}
               />
+            )}
+
+            {widthScalarProp && (
+              <div>
+                <PropField
+                  prop={widthScalarProp}
+                  value={isPlainObject(widthCurrent) ? widthCurrent : undefined}
+                  propsMeta={propsMeta}
+                  activeViewport={activeViewport}
+                  activeBreakpoint={activeBreakpoint3Way}
+                  onLocal={writeWidth}
+                  onCommit={writeWidth}
+                  onSetAndCommit={writeWidth}
+                  onOpenMediaPicker={() => {}}
+                  onOpenCropper={() => {}}
+                />
+                <Text size="xs" c="dimmed" fs="italic" mt={4}>
+                  Larghezza del contenitore nel genitore (es. colonna 50%). Vuoto: automatica.
+                </Text>
+              </div>
             )}
 
             {minHeightProp && (

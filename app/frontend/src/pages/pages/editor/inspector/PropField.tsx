@@ -612,7 +612,7 @@ export default function PropField({
       // screenshot Elementor Pro allegato dall'utente (2026-09-23), diverso dal layout a riga
       // unica sotto (Slider/NumberInput/Select) che resta lo stile di ogni altro `unitValue`
       // del registro (padding/margin/font-size...), non toccato da questa richiesta puntuale.
-      if (prop.name === 'boxedWidth' || prop.name === 'minHeight') {
+      if (prop.name === 'boxedWidth' || prop.name === 'minHeight' || prop.name === 'width') {
         // Prop opzionale non impostata ⇒ "Auto": campo vuoto, nessun valore fittizio. Scrivere
         // `undefined` la rimuove dal nodo (JSON.stringify la scarta), tornando al default del tema.
         const clearValue = () => onSetAndCommit(undefined);

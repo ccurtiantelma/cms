@@ -111,15 +111,14 @@ describe('Container (v2)', () => {
       expect(html).toContain('min-height:400px');
     });
 
-    it('contentWidth "boxed" + boxedWidth → max-width inline centrato', () => {
+    it('contentWidth "boxed" + boxedWidth → larghezza sul wrapper interno (ADR-100), via variabile CSS', () => {
       const html = renderToStaticMarkup(
         <Container id="b1" contentWidth="boxed" boxedWidth={{ value: 1200, unit: 'px' }}>
           x
         </Container>,
       );
-      expect(html).toContain('max-width:1200px');
-      expect(html).toContain('margin-left:auto');
-      expect(html).toContain('margin-right:auto');
+      expect(html).toContain('style="--container-boxed-width:1200px"');
+      expect(containerCss).toMatch(/\.inner \{[^}]*margin-inline: auto;/);
     });
 
     it('contentWidth "full" → nessun max-width, anche con boxedWidth presente', () => {
@@ -203,5 +202,27 @@ describe('Container (v2)', () => {
       expect(containerCss).toMatch(/\.container\s*{[^}]*overflow-wrap:\s*anywhere;/s);
       expect(containerCss).toMatch(/\.container\s*{[^}]*word-break:\s*break-word;/s);
     });
+  });
+
+  it("boxed (ADR-100): wrapper interno con la larghezza boxed, nessun max-width sull'esterno", () => {
+    const html = renderToStaticMarkup(
+      <Container id="b1" contentWidth="boxed" boxedWidth={{ value: 1140, unit: 'px' }}>
+        Contenuto
+      </Container>,
+    );
+    expect(html).toContain('data-container-boxed=""');
+    expect(html).toContain('data-container-inner=""');
+    expect(html).toContain('--container-boxed-width:1140px');
+    expect(html).not.toContain('max-width');
+  });
+
+  it('full (ADR-100): nessun wrapper interno', () => {
+    const html = renderToStaticMarkup(
+      <Container id="b1" contentWidth="full">
+        Contenuto
+      </Container>,
+    );
+    expect(html).not.toContain('data-container-inner');
+    expect(html).not.toContain('data-container-boxed');
   });
 });

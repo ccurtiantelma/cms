@@ -747,7 +747,17 @@ export class BlockTreeValidatorService {
         return;
       }
       case 'unitValue': {
-        this.validateUnitValue(value, propName, path, type, spec, errors);
+        this.validateStatefulResponsiveValue(
+          value,
+          propName,
+          path,
+          type,
+          'unitValue',
+          { stateful: false, responsive: spec.responsive === true },
+          errors,
+          (nakedValue, nakedPath) =>
+            this.validateUnitValue(nakedValue, propName, nakedPath, type, spec, errors),
+        );
         return;
       }
       case 'border': {

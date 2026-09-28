@@ -23,8 +23,8 @@ afterEach(() => {
 });
 
 describe('resolveContainerWidthSpec — la prop deve essere dichiarata dal registro', () => {
-  it('registro reale: container v2 (ADR-82-container-unificato-grid-flex.md § "Decisione" punto 1) non dichiara più styleFlexBasis — nessuna maniglia finché un round successivo (§ "Conseguenze", task R2 T4/T5) non la ripristina su una prop diversa', () => {
-    expect(resolveContainerWidthSpec()).toBeNull();
+  it('registro reale: container v2 dichiara `width` in % (ADR-100 punto 2) — maniglia attiva', () => {
+    expect(resolveContainerWidthSpec()).toEqual({ min: 0, max: 100 });
   });
 
   it('restituisce min/max quando il registro dichiara la prop come unitValue in percentuale', async () => {

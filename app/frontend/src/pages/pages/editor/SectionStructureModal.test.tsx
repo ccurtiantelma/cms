@@ -1,52 +1,74 @@
 /**
- * Un preset a più colonne inserisce la gerarchia reale Section → Row → Column: ogni colonna è
- * un `container` (nodo selezionabile e dropzone), non una cella grid virtuale della section.
+ * Una nuova riga è solo `container` (ADR-100 punto 1): genitore boxed con le colonne come
+ * figli diretti, nessuna `section`, nessuna riga intermedia. Le colonne portano la propria
+ * `width` (ADR-100 punto 2), 100% su mobile.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MantineProvider } from '@mantine/core';
 import { useBlockEditorStore } from '../../../hooks/useBlockEditorStore';
+import type { BlockNode } from './block-tree.utils';
 import SectionStructureModal from './SectionStructureModal';
 
-async function pick(step: string, preset: string): Promise<void> {
+async function pick(...buttons: string[]): Promise<void> {
   render(
     <MantineProvider>
       <SectionStructureModal opened onClose={() => {}} parentId={null} index={0} />
     </MantineProvider>,
   );
-  await userEvent.click(screen.getByRole('button', { name: step }));
-  await userEvent.click(screen.getByRole('button', { name: preset }));
+  for (const name of buttons) {
+    await userEvent.click(screen.getByRole('button', { name }));
+  }
 }
 
-describe('SectionStructureModal — colonne come nodi', () => {
+function collectTypes(nodes: readonly BlockNode[]): string[] {
+  return nodes.flatMap((node) => [node.type, ...collectTypes(node.children)]);
+}
+
+describe('SectionStructureModal — struttura Elementor (solo container)', () => {
   beforeEach(() => useBlockEditorStore.getState().initTree([]));
 
-  /*
-   * Nessun peso scritto sui nodi (`buildCellNode`, `SectionStructureModal.tsx`): il registro
-   * `container` v2 (ADR-82) non dichiara più `styleFlexBasis` e non ha oggi alcuna prop di
-   * peso per-colonna (task R2 T4/T5, non ancora fatto) — scrivere il peso su `boxedWidth`
-   * (max-width centrato, attivo solo con `contentWidth: 'boxed'`, `Container.tsx`) non
-   * produceva alcuna larghezza reale in riga flex: bug corretto qui, le colonne 33/67
-   * inseriscono oggi lo stesso 50/50 equo di un preset "equal" (default CSS,
-   * `Container.module.css`/`EditorBlockWrapper.module.css`), non ancora la proporzione
-   * scelta nella tessera.
-   */
-  it('"2 colonne (33/67)" → section > row container > 2 column container, nessun peso persistito', async () => {
+  it('"2 colonne (33/67)" → container boxed > 2 container full con width 33%/67%', async () => {
     await pick('Flexbox', '2 colonne (33/67)');
-    const [section] = useBlockEditorStore.getState().tree;
-    expect(section.type).toBe('section');
-    expect(section.children).toHaveLength(1);
-    const row = section.children[0];
-    expect(row.type).toBe('container');
-    expect(row.children.map((c) => c.type)).toEqual(['container', 'container']);
-    expect(row.children.map((c) => c.props.boxedWidth)).toEqual([undefined, undefined]);
+    const [root] = useBlockEditorStore.getState().tree;
+    expect(root.type).toBe('container');
+    expect(root.props.contentWidth).toBe('boxed');
+    expect(root.props.layout).toMatchObject({
+      default: { display: 'flex', direction: 'row' },
+      mobile: { direction: 'column' },
+    });
+    expect(root.children.map((c) => c.type)).toEqual(['container', 'container']);
+    expect(root.children.map((c) => c.props.contentWidth)).toEqual(['full', 'full']);
+    expect(root.children.map((c) => c.props.width)).toEqual([
+      { default: { value: 33, unit: '%' }, mobile: { value: 100, unit: '%' } },
+      { default: { value: 67, unit: '%' }, mobile: { value: 100, unit: '%' } },
+    ]);
   });
 
-  it('"Colonna" resta una section piatta senza figli', async () => {
+  it('"Colonna" è un solo container boxed senza figli', async () => {
     await pick('Flexbox', 'Colonna');
-    const [section] = useBlockEditorStore.getState().tree;
-    expect(section.type).toBe('section');
-    expect(section.children).toHaveLength(0);
+    const [root] = useBlockEditorStore.getState().tree;
+    expect(root.type).toBe('container');
+    expect(root.children).toHaveLength(0);
+  });
+
+  it('"Griglia 3×2" → un container grid con 6 celle, 1 colonna su mobile', async () => {
+    await pick('Griglia', 'Griglia 3×2');
+    const [root] = useBlockEditorStore.getState().tree;
+    expect(root.props.layout).toMatchObject({
+      default: {
+        display: 'grid',
+        gridTemplateColumns: { preset: 'repeat', count: 3 },
+        gridTemplateRows: { preset: 'repeat', count: 2 },
+      },
+      mobile: { gridTemplateColumns: { preset: 'repeat', count: 1 } },
+    });
+    expect(root.children).toHaveLength(6);
+  });
+
+  it('nessun preset (Flexbox, Griglia, annidati) crea una section', async () => {
+    await pick('Flexbox', 'Strutture annidate avanzate', '1 a sinistra, 2 a destra');
+    expect(collectTypes(useBlockEditorStore.getState().tree)).not.toContain('section');
   });
 });

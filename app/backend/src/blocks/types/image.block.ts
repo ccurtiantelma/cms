@@ -20,8 +20,7 @@ export const imageBlock: BlockDefinition = {
     },
     alt: {
       kind: 'plainText',
-      required: true,
-      nonEmpty: true,
+      required: false,
       maxLength: 300,
     },
     styleSpaceBefore: {

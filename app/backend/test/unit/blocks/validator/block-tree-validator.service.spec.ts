@@ -718,22 +718,13 @@ describe('BlockTreeValidatorService (unit) — interprete di validazione contro 
     );
   });
 
-  describe('BLOCK_PROP_INVALID — reason "empty" (solo image.alt, SPEC-F02 § 3.5)', () => {
-    it.each(['', '   '])('image.alt = %j produce reason empty', (alt) => {
+  describe('BLOCK_PROP_INVALID — reason "empty"', () => {
+    it.each(['', '   '])('image.alt = %j è valido: alt facoltativo', (alt) => {
       const result = validator.validateTree([
         node({ type: 'image', props: { mediaRef: '0123456789abcdef', alt } }),
       ]);
 
-      expect(result.errors).toContainEqual({
-        code: 'BLOCK_PROP_INVALID',
-        details: {
-          path: 'blocks[0].props.alt',
-          type: 'image',
-          prop: 'alt',
-          kind: 'plainText',
-          reason: 'empty',
-        },
-      });
+      expect(result.valid).toBe(true);
     });
 
     it('heading.text vuota NON produce reason empty: nonEmpty non è dichiarato su heading.text', () => {

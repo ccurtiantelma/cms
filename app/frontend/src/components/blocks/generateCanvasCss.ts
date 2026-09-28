@@ -613,6 +613,7 @@ function toCssForProp(
   value: unknown,
   blockId: string,
   activeBreakpoints: ResolvedBreakpoint[],
+  selectorSuffix = '',
 ): CssDeclarationBlock[] {
   if (!SUPPORTED_KINDS.has(spec.kind)) return [];
 
@@ -622,7 +623,7 @@ function toCssForProp(
   for (const state of PROP_STATES) {
     if (!Object.prototype.hasOwnProperty.call(stateEnvelope, state)) continue;
     const stateValue = stateEnvelope[state];
-    const selector = `[data-canvas-style-id="${blockId}"]${state === 'normal' ? '' : `:${state}`}`;
+    const selector = `[data-canvas-style-id="${blockId}"]${state === 'normal' ? '' : `:${state}`}${selectorSuffix}`;
 
     const perBreakpoint = resolveBreakpointDeclarations(spec, stateValue, activeBreakpoints);
     for (const { breakpoint, declarations } of perBreakpoint) {
@@ -640,22 +641,82 @@ function toCssForProp(
 /** Indice `type → descrittore`, stesso principio di `BlockRenderer.tsx` (`KNOWN_TYPES`). */
 const DESCRIPTOR_BY_TYPE = new Map(BLOCK_TYPES.map((descriptor) => [descriptor.type, descriptor]));
 
+/** Wrapper interno di un `container` boxed (ADR-100 punto 3): porta il `layout`, non lo sfondo. */
+export const CONTAINER_INNER_SELECTOR = '[data-container-inner]';
+
+/**
+ * `width` di `container` (ADR-100 punto 2): larghezza del contenitore stesso nel genitore.
+ * `flex: 0 1 auto` la rende autorevole in una riga flex (niente crescita equa di default),
+ * `max-width: 100%` la tiene dentro il genitore su schermi stretti.
+ */
+function containerWidthBlocks(
+  value: unknown,
+  selector: string,
+  activeBreakpoints: ResolvedBreakpoint[],
+): CssDeclarationBlock[] {
+  const envelope = normalizeBreakpointEnvelope(value, true);
+  const activeByName = new Map(
+    activeBreakpoints.map((breakpoint) => [breakpoint.name, breakpoint]),
+  );
+  const blocks: CssDeclarationBlock[] = [];
+  for (const name of RESPONSIVE_BREAKPOINTS) {
+    const breakpoint = activeByName.get(name);
+    if (!breakpoint) continue;
+    const nakedValue = envelope[name];
+    if (!isPlainObject(nakedValue)) continue;
+    const width = nakedValue as unknown as UnitValueShape;
+    if (typeof width.value !== 'number' || typeof width.unit !== 'string') continue;
+    blocks.push({
+      selector,
+      mediaQuery: breakpoint.name === 'default' ? undefined : breakpoint.mediaQuery,
+      declarations: [
+        { property: 'width', value: unitValueToCss(width) },
+        { property: 'flex', value: '0 1 auto' },
+        { property: 'max-width', value: '100%' },
+      ],
+    });
+  }
+  return blocks;
+}
+
+/** Opzioni del chiamante: il canvas dell'editor dimensiona il wrapper della chrome, non il contenitore. */
+export interface GenerateCanvasCssOptions {
+  /**
+   * Selettore dell'elemento che occupa la cella flex/grid del genitore, per la `width` di
+   * `container`. Default: il contenitore stesso (sito pubblico). Nel canvas l'elemento
+   * dimensionato è il wrapper `[data-block-id]` di `EditorBlockWrapper.tsx`.
+   */
+  widthSelector?: (blockId: string) => string;
+}
+
+const defaultWidthSelector = (blockId: string): string => `[data-canvas-style-id="${blockId}"]`;
+
 function collectDeclarationBlocks(
   node: CanvasCssNode,
   activeBreakpoints: ResolvedBreakpoint[],
   out: CssDeclarationBlock[],
+  options: GenerateCanvasCssOptions,
 ): void {
   const descriptor = DESCRIPTOR_BY_TYPE.get(node.type);
   if (descriptor) {
+    const isContainer = node.type === 'container';
+    const isBoxedContainer = isContainer && node.props.contentWidth === 'boxed';
     for (const spec of descriptor.props) {
       const value = node.props[spec.name];
       if (value === undefined) continue;
-      const blocks = toCssForProp(spec, value, node.id, activeBreakpoints);
+      if (isContainer && spec.name === 'width') {
+        const widthSelector = (options.widthSelector ?? defaultWidthSelector)(node.id);
+        out.push(...containerWidthBlocks(value, widthSelector, activeBreakpoints));
+        continue;
+      }
+      const suffix =
+        isBoxedContainer && spec.kind === 'layout' ? ` > ${CONTAINER_INNER_SELECTOR}` : '';
+      const blocks = toCssForProp(spec, value, node.id, activeBreakpoints, suffix);
       out.push(...blocks);
     }
   }
   for (const child of node.children) {
-    collectDeclarationBlocks(child, activeBreakpoints, out);
+    collectDeclarationBlocks(child, activeBreakpoints, out, options);
   }
 }
 
@@ -676,14 +737,16 @@ function serializeDeclarationBlock(block: CssDeclarationBlock): string {
  *
  * @param tree Radice/i dell'albero in editing (`state.tree` di `useBlockEditorStore.ts`).
  * @param activeBreakpoints Breakpoint attivi per il sito, già risolti (ADR-76), `'default'` incluso.
+ * @param options Vedi {@link GenerateCanvasCssOptions}.
  */
 export function generateCanvasCss(
   tree: readonly CanvasCssNode[],
   activeBreakpoints: ResolvedBreakpoint[],
+  options: GenerateCanvasCssOptions = {},
 ): string {
   const blocks: CssDeclarationBlock[] = [];
   for (const node of tree) {
-    collectDeclarationBlocks(node, activeBreakpoints, blocks);
+    collectDeclarationBlocks(node, activeBreakpoints, blocks, options);
   }
   return blocks.map(serializeDeclarationBlock).join('\n');
 }

@@ -146,6 +146,11 @@ export default function Container({
     .filter(Boolean)
     .join(' ');
 
+  // Boxed alla Elementor (ADR-100 punto 3): l'elemento esterno occupa tutta la larghezza del
+  // genitore (sfondo, bordo, padding), il wrapper interno `[data-container-inner]` è limitato a
+  // `boxedWidth` (o alla larghezza boxed del tema) e porta il `layout` (`generateCanvasCss.ts`).
+  const isBoxed = contentWidth === 'boxed';
+
   const style: CSSProperties = {};
   if (typeof opacity === 'number') {
     style.opacity = opacity;
@@ -153,22 +158,13 @@ export default function Container({
   if (isUnitValue(minHeight)) {
     style.minHeight = unitValueToCss(minHeight);
   }
-  if (contentWidth === 'boxed') {
-    // `boxedWidth` è opzionale (nessun default, `container.block.ts`): un container "boxed"
-    // senza un valore esplicito contava finora sull'ancestor `.pageBoxed` (il wrapper di
-    // pagina, `max-width: var(--theme-layout-boxed-width)`) per apparire vincolato — un
-    // no-op mascherato dalla coincidenza che quasi tutto vive dentro `.pageBoxed`. Un
-    // ancestor "full" che ora esce da `.pageBoxed` (sotto) smaschera il caso: qui ricade
-    // sulla stessa variabile tema, mai un valore magico duplicato.
-    style.maxWidth = isUnitValue(boxedWidth)
-      ? unitValueToCss(boxedWidth)
-      : 'var(--theme-layout-boxed-width, none)';
-    style.marginLeft = 'auto';
-    style.marginRight = 'auto';
-  }
   if (overflow === 'visible' || overflow === 'hidden' || overflow === 'auto') {
     style.overflow = overflow;
   }
+
+  const innerStyle = isUnitValue(boxedWidth)
+    ? ({ '--container-boxed-width': unitValueToCss(boxedWidth) } as CSSProperties)
+    : undefined;
 
   // Overlay "Contorno griglia": bande verticali equidistanti (`repeating-linear-gradient`),
   // una ogni `100% / gridOutlineColumnCount` — puramente decorativo, `aria-hidden`, mai nel
@@ -196,7 +192,10 @@ export default function Container({
       className,
       id: typeof htmlId === 'string' && htmlId ? htmlId : undefined,
       'data-canvas-style-id': id,
-      'data-default-direction': defaultDirection,
+      'data-default-direction': isBoxed ? undefined : defaultDirection,
+      // Root boxed: occupa tutta la griglia di pagina come un `full` (ADR-100 punto 4). Attributo
+      // distinto da `data-content-width`, che anche `Section.tsx` emette con valore `boxed`.
+      'data-container-boxed': isBoxed ? '' : undefined,
       // Aggancio per il posizionamento a livello radice (`PageView.css`/`EditorCanvas.module.css`,
       // ADR-98): un root container `full` occupa tutte le tracce della griglia di pagina, senza
       // margini negativi. Nessun effetto su un container annidato (nessuna regola lo consuma).
@@ -204,6 +203,17 @@ export default function Container({
       style: Object.keys(style).length > 0 ? style : undefined,
     },
     gridOutlineOverlay,
-    children,
+    isBoxed
+      ? createElement(
+          'div',
+          {
+            className: styles.inner,
+            'data-container-inner': '',
+            'data-default-direction': defaultDirection,
+            style: innerStyle,
+          },
+          children,
+        )
+      : children,
   );
 }

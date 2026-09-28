@@ -285,7 +285,10 @@ const IframeCanvas = forwardRef<HTMLIFrameElement, IframeCanvasProps>(function I
       styleTag.id = CANVAS_CSS_STYLE_TAG_ID;
       contentDoc.head.appendChild(styleTag);
     }
-    styleTag.textContent = generateCanvasCss(tree, activeBreakpoints);
+    // La `width` di un `container` dimensiona il wrapper della chrome, vero elemento flex del canvas.
+    styleTag.textContent = generateCanvasCss(tree, activeBreakpoints, {
+      widthSelector: (blockId) => `[data-block-id="${blockId}"]`,
+    });
   }, [contentDoc, tree, activeBreakpoints]);
 
   return (

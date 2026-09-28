@@ -40,7 +40,8 @@ import {
 import { toPersistableBlocks } from '../pages/pages/editor/block-content.serialization';
 import {
   CONTAINER_WIDTH_PROP,
-  toContainerWidthValue,
+  readContainerWidthPercentAt,
+  withContainerWidthAt,
 } from '../pages/pages/editor/container-resize.utils';
 import {
   resolveColumnRatio,
@@ -1273,11 +1274,14 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
       const node = findNode(state.tree, id);
       if (!node) return { containerResize: null };
 
+      // `width` è responsive (ADR-100 punto 2): il gesto scrive sul breakpoint attivo.
+      const breakpoint = state.activeBreakpoint;
       const previousValue = node.props[CONTAINER_WIDTH_PROP];
-      const nextValue = toContainerWidthValue(percent);
+      const nextValue = withContainerWidthAt(previousValue, breakpoint, percent);
       // Un trascinamento che torna esattamente da dove è partito non è una modifica:
       // nessuna voce di history, nessun contenuto marcato come non salvato.
-      if (readCommittedPercent(previousValue) === percent) return { containerResize: null };
+      if (readContainerWidthPercentAt(previousValue, breakpoint) === percent)
+        return { containerResize: null };
 
       // Stesso comando invertibile di `updateBlockPropsAction` — una sola prop, il valore
       // precedente catturato per chiusura, mai uno snapshot dell'albero. È qui che l'intero
@@ -1350,19 +1354,6 @@ export const useBlockEditorStore = create<BlockEditorState>((set, get) => ({
 
   clearPropResizePreview: () => set({ propResizePreview: null }),
 }));
-
-/**
- * Percentuale già persistita sulla prop, o `null` se assente/di altra forma. Duplica di
- * proposito la lettura di `readContainerWidthPercent` invece di importarla: quel modulo
- * legge il registro dei blocchi, e lo store non ha motivo di dipenderne per un confronto
- * di uguaglianza fra due numeri.
- */
-function readCommittedPercent(value: unknown): number | null {
-  if (typeof value !== 'object' || value === null) return null;
-  const candidate = value as { value?: unknown; unit?: unknown };
-  if (candidate.unit !== '%' || typeof candidate.value !== 'number') return null;
-  return candidate.value;
-}
 
 /**
  * Reinserisce un nodo completo (con id e children originali) a una posizione esatta —
